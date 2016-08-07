@@ -1,0 +1,585 @@
+System
+{
+    "XMLName": {
+        "Space": "",
+        "Local": "node"
+    },
+    "Name": "/org/freedesktop/PackageKit",
+    "Interfaces": [
+        {
+            "Name": "org.freedesktop.PackageKit",
+            "Methods": [
+                {
+                    "Name": "GetTransactionList",
+                    "Args": [
+                        {
+                            "Name": "",
+                            "Type": "ao",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "StateHasChanged",
+                    "Args": [
+                        {
+                            "Name": "reason",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "CreateTransaction",
+                    "Args": [
+                        {
+                            "Name": "",
+                            "Type": "o",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "CanAuthorize",
+                    "Args": [
+                        {
+                            "Name": "action_id",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "u",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "GetDaemonState",
+                    "Args": [
+                        {
+                            "Name": "",
+                            "Type": "s",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": [
+                {
+                    "Name": "RestartSchedule",
+                    "Args": null,
+                    "Annotations": null
+                },
+                {
+                    "Name": "RepoListChanged",
+                    "Args": null,
+                    "Annotations": null
+                },
+                {
+                    "Name": "TransactionListChanged",
+                    "Args": [
+                        {
+                            "Name": "transactions",
+                            "Type": "as",
+                            "Direction": ""
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "UpdatesChanged",
+                    "Args": null,
+                    "Annotations": null
+                },
+                {
+                    "Name": "Changed",
+                    "Args": null,
+                    "Annotations": null
+                }
+            ],
+            "Properties": [
+                {
+                    "Name": "BackendAuthor",
+                    "Type": "s",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "Roles",
+                    "Type": "t",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "DistroId",
+                    "Type": "s",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "Filters",
+                    "Type": "t",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "MimeTypes",
+                    "Type": "as",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "BackendDescription",
+                    "Type": "s",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "VersionMicro",
+                    "Type": "u",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "Provides",
+                    "Type": "t",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "Locked",
+                    "Type": "b",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "NetworkState",
+                    "Type": "u",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "Groups",
+                    "Type": "t",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "VersionMajor",
+                    "Type": "u",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "BackendName",
+                    "Type": "s",
+                    "Access": "read",
+                    "Annotations": null
+                },
+                {
+                    "Name": "VersionMinor",
+                    "Type": "u",
+                    "Access": "read",
+                    "Annotations": null
+                }
+            ],
+            "Annotations": null
+        },
+        {
+            "Name": "org.freedesktop.DBus.Properties",
+            "Methods": [
+                {
+                    "Name": "Get",
+                    "Args": [
+                        {
+                            "Name": "iface",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "property",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "v",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "GetAll",
+                    "Args": [
+                        {
+                            "Name": "iface",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "a{sv}",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "Set",
+                    "Args": [
+                        {
+                            "Name": "iface",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "name",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "value",
+                            "Type": "v",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": [
+                {
+                    "Name": "PropertiesChanged",
+                    "Args": [
+                        {
+                            "Name": "interface",
+                            "Type": "s",
+                            "Direction": ""
+                        },
+                        {
+                            "Name": "changed_properties",
+                            "Type": "a{sv}",
+                            "Direction": ""
+                        },
+                        {
+                            "Name": "invalidated_properties",
+                            "Type": "as",
+                            "Direction": ""
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Properties": null,
+            "Annotations": null
+        },
+        {
+            "Name": "org.freedesktop.DBus.Introspectable",
+            "Methods": [
+                {
+                    "Name": "Introspect",
+                    "Args": [
+                        {
+                            "Name": "",
+                            "Type": "s",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": null,
+            "Properties": null,
+            "Annotations": null
+        }
+    ],
+    "Children": null
+}
+Session
+{
+    "XMLName": {
+        "Space": "",
+        "Local": "node"
+    },
+    "Name": "/org/freedesktop/PackageKit",
+    "Interfaces": [
+        {
+            "Name": "org.freedesktop.DBus.Introspectable",
+            "Methods": [
+                {
+                    "Name": "Introspect",
+                    "Args": [
+                        {
+                            "Name": "",
+                            "Type": "s",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": null,
+            "Properties": null,
+            "Annotations": null
+        },
+        {
+            "Name": "org.freedesktop.PackageKit.Modify",
+            "Methods": [
+                {
+                    "Name": "InstallFontconfigResources",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "resources",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "RemovePackageByFiles",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "files",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallGStreamerResources",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "resources",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallPackageNames",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "packages",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallProvideFiles",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "files",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallMimeTypes",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "mime_types",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallCatalogs",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "files",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallPackageFiles",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "files",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "InstallPrinterDrivers",
+                    "Args": [
+                        {
+                            "Name": "xid",
+                            "Type": "u",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "resources",
+                            "Type": "as",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": null,
+            "Properties": null,
+            "Annotations": null
+        },
+        {
+            "Name": "org.freedesktop.PackageKit.Query",
+            "Methods": [
+                {
+                    "Name": "SearchFile",
+                    "Args": [
+                        {
+                            "Name": "file_name",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "b",
+                            "Direction": "out"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "s",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                },
+                {
+                    "Name": "IsInstalled",
+                    "Args": [
+                        {
+                            "Name": "package_name",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "interaction",
+                            "Type": "s",
+                            "Direction": "in"
+                        },
+                        {
+                            "Name": "",
+                            "Type": "b",
+                            "Direction": "out"
+                        }
+                    ],
+                    "Annotations": null
+                }
+            ],
+            "Signals": null,
+            "Properties": null,
+            "Annotations": null
+        }
+    ],
+    "Children": null
+}

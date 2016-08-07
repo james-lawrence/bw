@@ -1,0 +1,14 @@
+package: bitbucket.org/jatone/bearded-wookie
+import:
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
+  - aws/session
+  - service/ec2
+- package: github.com/godbus/dbus
+- package: github.com/hashicorp/serf
+  subpackages:
+  - serf
+- package: github.com/kballard/go-shellquote
+- package: github.com/manveru/faker
+- package: gopkg.in/alecthomas/kingpin.v2
