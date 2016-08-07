@@ -19,8 +19,19 @@ type Coordinator interface {
 	// of the server.
 	SystemStateChecksum() ([]byte, error)
 
-	// Returns an array of packages installed on the server.
-	Packages() ([]Package, error)
+	// // Install the manifest for the system.
+	// // the manifest is a toml file describing the repositories
+	// // and the packages to be installed/updated.
+	// InstallManifest([]byte) error
+	//
+	// // Initiates a repository fetch and installation of the packages specified
+	// // within the manifest.
+	// Deploy() error
+	//
+	// // Locks the system preventing deployments from being performed.
+	// Lock() error
+	// // Unlocks the system allowing deployments to be performed.
+	// Unlock() error
 
 	// Installs a list of packages
 	//

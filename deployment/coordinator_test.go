@@ -46,21 +46,4 @@ var _ = Describe("Coordinator", func() {
 			Expect(result).To(Equal(hasher.Sum(nil)))
 		})
 	})
-
-	Describe("Packages", func() {
-		It("returns an Array of packages installed on the system", func() {
-			result, err := coordinator.Packages()
-			Expect(err).ToNot(HaveOccurred())
-			Expect(len(result)).To(Equal(len(expectedPackages)))
-
-			// Sort the results to make them easier to compare
-			sort.Sort(PackageByID(result))
-
-			for i := 0; i < len(expectedPackages); i++ {
-				Expect(result[i].ID).To(Equal(expectedPackages[i].ID))
-				Expect(result[i].Info).To(Equal(expectedPackages[i].Info))
-				Expect(result[i].Summary).To(Equal(expectedPackages[i].Summary))
-			}
-		})
-	})
 })

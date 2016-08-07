@@ -52,10 +52,6 @@ func main() {
 	install := commands.Command("install", "install package")
 	install.Arg("packages", "packages to install").StringsVar(&installPackages)
 
-	// download := commands.Command("download", "")
-	// download.Arg("packages", "packages to download").StringsVar(&installPackages)
-	// download.Flag("store-in-cache", "store the package in the cache").Default("true").BoolVar(&cachestore)
-
 	quit := commands.Command("quit", "quit the application")
 
 	fmt.Println("creating serf client")

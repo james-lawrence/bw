@@ -22,12 +22,6 @@ func (t Deployment) SystemStateChecksum(args struct{}, state *[]byte) (err error
 	return
 }
 
-// Packages - returns a list of packages.
-func (t Deployment) Packages(args struct{}, packages *[]deployment.Package) (err error) {
-	*packages, err = t.Coordinator.Packages()
-	return
-}
-
 // InstallPackages - installs a list of packages.
 func (t Deployment) InstallPackages(packageIDs []string, noresult *struct{}) (err error) {
 	return t.Coordinator.InstallPackages(packageIDs...)

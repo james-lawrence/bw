@@ -77,22 +77,20 @@ func (t deployment) Packages() ([]Package, error) {
 }
 
 func (t deployment) InstallPackages(packageIDs ...string) error {
-	var err error
-	var tx packagekit.Transaction
+	var (
+		err error
+		tx  packagekit.Transaction
+	)
 
 	if tx, err = t.pkgkit.CreateTransaction(); err != nil {
 		return err
 	}
 	defer tx.Cancel()
 
-	// if err = tx.RefreshCache(); err != nil {
-	// 	log.Println("tx.RefreshCache failed", err)
-	// 	return err
-	// }
-	// if err = tx.DownloadPackages(true, packageIDs...); err != nil {
-	// 	log.Println("tx.DownloadPackages failed", err)
-	// 	return err
-	// }
+	if err = tx.RefreshCache(); err != nil {
+		log.Println("tx.RefreshCache failed", err)
+		return err
+	}
 
 	if err = tx.InstallPackages(packageIDs...); err != nil {
 		log.Println("tx.IntallPackages failed", err)
