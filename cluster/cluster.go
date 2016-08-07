@@ -33,8 +33,6 @@ type TaggedInstance interface {
 type Interface interface {
 	// Filters instances within the cluster by the specified filter
 	Filter(filters Filter) ([]TaggedInstance, error)
-	// Special case that returns every instance in the cluster
-	Instances() ([]TaggedInstance, error)
 }
 
 // FilterFunc - func that matches against Instances
