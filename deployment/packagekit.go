@@ -14,16 +14,18 @@ type PackagekitOption func(*pkgkit) error
 // the specified directory.
 func PackagekitOptionPackageFilesDirectory(dir string) PackagekitOption {
 	return func(pkg *pkgkit) error {
+		log.Println("walking", dir)
 		return filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			var (
 				f *os.File
 			)
+			log.Println("processing", path)
 			if err != nil {
 				return err
 			}
 
 			// skip sub directories.
-			if info.IsDir() {
+			if info.IsDir() && path != dir {
 				return filepath.SkipDir
 			}
 
@@ -61,9 +63,12 @@ type pkgkit struct {
 func (t pkgkit) Deploy(completed chan error) error {
 	log.Println("deploying")
 	defer log.Println("deploy complete")
+
 	log.Println("fetching latest from repositories")
 	for _, p := range t.packages {
 		log.Println("installing", p)
 	}
+
+	completed <- nil
 	return nil
 }

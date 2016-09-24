@@ -30,6 +30,7 @@ type core struct {
 	cluster struct {
 		port       int
 		memberlist *memberlist.Memberlist
+		bootstrap  []string
 	}
 }
 
@@ -47,6 +48,7 @@ func main() {
 	)
 
 	app := kingpin.New("node", "node in the deployment cluster")
+	app.Flag("node-bootstrap", "addresses to bootstrap from").StringsVar(&system.cluster.bootstrap)
 	app.Flag("node-network", "network interface to listen on").Default("127.0.0.1:").TCPVar(&system.network)
 	app.Flag("node-port", "port for the cluster to listen on").Default("7946").IntVar(&system.cluster.port)
 	app.Flag("node-name", "name to give to the node, defaults to the node-network").StringVar(&system.name)
@@ -96,7 +98,8 @@ func rpcBind(c *core) kingpin.Action {
 
 func clusterConnect(c *core) {
 	var (
-		err error
+		err    error
+		joined int
 	)
 
 	log.Println("connecting to cluster")
@@ -113,6 +116,12 @@ func clusterConnect(c *core) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	if joined, err = c.cluster.memberlist.Join(c.cluster.bootstrap); err != nil {
+		log.Fatalln(err)
+	}
+
+	log.Println("joined a cluster with", joined, "node(s)")
 }
 
 func clusterShutdown(cluster *memberlist.Memberlist) {
