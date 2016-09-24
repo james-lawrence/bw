@@ -1,5 +1,5 @@
-hash: 98beba5783c05b2f97727865f807ee9306c2d3696942a9b666b4324c5a5fa555
-updated: 2016-08-06T20:34:32.545370799-04:00
+hash: ad80d36718656d0a638394baf0df3973bc13b46b6d22f0b2ea2b7da0f35d20ff
+updated: 2016-09-24T13:50:05.075225197-04:00
 imports:
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
@@ -15,6 +15,8 @@ imports:
   - aws
   - aws/session
   - service/ec2
+- name: github.com/circonus-labs/circonus-gometrics
+  version: 02e91ce11e80e4ee29de4fec93250f04ba47f222
 - name: github.com/godbus/dbus
   version: 7a8c533d28e8162671a81090af5b9f78b74e2d26
 - name: github.com/hashicorp/errwrap
@@ -31,13 +33,14 @@ imports:
   version: f0080c8768f0f2817c8b0fa1029c48d5d81242b4
   subpackages:
   - serf
-  - coordinate
 - name: github.com/kballard/go-shellquote
   version: d8ec1a69a250a17bb0e419c386eac1f3711dc142
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
 - name: github.com/miekg/dns
   version: db96a2b759cdef4f11a34506a42eb8d1290c598e
+- name: github.com/pkg/errors
+  version: a887431f7f6ef7687b556dbf718d9f351d4858a0
 - name: gopkg.in/alecthomas/kingpin.v2
   version: e5900212cbf65b181d3d8e08308ef06a01d117cf
 devImports: []
