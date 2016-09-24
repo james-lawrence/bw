@@ -70,18 +70,22 @@ func (t failed) Status() StatusEnum {
 	return StatusFailed
 }
 
+// IsReady returns true if the node is in a ready state.
 func IsReady(err error) bool {
 	return isStatus(err, StatusReady)
 }
 
+// IsLocked returns true if the node is in a locked state.
 func IsLocked(err error) bool {
 	return isStatus(err, StatusLocked)
 }
 
+// IsDeploying returns true if the node is in a deploying state.
 func IsDeploying(err error) bool {
 	return isStatus(err, StatusDeploying)
 }
 
+// IsFailed returns true if the node is in a failed state.
 func IsFailed(err error) bool {
 	return isStatus(err, StatusFailed)
 }
@@ -97,6 +101,11 @@ func isStatus(err error, expected StatusEnum) bool {
 	return false
 }
 
+type deployer interface {
+	Deploy(completed chan error) error
+}
+
+// Coordinator is in charge of coordinating deployments.
 type Coordinator interface {
 	// Status of the deployment coordinator
 	// idle, deploying, locked

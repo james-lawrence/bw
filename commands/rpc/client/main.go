@@ -25,6 +25,8 @@ func main() {
 		local          = &net.TCPAddr{}
 	)
 
+	deployment.NewDBUS()
+
 	app := kingpin.New("client", "client for interacting with a deployment cluster")
 	app.Flag("cluster-address", "cluster server address").Default("127.0.0.1:7946").TCPVar(&clusterAddress)
 	app.Flag("cluster-local-address", "local cluster network to bind").Default("localhost:5001").TCPVar(&local)

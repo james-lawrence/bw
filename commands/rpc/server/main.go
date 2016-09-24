@@ -75,10 +75,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	dplyCoordinator, err := deployment.NewDefaultCoordinator()
-	if err != nil {
-		log.Fatal(err)
-	}
+	dplyCoordinator := deployment.NewDummyCoordinator()
 	deployments := adapters.Deployment{Coordinator: dplyCoordinator}
 	log.Println("Initializing RPC server")
 

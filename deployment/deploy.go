@@ -7,21 +7,6 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-func partition(length, partitionSize int) []struct{ Min, Max int } {
-	numFullPartitions := length / partitionSize
-	partitions := make([]struct{ Min, Max int }, 0, numFullPartitions+1)
-	var i int
-	for ; i < numFullPartitions; i++ {
-		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: (i + 1) * partitionSize})
-	}
-
-	if length%partitionSize != 0 { // left over
-		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: length})
-	}
-
-	return partitions
-}
-
 type cluster interface {
 	Members() []*memberlist.Node
 }
@@ -39,6 +24,21 @@ func Deploy(c cluster, deployer, status func(peer *memberlist.Node) error) {
 	}
 
 	log.Println("completed")
+}
+
+func partition(length, partitionSize int) []struct{ Min, Max int } {
+	numFullPartitions := length / partitionSize
+	partitions := make([]struct{ Min, Max int }, 0, numFullPartitions+1)
+	var i int
+	for ; i < numFullPartitions; i++ {
+		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: (i + 1) * partitionSize})
+	}
+
+	if length%partitionSize != 0 { // left over
+		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: length})
+	}
+
+	return partitions
 }
 
 func deployTo(deployer func(peer *memberlist.Node) error, nodes []*memberlist.Node) error {
@@ -69,7 +69,13 @@ func awaitCompletion(status func(*memberlist.Node) error, nodes []*memberlist.No
 
 			remaining = append(remaining, peer)
 		}
-		log.Println(time.Now().Sub(start), "waiting for", len(remaining), "node(s) to finish")
+
+		log.Printf(
+			"%3s waiting for %d node(s) to finish\n",
+			time.Now().Sub(start),
+			len(remaining),
+		)
+
 		nodes = remaining
 		time.Sleep(time.Second)
 	}
