@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"bitbucket.org/jatone/bearded-wookie/packagekit"
 )
 
 // PackagekitOption option for the Packagekit deployer.
@@ -69,6 +71,30 @@ func (t pkgkit) Deploy(completed chan error) error {
 		log.Println("installing", p)
 	}
 
-	completed <- nil
 	return nil
+}
+
+func (t pkgkit) deploy(completed chan error) {
+	var (
+		err error
+		tx  packagekit.Transaction
+	)
+
+	if tx, err = t.pkgkit.CreateTransaction(); err != nil {
+		goto done
+	}
+	defer tx.Cancel()
+
+	if err = tx.RefreshCache(); err != nil {
+		log.Println("tx.RefreshCache failed", err)
+		goto done
+	}
+
+	if err = tx.InstallPackages(packageIDs...); err != nil {
+		log.Println("tx.IntallPackages failed", err)
+		goto done
+	}
+
+done:
+	completed <- err
 }
