@@ -51,7 +51,7 @@ func (t *deployment) Deploy() error {
 func (t *deployment) startDeploy() Status {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
-	if !IsReady(t.status) {
+	if !(IsReady(t.status) || IsFailed(t.status)) {
 		return t.status
 	}
 	t.status = deploying{}

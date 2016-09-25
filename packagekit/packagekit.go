@@ -2,6 +2,8 @@ package packagekit
 
 import "fmt"
 
+//go:generate stringer -type=ErrorEnum -type=InfoEnum -type=ExitEnum
+
 // Generic NotImplemented Error
 var errNotImplemented = fmt.Errorf("Not Implemented")
 
@@ -84,8 +86,24 @@ type Transaction interface {
 	RefreshCache() error
 }
 
+const methodDBUSAddMatch = "org.freedesktop.DBus.AddMatch"
+const methodDBUSRemoveMatch = "org.freedesktop.DBus.RemoveMatch"
+
+// packagekit dbus methods.
+const methodTransactionDownloadPackages = "org.freedesktop.PackageKit.Transaction.DownloadPackages"
+const methodTransactionGetPackages = "org.freedesktop.PackageKit.Transaction.GetPackages"
+const methodTransactionCancel = "org.freedesktop.PackageKit.Transaction.Cancel"
+const methodTransactionRefreshCache = "org.freedesktop.PackageKit.Transaction.RefreshCache"
+const methodTransactionInstallPackages = "org.freedesktop.PackageKit.Transaction.InstallPackages"
+const methodCreateTransaction = "org.freedesktop.PackageKit.CreateTransaction"
+
+// packagekit dbus signals
+const signalTransactionPackage = "org.freedesktop.PackageKit.Transaction.Package"
 const signalTransactionFinished = "org.freedesktop.PackageKit.Transaction.Finished"
 const signalTransactionError = "org.freedesktop.PackageKit.Transaction.ErrorCode"
+const signalTransactionItemProgress = "org.freedesktop.PackageKit.Transaction.ItemProgress"
+const signalTransactionStatus = "org.freedesktop.PackageKit.Transaction.Status"
+const signalTransactionDestroy = "org.freedesktop.PackageKit.Transaction.Destroy"
 
 // Package Provides basic Information about a package.
 type Package struct {
@@ -142,30 +160,141 @@ type TransactionFlag uint64
 //       TransactionFlagSimulate is 1 << 2 which is 4. etc, etc.
 // source - https://github.com/hughsie/PackageKit/blob/master/lib/packagekit-glib2/pk-enum.h
 const (
-	TransactionFlagNone           TransactionFlag = 0x0000000
-	TransactionFlagOnlyTrusted                    = 0x0000001
-	TransactionFlagSimulate                       = 0x0000002
-	TransactionFlagOnlyDownload                   = 0x0000004
-	TransactionFlagAllowReinstall                 = 0x0000008
-	TransactionFlagJustReinstall                  = 0x0000010
-	TransactionFlagAllowDowngrade                 = 0x0000020
-	TransactionFlagLast                           = 0x0000040
+	TransactionFlagNone TransactionFlag = 1 << iota
+	TransactionFlagOnlyTrusted
+	TransactionFlagSimulate
+	TransactionFlagOnlyDownload
+	TransactionFlagAllowReinstall
+	TransactionFlagJustReinstall
+	TransactionFlagAllowDowngrade
 )
 
+// ExitEnum type representing exit codes
 type ExitEnum uint64
 
 // These constants represent the exit status of commands.
 const (
-	ExitUnknown             ExitEnum = 0x00
-	ExitSuccess                      = 0x01
-	ExitFailed                       = 0x02
-	ExitCancelled                    = 0x03
-	ExitKeyRequired                  = 0x04
-	ExitEULARequired                 = 0x05
-	ExitKilled                       = 0x06 /* when we forced the cancel, but had to SIGKILL */
-	ExitMediaChangeRequired          = 0x07
-	ExitNeedUntrusted                = 0x08
-	ExitCancelledPriority            = 0x09
-	ExitSkipTransaction              = 0x10
-	ExitRepairRequired               = 0x11
+	ExitUnknown ExitEnum = iota
+	ExitSuccess
+	ExitFailed
+	ExitCancelled
+	ExitKeyRequired
+	ExitEULARequired
+	ExitKilled
+	ExitMediaChangeRequired
+	ExitNeedUntrusted
+	ExitCancelledPriority
+	ExitSkipTransaction
+	ExitRepairRequired
+)
+
+// ErrorEnum type representing errors within packagekit.
+type ErrorEnum uint64
+
+// These constants represents errors within packagekit.
+const (
+	ErrorUnknown ErrorEnum = iota
+	ErrorOOM
+	ErrorNoNetwork
+	ErrorNotSupported
+	ErrorInternalError
+	ErrorGPGFailure
+	ErrorPackageIDInvalid
+	ErrorPackageNotInstalled
+	ErrorPackageNotFound
+	ErrorPackageAlreadyInstalled
+	ErrorPackageDownloadFailed
+	ErrorGroupNotFound
+	ErrorGroupListInvalid
+	ErrorDepResolutionFailed
+	ErrorFilterInvalid
+	ErrorCreateThreadFailed
+	ErrorTransactionError
+	ErrorTransactionCancelled
+	ErrorNoCache
+	ErrorRepoNotFound
+	ErrorCannotRemoveSystemPackage
+	ErrorProcessKill
+	ErrorFailedInitialization
+	ErrorFailedFinalise
+	ErrorFailedConfigParsing
+	ErrorCannotCancel
+	ErrorCannotGetLock
+	ErrorNoPackagesToUpdate
+	ErrorCannotWriteRepoConfig
+	ErrorLocalInstallFailed
+	ErrorBadGPGSignature
+	ErrorMissingGpgSignature
+	ErrorCannotInstallSourcePackage
+	ErrorRepoConfigurationError
+	ErrorNoLicenseAgreement
+	ErrorFileConflicts
+	ErrorPackageConflicts
+	ErrorRepoNotAvailable
+	ErrorInvalidPackageFile
+	ErrorPackageInstallBlocked
+	ErrorPackageCorrupt
+	ErrorAllPackagesAlreadyInstalled
+	ErrorFileNotFound
+	ErrorNoMoreMirrorsToTry
+	ErrorNoDistroUpgradeData
+	ErrorIncompatibleArchitecture
+	ErrorNoSpaceOnDevice
+	ErrorMediaChangeRequired
+	ErrorNotAuthorized
+	ErrorUpdateNotFound
+	ErrorCannotInstallRepoUnsigned
+	ErrorCannotUpdateRepoUnsigned
+	ErrorCannotGetFilelist
+	ErrorCannotGetRequires
+	ErrorCannotDisableRepository
+	ErrorRestrictedDownload
+	ErrorPackageFailedToConfigure
+	ErrorPackageFailedToBuild
+	ErrorPackageFailedToInstall
+	ErrorPackageFailedToRemove
+	ErrorUpdateFailedDueToRunningProcess
+	ErrorPackageDatabaseChanged
+	ErrorProvideTypeNotSupported
+	ErrorInstallRootInvalid
+	ErrorCannotFetchSources
+	ErrorCancelledPriority
+	ErrorUnfinishedTransaction
+	ErrorLockRequired
+	ErrorRepoAlreadySet
+)
+
+// InfoEnum The enumerated types used in Package() - these have to refer to a specific
+// package action, rather than a general state
+type InfoEnum uint64
+
+// The enumerated types used in Package() - these have to refer to a specific
+// package action, rather than a general state
+const (
+	InfoUnknown InfoEnum = iota
+	InfoInstalled
+	InfoAvailable
+	InfoLow
+	InfoEnhancement
+	InfoNormal
+	InfoBugfix
+	InfoImportant
+	InfoSecurity
+	InfoBlocked
+	InfoDownloading
+	InfoUpdating
+	InfoInstalling
+	InfoRemoving
+	InfoCleanup
+	InfoObsoleting
+	InfoCollectionInstalled
+	InfoCollectionAvailable
+	InfoFinished
+	InfoReinstalling
+	InfoDowngrading
+	InfoPreparing
+	InfoDecompressing
+	InfoUntrusted
+	InfoTrusted
+	InfoUnavailable
 )

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"bitbucket.org/jatone/bearded-wookie/packagekit"
 )
 
@@ -45,32 +47,39 @@ func PackagekitOptionPackageFilesDirectory(dir string) PackagekitOption {
 	}
 }
 
-// NewPackagekit builds a coordinator that uses packagekit to install packages.
-func NewPackagekit(options ...PackagekitOption) (Coordinator, error) {
-	c := pkgkit{}
+func connect(pkgkit *pkgkit) error {
+	var (
+		err error
+	)
 
-	for _, opt := range options {
-		if err := opt(&c); err != nil {
-			return nil, err
-		}
+	pkgkit.client, err = packagekit.NewClient()
+
+	return err
+}
+
+// NewPackagekit builds a coordinator that uses packagekit to install packages.
+func NewPackagekit(options ...PackagekitOption) Coordinator {
+	coord := pkgkit{
+		options: append(options, connect),
 	}
 
-	return New(c), nil
+	return New(coord)
 }
 
 type pkgkit struct {
+	options  []PackagekitOption
+	client   packagekit.Client
 	packages []string
 }
 
 func (t pkgkit) Deploy(completed chan error) error {
-	log.Println("deploying")
-	defer log.Println("deploy complete")
-
-	log.Println("fetching latest from repositories")
-	for _, p := range t.packages {
-		log.Println("installing", p)
+	for _, opt := range t.options {
+		if err := opt(&t); err != nil {
+			return err
+		}
 	}
 
+	go t.deploy(completed)
 	return nil
 }
 
@@ -79,22 +88,35 @@ func (t pkgkit) deploy(completed chan error) {
 		err error
 		tx  packagekit.Transaction
 	)
+	log.Println("deploying")
+	defer log.Println("deploy complete")
 
-	if tx, err = t.pkgkit.CreateTransaction(); err != nil {
+	if tx, err = t.client.CreateTransaction(); err != nil {
+		err = errors.Wrap(err, "failed to created transaction")
 		goto done
 	}
-	defer tx.Cancel()
 
+	log.Println("refreshing cache")
 	if err = tx.RefreshCache(); err != nil {
-		log.Println("tx.RefreshCache failed", err)
+		err = errors.Wrap(err, "tx.RefreshCache failed")
 		goto done
 	}
 
-	if err = tx.InstallPackages(packageIDs...); err != nil {
-		log.Println("tx.IntallPackages failed", err)
+	if tx, err = t.client.CreateTransaction(); err != nil {
+		err = errors.Wrap(err, "failed to created transaction")
+		goto done
+	}
+
+	log.Println("installing packages")
+	if err = tx.InstallPackages(t.packages...); err != nil {
+		err = errors.Wrap(err, "tx.IntallPackages failed")
 		goto done
 	}
 
 done:
+	if err != nil {
+		tx.Cancel()
+		log.Println(err)
+	}
 	completed <- err
 }

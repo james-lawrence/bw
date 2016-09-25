@@ -3,8 +3,6 @@
 package main
 
 import (
-	"log"
-
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -22,22 +20,10 @@ func (t *packagekit) configure(cmd *kingpin.CmdClause) error {
 }
 
 func (t *packagekit) attach(*kingpin.ParseContext) error {
-	var (
-		err   error
-		coord deployment.Coordinator
-	)
-
-	log.Println("Package dir", t.packageDir)
-	options := []deployment.PackagekitOption{
-		deployment.PackagekitOptionPackageFilesDirectory(t.packageDir),
-	}
-
-	if coord, err = deployment.NewPackagekit(options...); err != nil {
-		return err
-	}
-
 	deployments := adapters.Deployment{
-		Coordinator: coord,
+		Coordinator: deployment.NewPackagekit(
+			deployment.PackagekitOptionPackageFilesDirectory(t.packageDir),
+		),
 	}
 
 	return t.core.rpc.server.Register(deployments)

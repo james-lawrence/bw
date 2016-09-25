@@ -27,6 +27,10 @@ func Deploy(c cluster, deployer, status func(peer *memberlist.Node) error) {
 }
 
 func partition(length, partitionSize int) []struct{ Min, Max int } {
+	if length == 1 {
+		return []struct{ Min, Max int }{{Min: 0, Max: 1}}
+	}
+
 	numFullPartitions := length / partitionSize
 	partitions := make([]struct{ Min, Max int }, 0, numFullPartitions+1)
 	var i int

@@ -47,6 +47,8 @@ func main() {
 		shutdown chan struct{}
 	)
 
+	log.SetFlags(log.Lshortfile | log.LstdFlags)
+
 	app := kingpin.New("node", "node in the deployment cluster")
 	app.Flag("node-bootstrap", "addresses to bootstrap from").StringsVar(&system.cluster.bootstrap)
 	app.Flag("node-network", "network interface to listen on").Default("127.0.0.1:").TCPVar(&system.network)
