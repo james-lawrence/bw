@@ -111,8 +111,9 @@ func clusterConnect(c *core) {
 		stringsx.Default(c.name, c.network.IP.String()),
 		serfdom.COBindInterface(c.network.IP.String()),
 		serfdom.COBindPort(c.cluster.port),
-		serfdom.COAliveDelegate(aliveHandler{}),
+		// serfdom.COAliveDelegate(aliveHandler{}),
 		serfdom.COEventsDelegate(eventHandler{}),
+		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
 	)
 
 	if err != nil {

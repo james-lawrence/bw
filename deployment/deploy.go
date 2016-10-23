@@ -12,18 +12,32 @@ type cluster interface {
 }
 
 // Deploy - trigger a deploy
-func Deploy(c cluster, deployer, status func(peer *memberlist.Node) error) {
-	nodes := c.Members()
+func Deploy(c cluster, ignore func(peer *memberlist.Node) bool, deployer, status func(peer *memberlist.Node) error) {
+	nodes := filter(c.Members(), ignore)
 	log.Println("waiting for cluster to enter ready state")
 	awaitCompletion(status, nodes)
 	log.Println("everything is gtg, deploying")
 	for _, partition := range partition(len(nodes), len(nodes)/2) {
-		deployTo(deployer, nodes[partition.Min:partition.Max])
+		subset := nodes[partition.Min:partition.Max]
+		deployTo(deployer, subset)
 		log.Println("awaiting completion")
-		awaitCompletion(status, nodes)
+		awaitCompletion(status, subset)
 	}
 
 	log.Println("completed")
+}
+
+func filter(set []*memberlist.Node, ignore func(peer *memberlist.Node) bool) []*memberlist.Node {
+	subset := make([]*memberlist.Node, 0, len(set))
+	for _, peer := range set {
+		if ignore(peer) {
+			continue
+		}
+
+		subset = append(subset, peer)
+	}
+
+	return subset
 }
 
 func partition(length, partitionSize int) []struct{ Min, Max int } {

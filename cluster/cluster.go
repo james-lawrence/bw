@@ -49,7 +49,7 @@ func always(Instance) bool {
 }
 
 // AlwaysMatch - Always returns true
-var AlwaysMatch FilterFunc = FilterFunc(always)
+var AlwaysMatch = FilterFunc(always)
 
 // Implement the FilterFunc interface
 func never(Instance) bool {
@@ -57,7 +57,7 @@ func never(Instance) bool {
 }
 
 // NeverMatch - Always returns false
-var NeverMatch FilterFunc = FilterFunc(never)
+var NeverMatch = FilterFunc(never)
 
 // FilterSet - a slice of related filters.
 type FilterSet struct {

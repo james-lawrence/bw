@@ -6,12 +6,11 @@ import (
 	"net"
 	"net/rpc"
 	"os"
-	"strings"
-	"time"
 
 	"github.com/hashicorp/memberlist"
 	"gopkg.in/alecthomas/kingpin.v2"
 
+	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
@@ -37,42 +36,39 @@ func main() {
 	}
 
 	fmt.Println("creating serf client")
-	cluster, err := serfdom.New("lurker-client",
+	c, err := serfdom.New("client",
 		serfdom.COBindInterface(local.IP.String()),
 		serfdom.COBindPort(local.Port),
-		serfdom.COAliveDelegate(aliveHandler{}),
 		serfdom.COEventsDelegate(eventHandler{}),
+		serfdom.CODelegate(serfdom.NewLocal(cluster.BitFieldMerge([]byte(nil), cluster.Lurker))),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer func() {
-		var (
-			err error
-		)
-
-		if err = cluster.Leave(5 * time.Second); err != nil {
-			log.Println("failure to leave cluster", err)
-		}
-
-		if err = cluster.Shutdown(); err != nil {
-			log.Println("failure to shutdown node", err)
+		if e := c.Shutdown(); e != nil {
+			log.Println("failure to shutdown node", e)
 		}
 	}()
 
-	fmt.Println("joining serf cluster")
-
-	_, err = cluster.Join([]string{clusterAddress.String()})
+	log.Println("joining serf cluster")
+	_, err = c.Join([]string{clusterAddress.String()})
 	if err != nil {
-		log.Panic(err)
+		log.Fatalln(err)
 	}
+
+	log.Println("joined a cluster of size", c.NumMembers())
 
 	switch actual {
 	case all.FullCommand():
-		deployment.Deploy(cluster, deployer, status)
+		deployment.Deploy(c, ignore, deployer, status)
 	}
 
-	fmt.Println("joined a cluster of size", cluster.NumMembers())
+}
+
+func ignore(peer *memberlist.Node) bool {
+	return cluster.BitField(peer.Meta).Has(cluster.Lurker)
 }
 
 func status(peer *memberlist.Node) error {
@@ -93,18 +89,6 @@ func deployer(peer *memberlist.Node) error {
 	}
 
 	return adapters.DeploymentClient{Client: rpcClient}.Deploy()
-}
-
-type aliveHandler struct{}
-
-func (aliveHandler) NotifyAlive(peer *memberlist.Node) error {
-	log.Println("NotifyAlive", peer.Name)
-	if strings.HasPrefix(peer.Name, "lurker") {
-		log.Println("NotifyAlive ignoring", peer.Name)
-		return fmt.Errorf("ignoring peer: %s", peer.Name)
-	}
-
-	return nil
 }
 
 type eventHandler struct{}

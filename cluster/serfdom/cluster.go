@@ -22,6 +22,12 @@ func COBindPort(port int) ClusterOption {
 	}
 }
 
+func CODelegate(delegate memberlist.Delegate) ClusterOption {
+	return func(config *memberlist.Config) {
+		config.Delegate = delegate
+	}
+}
+
 func COAliveDelegate(delegate memberlist.AliveDelegate) ClusterOption {
 	return func(config *memberlist.Config) {
 		config.Alive = delegate
@@ -47,6 +53,7 @@ func New(name string, options ...ClusterOption) (*memberlist.Memberlist, error) 
 
 	config.Name = name
 	config.LogOutput = os.Stderr
+	config.Alive = aliveHandler{}
 
 	for _, opt := range options {
 		opt(config)
