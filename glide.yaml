@@ -15,3 +15,6 @@ import:
 - package: github.com/circonus-labs/circonus-gometrics
 - package: github.com/hashicorp/memberlist
 - package: github.com/pkg/errors
+testImport:
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega

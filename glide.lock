@@ -1,5 +1,5 @@
-hash: ad80d36718656d0a638394baf0df3973bc13b46b6d22f0b2ea2b7da0f35d20ff
-updated: 2016-09-24T13:50:05.075225197-04:00
+hash: 3191e71c5de64800e0e241ae999e5f557c2751a0a2efac74c7f3afa893abedc4
+updated: 2016-12-31T15:33:13.290087551-05:00
 imports:
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
@@ -43,4 +43,35 @@ imports:
   version: a887431f7f6ef7687b556dbf718d9f351d4858a0
 - name: gopkg.in/alecthomas/kingpin.v2
   version: e5900212cbf65b181d3d8e08308ef06a01d117cf
-devImports: []
+testImports:
+- name: github.com/onsi/ginkgo
+  version: ac3d45ddd7ef5c4d7fc4d037b615a81f4d67981e
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - types
+- name: github.com/onsi/gomega
+  version: c72df929b80ef4930aaa75d5e486887ff2f3e06a
+  subpackages:
+  - format
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
