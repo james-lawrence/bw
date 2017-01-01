@@ -10,6 +10,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/ux"
 
 	"github.com/hashicorp/memberlist"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -17,6 +18,7 @@ import (
 
 type deployer struct {
 	*cluster
+	ctx    context.Context
 	cancel context.CancelFunc
 }
 
@@ -38,6 +40,8 @@ func (t *deployer) Deploy(ctx *kingpin.ParseContext) error {
 	}
 
 	deployment.NewDeploy(
+		// ux.Logging(),
+		ux.NewTermui(t.ctx),
 		deploy,
 		deployment.DeployerOptionChecker(status{}),
 	).Deploy(t.cluster.memberlist)

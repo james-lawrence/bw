@@ -3,19 +3,54 @@ package deployment
 import (
 	"log"
 	"math"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/memberlist"
 )
+
+type Stage int
+
+const (
+	// StageAwaitingForReady - deployer is waiting for all nodes to be ready for deployment.
+	StageWaitingForReady Stage = iota
+	// StageDeploying - deployer is deploying.
+	StageDeploying
+	//StageDone - deployer has finished.
+	StageDone
+)
+
+type NodeUpdate struct {
+	Peer   *memberlist.Node
+	Status error
+}
+
+func NewEvents() *Events {
+	return &Events{
+		NodesFound:     make(chan int64),
+		NodesCompleted: make(chan int64),
+		Status:         make(chan NodeUpdate, 10),
+		StageUpdate:    make(chan Stage),
+	}
+}
+
+type Events struct {
+	NodesFound     chan int64
+	NodesCompleted chan int64
+	completed      int64
+	StageUpdate    chan Stage
+	Status         chan NodeUpdate
+}
 
 // PercentagePartitioner size is based on the percentage. has an upper bound of 1.0.
 type PercentagePartitioner float64
 
 func (t PercentagePartitioner) Partition(length int) int {
 	ratio := math.Min(float64(t), 1.0)
-	log.Println("length", length, "ratio", ratio)
+	// log.Println("length", length, "ratio", ratio)
 	computed := int(math.Max(math.Floor(float64(length)*ratio), 1.0))
-	log.Println("computed", computed)
+	// log.Println("computed", computed)
 	return computed
 }
 
@@ -81,12 +116,17 @@ func DeployerOptionChecker(x checker) Option {
 	}
 }
 
-func NewDeploy(deployer func(peer *memberlist.Node) error, options ...Option) Deploy {
+func NewDeploy(h *Events, deployer func(peer *memberlist.Node) error, options ...Option) Deploy {
 	d := Deploy{
-		filter:      all(true),
+		filter: all(true),
+		worker: worker{
+			c:        make(chan func()),
+			wait:     &sync.WaitGroup{},
+			checker:  constantChecker{Status: ready{}},
+			deployer: deployer,
+			handler:  h,
+		},
 		partitioner: PercentagePartitioner(0.50),
-		checker:     constantChecker{Status: ready{}},
-		deployer:    deployer,
 	}
 
 	for _, opt := range options {
@@ -96,26 +136,64 @@ func NewDeploy(deployer func(peer *memberlist.Node) error, options ...Option) De
 	return d
 }
 
+type worker struct {
+	c    chan func()
+	wait *sync.WaitGroup
+	checker
+	deployer func(peer *memberlist.Node) error
+	handler  *Events
+}
+
+func (t worker) work() {
+	defer t.wait.Done()
+	for f := range t.c {
+		f()
+	}
+}
+
+func (t worker) Complete() {
+	close(t.c)
+	t.wait.Wait()
+}
+
+func (t worker) DeployTo(peer *memberlist.Node) {
+	t.c <- func() {
+		if err := t.deployer(peer); err != nil {
+			log.Println("failed to deploy to", peer.Name, err)
+			return
+		}
+		awaitCompletion(t.handler, t.checker, peer)
+		log.Println("emitting completion")
+		t.handler.NodesCompleted <- atomic.AddInt64(&t.handler.completed, 1)
+		log.Println("emitted completion")
+	}
+}
+
 type Deploy struct {
 	filter
 	partitioner
-	checker
-	deployer func(peer *memberlist.Node) error
+	worker
 }
 
 func (t Deploy) Deploy(c cluster) {
 	nodes := _filter(c.Members(), t.filter)
-	log.Println("waiting for cluster to enter ready state")
-	awaitCompletion(t.checker, nodes)
-	log.Println("everything is gtg, deploying")
-	for _, partition := range partition(len(nodes), t.partitioner.Partition(len(nodes))) {
-		subset := nodes[partition.Min:partition.Max]
-		deployTo(t.deployer, subset...)
-		log.Println("awaiting completion")
-		awaitCompletion(t.checker, subset)
+	t.worker.handler.NodesFound <- int64(len(nodes))
+	log.Println("emitting nodes found")
+	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
+		t.worker.wait.Add(1)
+		go t.worker.work()
 	}
 
-	log.Println("completed")
+	t.worker.handler.StageUpdate <- StageWaitingForReady
+	awaitCompletion(t.worker.handler, t.worker.checker, nodes...)
+
+	t.worker.handler.StageUpdate <- StageDeploying
+	for _, peer := range nodes {
+		t.worker.DeployTo(peer)
+	}
+	log.Println("awaiting workers shutdown")
+	t.worker.Complete()
+	t.worker.handler.StageUpdate <- StageDone
 }
 
 func _filter(set []*memberlist.Node, s filter) []*memberlist.Node {
@@ -129,65 +207,28 @@ func _filter(set []*memberlist.Node, s filter) []*memberlist.Node {
 	return subset
 }
 
-func partition(length, partitionSize int) []struct{ Min, Max int } {
-	var (
-		i int
-	)
-
-	if length == 1 {
-		return []struct{ Min, Max int }{{Min: 0, Max: 1}}
-	}
-
-	numFullPartitions, leftOver := int(length/partitionSize), length%partitionSize
-	partitions := make([]struct{ Min, Max int }, 0, numFullPartitions+1)
-	for ; i < numFullPartitions; i++ {
-		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: (i + 1) * partitionSize})
-	}
-
-	if leftOver != 0 { // left over
-		partitions = append(partitions, struct{ Min, Max int }{Min: i * partitionSize, Max: length})
-	}
-
-	return partitions
-}
-
-func deployTo(deployer func(peer *memberlist.Node) error, nodes ...*memberlist.Node) error {
-	for _, peer := range nodes {
-		if err := deployer(peer); err != nil {
-			log.Println("failed to deploy to", peer.Name, err)
-		}
-	}
-
-	return nil
-}
-
-func awaitCompletion(c checker, nodes []*memberlist.Node) {
-	start := time.Now()
+func awaitCompletion(e *Events, c checker, nodes ...*memberlist.Node) {
+	remaining := make([]*memberlist.Node, 0, len(nodes))
 	for len(nodes) > 0 {
-		remaining := make([]*memberlist.Node, 0, len(nodes))
+		remaining = remaining[:0]
 		for _, peer := range nodes {
 			s := c.Check(peer)
+
+			e.Status <- NodeUpdate{Status: s, Peer: peer}
 
 			if IsReady(s) {
 				continue
 			}
 
 			if IsFailed(s) {
-				log.Println(peer.Name, "failed", s)
 				continue
 			}
 
 			remaining = append(remaining, peer)
+			time.Sleep(time.Second)
 		}
 
-		log.Printf(
-			"%3s waiting for %d node(s) to finish\n",
-			time.Now().Sub(start),
-			len(remaining),
-		)
-
 		nodes = remaining
-		time.Sleep(time.Second)
 	}
 }
 

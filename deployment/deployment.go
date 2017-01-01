@@ -24,6 +24,19 @@ const (
 	StatusFailed
 )
 
+func NewStatus(s StatusEnum) Status {
+	switch s {
+	case StatusReady:
+		return ready{}
+	case StatusDeploying:
+		return deploying{}
+	case StatusLocked:
+		return locked{}
+	default:
+		return failed{}
+	}
+}
+
 // Status represents the current status of the coorindator.
 type Status interface {
 	error
@@ -33,7 +46,7 @@ type Status interface {
 type ready struct{}
 
 func (t ready) Error() string {
-	return "coordinator is currently ready"
+	return "ready"
 }
 
 func (t ready) Status() StatusEnum {
@@ -43,7 +56,7 @@ func (t ready) Status() StatusEnum {
 type deploying struct{}
 
 func (t deploying) Error() string {
-	return "coordinator is currently deploying"
+	return "deploying"
 }
 
 func (t deploying) Status() StatusEnum {
@@ -53,7 +66,7 @@ func (t deploying) Status() StatusEnum {
 type locked struct{}
 
 func (t locked) Error() string {
-	return "coordinator is currently locked and refusing deployments"
+	return "locked and refusing deployments"
 }
 
 func (t locked) Status() StatusEnum {
@@ -63,7 +76,7 @@ func (t locked) Status() StatusEnum {
 type failed struct{}
 
 func (t failed) Error() string {
-	return "coordinator failed its deployment"
+	return "failed"
 }
 
 func (t failed) Status() StatusEnum {

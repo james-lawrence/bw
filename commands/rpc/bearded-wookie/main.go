@@ -20,6 +20,9 @@ type core struct {
 	Deployer *deployer
 }
 
+// agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
+// client: ./bin/bearded-wookie deploy --cluster-node-name="client" --cluster-bootstrap=127.0.0.1:7946 --cluster-bind=127.0.0.1:5000
+
 func main() {
 	var (
 		err             error
@@ -33,6 +36,7 @@ func main() {
 			},
 			Deployer: &deployer{
 				cluster: c,
+				ctx:     cleanup,
 				cancel:  cancel,
 			},
 		}

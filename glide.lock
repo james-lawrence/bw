@@ -1,5 +1,5 @@
-hash: 3191e71c5de64800e0e241ae999e5f557c2751a0a2efac74c7f3afa893abedc4
-updated: 2016-12-31T15:33:13.290087551-05:00
+hash: e953ca2a3ac690f6b665c77c8764f4dfb1b4880680661d0920b96d03552ff2e2
+updated: 2016-12-31T16:19:08.681418856-05:00
 imports:
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
@@ -17,6 +17,8 @@ imports:
   - service/ec2
 - name: github.com/circonus-labs/circonus-gometrics
   version: 02e91ce11e80e4ee29de4fec93250f04ba47f222
+- name: github.com/gizak/termui
+  version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
   version: 7a8c533d28e8162671a81090af5b9f78b74e2d26
 - name: github.com/hashicorp/errwrap
@@ -37,8 +39,18 @@ imports:
   version: d8ec1a69a250a17bb0e419c386eac1f3711dc142
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
+- name: github.com/maruel/panicparse
+  version: ad661195ed0e88491e0f14be6613304e3b1141d6
+  subpackages:
+  - stack
+- name: github.com/mattn/go-runewidth
+  version: 737072b4e32b7a5018b4a7125da8d12de90e8045
 - name: github.com/miekg/dns
   version: db96a2b759cdef4f11a34506a42eb8d1290c598e
+- name: github.com/mitchellh/go-wordwrap
+  version: ad45545899c7b13c020ea92b2072220eefad42b8
+- name: github.com/nsf/termbox-go
+  version: abe82ce5fb7a42fbd6784a5ceb71aff977e09ed8
 - name: github.com/pkg/errors
   version: a887431f7f6ef7687b556dbf718d9f351d4858a0
 - name: gopkg.in/alecthomas/kingpin.v2

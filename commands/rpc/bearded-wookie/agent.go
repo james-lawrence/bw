@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 
@@ -41,5 +42,9 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 
 	go t.server.Accept(t.listener)
 
-	return t.cluster.Join(ctx, serfdom.CODelegate(serfdom.NewLocal([]byte{})))
+	return t.cluster.Join(
+		ctx,
+		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
+		serfdom.COLogger(os.Stderr),
+	)
 }

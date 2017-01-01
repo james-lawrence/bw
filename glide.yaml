@@ -15,6 +15,8 @@ import:
 - package: github.com/circonus-labs/circonus-gometrics
 - package: github.com/hashicorp/memberlist
 - package: github.com/pkg/errors
+- package: github.com/gizak/termui
+  version: ~2.1.1
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega

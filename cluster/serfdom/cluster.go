@@ -1,7 +1,7 @@
 package serfdom
 
 import (
-	"os"
+	"io"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -46,13 +46,18 @@ func COConflictDelegate(delegate memberlist.ConflictDelegate) ClusterOption {
 	}
 }
 
+func COLogger(out io.Writer) ClusterOption {
+	return func(config *memberlist.Config) {
+		config.LogOutput = out
+	}
+}
+
 func New(name string, options ...ClusterOption) (*memberlist.Memberlist, error) {
 	var (
 		config = memberlist.DefaultLocalConfig()
 	)
 
 	config.Name = name
-	config.LogOutput = os.Stderr
 	config.Alive = aliveHandler{}
 
 	for _, opt := range options {
