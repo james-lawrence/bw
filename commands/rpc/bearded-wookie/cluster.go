@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 type cluster struct {

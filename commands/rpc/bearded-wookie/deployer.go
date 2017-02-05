@@ -13,7 +13,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/ux"
 
 	"github.com/hashicorp/memberlist"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 type deployer struct {

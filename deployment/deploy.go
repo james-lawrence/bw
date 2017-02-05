@@ -178,7 +178,7 @@ type Deploy struct {
 func (t Deploy) Deploy(c cluster) {
 	nodes := _filter(c.Members(), t.filter)
 	t.worker.handler.NodesFound <- int64(len(nodes))
-	log.Println("emitting nodes found")
+
 	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
 		t.worker.wait.Add(1)
 		go t.worker.work()
@@ -191,7 +191,7 @@ func (t Deploy) Deploy(c cluster) {
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)
 	}
-	log.Println("awaiting workers shutdown")
+
 	t.worker.Complete()
 	t.worker.handler.StageUpdate <- StageDone
 }

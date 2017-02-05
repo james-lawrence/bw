@@ -5,7 +5,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 
 	"github.com/pkg/errors"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 type packagekit struct {

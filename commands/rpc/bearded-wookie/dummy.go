@@ -5,7 +5,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 type dummy struct {

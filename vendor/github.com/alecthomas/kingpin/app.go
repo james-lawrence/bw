@@ -13,7 +13,7 @@ var (
 )
 
 var (
-	envarTransformRegexp = regexp.MustCompile(`[^a-zA-Z_]+`)
+	envarTransformRegexp = regexp.MustCompile(`[^a-zA-Z0-9_]+`)
 )
 
 type ApplicationValidator func(*Application) error
@@ -136,7 +136,7 @@ func (a *Application) Writer(w io.Writer) *Application {
 
 // ErrorWriter sets the io.Writer to use for errors.
 func (a *Application) ErrorWriter(w io.Writer) *Application {
-	a.usageWriter = w
+	a.errorWriter = w
 	return a
 }
 

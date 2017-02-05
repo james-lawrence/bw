@@ -9,7 +9,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 
 	"github.com/pkg/errors"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 type agent struct {

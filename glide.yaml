@@ -11,7 +11,7 @@ import:
   - serf
 - package: github.com/kballard/go-shellquote
 - package: github.com/manveru/faker
-- package: gopkg.in/alecthomas/kingpin.v2
+- package: github.com/alecthomas/kingpin
 - package: github.com/circonus-labs/circonus-gometrics
 - package: github.com/hashicorp/memberlist
 - package: github.com/pkg/errors

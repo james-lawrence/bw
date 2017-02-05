@@ -7,7 +7,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/packagekit"
 	"github.com/kballard/go-shellquote"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/alecthomas/kingpin"
 )
 
 func main() {

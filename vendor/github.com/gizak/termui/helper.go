@@ -9,9 +9,8 @@ import (
 	"strings"
 
 	tm "github.com/nsf/termbox-go"
-
-	rw "github.com/mattn/go-runewidth"
 )
+import rw "github.com/mattn/go-runewidth"
 
 /* ---------------Port from termbox-go --------------------- */
 
@@ -195,10 +194,7 @@ func DTrimTxCls(cs []Cell, w int) []Cell {
 	if l <= 0 {
 		return []Cell{}
 	}
-	if w < 0 {
-		w = 0
-		// panic(fmt.Sprintf("w is %d", w))
-	}
+
 	rt := make([]Cell, 0, w)
 	csw := 0
 	for i := 0; i < l && csw <= w; i++ {
