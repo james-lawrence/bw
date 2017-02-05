@@ -4,9 +4,7 @@ import (
 	"log"
 	"net"
 	"net/rpc"
-	"os"
-
-	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
+	"strconv"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
@@ -14,9 +12,18 @@ import (
 
 type agent struct {
 	*cluster
-	network  *net.TCPAddr
-	server   *rpc.Server
-	listener net.Listener
+	network     *net.TCPAddr
+	server      *rpc.Server
+	listener    net.Listener
+	upnpEnabled bool
+}
+
+func (t *agent) configure(parent *kingpin.CmdClause) {
+	t.cluster.configure(parent)
+	parent.Flag("upnp-enabled", "enable upnp forwarding for the agent").Default(strconv.FormatBool(t.upnpEnabled)).Hidden().BoolVar(&t.upnpEnabled)
+	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
+	parent.Action(t.Bind)
+	t.operatingSystemSpecificConfiguration(parent)
 }
 
 func (t *agent) Bind(ctx *kingpin.ParseContext) error {
@@ -33,9 +40,5 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 
 	go t.server.Accept(t.listener)
 
-	return t.cluster.Join(
-		ctx,
-		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
-		serfdom.COLogger(os.Stderr),
-	)
+	return nil
 }

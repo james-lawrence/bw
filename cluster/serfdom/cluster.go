@@ -22,6 +22,18 @@ func COBindPort(port int) ClusterOption {
 	}
 }
 
+func COAdvertiseInterface(addr string) ClusterOption {
+	return func(config *memberlist.Config) {
+		config.AdvertiseAddr = addr
+	}
+}
+
+func COAdvertisePort(port int) ClusterOption {
+	return func(config *memberlist.Config) {
+		config.AdvertisePort = port
+	}
+}
+
 func CODelegate(delegate memberlist.Delegate) ClusterOption {
 	return func(config *memberlist.Config) {
 		config.Delegate = delegate
@@ -54,7 +66,8 @@ func COLogger(out io.Writer) ClusterOption {
 
 func New(name string, options ...ClusterOption) (*memberlist.Memberlist, error) {
 	var (
-		config = memberlist.DefaultLocalConfig()
+		// config = memberlist.DefaultLocalConfig()
+		config = memberlist.DefaultWANConfig()
 	)
 
 	config.Name = name
@@ -69,7 +82,6 @@ func New(name string, options ...ClusterOption) (*memberlist.Memberlist, error) 
 
 // GracefulShutdown gracefully leaves the cluster.
 func GracefulShutdown(cluster *memberlist.Memberlist) error {
-
 	var (
 		err error
 	)

@@ -1,5 +1,5 @@
-hash: 57c19205d3565cf9576fc166bb8e57ba9d28fbe49896ee1afe8869c3f9480d1f
-updated: 2017-02-05T10:28:35.730183054-05:00
+hash: 97bddde803c8027c32c870c8abf8fc6c9d23784ba2230877fa4b031f4ed8843b
+updated: 2017-02-05T16:38:55.304483982-05:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 4632cad00ac4bf4c455622ebfae46580c3890b8f
@@ -37,6 +37,14 @@ imports:
   version: f0080c8768f0f2817c8b0fa1029c48d5d81242b4
   subpackages:
   - serf
+- name: github.com/huin/goupnp
+  version: 679507af18f3c7ba2bcc7905392ce23e148661c3
+  subpackages:
+  - dcps/internetgateway2
+  - httpu
+  - scpd
+  - soap
+  - ssdp
 - name: github.com/kballard/go-shellquote
   version: d8ec1a69a250a17bb0e419c386eac1f3711dc142
 - name: github.com/manveru/faker
@@ -55,6 +63,30 @@ imports:
   version: abe82ce5fb7a42fbd6784a5ceb71aff977e09ed8
 - name: github.com/pkg/errors
   version: 17b591df37844cde689f4d5813e5cea0927d8dd2
+- name: golang.org/x/net
+  version: 8968c61983e8f51a91b8c0ef25bf739278c89634
+  subpackages:
+  - html
+  - html/atom
+  - html/charset
+- name: golang.org/x/text
+  version: 506f9d5c962f284575e88337e7d9296d27e729d3
+  subpackages:
+  - encoding
+  - encoding/charmap
+  - encoding/htmlindex
+  - encoding/internal
+  - encoding/internal/identifier
+  - encoding/japanese
+  - encoding/korean
+  - encoding/simplifiedchinese
+  - encoding/traditionalchinese
+  - encoding/unicode
+  - internal/tag
+  - internal/utf8internal
+  - language
+  - runes
+  - transform
 testImports:
 - name: github.com/onsi/ginkgo
   version: ac3d45ddd7ef5c4d7fc4d037b615a81f4d67981e

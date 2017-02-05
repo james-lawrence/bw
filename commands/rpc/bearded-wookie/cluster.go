@@ -9,9 +9,9 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
-	"github.com/alecthomas/kingpin"
 )
 
 type cluster struct {
@@ -24,7 +24,7 @@ type cluster struct {
 func (t *cluster) configure(parent *kingpin.CmdClause) {
 	parent.Flag("cluster-node-name", "name of the node within the cluster").StringVar(&t.name)
 	parent.Flag("cluster-bootstrap", "addresses to bootstrap the cluster from").TCPListVar(&t.bootstrap)
-	parent.Flag("cluster-bind", "address to bind").Default("127.0.0.1:7946").TCPVar(&t.network)
+	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
 }
 
 func (t *cluster) Join(_ *kingpin.ParseContext, options ...serfdom.ClusterOption) error {
@@ -35,6 +35,7 @@ func (t *cluster) Join(_ *kingpin.ParseContext, options ...serfdom.ClusterOption
 
 	log.Println("connecting to cluster")
 	defer log.Println("connection to cluster complete")
+
 	defaults := []serfdom.ClusterOption{
 		serfdom.COBindInterface(t.network.IP.String()),
 		serfdom.COBindPort(t.network.Port),

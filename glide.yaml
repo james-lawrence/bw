@@ -13,10 +13,14 @@ import:
 - package: github.com/manveru/faker
 - package: github.com/alecthomas/kingpin
 - package: github.com/circonus-labs/circonus-gometrics
-- package: github.com/hashicorp/memberlist
 - package: github.com/pkg/errors
 - package: github.com/gizak/termui
   version: ~2.1.1
+- package: github.com/huin/goupnp
+- package: golang.org/x/net
+  subpackages:
+  - html/charset
+- package: github.com/hashicorp/memberlist
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
