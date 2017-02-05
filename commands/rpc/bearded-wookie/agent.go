@@ -8,8 +8,8 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 
-	"github.com/pkg/errors"
 	"github.com/alecthomas/kingpin"
+	"github.com/pkg/errors"
 )
 
 type agent struct {
@@ -17,15 +17,6 @@ type agent struct {
 	network  *net.TCPAddr
 	server   *rpc.Server
 	listener net.Listener
-}
-
-func (t *agent) configure(parent *kingpin.CmdClause) {
-	t.cluster.configure(parent)
-	parent.Flag("agent-bind", "network interface to listen on").Default("127.0.0.1:2000").TCPVar(&t.network)
-	parent.Action(t.Bind)
-
-	(&dummy{agent: t}).configure(parent.Command("dummy", "dummy deployment").Default())
-	(&packagekit{agent: t}).configure(parent.Command("packagekit", "packagekit deployment"))
 }
 
 func (t *agent) Bind(ctx *kingpin.ParseContext) error {

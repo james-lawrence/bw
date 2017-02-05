@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/x/debug"
 	"bitbucket.org/jatone/bearded-wookie/x/netx"
 
@@ -20,7 +21,7 @@ type core struct {
 	Deployer *deployer
 }
 
-// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.2:7946
+// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946
 // agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
 // agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
 // agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
@@ -45,7 +46,7 @@ func main() {
 		}
 	)
 
-	app := kingpin.New("bearded-wookie", "deployment system")
+	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	system.Agent.configure(app.Command("agent", "agent that manages deployments").Default())
 	system.Deployer.configure(app.Command("deploy", "deploys the application"))
 
@@ -64,14 +65,14 @@ func main() {
 func signals(shutdown context.CancelFunc) {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, os.Kill, os.Interrupt, syscall.SIGUSR2)
+	defer close(signals)
+	defer signal.Stop(signals)
 
 	for s := range signals {
 		switch s {
 		case os.Kill, os.Interrupt:
 			log.Println("shutdown request received")
 			shutdown()
-			signal.Stop(signals)
-			close(signals)
 		case syscall.SIGUSR2:
 			var (
 				err  error
