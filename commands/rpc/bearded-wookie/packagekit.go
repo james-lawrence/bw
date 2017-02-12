@@ -1,11 +1,14 @@
 package main
 
 import (
+	"path/filepath"
+
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 
-	"github.com/pkg/errors"
 	"github.com/alecthomas/kingpin"
+	"github.com/pkg/errors"
 )
 
 type packagekit struct {
@@ -14,7 +17,10 @@ type packagekit struct {
 }
 
 func (t *packagekit) configure(cmd *kingpin.CmdClause) error {
-	cmd.Flag("package-set-dir", "file describing the packages to install").ExistingDirVar(&t.packageDir)
+	user := systemx.MustUser()
+
+	cmd.Flag("package-set-dir", "file describing the packages to install").
+		Default(filepath.Join(user.HomeDir, ".config", "bearded-wookie")).StringVar(&t.packageDir)
 	cmd.Action(t.attach)
 	return nil
 }

@@ -7,10 +7,9 @@ import (
 	"net/rpc"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
-	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/upnp"
 	"bitbucket.org/jatone/bearded-wookie/x/debug"
@@ -27,6 +26,13 @@ type core struct {
 	upnpEnabled bool
 }
 
+type global struct {
+	cluster *cluster
+	ctx     context.Context
+	cancel  context.CancelFunc
+	cleanup *sync.WaitGroup
+}
+
 // agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946
 // agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
 // agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946
@@ -36,32 +42,32 @@ type core struct {
 func main() {
 	var (
 		err             error
-		agentUPNP       *net.TCPAddr
-		clusterUPNP     *net.TCPAddr
-		clusterUPNPUDP  *net.UDPAddr
 		cleanup, cancel = context.WithCancel(context.Background())
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
-		c               = &cluster{
-			network: &net.TCPAddr{
-				IP:   systemip,
-				Port: 7946,
+		global          = &global{
+			cluster: &cluster{
+				network: &net.TCPAddr{
+					IP:   systemip,
+					Port: 7946,
+				},
 			},
+			ctx:     cleanup,
+			cancel:  cancel,
+			cleanup: &sync.WaitGroup{},
 		}
 		system = core{
 			Agent: &agent{
+				global: global,
 				network: &net.TCPAddr{
 					IP:   systemip,
 					Port: 2000,
 				},
-				cluster:     c,
 				listener:    netx.NewNoopListener(),
 				server:      rpc.NewServer(),
 				upnpEnabled: false,
 			},
 			Deployer: &deployer{
-				cluster: c,
-				ctx:     cleanup,
-				cancel:  cancel,
+				global: global,
 			},
 		}
 	)
@@ -75,54 +81,10 @@ func main() {
 	}
 
 	go signals(cancel)
-	clusterOptions := []serfdom.ClusterOption{
-		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
-		serfdom.COLogger(os.Stderr),
-	}
 
-	if system.Agent.upnpEnabled {
-		if agentUPNP, err = upnp.AddTCP(system.Agent.network); err != nil {
-			log.Println("agent upnp failed", err)
-		}
-
-		if clusterUPNP, clusterUPNPUDP, err = setupclusterUPNP(system.Agent.cluster.network); err != nil {
-			log.Println("failed to setup cluster upnp", err)
-			clusterOptions = append(
-				clusterOptions,
-				serfdom.COAdvertiseInterface("73.119.50.204"),
-				serfdom.COAdvertisePort(system.Agent.cluster.network.Port),
-			)
-		} else {
-			clusterOptions = append(
-				clusterOptions,
-				serfdom.COAdvertiseInterface(clusterUPNP.IP.String()),
-				serfdom.COAdvertisePort(clusterUPNP.Port),
-			)
-		}
-	}
-	err = system.Agent.cluster.Join(nil, clusterOptions...)
-
-	if err != nil {
-		log.Println("failed to join cluster", err)
-		cancel()
-	}
-
-	go func() {
-		for _ = range time.Tick(time.Second) {
-			log.Println("cluster size", system.Agent.cluster.memberlist.NumMembers())
-		}
-	}()
 	<-cleanup.Done()
-
-	if system.Agent.upnpEnabled {
-		log.Println("agent upnp", upnp.DeleteTCP(agentUPNP))
-		log.Println("cluster upnp", upnp.DeleteTCP(clusterUPNP))
-		log.Println("cluster upnp udp", upnp.DeleteUDP(clusterUPNPUDP))
-	}
-
-	log.Println("left cluster", system.Agent.cluster.memberlist.Leave(5*time.Second))
-	log.Println("cluster shutdown", system.Agent.cluster.memberlist.Shutdown())
-	log.Println("agent shutdown", system.Agent.listener.Close())
+	log.Println("waiting for systems to shutdown")
+	global.cleanup.Wait()
 }
 
 func setupclusterUPNP(c *net.TCPAddr) (*net.TCPAddr, *net.UDPAddr, error) {
@@ -140,6 +102,15 @@ func setupclusterUPNP(c *net.TCPAddr) (*net.TCPAddr, *net.UDPAddr, error) {
 	}
 
 	return clusterUPNP, clusterUPNPUDP, nil
+}
+
+func setUDPRecvBuf(c *net.UDPConn, size int) {
+	for {
+		if err := c.SetReadBuffer(size); err == nil {
+			break
+		}
+		size = size / 2
+	}
 }
 
 func signals(shutdown context.CancelFunc) {

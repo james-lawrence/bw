@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net"
 	"net/rpc"
@@ -12,18 +11,16 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/ux"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/alecthomas/kingpin"
+	"github.com/hashicorp/memberlist"
 )
 
 type deployer struct {
-	*cluster
-	ctx    context.Context
-	cancel context.CancelFunc
+	*global
 }
 
 func (t *deployer) configure(parent *kingpin.CmdClause) {
-	t.cluster.configure(parent)
+	t.global.cluster.configure(parent)
 	parent.Command("all", "deploy to all nodes within the cluster").Default().Action(t.Deploy)
 }
 
@@ -35,21 +32,20 @@ func (t *deployer) Deploy(ctx *kingpin.ParseContext) error {
 		serfdom.CODelegate(serfdom.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
 	}
 
-	if err = t.cluster.Join(ctx, coptions...); err != nil {
+	if err = t.global.cluster.Join(ctx, coptions...); err != nil {
 		return err
 	}
 
 	deployment.NewDeploy(
-		// ux.Logging(),
-		ux.NewTermui(t.ctx),
+		ux.NewTermui(t.global.cleanup, t.global.ctx),
 		deploy,
 		deployment.DeployerOptionChecker(status{}),
-	).Deploy(t.cluster.memberlist)
+	).Deploy(t.global.cluster.memberlist)
 
 	// complete.
 	t.cancel()
 
-	return nil
+	return err
 }
 
 type status struct{}

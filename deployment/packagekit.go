@@ -23,9 +23,14 @@ func PackagekitOptionPackageFilesDirectory(dir string) PackagekitOption {
 			var (
 				f *os.File
 			)
-			log.Println("processing", path)
+
+			if os.IsNotExist(err) {
+				log.Println("package directory does not exist")
+				return nil
+			}
+
 			if err != nil {
-				return err
+				return errors.Wrap(err, "error while processing directory")
 			}
 
 			// skip sub directories.
@@ -34,7 +39,7 @@ func PackagekitOptionPackageFilesDirectory(dir string) PackagekitOption {
 			}
 
 			if f, err = os.Open(path); err != nil {
-				return err
+				return errors.Wrap(err, "failed to open file")
 			}
 
 			scanner := bufio.NewScanner(f)
@@ -90,6 +95,9 @@ func (t pkgkit) deploy(completed chan error) {
 	)
 	log.Println("deploying")
 	defer log.Println("deploy complete")
+	if len(t.packages) == 0 {
+		goto done
+	}
 
 	if tx, err = t.client.CreateTransaction(); err != nil {
 		err = errors.Wrap(err, "failed to created transaction")

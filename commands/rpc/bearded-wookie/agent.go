@@ -4,14 +4,18 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 	"strconv"
+	"time"
+
+	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 )
 
 type agent struct {
-	*cluster
+	*global
 	network     *net.TCPAddr
 	server      *rpc.Server
 	listener    net.Listener
@@ -38,7 +42,24 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
 	}
 
+	clusterOptions := []serfdom.ClusterOption{
+		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
+		serfdom.COLogger(os.Stderr),
+	}
+
+	if err = t.global.cluster.Join(nil, clusterOptions...); err != nil {
+		return errors.Wrap(err, "failed to join cluster")
+	}
+
 	go t.server.Accept(t.listener)
 
+	t.global.cleanup.Add(1)
+	go func() {
+		defer t.global.cleanup.Done()
+		<-t.global.ctx.Done()
+		log.Println("left cluster", t.global.cluster.memberlist.Leave(5*time.Second))
+		log.Println("cluster shutdown", t.global.cluster.memberlist.Shutdown())
+		log.Println("agent shutdown", t.listener.Close())
+	}()
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/user"
 )
 
 // HostnameOrLocalhost returns the hostname, otherwise fallsback to localhost.
@@ -27,6 +28,17 @@ func HostnameOrDefault(fallback string) string {
 	return hostname
 }
 
+// MustUser ...
+func MustUser() *user.User {
+	u, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	return u
+}
+
+// HostIP ...
 func HostIP(host string) net.IP {
 	ip, err := net.ResolveIPAddr("ip", host)
 	if err != nil {

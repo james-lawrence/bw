@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"sync"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/deployment"
@@ -13,10 +14,13 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-func NewTermui(ctx context.Context) *deployment.Events {
+func NewTermui(wg *sync.WaitGroup, ctx context.Context) *deployment.Events {
 	events := deployment.NewEvents()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
+
 		var (
 			storage = state{
 				Peers: map[*memberlist.Node]deployment.Status{},
