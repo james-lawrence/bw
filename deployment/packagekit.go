@@ -110,11 +110,6 @@ func (t pkgkit) deploy(completed chan error) {
 		goto done
 	}
 
-	if tx, err = t.client.CreateTransaction(); err != nil {
-		err = errors.Wrap(err, "failed to created transaction")
-		goto done
-	}
-
 	log.Println("installing packages")
 	if err = tx.InstallPackages(t.packages...); err != nil {
 		err = errors.Wrap(err, "tx.IntallPackages failed")
@@ -122,9 +117,5 @@ func (t pkgkit) deploy(completed chan error) {
 	}
 
 done:
-	if err != nil {
-		tx.Cancel()
-		log.Println(err)
-	}
-	completed <- err
+	completed <- packagekit.MaybeCancel(tx, err)
 }

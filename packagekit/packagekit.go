@@ -76,6 +76,8 @@ type Transaction interface {
 	// example: htop;2.0.2-1;x86_64;
 	InstallPackages(packageIDs ...string) error
 
+	// InstallLocalFile(paths ...string) error
+
 	// Download the packages
 	//
 	// storeInCache - Whether we should store the downloaded packages in the cache.
@@ -104,6 +106,15 @@ const signalTransactionError = "org.freedesktop.PackageKit.Transaction.ErrorCode
 const signalTransactionItemProgress = "org.freedesktop.PackageKit.Transaction.ItemProgress"
 const signalTransactionStatus = "org.freedesktop.PackageKit.Transaction.Status"
 const signalTransactionDestroy = "org.freedesktop.PackageKit.Transaction.Destroy"
+
+func MaybeCancel(tx Transaction, err error) error {
+	if err != nil {
+		tx.Cancel()
+		return err
+	}
+
+	return nil
+}
 
 // Package Provides basic Information about a package.
 type Package struct {
