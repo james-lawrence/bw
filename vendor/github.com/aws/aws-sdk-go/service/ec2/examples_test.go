@@ -15,6 +15,42 @@ import (
 var _ time.Duration
 var _ bytes.Buffer
 
+func ExampleEC2_AcceptReservedInstancesExchangeQuote() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.AcceptReservedInstancesExchangeQuoteInput{
+		ReservedInstanceIds: []*string{ // Required
+			aws.String("String"), // Required
+			// More values...
+		},
+		DryRun: aws.Bool(true),
+		TargetConfigurations: []*ec2.TargetConfigurationRequest{
+			{ // Required
+				OfferingId:    aws.String("String"), // Required
+				InstanceCount: aws.Int64(1),
+			},
+			// More values...
+		},
+	}
+	resp, err := svc.AcceptReservedInstancesExchangeQuote(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
 func ExampleEC2_AcceptVpcPeeringConnection() {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -84,6 +120,36 @@ func ExampleEC2_AllocateHosts() {
 		ClientToken:      aws.String("String"),
 	}
 	resp, err := svc.AllocateHosts(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_AssignIpv6Addresses() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.AssignIpv6AddressesInput{
+		NetworkInterfaceId: aws.String("String"), // Required
+		Ipv6AddressCount:   aws.Int64(1),
+		Ipv6Addresses: []*string{
+			aws.String("String"), // Required
+			// More values...
+		},
+	}
+	resp, err := svc.AssignIpv6Addresses(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -200,6 +266,58 @@ func ExampleEC2_AssociateRouteTable() {
 		DryRun:       aws.Bool(true),
 	}
 	resp, err := svc.AssociateRouteTable(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_AssociateSubnetCidrBlock() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.AssociateSubnetCidrBlockInput{
+		Ipv6CidrBlock: aws.String("String"), // Required
+		SubnetId:      aws.String("String"), // Required
+	}
+	resp, err := svc.AssociateSubnetCidrBlock(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_AssociateVpcCidrBlock() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.AssociateVpcCidrBlockInput{
+		VpcId: aws.String("String"), // Required
+		AmazonProvidedIpv6CidrBlock: aws.Bool(true),
+	}
+	resp, err := svc.AssociateVpcCidrBlock(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -377,6 +495,12 @@ func ExampleEC2_AuthorizeSecurityGroupEgress() {
 					},
 					// More values...
 				},
+				Ipv6Ranges: []*ec2.Ipv6Range{
+					{ // Required
+						CidrIpv6: aws.String("String"),
+					},
+					// More values...
+				},
 				PrefixListIds: []*ec2.PrefixListId{
 					{ // Required
 						PrefixListId: aws.String("String"),
@@ -438,6 +562,12 @@ func ExampleEC2_AuthorizeSecurityGroupIngress() {
 				IpRanges: []*ec2.IpRange{
 					{ // Required
 						CidrIp: aws.String("String"),
+					},
+					// More values...
+				},
+				Ipv6Ranges: []*ec2.Ipv6Range{
+					{ // Required
+						CidrIpv6: aws.String("String"),
 					},
 					// More values...
 				},
@@ -858,6 +988,33 @@ func ExampleEC2_CreateDhcpOptions() {
 	fmt.Println(resp)
 }
 
+func ExampleEC2_CreateEgressOnlyInternetGateway() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.CreateEgressOnlyInternetGatewayInput{
+		VpcId:       aws.String("String"), // Required
+		ClientToken: aws.String("String"),
+		DryRun:      aws.Bool(true),
+	}
+	resp, err := svc.CreateEgressOnlyInternetGateway(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
 func ExampleEC2_CreateFlowLogs() {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -1083,17 +1240,18 @@ func ExampleEC2_CreateNetworkAclEntry() {
 	svc := ec2.New(sess)
 
 	params := &ec2.CreateNetworkAclEntryInput{
-		CidrBlock:    aws.String("String"),     // Required
 		Egress:       aws.Bool(true),           // Required
 		NetworkAclId: aws.String("String"),     // Required
 		Protocol:     aws.String("String"),     // Required
 		RuleAction:   aws.String("RuleAction"), // Required
 		RuleNumber:   aws.Int64(1),             // Required
+		CidrBlock:    aws.String("String"),
 		DryRun:       aws.Bool(true),
 		IcmpTypeCode: &ec2.IcmpTypeCode{
 			Code: aws.Int64(1),
 			Type: aws.Int64(1),
 		},
+		Ipv6CidrBlock: aws.String("String"),
 		PortRange: &ec2.PortRange{
 			From: aws.Int64(1),
 			To:   aws.Int64(1),
@@ -1127,6 +1285,13 @@ func ExampleEC2_CreateNetworkInterface() {
 		DryRun:      aws.Bool(true),
 		Groups: []*string{
 			aws.String("String"), // Required
+			// More values...
+		},
+		Ipv6AddressCount: aws.Int64(1),
+		Ipv6Addresses: []*ec2.InstanceIpv6Address{
+			{ // Required
+				Ipv6Address: aws.String("String"),
+			},
 			// More values...
 		},
 		PrivateIpAddress: aws.String("String"),
@@ -1224,14 +1389,16 @@ func ExampleEC2_CreateRoute() {
 	svc := ec2.New(sess)
 
 	params := &ec2.CreateRouteInput{
-		DestinationCidrBlock:   aws.String("String"), // Required
-		RouteTableId:           aws.String("String"), // Required
-		DryRun:                 aws.Bool(true),
-		GatewayId:              aws.String("String"),
-		InstanceId:             aws.String("String"),
-		NatGatewayId:           aws.String("String"),
-		NetworkInterfaceId:     aws.String("String"),
-		VpcPeeringConnectionId: aws.String("String"),
+		RouteTableId:             aws.String("String"), // Required
+		DestinationCidrBlock:     aws.String("String"),
+		DestinationIpv6CidrBlock: aws.String("String"),
+		DryRun: aws.Bool(true),
+		EgressOnlyInternetGatewayId: aws.String("String"),
+		GatewayId:                   aws.String("String"),
+		InstanceId:                  aws.String("String"),
+		NatGatewayId:                aws.String("String"),
+		NetworkInterfaceId:          aws.String("String"),
+		VpcPeeringConnectionId:      aws.String("String"),
 	}
 	resp, err := svc.CreateRoute(params)
 
@@ -1368,6 +1535,7 @@ func ExampleEC2_CreateSubnet() {
 		VpcId:            aws.String("String"), // Required
 		AvailabilityZone: aws.String("String"),
 		DryRun:           aws.Bool(true),
+		Ipv6CidrBlock:    aws.String("String"),
 	}
 	resp, err := svc.CreateSubnet(params)
 
@@ -1460,7 +1628,8 @@ func ExampleEC2_CreateVpc() {
 	svc := ec2.New(sess)
 
 	params := &ec2.CreateVpcInput{
-		CidrBlock:       aws.String("String"), // Required
+		CidrBlock:                   aws.String("String"), // Required
+		AmazonProvidedIpv6CidrBlock: aws.Bool(true),
 		DryRun:          aws.Bool(true),
 		InstanceTenancy: aws.String("Tenancy"),
 	}
@@ -1662,6 +1831,32 @@ func ExampleEC2_DeleteDhcpOptions() {
 		DryRun:        aws.Bool(true),
 	}
 	resp, err := svc.DeleteDhcpOptions(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_DeleteEgressOnlyInternetGateway() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DeleteEgressOnlyInternetGatewayInput{
+		EgressOnlyInternetGatewayId: aws.String("EgressOnlyInternetGatewayId"), // Required
+		DryRun: aws.Bool(true),
+	}
+	resp, err := svc.DeleteEgressOnlyInternetGateway(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -1895,9 +2090,10 @@ func ExampleEC2_DeleteRoute() {
 	svc := ec2.New(sess)
 
 	params := &ec2.DeleteRouteInput{
-		DestinationCidrBlock: aws.String("String"), // Required
-		RouteTableId:         aws.String("String"), // Required
-		DryRun:               aws.Bool(true),
+		RouteTableId:             aws.String("String"), // Required
+		DestinationCidrBlock:     aws.String("String"),
+		DestinationIpv6CidrBlock: aws.String("String"),
+		DryRun: aws.Bool(true),
 	}
 	resp, err := svc.DeleteRoute(params)
 
@@ -2495,16 +2691,6 @@ func ExampleEC2_DescribeConversionTasks() {
 			// More values...
 		},
 		DryRun: aws.Bool(true),
-		Filters: []*ec2.Filter{
-			{ // Required
-				Name: aws.String("String"),
-				Values: []*string{
-					aws.String("String"), // Required
-					// More values...
-				},
-			},
-			// More values...
-		},
 	}
 	resp, err := svc.DescribeConversionTasks(params)
 
@@ -2597,6 +2783,37 @@ func ExampleEC2_DescribeDhcpOptions() {
 	fmt.Println(resp)
 }
 
+func ExampleEC2_DescribeEgressOnlyInternetGateways() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DescribeEgressOnlyInternetGatewaysInput{
+		DryRun: aws.Bool(true),
+		EgressOnlyInternetGatewayIds: []*string{
+			aws.String("EgressOnlyInternetGatewayId"), // Required
+			// More values...
+		},
+		MaxResults: aws.Int64(1),
+		NextToken:  aws.String("String"),
+	}
+	resp, err := svc.DescribeEgressOnlyInternetGateways(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
 func ExampleEC2_DescribeExportTasks() {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -2653,6 +2870,85 @@ func ExampleEC2_DescribeFlowLogs() {
 		NextToken:  aws.String("String"),
 	}
 	resp, err := svc.DescribeFlowLogs(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_DescribeHostReservationOfferings() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DescribeHostReservationOfferingsInput{
+		Filter: []*ec2.Filter{
+			{ // Required
+				Name: aws.String("String"),
+				Values: []*string{
+					aws.String("String"), // Required
+					// More values...
+				},
+			},
+			// More values...
+		},
+		MaxDuration: aws.Int64(1),
+		MaxResults:  aws.Int64(1),
+		MinDuration: aws.Int64(1),
+		NextToken:   aws.String("String"),
+		OfferingId:  aws.String("String"),
+	}
+	resp, err := svc.DescribeHostReservationOfferings(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_DescribeHostReservations() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DescribeHostReservationsInput{
+		Filter: []*ec2.Filter{
+			{ // Required
+				Name: aws.String("String"),
+				Values: []*string{
+					aws.String("String"), // Required
+					// More values...
+				},
+			},
+			// More values...
+		},
+		HostReservationIdSet: []*string{
+			aws.String("String"), // Required
+			// More values...
+		},
+		MaxResults: aws.Int64(1),
+		NextToken:  aws.String("String"),
+	}
+	resp, err := svc.DescribeHostReservations(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -3426,7 +3722,8 @@ func ExampleEC2_DescribeReservedInstances() {
 			},
 			// More values...
 		},
-		OfferingType: aws.String("OfferingTypeValues"),
+		OfferingClass: aws.String("OfferingClassType"),
+		OfferingType:  aws.String("OfferingTypeValues"),
 		ReservedInstancesIds: []*string{
 			aws.String("String"), // Required
 			// More values...
@@ -3550,6 +3847,7 @@ func ExampleEC2_DescribeReservedInstancesOfferings() {
 		MaxResults:         aws.Int64(1),
 		MinDuration:        aws.Int64(1),
 		NextToken:          aws.String("String"),
+		OfferingClass:      aws.String("OfferingClassType"),
 		OfferingType:       aws.String("OfferingTypeValues"),
 		ProductDescription: aws.String("RIProductDescription"),
 		ReservedInstancesOfferingIds: []*string{
@@ -4856,6 +5154,56 @@ func ExampleEC2_DisassociateRouteTable() {
 	fmt.Println(resp)
 }
 
+func ExampleEC2_DisassociateSubnetCidrBlock() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DisassociateSubnetCidrBlockInput{
+		AssociationId: aws.String("String"), // Required
+	}
+	resp, err := svc.DisassociateSubnetCidrBlock(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_DisassociateVpcCidrBlock() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.DisassociateVpcCidrBlockInput{
+		AssociationId: aws.String("String"), // Required
+	}
+	resp, err := svc.DisassociateVpcCidrBlock(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
 func ExampleEC2_EnableVgwRoutePropagation() {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -5012,6 +5360,35 @@ func ExampleEC2_GetConsoleScreenshot() {
 	fmt.Println(resp)
 }
 
+func ExampleEC2_GetHostReservationPurchasePreview() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.GetHostReservationPurchasePreviewInput{
+		HostIdSet: []*string{ // Required
+			aws.String("String"), // Required
+			// More values...
+		},
+		OfferingId: aws.String("String"), // Required
+	}
+	resp, err := svc.GetHostReservationPurchasePreview(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
 func ExampleEC2_GetPasswordData() {
 	sess, err := session.NewSession()
 	if err != nil {
@@ -5026,6 +5403,42 @@ func ExampleEC2_GetPasswordData() {
 		DryRun:     aws.Bool(true),
 	}
 	resp, err := svc.GetPasswordData(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_GetReservedInstancesExchangeQuote() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.GetReservedInstancesExchangeQuoteInput{
+		ReservedInstanceIds: []*string{ // Required
+			aws.String("String"), // Required
+			// More values...
+		},
+		DryRun: aws.Bool(true),
+		TargetConfigurations: []*ec2.TargetConfigurationRequest{
+			{ // Required
+				OfferingId:    aws.String("String"), // Required
+				InstanceCount: aws.Int64(1),
+			},
+			// More values...
+		},
+	}
+	resp, err := svc.GetReservedInstancesExchangeQuote(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -5567,6 +5980,7 @@ func ExampleEC2_ModifyReservedInstances() {
 				InstanceCount:    aws.Int64(1),
 				InstanceType:     aws.String("InstanceType"),
 				Platform:         aws.String("String"),
+				Scope:            aws.String("scope"),
 			},
 			// More values...
 		},
@@ -5675,6 +6089,9 @@ func ExampleEC2_ModifySubnetAttribute() {
 
 	params := &ec2.ModifySubnetAttributeInput{
 		SubnetId: aws.String("String"), // Required
+		AssignIpv6AddressOnCreation: &ec2.AttributeBooleanValue{
+			Value: aws.Bool(true),
+		},
 		MapPublicIpOnLaunch: &ec2.AttributeBooleanValue{
 			Value: aws.Bool(true),
 		},
@@ -5867,6 +6284,38 @@ func ExampleEC2_MoveAddressToVpc() {
 		DryRun:   aws.Bool(true),
 	}
 	resp, err := svc.MoveAddressToVpc(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_PurchaseHostReservation() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.PurchaseHostReservationInput{
+		HostIdSet: []*string{ // Required
+			aws.String("String"), // Required
+			// More values...
+		},
+		OfferingId:   aws.String("String"), // Required
+		ClientToken:  aws.String("String"),
+		CurrencyCode: aws.String("CurrencyCodeValues"),
+		LimitPrice:   aws.String("String"),
+	}
+	resp, err := svc.PurchaseHostReservation(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -6141,17 +6590,18 @@ func ExampleEC2_ReplaceNetworkAclEntry() {
 	svc := ec2.New(sess)
 
 	params := &ec2.ReplaceNetworkAclEntryInput{
-		CidrBlock:    aws.String("String"),     // Required
 		Egress:       aws.Bool(true),           // Required
 		NetworkAclId: aws.String("String"),     // Required
 		Protocol:     aws.String("String"),     // Required
 		RuleAction:   aws.String("RuleAction"), // Required
 		RuleNumber:   aws.Int64(1),             // Required
+		CidrBlock:    aws.String("String"),
 		DryRun:       aws.Bool(true),
 		IcmpTypeCode: &ec2.IcmpTypeCode{
 			Code: aws.Int64(1),
 			Type: aws.Int64(1),
 		},
+		Ipv6CidrBlock: aws.String("String"),
 		PortRange: &ec2.PortRange{
 			From: aws.Int64(1),
 			To:   aws.Int64(1),
@@ -6180,14 +6630,16 @@ func ExampleEC2_ReplaceRoute() {
 	svc := ec2.New(sess)
 
 	params := &ec2.ReplaceRouteInput{
-		DestinationCidrBlock:   aws.String("String"), // Required
-		RouteTableId:           aws.String("String"), // Required
-		DryRun:                 aws.Bool(true),
-		GatewayId:              aws.String("String"),
-		InstanceId:             aws.String("String"),
-		NatGatewayId:           aws.String("String"),
-		NetworkInterfaceId:     aws.String("String"),
-		VpcPeeringConnectionId: aws.String("String"),
+		RouteTableId:             aws.String("String"), // Required
+		DestinationCidrBlock:     aws.String("String"),
+		DestinationIpv6CidrBlock: aws.String("String"),
+		DryRun: aws.Bool(true),
+		EgressOnlyInternetGatewayId: aws.String("String"),
+		GatewayId:                   aws.String("String"),
+		InstanceId:                  aws.String("String"),
+		NatGatewayId:                aws.String("String"),
+		NetworkInterfaceId:          aws.String("String"),
+		VpcPeeringConnectionId:      aws.String("String"),
 	}
 	resp, err := svc.ReplaceRoute(params)
 
@@ -6319,6 +6771,13 @@ func ExampleEC2_RequestSpotFleet() {
 								aws.String("String"), // Required
 								// More values...
 							},
+							Ipv6AddressCount: aws.Int64(1),
+							Ipv6Addresses: []*ec2.InstanceIpv6Address{
+								{ // Required
+									Ipv6Address: aws.String("String"),
+								},
+								// More values...
+							},
 							NetworkInterfaceId: aws.String("String"),
 							PrivateIpAddress:   aws.String("String"),
 							PrivateIpAddresses: []*ec2.PrivateIpAddressSpecification{
@@ -6336,6 +6795,7 @@ func ExampleEC2_RequestSpotFleet() {
 					Placement: &ec2.SpotPlacement{
 						AvailabilityZone: aws.String("String"),
 						GroupName:        aws.String("String"),
+						Tenancy:          aws.String("Tenancy"),
 					},
 					RamdiskId: aws.String("String"),
 					SecurityGroups: []*ec2.GroupIdentifier{
@@ -6358,6 +6818,7 @@ func ExampleEC2_RequestSpotFleet() {
 			ClientToken:                      aws.String("String"),
 			ExcessCapacityTerminationPolicy:  aws.String("ExcessCapacityTerminationPolicy"),
 			FulfilledCapacity:                aws.Float64(1.0),
+			ReplaceUnhealthyInstances:        aws.Bool(true),
 			TerminateInstancesWithExpiration: aws.Bool(true),
 			Type:       aws.String("FleetType"),
 			ValidFrom:  aws.Time(time.Now()),
@@ -6435,6 +6896,13 @@ func ExampleEC2_RequestSpotInstances() {
 						aws.String("String"), // Required
 						// More values...
 					},
+					Ipv6AddressCount: aws.Int64(1),
+					Ipv6Addresses: []*ec2.InstanceIpv6Address{
+						{ // Required
+							Ipv6Address: aws.String("String"),
+						},
+						// More values...
+					},
 					NetworkInterfaceId: aws.String("String"),
 					PrivateIpAddress:   aws.String("String"),
 					PrivateIpAddresses: []*ec2.PrivateIpAddressSpecification{
@@ -6452,6 +6920,7 @@ func ExampleEC2_RequestSpotInstances() {
 			Placement: &ec2.SpotPlacement{
 				AvailabilityZone: aws.String("String"),
 				GroupName:        aws.String("String"),
+				Tenancy:          aws.String("Tenancy"),
 			},
 			RamdiskId: aws.String("String"),
 			SecurityGroupIds: []*string{
@@ -6640,6 +7109,12 @@ func ExampleEC2_RevokeSecurityGroupEgress() {
 					},
 					// More values...
 				},
+				Ipv6Ranges: []*ec2.Ipv6Range{
+					{ // Required
+						CidrIpv6: aws.String("String"),
+					},
+					// More values...
+				},
 				PrefixListIds: []*ec2.PrefixListId{
 					{ // Required
 						PrefixListId: aws.String("String"),
@@ -6701,6 +7176,12 @@ func ExampleEC2_RevokeSecurityGroupIngress() {
 				IpRanges: []*ec2.IpRange{
 					{ // Required
 						CidrIp: aws.String("String"),
+					},
+					// More values...
+				},
+				Ipv6Ranges: []*ec2.Ipv6Range{
+					{ // Required
+						CidrIpv6: aws.String("String"),
 					},
 					// More values...
 				},
@@ -6783,8 +7264,15 @@ func ExampleEC2_RunInstances() {
 		},
 		InstanceInitiatedShutdownBehavior: aws.String("ShutdownBehavior"),
 		InstanceType:                      aws.String("InstanceType"),
-		KernelId:                          aws.String("String"),
-		KeyName:                           aws.String("String"),
+		Ipv6AddressCount:                  aws.Int64(1),
+		Ipv6Addresses: []*ec2.InstanceIpv6Address{
+			{ // Required
+				Ipv6Address: aws.String("String"),
+			},
+			// More values...
+		},
+		KernelId: aws.String("String"),
+		KeyName:  aws.String("String"),
 		Monitoring: &ec2.RunInstancesMonitoringEnabled{
 			Enabled: aws.Bool(true), // Required
 		},
@@ -6796,6 +7284,13 @@ func ExampleEC2_RunInstances() {
 				DeviceIndex:              aws.Int64(1),
 				Groups: []*string{
 					aws.String("String"), // Required
+					// More values...
+				},
+				Ipv6AddressCount: aws.Int64(1),
+				Ipv6Addresses: []*ec2.InstanceIpv6Address{
+					{ // Required
+						Ipv6Address: aws.String("String"),
+					},
 					// More values...
 				},
 				NetworkInterfaceId: aws.String("String"),
@@ -6892,6 +7387,13 @@ func ExampleEC2_RunScheduledInstances() {
 					DeviceIndex:              aws.Int64(1),
 					Groups: []*string{
 						aws.String("String"), // Required
+						// More values...
+					},
+					Ipv6AddressCount: aws.Int64(1),
+					Ipv6Addresses: []*ec2.ScheduledInstancesIpv6Address{
+						{ // Required
+							Ipv6Address: aws.String("Ipv6Address"),
+						},
 						// More values...
 					},
 					NetworkInterfaceId: aws.String("String"),
@@ -7015,6 +7517,35 @@ func ExampleEC2_TerminateInstances() {
 		DryRun: aws.Bool(true),
 	}
 	resp, err := svc.TerminateInstances(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleEC2_UnassignIpv6Addresses() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ec2.New(sess)
+
+	params := &ec2.UnassignIpv6AddressesInput{
+		Ipv6Addresses: []*string{ // Required
+			aws.String("String"), // Required
+			// More values...
+		},
+		NetworkInterfaceId: aws.String("String"), // Required
+	}
+	resp, err := svc.UnassignIpv6Addresses(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and

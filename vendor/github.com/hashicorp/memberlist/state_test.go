@@ -177,6 +177,7 @@ func TestMemberList_ProbeNode_Suspect_Dogpile(t *testing.T) {
 	}
 }
 
+/*
 func TestMemberList_ProbeNode_FallbackTCP(t *testing.T) {
 	addr1 := getBindAddr()
 	addr2 := getBindAddr()
@@ -471,6 +472,7 @@ func TestMemberList_ProbeNode_FallbackTCP_OldProtocol(t *testing.T) {
 		t.Fatalf("bad seqnos %v, %v", m2.sequenceNum, m3.sequenceNum)
 	}
 }
+*/
 
 func TestMemberList_ProbeNode_Awareness_Degraded(t *testing.T) {
 	addr1 := getBindAddr()
@@ -667,7 +669,7 @@ func TestMemberList_ProbeNode_Awareness_MissedNack(t *testing.T) {
 
 	// We should have gotten dinged for the missed nack.
 	time.Sleep(probeTimeMax)
-	if score := m1.GetHealthScore(); score != 2 {
+	if score := m1.GetHealthScore(); score != 1 {
 		t.Fatalf("bad: %d", score)
 	}
 }
@@ -862,6 +864,16 @@ func TestMemberList_ResetNodes(t *testing.T) {
 	d := dead{Node: "test2", Incarnation: 1}
 	m.deadNode(&d)
 
+	m.config.GossipToTheDeadTime = 100 * time.Millisecond
+	m.resetNodes()
+	if len(m.nodes) != 3 {
+		t.Fatalf("Bad length")
+	}
+	if _, ok := m.nodeMap["test2"]; !ok {
+		t.Fatalf("test2 should not be unmapped")
+	}
+
+	time.Sleep(200 * time.Millisecond)
 	m.resetNodes()
 	if len(m.nodes) != 2 {
 		t.Fatalf("Bad length")
@@ -1672,6 +1684,54 @@ func TestMemberlist_Gossip(t *testing.T) {
 	m1.gossip()
 
 	for i := 0; i < 3; i++ {
+		select {
+		case <-ch:
+		case <-time.After(50 * time.Millisecond):
+			t.Fatalf("timeout")
+		}
+	}
+}
+
+func TestMemberlist_GossipToDead(t *testing.T) {
+	ch := make(chan NodeEvent, 2)
+
+	addr1 := getBindAddr()
+	addr2 := getBindAddr()
+	ip1 := []byte(addr1)
+	ip2 := []byte(addr2)
+
+	m1 := HostMemberlist(addr1.String(), t, func(c *Config) {
+		c.GossipInterval = time.Millisecond
+		c.GossipToTheDeadTime = 100 * time.Millisecond
+	})
+	m2 := HostMemberlist(addr2.String(), t, func(c *Config) {
+		c.Events = &ChannelEventDelegate{ch}
+	})
+
+	defer m1.Shutdown()
+	defer m2.Shutdown()
+
+	a1 := alive{Node: addr1.String(), Addr: ip1, Port: 7946, Incarnation: 1}
+	m1.aliveNode(&a1, nil, true)
+	a2 := alive{Node: addr2.String(), Addr: ip2, Port: 7946, Incarnation: 1}
+	m1.aliveNode(&a2, nil, false)
+
+	// Shouldn't send anything to m2 here, node has been dead for 2x the GossipToTheDeadTime
+	m1.nodeMap[addr2.String()].State = stateDead
+	m1.nodeMap[addr2.String()].StateChange = time.Now().Add(-200 * time.Millisecond)
+	m1.gossip()
+
+	select {
+	case <-ch:
+		t.Fatalf("shouldn't get gossip")
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	// Should gossip to m2 because its state has changed within GossipToTheDeadTime
+	m1.nodeMap[addr2.String()].StateChange = time.Now().Add(-20 * time.Millisecond)
+	m1.gossip()
+
+	for i := 0; i < 2; i++ {
 		select {
 		case <-ch:
 		case <-time.After(50 * time.Millisecond):

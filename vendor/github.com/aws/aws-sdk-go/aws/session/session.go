@@ -1,14 +1,17 @@
 package session
 
 import (
+	"fmt"
+
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/corehandlers"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/private/endpoints"
 )
 
 // A Session provides a central location to create service clients from and
@@ -31,17 +34,17 @@ type Session struct {
 // If the AWS_SDK_LOAD_CONFIG environment is set to a truthy value, the New
 // method could now encounter an error when loading the configuration. When
 // The environment variable is set, and an error occurs, New will return a
-// session that will fail all requests reporting the error that occured while
+// session that will fail all requests reporting the error that occurred while
 // loading the session. Use NewSession to get the error when creating the
 // session.
 //
 // If the AWS_SDK_LOAD_CONFIG environment variable is set to a truthy value
 // the shared config file (~/.aws/config) will also be loaded, in addition to
-// the shared credentials file (~/.aws/config). Values set in both the
+// the shared credentials file (~/.aws/credentials). Values set in both the
 // shared config, and shared credentials will be taken from the shared
 // credentials file.
 //
-// Deprecated: Use NewSession functiions to create sessions instead. NewSession
+// Deprecated: Use NewSession functions to create sessions instead. NewSession
 // has the same functionality as New except an error can be returned when the
 // func is called instead of waiting to receive an error until a request is made.
 func New(cfgs ...*aws.Config) *Session {
@@ -56,7 +59,7 @@ func New(cfgs ...*aws.Config) *Session {
 			// needs to be replicated if an error occurs while creating
 			// the session.
 			msg := "failed to create session with AWS_SDK_LOAD_CONFIG enabled. " +
-				"Use session.NewSession to handle errors occuring during session creation."
+				"Use session.NewSession to handle errors occurring during session creation."
 
 			// Session creation failed, need to report the error and prevent
 			// any requests from succeeding.
@@ -80,13 +83,13 @@ func New(cfgs ...*aws.Config) *Session {
 //
 // If the AWS_SDK_LOAD_CONFIG environment variable is set to a truthy value
 // the shared config file (~/.aws/config) will also be loaded in addition to
-// the shared credentials file (~/.aws/config). Values set in both the
+// the shared credentials file (~/.aws/credentials). Values set in both the
 // shared config, and shared credentials will be taken from the shared
 // credentials file. Enabling the Shared Config will also allow the Session
 // to be built with retrieving credentials with AssumeRole set in the config.
 //
 // See the NewSessionWithOptions func for information on how to override or
-// control through code how the Session will be created. Such as specifing the
+// control through code how the Session will be created. Such as specifying the
 // config profile, and controlling if shared config is enabled or not.
 func NewSession(cfgs ...*aws.Config) (*Session, error) {
 	envCfg := loadEnvConfig()
@@ -121,7 +124,7 @@ type Options struct {
 	// Provides config values for the SDK to use when creating service clients
 	// and making API requests to services. Any value set in with this field
 	// will override the associated value provided by the SDK defaults,
-	// environment or config files where relevent.
+	// environment or config files where relevant.
 	//
 	// If not set, configuration values from from SDK defaults, environment,
 	// config will be used.
@@ -152,7 +155,7 @@ type Options struct {
 //
 // If the AWS_SDK_LOAD_CONFIG environment variable is set to a truthy value
 // the shared config file (~/.aws/config) will also be loaded in addition to
-// the shared credentials file (~/.aws/config). Values set in both the
+// the shared credentials file (~/.aws/credentials). Values set in both the
 // shared config, and shared credentials will be taken from the shared
 // credentials file. Enabling the Shared Config will also allow the Session
 // to be built with retrieving credentials with AssumeRole set in the config.
@@ -176,7 +179,12 @@ type Options struct {
 //         SharedConfigState: SharedConfigEnable,
 //     })
 func NewSessionWithOptions(opts Options) (*Session, error) {
-	envCfg := loadEnvConfig()
+	var envCfg envConfig
+	if opts.SharedConfigState == SharedConfigEnable {
+		envCfg = loadSharedEnvConfig()
+	} else {
+		envCfg = loadEnvConfig()
+	}
 
 	if len(opts.Profile) > 0 {
 		envCfg.Profile = opts.Profile
@@ -214,6 +222,11 @@ func oldNewSession(cfgs ...*aws.Config) *Session {
 	// Apply the passed in configs so the configuration can be applied to the
 	// default credential chain
 	cfg.MergeIn(cfgs...)
+	if cfg.EndpointResolver == nil {
+		// An endpoint resolver is required for a session to be able to provide
+		// endpoints for service client configurations.
+		cfg.EndpointResolver = endpoints.DefaultResolver()
+	}
 	cfg.Credentials = defaults.CredChain(cfg, handlers)
 
 	// Reapply any passed in configs to override credentials if set
@@ -310,12 +323,32 @@ func mergeConfigSrcs(cfg, userCfg *aws.Config, envCfg envConfig, sharedCfg share
 				sharedCfg.Creds,
 			)
 		} else {
-			// Fallback to default credentials provider
-			cfg.Credentials = credentials.NewCredentials(
-				defaults.RemoteCredProvider(*cfg, handlers),
-			)
+			// Fallback to default credentials provider, include mock errors
+			// for the credential chain so user can identify why credentials
+			// failed to be retrieved.
+			cfg.Credentials = credentials.NewCredentials(&credentials.ChainProvider{
+				VerboseErrors: aws.BoolValue(cfg.CredentialsChainVerboseErrors),
+				Providers: []credentials.Provider{
+					&credProviderError{Err: awserr.New("EnvAccessKeyNotFound", "failed to find credentials in the environment.", nil)},
+					&credProviderError{Err: awserr.New("SharedCredsLoad", fmt.Sprintf("failed to load profile, %s.", envCfg.Profile), nil)},
+					defaults.RemoteCredProvider(*cfg, handlers),
+				},
+			})
 		}
 	}
+}
+
+type credProviderError struct {
+	Err error
+}
+
+var emptyCreds = credentials.Value{}
+
+func (c credProviderError) Retrieve() (credentials.Value, error) {
+	return credentials.Value{}, c.Err
+}
+func (c credProviderError) IsExpired() bool {
+	return true
 }
 
 func initHandlers(s *Session) {
@@ -347,15 +380,39 @@ func (s *Session) Copy(cfgs ...*aws.Config) *Session {
 // configure the service client instances. Passing the Session to the service
 // client's constructor (New) will use this method to configure the client.
 func (s *Session) ClientConfig(serviceName string, cfgs ...*aws.Config) client.Config {
+	// Backwards compatibility, the error will be eaten if user calls ClientConfig
+	// directly. All SDK services will use ClientconfigWithError.
+	cfg, _ := s.clientConfigWithErr(serviceName, cfgs...)
+
+	return cfg
+}
+
+func (s *Session) clientConfigWithErr(serviceName string, cfgs ...*aws.Config) (client.Config, error) {
 	s = s.Copy(cfgs...)
-	endpoint, signingRegion := endpoints.NormalizeEndpoint(
-		aws.StringValue(s.Config.Endpoint), serviceName,
-		aws.StringValue(s.Config.Region), aws.BoolValue(s.Config.DisableSSL))
+
+	var resolved endpoints.ResolvedEndpoint
+	var err error
+
+	region := aws.StringValue(s.Config.Region)
+
+	if endpoint := aws.StringValue(s.Config.Endpoint); len(endpoint) != 0 {
+		resolved.URL = endpoints.AddScheme(endpoint, aws.BoolValue(s.Config.DisableSSL))
+		resolved.SigningRegion = region
+	} else {
+		resolved, err = s.Config.EndpointResolver.EndpointFor(
+			serviceName, region,
+			func(opt *endpoints.Options) {
+				opt.DisableSSL = aws.BoolValue(s.Config.DisableSSL)
+				opt.UseDualStack = aws.BoolValue(s.Config.UseDualStack)
+			},
+		)
+	}
 
 	return client.Config{
 		Config:        s.Config,
 		Handlers:      s.Handlers,
-		Endpoint:      endpoint,
-		SigningRegion: signingRegion,
-	}
+		Endpoint:      resolved.URL,
+		SigningRegion: resolved.SigningRegion,
+		SigningName:   resolved.SigningName,
+	}, err
 }

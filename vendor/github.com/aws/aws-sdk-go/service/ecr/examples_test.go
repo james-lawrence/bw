@@ -96,7 +96,11 @@ func ExampleECR_BatchGetImage() {
 			// More values...
 		},
 		RepositoryName: aws.String("RepositoryName"), // Required
-		RegistryId:     aws.String("RegistryId"),
+		AcceptedMediaTypes: []*string{
+			aws.String("MediaType"), // Required
+			// More values...
+		},
+		RegistryId: aws.String("RegistryId"),
 	}
 	resp, err := svc.BatchGetImage(params)
 
@@ -208,6 +212,44 @@ func ExampleECR_DeleteRepositoryPolicy() {
 		RegistryId:     aws.String("RegistryId"),
 	}
 	resp, err := svc.DeleteRepositoryPolicy(params)
+
+	if err != nil {
+		// Print the error, cast err to awserr.Error to get the Code and
+		// Message from an error.
+		fmt.Println(err.Error())
+		return
+	}
+
+	// Pretty-print the response data.
+	fmt.Println(resp)
+}
+
+func ExampleECR_DescribeImages() {
+	sess, err := session.NewSession()
+	if err != nil {
+		fmt.Println("failed to create session,", err)
+		return
+	}
+
+	svc := ecr.New(sess)
+
+	params := &ecr.DescribeImagesInput{
+		RepositoryName: aws.String("RepositoryName"), // Required
+		Filter: &ecr.DescribeImagesFilter{
+			TagStatus: aws.String("TagStatus"),
+		},
+		ImageIds: []*ecr.ImageIdentifier{
+			{ // Required
+				ImageDigest: aws.String("ImageDigest"),
+				ImageTag:    aws.String("ImageTag"),
+			},
+			// More values...
+		},
+		MaxResults: aws.Int64(1),
+		NextToken:  aws.String("NextToken"),
+		RegistryId: aws.String("RegistryId"),
+	}
+	resp, err := svc.DescribeImages(params)
 
 	if err != nil {
 		// Print the error, cast err to awserr.Error to get the Code and
@@ -369,9 +411,12 @@ func ExampleECR_ListImages() {
 
 	params := &ecr.ListImagesInput{
 		RepositoryName: aws.String("RepositoryName"), // Required
-		MaxResults:     aws.Int64(1),
-		NextToken:      aws.String("NextToken"),
-		RegistryId:     aws.String("RegistryId"),
+		Filter: &ecr.ListImagesFilter{
+			TagStatus: aws.String("TagStatus"),
+		},
+		MaxResults: aws.Int64(1),
+		NextToken:  aws.String("NextToken"),
+		RegistryId: aws.String("RegistryId"),
 	}
 	resp, err := svc.ListImages(params)
 
@@ -398,6 +443,7 @@ func ExampleECR_PutImage() {
 	params := &ecr.PutImageInput{
 		ImageManifest:  aws.String("ImageManifest"),  // Required
 		RepositoryName: aws.String("RepositoryName"), // Required
+		ImageTag:       aws.String("ImageTag"),
 		RegistryId:     aws.String("RegistryId"),
 	}
 	resp, err := svc.PutImage(params)
