@@ -1,28 +1,28 @@
-hash: 97bddde803c8027c32c870c8abf8fc6c9d23784ba2230877fa4b031f4ed8843b
-updated: 2017-02-05T16:38:55.304483982-05:00
+hash: 530b01675f629f153c27798fe3aadb2ee77244759fb958a72f3764bae24e6d87
+updated: 2017-08-06T11:38:17.419642563-04:00
 imports:
 - name: github.com/alecthomas/kingpin
-  version: 4632cad00ac4bf4c455622ebfae46580c3890b8f
+  version: 1087e65c9441605df944fb12c33f0fe7072d18ca
 - name: github.com/alecthomas/template
-  version: a0175ee3bccc567396460bf5acd36800cb10c49c
+  version: 14fd436dd20c3cc65242a9f396b61bfc8a3926fc
   subpackages:
   - parse
 - name: github.com/alecthomas/units
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/armon/go-metrics
-  version: 3df31a1ada83e310c2e24b267c8e8b68836547b4
+  version: f036747b9d0e8590f175a5d654a2194a7d9df4b5
 - name: github.com/aws/aws-sdk-go
-  version: 13d7266e75bd078dd0e904106be68b2e52860fd7
+  version: db14171eb3a0a13125d9cc2d9ebc7cbdb4e737b6
   subpackages:
   - aws
   - aws/session
   - service/ec2
 - name: github.com/circonus-labs/circonus-gometrics
-  version: 02e91ce11e80e4ee29de4fec93250f04ba47f222
+  version: 6731e6ad43ce5933e5cbc1d8f8257b3a21e2d9a5
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
-  version: 7a8c533d28e8162671a81090af5b9f78b74e2d26
+  version: bd29ed602e2cf4207ebcabcd530259169e4289ba
 - name: github.com/hashicorp/errwrap
   version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
 - name: github.com/hashicorp/go-msgpack
@@ -30,15 +30,19 @@ imports:
   subpackages:
   - codec
 - name: github.com/hashicorp/go-multierror
-  version: d30f09973e19c1dfcd120b2d9c4f168e68d6b5d5
+  version: ed905158d87462226a13fe39ddf685ea65f1c11f
+- name: github.com/hashicorp/go-sockaddr
+  version: 2d10d7c10258d11196c0ebf2943509e4afd06cd4
 - name: github.com/hashicorp/memberlist
-  version: b2053e314b4a87e5f0d2d47aeafd3e03be13da90
+  version: 16fe34d996eba2b68f6f46f26c51c617c6bc1bf0
+- name: github.com/hashicorp/raft
+  version: 44f9caeb9cab6ff8b21459ba6d8519a731888d82
 - name: github.com/hashicorp/serf
-  version: f0080c8768f0f2817c8b0fa1029c48d5d81242b4
+  version: e0e11d82226a61dd9b31c1df562dc9101ee86142
   subpackages:
   - serf
 - name: github.com/huin/goupnp
-  version: 679507af18f3c7ba2bcc7905392ce23e148661c3
+  version: 9b81a7424f2384e4df098d4ac9096f9ed9d8ef95
   subpackages:
   - dcps/internetgateway2
   - httpu
@@ -46,23 +50,25 @@ imports:
   - soap
   - ssdp
 - name: github.com/kballard/go-shellquote
-  version: d8ec1a69a250a17bb0e419c386eac1f3711dc142
+  version: cd60e84ee657ff3dc51de0b4f55dd299a3e136f2
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
 - name: github.com/maruel/panicparse
-  version: ad661195ed0e88491e0f14be6613304e3b1141d6
+  version: 868abbf1ebac0fb2760cd9a410a5bd2f5afb2f76
   subpackages:
   - stack
 - name: github.com/mattn/go-runewidth
-  version: 14207d285c6c197daabb5c9793d63e7af9ab2d50
+  version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/miekg/dns
-  version: db96a2b759cdef4f11a34506a42eb8d1290c598e
+  version: e78414ef75607394ad7d917824f07f381df2eafa
 - name: github.com/mitchellh/go-wordwrap
   version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/nsf/termbox-go
-  version: abe82ce5fb7a42fbd6784a5ceb71aff977e09ed8
+  version: 4ed959e0540971545eddb8c75514973d670cf739
 - name: github.com/pkg/errors
   version: 17b591df37844cde689f4d5813e5cea0927d8dd2
+- name: github.com/sean-/seed
+  version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: golang.org/x/net
   version: 8968c61983e8f51a91b8c0ef25bf739278c89634
   subpackages:
@@ -70,7 +76,7 @@ imports:
   - html/atom
   - html/charset
 - name: golang.org/x/text
-  version: 506f9d5c962f284575e88337e7d9296d27e729d3
+  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
   subpackages:
   - encoding
   - encoding/charmap
@@ -87,11 +93,14 @@ imports:
   - language
   - runes
   - transform
+- name: gopkg.in/yaml.v2
+  version: cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b
 testImports:
 - name: github.com/onsi/ginkgo
   version: ac3d45ddd7ef5c4d7fc4d037b615a81f4d67981e
   subpackages:
   - config
+  - extensions/table
   - internal/codelocation
   - internal/containernode
   - internal/failer
