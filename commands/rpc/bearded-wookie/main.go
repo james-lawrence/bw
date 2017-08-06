@@ -12,7 +12,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/upnp"
-	"bitbucket.org/jatone/bearded-wookie/x/debug"
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"bitbucket.org/jatone/bearded-wookie/x/netx"
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 
@@ -27,10 +27,10 @@ type core struct {
 }
 
 type global struct {
-	cluster *cluster
-	ctx     context.Context
-	cancel  context.CancelFunc
-	cleanup *sync.WaitGroup
+	cluster  *cluster
+	ctx      context.Context
+	shutdown context.CancelFunc
+	cleanup  *sync.WaitGroup
 }
 
 // agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946
@@ -51,9 +51,9 @@ func main() {
 					Port: 7946,
 				},
 			},
-			ctx:     cleanup,
-			cancel:  cancel,
-			cleanup: &sync.WaitGroup{},
+			ctx:      cleanup,
+			shutdown: cancel,
+			cleanup:  &sync.WaitGroup{},
 		}
 		system = core{
 			Agent: &agent{
@@ -72,6 +72,8 @@ func main() {
 		}
 	)
 
+	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
+
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	system.Agent.configure(app.Command("agent", "agent that manages deployments").Default())
 	system.Deployer.configure(app.Command("deploy", "deploys the application"))
@@ -80,11 +82,9 @@ func main() {
 		log.Fatalln("failed to parse initialization arguments:", err)
 	}
 
-	go signals(cancel)
-
-	<-cleanup.Done()
-	log.Println("waiting for systems to shutdown")
-	global.cleanup.Wait()
+	systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
+		log.Println("waiting for systems to shutdown")
+	})
 }
 
 func setupclusterUPNP(c *net.TCPAddr) (*net.TCPAddr, *net.UDPAddr, error) {
@@ -115,7 +115,7 @@ func setUDPRecvBuf(c *net.UDPConn, size int) {
 
 func signals(shutdown context.CancelFunc) {
 	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, os.Kill, os.Interrupt, syscall.SIGUSR2)
+	signal.Notify(signals, os.Kill, os.Interrupt)
 	defer close(signals)
 	defer signal.Stop(signals)
 
@@ -124,17 +124,6 @@ func signals(shutdown context.CancelFunc) {
 		case os.Kill, os.Interrupt:
 			log.Println("shutdown request received")
 			shutdown()
-		case syscall.SIGUSR2:
-			var (
-				err  error
-				path string
-			)
-
-			if path, err = debug.DumpRoutines(); err != nil {
-				log.Println("failed to dump routines:", err)
-			} else {
-				log.Println("dump located at:", path)
-			}
 		}
 	}
 }

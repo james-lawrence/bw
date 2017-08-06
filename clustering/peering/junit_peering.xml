@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite tests="1" failures="0" time="0.557009049">
+      <testcase name="File should persist the peers to a file" classname="Peering Suite" time="0.545377459"></testcase>
+  </testsuite>

@@ -6,7 +6,8 @@ import (
 	"net"
 
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
+	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 
 	"github.com/alecthomas/kingpin"
@@ -27,41 +28,43 @@ func (t *cluster) configure(parent *kingpin.CmdClause) {
 	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
 }
 
-func (t *cluster) Join(_ *kingpin.ParseContext, options ...serfdom.ClusterOption) error {
+func (t *cluster) Join(_ *kingpin.ParseContext, options ...clustering.Option) error {
 	var (
-		err    error
-		joined int
+		err error
+		c   clustering.Cluster
 	)
 
 	log.Println("connecting to cluster")
 	defer log.Println("connection to cluster complete")
 
-	defaults := []serfdom.ClusterOption{
-		serfdom.COBindInterface(t.network.IP.String()),
-		serfdom.COBindPort(t.network.Port),
-		serfdom.COEventsDelegate(eventHandler{}),
-		serfdom.COAliveDelegate(aliveHandler{}),
+	defaults := []clustering.Option{
+		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.name, t.network.IP.String())),
+		clustering.OptionBindAddress(t.network.IP.String()),
+		clustering.OptionBindPort(t.network.Port),
+		clustering.OptionEventDelegate(eventHandler{}),
+		clustering.OptionAliveDelegate(aliveHandler{}),
 	}
 
-	t.memberlist, err = serfdom.New(
-		stringsx.DefaultIfBlank(t.name, t.network.IP.String()),
-		append(defaults, options...)...,
+	options = append(defaults, options...)
+	if c, err = clustering.NewOptions(options...).NewCluster(); err != nil {
+		return errors.Wrap(err, "failed to join cluster")
+	}
+
+	peerings := clustering.BootstrapOptionPeeringStrategies(
+		peering.Closure(func() ([]string, error) {
+			addresses := make([]string, 0, len(t.bootstrap))
+			for _, addr := range t.bootstrap {
+				addresses = append(addresses, addr.String())
+			}
+
+			return addresses, nil
+		}),
 	)
 
-	if err != nil {
-		return err
+	if err = clustering.Bootstrap(c, peerings); err != nil {
+		return errors.Wrap(err, "failed to bootstrap cluster")
 	}
 
-	addresses := make([]string, 0, len(t.bootstrap))
-	for _, addr := range t.bootstrap {
-		addresses = append(addresses, addr.String())
-	}
-
-	if joined, err = t.memberlist.Join(addresses); err != nil {
-		return errors.Wrapf(err, "failed to join cluster %s", addresses)
-	}
-
-	log.Println("joined a cluster with", joined, "node(s)")
 	return nil
 }
 

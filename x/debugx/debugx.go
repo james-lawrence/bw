@@ -1,9 +1,11 @@
-package debug
+package debugx
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime/pprof"
 	"strconv"
@@ -29,4 +31,24 @@ func DumpRoutines() (string, error) {
 	}
 
 	return path, nil
+}
+
+// DumpOnSignal runs the DumpRoutes method and prints to stderr whenever one of the provided
+// signals is received.
+func DumpOnSignal(ctx context.Context, sigs ...os.Signal) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, sigs...)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case _ = <-signals:
+			if path, err := DumpRoutines(); err == nil {
+				log.Println("dump located at:", path)
+			} else {
+				log.Println("failed to dump routines:", err)
+			}
+		}
+	}
 }

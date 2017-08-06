@@ -43,7 +43,7 @@ func (t *deployer) Deploy(ctx *kingpin.ParseContext) error {
 	).Deploy(t.global.cluster.memberlist)
 
 	// complete.
-	t.cancel()
+	t.shutdown()
 
 	return err
 }
