@@ -6,9 +6,9 @@ import (
 	"net/rpc"
 	"os"
 	"strconv"
-	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
+	"bitbucket.org/jatone/bearded-wookie/clustering"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
@@ -33,6 +33,7 @@ func (t *agent) configure(parent *kingpin.CmdClause) {
 func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 	var (
 		err error
+		c   clustering.Cluster
 	)
 
 	log.Println("initiated binding rpc server", t.network.String())
@@ -42,12 +43,12 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
 	}
 
-	clusterOptions := []serfdom.ClusterOption{
-		serfdom.CODelegate(serfdom.NewLocal([]byte{})),
-		serfdom.COLogger(os.Stderr),
+	options := []clustering.Option{
+		clustering.OptionDelegate(serfdom.NewLocal([]byte{})),
+		clustering.OptionLogger(os.Stderr),
 	}
 
-	if err = t.global.cluster.Join(nil, clusterOptions...); err != nil {
+	if c, err = t.global.cluster.Join(options...); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
@@ -57,9 +58,10 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 	go func() {
 		defer t.global.cleanup.Done()
 		<-t.global.ctx.Done()
-		log.Println("left cluster", t.global.cluster.memberlist.Leave(5*time.Second))
-		log.Println("cluster shutdown", t.global.cluster.memberlist.Shutdown())
+
+		log.Println("left cluster", c.Shutdown())
 		log.Println("agent shutdown", t.listener.Close())
 	}()
+
 	return nil
 }

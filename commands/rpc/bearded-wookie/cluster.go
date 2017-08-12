@@ -16,10 +16,9 @@ import (
 )
 
 type cluster struct {
-	name       string
-	network    *net.TCPAddr
-	bootstrap  []*net.TCPAddr
-	memberlist *memberlist.Memberlist
+	name      string
+	network   *net.TCPAddr
+	bootstrap []*net.TCPAddr
 }
 
 func (t *cluster) configure(parent *kingpin.CmdClause) {
@@ -28,7 +27,7 @@ func (t *cluster) configure(parent *kingpin.CmdClause) {
 	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
 }
 
-func (t *cluster) Join(_ *kingpin.ParseContext, options ...clustering.Option) error {
+func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error) {
 	var (
 		err error
 		c   clustering.Cluster
@@ -47,7 +46,7 @@ func (t *cluster) Join(_ *kingpin.ParseContext, options ...clustering.Option) er
 
 	options = append(defaults, options...)
 	if c, err = clustering.NewOptions(options...).NewCluster(); err != nil {
-		return errors.Wrap(err, "failed to join cluster")
+		return c, errors.Wrap(err, "failed to join cluster")
 	}
 
 	peerings := clustering.BootstrapOptionPeeringStrategies(
@@ -62,10 +61,10 @@ func (t *cluster) Join(_ *kingpin.ParseContext, options ...clustering.Option) er
 	)
 
 	if err = clustering.Bootstrap(c, peerings); err != nil {
-		return errors.Wrap(err, "failed to bootstrap cluster")
+		return c, errors.Wrap(err, "failed to bootstrap cluster")
 	}
 
-	return nil
+	return c, nil
 }
 
 type aliveHandler struct{}

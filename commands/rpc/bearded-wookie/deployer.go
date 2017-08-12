@@ -4,9 +4,11 @@ import (
 	"log"
 	"net"
 	"net/rpc"
+	"os"
 
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
+	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/commands/rpc/adapters"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/ux"
@@ -27,12 +29,15 @@ func (t *deployer) configure(parent *kingpin.CmdClause) {
 func (t *deployer) Deploy(ctx *kingpin.ParseContext) error {
 	var (
 		err error
+		c   clustering.Cluster
 	)
-	coptions := []serfdom.ClusterOption{
-		serfdom.CODelegate(serfdom.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
+
+	options := []clustering.Option{
+		clustering.OptionDelegate(serfdom.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
+		clustering.OptionLogger(os.Stderr),
 	}
 
-	if err = t.global.cluster.Join(ctx, coptions...); err != nil {
+	if c, err = t.global.cluster.Join(options...); err != nil {
 		return err
 	}
 
@@ -40,7 +45,7 @@ func (t *deployer) Deploy(ctx *kingpin.ParseContext) error {
 		ux.NewTermui(t.global.cleanup, t.global.ctx),
 		deploy,
 		deployment.DeployerOptionChecker(status{}),
-	).Deploy(t.global.cluster.memberlist)
+	).Deploy(c)
 
 	// complete.
 	t.shutdown()

@@ -1,6 +1,7 @@
 package clustering
 
 import (
+	"io"
 	"log"
 
 	"github.com/hashicorp/memberlist"
@@ -63,9 +64,9 @@ func OptionBindPort(port int) Option {
 }
 
 // OptionLogger sets the logger for the memberlist.
-func OptionLogger(l *log.Logger) Option {
+func OptionLogger(l io.Writer) Option {
 	return func(opts *Options) {
-		opts.Config.Logger = l
+		opts.Config.LogOutput = l
 	}
 }
 
@@ -80,6 +81,13 @@ func OptionEventDelegate(d memberlist.EventDelegate) Option {
 func OptionAliveDelegate(d memberlist.AliveDelegate) Option {
 	return func(opts *Options) {
 		opts.Config.Alive = d
+	}
+}
+
+// OptionDelegate set the delegate for the cluster.
+func OptionDelegate(delegate memberlist.Delegate) Option {
+	return func(opts *Options) {
+		opts.Config.Delegate = delegate
 	}
 }
 
