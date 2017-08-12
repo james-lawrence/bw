@@ -13,3 +13,16 @@ func NewClient() (Client, error) {
 
 	return dbusClient{systemBus: systemBus, pkgKit: systemBus.Object(pkDbusInterface, pkDbusObjectPath)}, nil
 }
+
+// NewTransaction convience method for getting a transaction directly.
+func NewTransaction() (tx Transaction, err error) {
+	var (
+		c Client
+	)
+
+	if c, err = NewClient(); err != nil {
+		return nil, err
+	}
+
+	return c.CreateTransaction()
+}
