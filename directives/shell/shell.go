@@ -20,8 +20,14 @@ type Exec struct {
 }
 
 func (t Exec) execute(ctx Context) error {
-	deadline, done := context.WithTimeout(context.Background(), (t.Timeout))
+	timeout := t.Timeout
+	if timeout == 0 {
+		timeout = 5 * time.Minute
+	}
+
+	deadline, done := context.WithTimeout(context.Background(), timeout)
 	defer done()
+
 	command := ctx.variableSubst(t.Command)
 	cmd := exec.CommandContext(deadline, ctx.Shell, "-c", command)
 	cmd.Env = ctx.Environ
@@ -40,14 +46,15 @@ func (t Exec) lenient(err error) error {
 }
 
 // Execute ...
-func Execute(ctx Context, commands ...Exec) {
+func Execute(ctx Context, commands ...Exec) error {
 	for _, c := range commands {
-		log.Println("executing", c.Command)
+		log.Println("executing", ctx.Shell, "-c", c.Command)
 		if err := c.execute(ctx); err != nil {
-			log.Printf("failed to execute: %s: '%s'", err, c.Command)
-			return
+			return errors.Wrapf(err, "failed to execute: '%s'", c.Command)
 		}
 	}
+
+	return nil
 }
 
 // ParseYAML ...

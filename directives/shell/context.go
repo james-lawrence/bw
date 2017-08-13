@@ -34,6 +34,7 @@ func GenerateContext() (ctx Context, err error) {
 	}
 
 	return Context{
+		Shell:     os.Getenv("SHELL"),
 		User:      *u,
 		Hostname:  hostname,
 		FQDN:      fqdn,

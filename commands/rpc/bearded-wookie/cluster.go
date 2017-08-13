@@ -16,15 +16,17 @@ import (
 )
 
 type cluster struct {
-	name      string
-	network   *net.TCPAddr
-	bootstrap []*net.TCPAddr
+	name                string
+	network             *net.TCPAddr
+	bootstrap           []*net.TCPAddr
+	singleNodeOperation bool
 }
 
 func (t *cluster) configure(parent *kingpin.CmdClause) {
 	parent.Flag("cluster-node-name", "name of the node within the cluster").StringVar(&t.name)
 	parent.Flag("cluster-bootstrap", "addresses to bootstrap the cluster from").TCPListVar(&t.bootstrap)
 	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
+	parent.Flag("cluster-single-node", "enable single mode operation").BoolVar(&t.singleNodeOperation)
 }
 
 func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error) {
@@ -61,7 +63,9 @@ func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error)
 	)
 
 	if err = clustering.Bootstrap(c, peerings); err != nil {
-		return c, errors.Wrap(err, "failed to bootstrap cluster")
+		if !t.singleNodeOperation {
+			return c, errors.Wrap(err, "failed to bootstrap cluster")
+		}
 	}
 
 	return c, nil

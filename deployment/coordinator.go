@@ -1,6 +1,9 @@
 package deployment
 
-import "sync"
+import (
+	"log"
+	"sync"
+)
 
 // New Builds a deployment Coordinator.
 // Pass in a packagekit.Client implementation
@@ -26,6 +29,7 @@ type deployment struct {
 func (t *deployment) init() {
 	for err := range t.completed {
 		if err != nil {
+			log.Println("deployment failed", err)
 			t.update(failed{})
 		} else {
 			t.update(ready{})
