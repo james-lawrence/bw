@@ -1,5 +1,5 @@
 hash: 530b01675f629f153c27798fe3aadb2ee77244759fb958a72f3764bae24e6d87
-updated: 2017-08-06T11:38:17.419642563-04:00
+updated: 2017-08-13T15:22:54.337920394-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 1087e65c9441605df944fb12c33f0fe7072d18ca
@@ -18,7 +18,7 @@ imports:
   - aws/session
   - service/ec2
 - name: github.com/circonus-labs/circonus-gometrics
-  version: 6731e6ad43ce5933e5cbc1d8f8257b3a21e2d9a5
+  version: c2344fc6143bb05f9f585aedd58a9444160149e1
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
@@ -36,7 +36,7 @@ imports:
 - name: github.com/hashicorp/memberlist
   version: 16fe34d996eba2b68f6f46f26c51c617c6bc1bf0
 - name: github.com/hashicorp/raft
-  version: 44f9caeb9cab6ff8b21459ba6d8519a731888d82
+  version: ac704075e75b8626023224c76c56be4d6958a5dc
 - name: github.com/hashicorp/serf
   version: e0e11d82226a61dd9b31c1df562dc9101ee86142
   subpackages:
@@ -54,7 +54,7 @@ imports:
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
 - name: github.com/maruel/panicparse
-  version: 868abbf1ebac0fb2760cd9a410a5bd2f5afb2f76
+  version: c139306d9b850f842c12be39998d2fcecfdf2e34
   subpackages:
   - stack
 - name: github.com/mattn/go-runewidth
@@ -76,7 +76,7 @@ imports:
   - html/atom
   - html/charset
 - name: golang.org/x/text
-  version: 3bd178b88a8180be2df394a1fbb81313916f0e7b
+  version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
   - encoding
   - encoding/charmap
