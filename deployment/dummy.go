@@ -1,10 +1,13 @@
 package deployment
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
+
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.
@@ -19,10 +22,10 @@ type dummy struct {
 	sleepy int
 }
 
-func (t dummy) Deploy(completed chan error) error {
+func (t dummy) Deploy(archive *agent.Archive, completed chan error) error {
 	go func() {
-		log.Println("deploying")
-		defer log.Println("deploy complete")
+		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
+		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
 
 		completedDuration := time.Duration(rand.Intn(t.sleepy)) * time.Second
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second

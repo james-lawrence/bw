@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/packagekit"
 )
 
+// PackageLoader reads a set of packages to install from an io.Reader
 type PackageLoader struct{}
 
 // Ext extensions to succeed against.

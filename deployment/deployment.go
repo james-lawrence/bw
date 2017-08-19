@@ -1,6 +1,10 @@
 package deployment
 
-import "encoding/gob"
+import (
+	"encoding/gob"
+
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+)
 
 func init() {
 	gob.Register(ready{})
@@ -83,6 +87,32 @@ func (t failed) Status() StatusEnum {
 	return StatusFailed
 }
 
+func AgentStateFromStatus(status Status) agent.AgentInfo_State {
+	switch status.Status() {
+	case StatusReady:
+		return agent.AgentInfo_Ready
+	case StatusLocked:
+		return agent.AgentInfo_Locked
+	case StatusDeploying:
+		return agent.AgentInfo_Deploying
+	default:
+		return agent.AgentInfo_Failed
+	}
+}
+
+func AgentStateToStatus(info agent.AgentInfo_State) Status {
+	switch info {
+	case agent.AgentInfo_Ready:
+		return ready{}
+	case agent.AgentInfo_Locked:
+		return locked{}
+	case agent.AgentInfo_Deploying:
+		return deploying{}
+	default:
+		return failed{}
+	}
+}
+
 // IsReady returns true if the node is in a ready state.
 func IsReady(err error) bool {
 	return isStatus(err, StatusReady)
@@ -115,7 +145,7 @@ func isStatus(err error, expected StatusEnum) bool {
 }
 
 type deployer interface {
-	Deploy(completed chan error) error
+	Deploy(archive *agent.Archive, completed chan error) error
 }
 
 // Coordinator is in charge of coordinating deployments.
@@ -124,5 +154,5 @@ type Coordinator interface {
 	// idle, deploying, locked
 	Status() error
 	// Deploy trigger a deploy
-	Deploy() error
+	Deploy(*agent.Archive) error
 }

@@ -3,9 +3,10 @@ package main
 import (
 	"log"
 	"net"
-	"net/rpc"
 	"os"
 	"strconv"
+
+	"google.golang.org/grpc"
 
 	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
@@ -14,23 +15,31 @@ import (
 	"github.com/pkg/errors"
 )
 
-type agent struct {
+type agentCmd struct {
 	*global
 	network     *net.TCPAddr
-	server      *rpc.Server
+	server      *grpc.Server
 	listener    net.Listener
 	upnpEnabled bool
 }
 
-func (t *agent) configure(parent *kingpin.CmdClause) {
-	t.cluster.configure(parent)
+func (t *agentCmd) configure(parent *kingpin.CmdClause) {
+	t.cluster.configure(
+		parent,
+		clusterCmdOptionBind(
+			&net.TCPAddr{
+				IP:   t.global.systemIP,
+				Port: 2001,
+			},
+		),
+	)
 	parent.Flag("upnp-enabled", "enable upnp forwarding for the agent").Default(strconv.FormatBool(t.upnpEnabled)).Hidden().BoolVar(&t.upnpEnabled)
 	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
-	parent.Action(t.Bind)
+
 	t.operatingSystemSpecificConfiguration(parent)
 }
 
-func (t *agent) Bind(ctx *kingpin.ParseContext) error {
+func (t *agentCmd) Bind(ctx *kingpin.ParseContext) error {
 	var (
 		err error
 		c   clustering.Cluster
@@ -52,7 +61,7 @@ func (t *agent) Bind(ctx *kingpin.ParseContext) error {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
-	go t.server.Accept(t.listener)
+	go t.server.Serve(t.listener)
 
 	t.global.cleanup.Add(1)
 	go func() {

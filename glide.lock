@@ -1,5 +1,5 @@
-hash: 530b01675f629f153c27798fe3aadb2ee77244759fb958a72f3764bae24e6d87
-updated: 2017-08-13T15:47:08.95740262-04:00
+hash: 864f3905b626093c345021954b8254bba433addc2cfc5fe04cb8afa3eaff21e4
+updated: 2017-08-13T15:54:15.558610948-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 1087e65c9441605df944fb12c33f0fe7072d18ca
@@ -23,6 +23,11 @@ imports:
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
   version: bd29ed602e2cf4207ebcabcd530259169e4289ba
+- name: github.com/golang/protobuf
+  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  subpackages:
+  - proto
+  - ptypes/any
 - name: github.com/hashicorp/errwrap
   version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
 - name: github.com/hashicorp/go-immutable-radix
@@ -78,9 +83,16 @@ imports:
 - name: golang.org/x/net
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
+  - context
   - html
   - html/atom
   - html/charset
+  - http2
+  - http2/hpack
+  - idna
+  - internal/timeseries
+  - lex/httplex
+  - trace
 - name: golang.org/x/text
   version: b19bf474d317b857955b12035d2c5acb57ce8b01
   subpackages:
@@ -98,7 +110,30 @@ imports:
   - internal/utf8internal
   - language
   - runes
+  - secure/bidirule
   - transform
+  - unicode/bidi
+  - unicode/norm
+- name: google.golang.org/genproto
+  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  subpackages:
+  - googleapis/rpc/status
+- name: google.golang.org/grpc
+  version: b8669c35455183da6d5c474ea6e72fbf55183274
+  subpackages:
+  - codes
+  - credentials
+  - grpclb/grpc_lb_v1
+  - grpclog
+  - internal
+  - keepalive
+  - metadata
+  - naming
+  - peer
+  - stats
+  - status
+  - tap
+  - transport
 - name: gopkg.in/yaml.v2
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:

@@ -68,17 +68,6 @@ type partitioner interface {
 	Partition(length int) (size int)
 }
 
-// filter determines if a node should be deployed to based on some conditions.
-type filter interface {
-	Match(*memberlist.Node) bool
-}
-
-type all bool
-
-func (t all) Match(*memberlist.Node) bool {
-	return bool(t)
-}
-
 // checker checks the current status of a node.
 type checker interface {
 	Check(*memberlist.Node) error
@@ -98,35 +87,42 @@ type cluster interface {
 
 type Option func(*Deploy)
 
-func DeployerOptionFilter(x filter) Option {
+func DeployOptionFilter(x Filter) Option {
 	return func(d *Deploy) {
 		d.filter = x
 	}
 }
 
-func DeployerOptionPartitioner(x partitioner) Option {
+func DeployOptionPartitioner(x partitioner) Option {
 	return func(d *Deploy) {
 		d.partitioner = x
 	}
 }
 
-func DeployerOptionChecker(x checker) Option {
+func DeployOptionChecker(x checker) Option {
 	return func(d *Deploy) {
 		d.checker = x
 	}
 }
 
-func NewDeploy(h *Events, deployer func(peer *memberlist.Node) error, options ...Option) Deploy {
+func DeployOptionDeployer(deployer func(peer *memberlist.Node) error) Option {
+	return func(d *Deploy) {
+		d.worker.deployer = deployer
+	}
+}
+
+// NewDeploy by default deploys operate in one-at-a-time mode.
+func NewDeploy(h *Events, options ...Option) Deploy {
 	d := Deploy{
-		filter: all(true),
+		filter: AlwaysMatch,
 		worker: worker{
 			c:        make(chan func()),
 			wait:     &sync.WaitGroup{},
 			checker:  constantChecker{Status: ready{}},
-			deployer: deployer,
+			deployer: loggingDeployer,
 			handler:  h,
 		},
-		partitioner: PercentagePartitioner(0.50),
+		partitioner: ConstantPartitioner(1),
 	}
 
 	for _, opt := range options {
@@ -136,10 +132,16 @@ func NewDeploy(h *Events, deployer func(peer *memberlist.Node) error, options ..
 	return d
 }
 
+func loggingDeployer(peer *memberlist.Node) error {
+	log.Println("deploy triggered for peer", peer.String())
+	return nil
+}
+
 type worker struct {
 	c    chan func()
 	wait *sync.WaitGroup
 	checker
+	filter   Filter
 	deployer func(peer *memberlist.Node) error
 	handler  *Events
 }
@@ -159,7 +161,7 @@ func (t worker) Complete() {
 func (t worker) DeployTo(peer *memberlist.Node) {
 	t.c <- func() {
 		if err := t.deployer(peer); err != nil {
-			log.Println("failed to deploy to", peer.Name, err)
+			log.Printf("failed to deploy to: %s - %+v\n", peer.Name, err)
 			return
 		}
 		awaitCompletion(t.handler, t.checker, peer)
@@ -170,7 +172,7 @@ func (t worker) DeployTo(peer *memberlist.Node) {
 }
 
 type Deploy struct {
-	filter
+	filter Filter
 	partitioner
 	worker
 }
@@ -196,7 +198,7 @@ func (t Deploy) Deploy(c cluster) {
 	t.worker.handler.StageUpdate <- StageDone
 }
 
-func _filter(set []*memberlist.Node, s filter) []*memberlist.Node {
+func _filter(set []*memberlist.Node, s Filter) []*memberlist.Node {
 	subset := make([]*memberlist.Node, 0, len(set))
 	for _, peer := range set {
 		if s.Match(peer) {

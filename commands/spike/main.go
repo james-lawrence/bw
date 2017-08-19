@@ -1,78 +1,49 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 
-	"bitbucket.org/jatone/bearded-wookie/packagekit"
-	"github.com/kballard/go-shellquote"
+	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/archive"
+
 	"github.com/alecthomas/kingpin"
 )
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-
+	var (
+		root string
+		dst  string
+	)
 	app := kingpin.New("spike", "spike command line for testing functionality")
-	quit := app.Command("quit", "quit the application")
-
-	packages := app.Command("packages", "list the packages on the current machine")
-	packageFilter := packages.Arg("filter", "uint64 representing the filter to use.").Default("0").Uint64()
-
-	args := make([]string, len(os.Args)-1, (len(os.Args)-1)*2)
-	copy(args, os.Args[1:])
-	for {
+	app.Flag("root", "root directory to archive").StringVar(&root)
+	app.Flag("dst", "dst directory to write into").StringVar(&dst)
+	app.Action(func(ctx *kingpin.ParseContext) error {
 		var (
-			command string
-			input   string
-			err     error
-			client  packagekit.Client
-			tx      packagekit.Transaction
+			pipe *os.File
+			err  error
 		)
+		if pipe, err = ioutil.TempFile("", "archive"); err != nil {
+			return err
+		}
+		defer os.Remove(pipe.Name())
 
-		if command, err = app.Parse(args); err != nil {
-			goto input
+		if err = archive.Pack(pipe, root); err != nil {
+			return err
 		}
 
-		switch command {
-		case packages.FullCommand():
-			fmt.Println(*packageFilter)
-
-			//packageFilters := map[string]uint64{
-			//"FilterNone":         packagekit.FilterNone,
-			//"FilterInstalled":    packagekit.FilterInstalled,
-			//"FilterNotInstalled": packagekit.FilterNotInstalled,
-			//}
-
-			client, err = packagekit.NewClient()
-			if err != nil {
-				fmt.Println("Error creating client:", err)
-			}
-
-			tx, err = client.CreateTransaction()
-			if err != nil {
-				fmt.Println("Error creating transaction:", err)
-			}
-
-			results, err := tx.Packages(packagekit.PackageFilter(*packageFilter))
-			if err != nil {
-				fmt.Println("Error getting packages:", err)
-			}
-
-			fmt.Println(len(results))
-		case quit.FullCommand():
-			return
+		if err = pipe.Close(); err != nil {
+			return err
 		}
+		src := agent.NewDownloader("file://" + pipe.Name()).Download()
+		defer src.Close()
+		return archive.Unpack(dst, src)
+	})
+	// _ = app.Command("agent", "agent server").Action(agentx).Default()
+	// _ = app.Command("client", "client cli").Action(deploy)
 
-	input:
-		fmt.Print(">")
-		if input, err = reader.ReadString('\n'); err != nil {
-			fmt.Println("Scan Error:", err)
-			continue
-		}
-		if args, err = shellquote.Split(input); err != nil {
-			fmt.Println("Input Error:", err)
-			continue
-		}
+	if _, err := app.Parse(os.Args[1:]); err != nil {
+		log.Println("boom", err)
 	}
 }

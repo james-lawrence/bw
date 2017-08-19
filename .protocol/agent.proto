@@ -1,0 +1,61 @@
+syntax = "proto3";
+package agent;
+
+// Deployment Event.
+message Message {
+  enum Type { PackageInfo = 0; CommandInfo = 1; Log = 2; }
+
+  // Identifies which field is filled in.
+  Type type = 1;
+  string node = 2;
+  int64 ts = 3; // unix timestamp.
+
+  oneof Event {
+    // One of the following will be filled in.
+    PackageInfo package = 4;
+    CommandInfo command = 5;
+    Log logEvent = 6;
+  }
+}
+
+message PackageInfo {
+  string name = 1;
+  float progress = 2;
+}
+
+message CommandInfo {
+  enum State { Started = 0; Info = 1; Completed = 2; Failed = 3; }
+  string command = 1;
+}
+
+message Log {
+  string Log = 1;
+}
+
+message ArchiveChunk {
+  bytes data = 1;
+  bytes checksum = 2;
+}
+
+message Archive {
+  bytes deploymentID = 1;
+  string Leader = 2;
+  string Location = 3;
+  bytes checksum = 4;
+}
+
+message DeployResult {}
+
+message AgentInfo {
+  enum State { Ready = 0; Locked = 1; Deploying = 2; Failed = 3; }
+  State Status = 1;
+}
+
+message AgentInfoRequest {}
+
+service Agent {
+  rpc Upload(stream ArchiveChunk) returns (Archive) {}
+  rpc Deploy(Archive) returns (DeployResult) {}
+  rpc Info(AgentInfoRequest) returns (AgentInfo) {}
+  rpc Events(Archive) returns (stream Message) {}
+}

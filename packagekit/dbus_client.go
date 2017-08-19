@@ -192,7 +192,7 @@ func (t dbusTransaction) InstallPackages(packageIDs ...string) error {
 	}
 
 	flags := dbus.Flags(0)
-	transactionFlags := TransactionFlag(TransactionFlagNone)
+	transactionFlags := TransactionFlag(TransactionFlagNone | TransactionFlagAllowDowngrade)
 	if err = t.transaction.Call(methodTransactionInstallPackages, flags, transactionFlags, packageIDs).Store(); err != nil {
 		return errors.Wrap(err, "failed to install packages")
 	}
@@ -204,8 +204,8 @@ func (t dbusTransaction) InstallPackages(packageIDs ...string) error {
 			info, pkg, summary := handlePackage(event)
 			log.Println("Package:", info, pkg, summary)
 		case signalTransactionItemProgress:
-			id, status, progress := handleItemProgress(event)
-			log.Println("item progress", id, status, progress)
+			// id, status, progress := handleItemProgress(event)
+			// log.Println("item progress", id, status, progress)
 		case signalTransactionError:
 			return handleError(event)
 		case signalTransactionFinished:

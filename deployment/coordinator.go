@@ -3,10 +3,11 @@ package deployment
 import (
 	"log"
 	"sync"
+
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // New Builds a deployment Coordinator.
-// Pass in a packagekit.Client implementation
 func New(d deployer) Coordinator {
 	coord := &deployment{
 		deployer:  d,
@@ -29,7 +30,7 @@ type deployment struct {
 func (t *deployment) init() {
 	for err := range t.completed {
 		if err != nil {
-			log.Println("deployment failed", err)
+			log.Printf("deployment failed: %+v\n", err)
 			t.update(failed{})
 		} else {
 			t.update(ready{})
@@ -44,12 +45,12 @@ func (t *deployment) Status() error {
 	return t.status
 }
 
-func (t *deployment) Deploy() error {
+func (t *deployment) Deploy(archive *agent.Archive) error {
 	if err := t.startDeploy(); err != nil {
 		return err
 	}
 
-	return t.deployer.Deploy(t.completed)
+	return t.deployer.Deploy(archive, t.completed)
 }
 
 func (t *deployment) startDeploy() Status {

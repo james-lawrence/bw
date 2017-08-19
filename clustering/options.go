@@ -80,6 +80,7 @@ func OptionEventDelegate(d memberlist.EventDelegate) Option {
 // OptionAliveDelegate set the event delegate for the cluster.
 func OptionAliveDelegate(d memberlist.AliveDelegate) Option {
 	return func(opts *Options) {
+		log.Printf("Adding Alive Delegate: %T\n", d)
 		opts.Config.Alive = d
 	}
 }
@@ -115,6 +116,7 @@ func NewOptions(opts ...Option) Options {
 	log.Println("Bind:", options.Config.BindAddr, options.Config.BindPort)
 	log.Println("TCPTimeout:", options.Config.TCPTimeout)
 	log.Println("Compression:", options.Config.EnableCompression)
+	log.Printf("Alive Delegate: %T\n", options.Config.Alive)
 
 	return options
 }

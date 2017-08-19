@@ -4,7 +4,7 @@ import (
 	. "bitbucket.org/jatone/bearded-wookie/deployment"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	gomega "github.com/onsi/gomega"
 )
 
 var _ = Describe("Coordinator", func() {
@@ -15,7 +15,7 @@ var _ = Describe("Coordinator", func() {
 
 	Describe("Status", func() {
 		It("returns nil", func() {
-			Expect(coordinator.Status()).To(BeNil())
+			gomega.Expect(coordinator.Status()).To(gomega.BeNil())
 		})
 	})
 })
