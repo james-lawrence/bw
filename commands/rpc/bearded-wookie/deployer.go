@@ -14,7 +14,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -94,7 +93,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	)
 
 	coptions := []clustering.Option{
-		clustering.OptionDelegate(serfdom.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
+		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
 		clustering.OptionLogger(os.Stderr),
 	}
 	if c, err = t.global.cluster.Join(coptions...); err != nil {

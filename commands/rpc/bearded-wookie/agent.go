@@ -8,7 +8,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"bitbucket.org/jatone/bearded-wookie/cluster/serfdom"
+	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 
 	"github.com/alecthomas/kingpin"
@@ -53,7 +53,7 @@ func (t *agentCmd) Bind(ctx *kingpin.ParseContext) error {
 	}
 
 	options := []clustering.Option{
-		clustering.OptionDelegate(serfdom.NewLocal([]byte{})),
+		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogger(os.Stderr),
 	}
 

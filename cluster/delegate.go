@@ -1,4 +1,4 @@
-package serfdom
+package cluster
 
 import (
 	"log"
