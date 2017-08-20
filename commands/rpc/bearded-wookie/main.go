@@ -5,10 +5,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/user"
 	"sync"
 	"syscall"
-
-	"google.golang.org/grpc"
 
 	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
@@ -19,14 +18,18 @@ import (
 )
 
 const (
-	uploadArchiveRootDefault = ".bw"
+	workspaceDefault      = ".bw"
+	configDirDefault      = ".bwconfig"
+	credentialsDirDefault = ".bwcreds"
+	credentialsDefault    = "default"
+	environmentDefault    = "default"
+	tlscaKeyDefault       = "tlsca.key"
+	tlscaCertDefault      = "tlsca.cert"
+	tlsclientKeyDefault   = "tlsclient.key"
+	tlsclientCertDefault  = "tlsclient.cert"
+	tlsserverKeyDefault   = "tlsserver.key"
+	tlsserverCertDefault  = "tlsserver.cert"
 )
-
-type core struct {
-	Agent       *agentCmd
-	Deployer    *deployCmd
-	upnpEnabled bool
-}
 
 type global struct {
 	systemIP net.IP
@@ -34,6 +37,7 @@ type global struct {
 	ctx      context.Context
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
+	user     *user.User
 }
 
 // agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-maximum-join-attempts=10
@@ -53,6 +57,7 @@ func main() {
 			ctx:      cleanup,
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},
+			user:     systemx.MustUser(),
 		}
 		agent = &agentCmd{
 			global: global,
@@ -61,10 +66,12 @@ func main() {
 				Port: 2000,
 			},
 			listener:    netx.NewNoopListener(),
-			server:      grpc.NewServer(),
 			upnpEnabled: false,
 		}
 		client = &deployCmd{
+			global: global,
+		}
+		envinit = &initCmd{
 			global: global,
 		}
 	)
@@ -76,9 +83,10 @@ func main() {
 	agent.configure(app.Command("agent", "agent that manages deployments"))
 	client.deployCmd(app.Command("deploy", "deploy to all nodes within the cluster").Default())
 	client.filteredCmd(app.Command("filtered", "allows for filtering the instances within the cluster"))
+	envinit.configure(app.Command("init", "generate tls cert/key for an environment"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
-		log.Fatalln("failed to parse initialization arguments:", err)
+		log.Fatalf("failed to parse initialization arguments: %+v\n", err)
 	}
 
 	systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {

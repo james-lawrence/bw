@@ -38,13 +38,10 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 		),
 	)
 
-	agent.RegisterServer(
-		t.server,
+	return t.agentCmd.bind(
 		agent.NewServer(
 			t.listener.Addr(),
 			agent.ServerOptionDeployer(deployments),
 		),
 	)
-
-	return t.agentCmd.Bind(ctx)
 }

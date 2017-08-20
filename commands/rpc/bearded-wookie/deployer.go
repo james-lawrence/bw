@@ -7,9 +7,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
@@ -21,12 +23,16 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 )
 
 type deployCmd struct {
-	*global
+	global        *global
 	environment   string
 	workspace     string
+	tlscert       string
+	tlskey        string
+	tlsca         string
 	filteredIP    []net.IP
 	filteredRegex []*regexp.Regexp
 	doptions      []deployment.Option
@@ -45,7 +51,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 		clusterCmdOptionMinPeers(1),
 	)
 
-	parent.Flag("workspace", "root directory of the workspace to be deployed").Default(uploadArchiveRootDefault).StringVar(&t.workspace)
+	parent.Flag("workspace", "root directory of the workspace to be deployed").Default(workspaceDefault).StringVar(&t.workspace)
 	parent.Arg("environment", "the environment").StringVar(&t.environment)
 }
 
@@ -88,9 +94,18 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		err         error
 		dst         *os.File
 		c           clustering.Cluster
+		creds       credentials.TransportCredentials
 		coordinator agent.Client
 		info        gagent.Archive
 	)
+
+	rootdir := filepath.Join(t.global.user.HomeDir, credentialsDirDefault, credentialsDefault)
+	key := filepath.Join(rootdir, tlsclientKeyDefault)
+	cert := filepath.Join(rootdir, tlsclientCertDefault)
+	ca := filepath.Join(rootdir, tlscaCertDefault)
+	if creds, err = buildTLSClient("wambli.talla.io", key, cert, ca); err != nil {
+		return errors.WithStack(err)
+	}
 
 	coptions := []clustering.Option{
 		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
@@ -100,7 +115,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
-	if coordinator, err = connectToCoordinator(c); err != nil {
+	if coordinator, err = connectToCoordinator(c, grpc.WithTransportCredentials(creds)); err != nil {
 		return err
 	}
 
@@ -123,7 +138,10 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Leader, hex.EncodeToString(info.DeploymentID), info.Location)
-
+	options = append(
+		options,
+		deployment.DeployOptionChecker(newStatus(grpc.WithTransportCredentials(creds))),
+	)
 	deployment.NewDeploy(
 		// ux.NewTermui(t.global.cleanup, t.global.ctx),
 		ux.Logging(),
@@ -133,12 +151,12 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	log.Println("deployment complete")
 
 	// complete.
-	t.shutdown()
+	t.global.shutdown()
 
 	return err
 }
 
-func connectToCoordinator(c clustering.Cluster) (_czero agent.Client, err error) {
+func connectToCoordinator(c clustering.Cluster, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
 	var (
 		randomness  []byte
 		coordinator agent.Client
@@ -147,33 +165,36 @@ func connectToCoordinator(c clustering.Cluster) (_czero agent.Client, err error)
 	if randomness, err = agent.GenerateID(); err != nil {
 		return _czero, err
 	}
-
-	if coordinator, err = connect(c.Get(randomness)); err != nil {
+	// grpc.WithCompressor(grpc.NewGZIPCompressor()),
+	// grpc.WithDecompressor(grpc.NewGZIPDecompressor()),
+	if coordinator, err = connect(c.Get(randomness), doptions...); err != nil {
 		return _czero, err
 	}
 
 	return coordinator, err
 }
 
-func connect(peer *memberlist.Node) (_czero agent.Client, err error) {
+func connect(peer *memberlist.Node, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
 	address := net.JoinHostPort(peer.Addr.String(), "2000")
-	doptions := []grpc.DialOption{
-		grpc.WithInsecure(),
-		// grpc.WithCompressor(grpc.NewGZIPCompressor()),
-		// grpc.WithDecompressor(grpc.NewGZIPDecompressor()),
-	}
-
 	return agent.DialClient(address, doptions...)
 }
 
-type status struct{}
+func newStatus(options ...grpc.DialOption) statusx {
+	return statusx{
+		options: options,
+	}
+}
 
-func (status) Check(peer *memberlist.Node) (err error) {
+type statusx struct {
+	options []grpc.DialOption
+}
+
+func (t statusx) Check(peer *memberlist.Node) (err error) {
 	var (
 		c    agent.Client
 		info gagent.AgentInfo
 	)
-	if c, err = connect(peer); err != nil {
+	if c, err = connect(peer, t.options...); err != nil {
 		return err
 	}
 	defer c.Close()
