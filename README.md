@@ -9,12 +9,12 @@ and deploy onto different clusters of machines. they are a way of thinking about
 - no centralized server.
 
 #### what this project is not.
-- bearded wookie is not about infrastructure management. its about configuration management.
+- bearded wookie is not about infrastructure management. use something like terraform.
 
 #### credentials
 bearded-wookie uses SSL/TLS to encrypt all data transfered between the agent and the cluster.
 
-#### workspace
+#### workspace (rename to deployspace?)
 workspaces are the top level namespace that describes a deployment.
 generally projects only have a single workspace. But multiple workspaces may be
 desirable for example: a separate workspace for local development configuration
@@ -35,7 +35,7 @@ directives are the final piece of a deployment, they represent the steps
 and the order of the steps to take to deploy an application. directives
 come in three types package installation (.bwpkg), commands (.bwcmd), file installations (.bwfs).
 
-example commands:
+example commands:  
  - `bw init {common-name} {hosts...}` generates ssl/tls certificates for use with bw.  
  - `bw workspace create {name}`  
  - `bw environment create {address}`  
