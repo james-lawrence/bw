@@ -36,14 +36,14 @@ and the order of the steps to take to deploy an application. directives
 come in three types package installation (.bwpkg), commands (.bwcmd), file installations (.bwfs).
 
 example commands:
- - `bw init {common-name} {hosts...}` generates ssl/tls certificates for use with bw.
- - `bw workspace create {name}`
- - `bw environment create {address}`
- - `bw agent` runs a bearded-wookie agent.
- - `bw deploy production` deploy to the production environment
- - `bw deploy --workspace=".bearded-wookie-deployment" production`
- - `bw filtered deploy --name='node1' --name='us-east.*' production` to the servers that match the given filters, in this case up to 5 servers whose agents have the name `node1` or match the regex `us-east-.*`.
- - `bw info production` display information about the production environment.
+ - `bw init {common-name} {hosts...}` generates ssl/tls certificates for use with bw.  
+ - `bw workspace create {name}`  
+ - `bw environment create {address}`  
+ - `bw agent` runs a bearded-wookie agent.  
+ - `bw deploy production` deploy to the production environment  
+ - `bw deploy --workspace=".bearded-wookie-deployment" production`  
+ - `bw filtered deploy --name='node1' --name='us-east.*' production` to the servers that match the given filters, in this case up to 5 servers whose agents have the name `node1` or match the regex `us-east-.*`.  
+ - `bw info production` display information about the production environment.  
 
 #### TODO
  - implement peers.
