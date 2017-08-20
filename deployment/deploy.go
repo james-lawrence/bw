@@ -48,9 +48,7 @@ type PercentagePartitioner float64
 
 func (t PercentagePartitioner) Partition(length int) int {
 	ratio := math.Min(float64(t), 1.0)
-	// log.Println("length", length, "ratio", ratio)
 	computed := int(math.Max(math.Floor(float64(length)*ratio), 1.0))
-	// log.Println("computed", computed)
 	return computed
 }
 

@@ -22,8 +22,8 @@ from deployed environments, or for different distros.
 
 #### environments
 generally environments are used to configure the different environments
-you deploy into. such as production vs staging. Environments are represented
-by .env files that contain environment variables used to configure the deployment.
+you deploy into. such as production vs staging. environments have there own configuration
+that tell the agent how to connect to the cluster.
 
 #### filesystems
 filesystems represent the different groups files you want deployed
@@ -38,6 +38,7 @@ come in three types package installation (.bwpkg), commands (.bwcmd), file insta
 example commands:
  - `bw init {common-name} {hosts...}` generates ssl/tls certificates for use with bw.
  - `bw workspace create {name}`
+ - `bw environment create {address}`
  - `bw agent` runs a bearded-wookie agent.
  - `bw deploy production` deploy to the production environment
  - `bw deploy --workspace=".bearded-wookie-deployment" production`
@@ -45,7 +46,8 @@ example commands:
  - `bw info production` display information about the production environment.
 
 #### TODO
- - implement directory cleanup of previous deployments.
- - implement info.
- - implement members.
+ - implement peers.
  - implement server configuration file.
+ - implement events.
+ - installation cleanups.
+ - ux improvements.

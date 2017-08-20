@@ -4,10 +4,10 @@ import (
 	"encoding/hex"
 	"log"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/directives"
@@ -41,6 +41,7 @@ func DirectiveOptionRoot(root string) DirectiveOption {
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
+		keepN:   3,
 		options: options,
 	}
 
@@ -49,6 +50,7 @@ func NewDirective(options ...DirectiveOption) Directive {
 
 // Directive ...
 type Directive struct {
+	keepN   int
 	root    string
 	archive agent.Archive
 	sctx    shell.Context
@@ -81,6 +83,7 @@ func (t Directive) deploy(completed chan error) {
 	)
 	log.Println("deploying")
 	defer log.Println("deploy complete")
+
 	dshell := directives.ShellLoader{
 		Context: t.sctx,
 	}
@@ -93,6 +96,8 @@ func (t Directive) deploy(completed chan error) {
 		goto done
 	}
 
+	log.Println("workspace downloaded", dst)
+
 	if _directives, err = directives.Load(filepath.Join(dst, ".directives"), dshell, dpkg); err != nil {
 		err = errors.Wrapf(err, "failed to load directives")
 		goto done
@@ -104,7 +109,11 @@ func (t Directive) deploy(completed chan error) {
 			goto done
 		}
 	}
+
 done:
-	time.Sleep(5 * time.Second)
+	// cleanup workspace directory.
+	if soft := agentutil.MaybeClean(agentutil.KeepNewestN(t.keepN))(agentutil.Dirs(t.root)); soft != nil {
+		log.Println("failed to clean workspace directory", soft)
+	}
 	completed <- err
 }

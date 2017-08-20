@@ -45,6 +45,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("upnp-enabled", "enable upnp forwarding for the agent").Default(strconv.FormatBool(t.upnpEnabled)).Hidden().BoolVar(&t.upnpEnabled)
 	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
 	parent.Flag("credentials", "credentials to use").StringVar(&t.credentials)
+
 	t.operatingSystemSpecificConfiguration(parent)
 }
 

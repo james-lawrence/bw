@@ -121,3 +121,24 @@ type closure func() error
 func (t closure) Run() error {
 	return t()
 }
+
+// NoopLoader ...
+type NoopLoader struct{}
+
+// Build ...
+func (t NoopLoader) Build(r io.Reader) (Directive, error) {
+	return NoopDirective{}, nil
+}
+
+// Ext ...
+func (t NoopLoader) Ext() []string {
+	return []string(nil)
+}
+
+// NoopDirective ...
+type NoopDirective struct{}
+
+// Run - implements Directive interface.
+func (t NoopDirective) Run() error {
+	return nil
+}

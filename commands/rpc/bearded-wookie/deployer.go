@@ -111,6 +111,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
 		clustering.OptionLogger(os.Stderr),
 	}
+
 	if c, err = t.global.cluster.Join(coptions...); err != nil {
 		return err
 	}
@@ -141,6 +142,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	options = append(
 		options,
 		deployment.DeployOptionChecker(newStatus(grpc.WithTransportCredentials(creds))),
+		deployment.DeployOptionDeployer(deploy(info, grpc.WithTransportCredentials(creds))),
 	)
 	deployment.NewDeploy(
 		// ux.NewTermui(t.global.cleanup, t.global.ctx),
@@ -206,13 +208,13 @@ func (t statusx) Check(peer *memberlist.Node) (err error) {
 	return deployment.AgentStateToStatus(info.Status)
 }
 
-func deploy(info gagent.Archive) func(*memberlist.Node) error {
+func deploy(info gagent.Archive, options ...grpc.DialOption) func(*memberlist.Node) error {
 	return func(peer *memberlist.Node) (err error) {
 		var (
 			c agent.Client
 		)
 		log.Println("connecting to peer")
-		if c, err = connect(peer); err != nil {
+		if c, err = connect(peer, options...); err != nil {
 			return err
 		}
 		defer c.Close()
