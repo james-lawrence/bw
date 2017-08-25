@@ -29,7 +29,7 @@ message CommandInfo {
 }
 
 message Log {
-  string Log = 1;
+  string log = 1;
 }
 
 message ArchiveChunk {
@@ -53,7 +53,19 @@ message AgentInfo {
 
 message AgentInfoRequest {}
 
+message Node {
+  string ip = 1;
+  string hostname = 2;
+}
+
+message CredentialsRequest {}
+message CredentialsResponse {
+  bytes secret = 1;
+  repeated Node peers = 2;
+}
+
 service Agent {
+  rpc Credentials(CredentialsRequest) returns (CredentialsResponse) {}
   rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Deploy(Archive) returns (DeployResult) {}
   rpc Info(AgentInfoRequest) returns (AgentInfo) {}

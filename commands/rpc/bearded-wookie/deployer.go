@@ -7,52 +7,43 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/ux"
-
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
 
+type deployConfig struct {
+	Address string
+	TLSConfig
+}
+
 type deployCmd struct {
+	config        deployConfig
 	global        *global
 	environment   string
 	workspace     string
-	tlscert       string
-	tlskey        string
-	tlsca         string
 	filteredIP    []net.IP
 	filteredRegex []*regexp.Regexp
 	doptions      []deployment.Option
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
-	t.global.cluster.configure(
-		parent,
-		clusterCmdOptionName("deploy"),
-		clusterCmdOptionBind(
-			&net.TCPAddr{
-				IP:   t.global.systemIP,
-				Port: 0,
-			},
-		),
-		clusterCmdOptionMinPeers(1),
-	)
-
 	parent.Flag("workspace", "root directory of the workspace to be deployed").Default(workspaceDefault).StringVar(&t.workspace)
-	parent.Arg("environment", "the environment").StringVar(&t.environment)
+	parent.Arg("environment", "the environment").Default(environmentDefault).StringVar(&t.environment)
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) {
@@ -73,16 +64,13 @@ func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {
 	for _, n := range t.filteredRegex {
 		filters = append(filters, deployment.Named(n))
 	}
+
 	for _, n := range t.filteredIP {
 		filters = append(filters, deployment.IP(n))
 	}
 
-	return t._deploy(
-		append(
-			t.doptions,
-			deployment.DeployOptionFilter(deployment.Or(filters...)),
-		)...,
-	)
+	options := append(t.doptions, deployment.DeployOptionFilter(deployment.Or(filters...)))
+	return t._deploy(options...)
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
@@ -96,31 +84,63 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		c           clustering.Cluster
 		creds       credentials.TransportCredentials
 		coordinator agent.Client
+		secret      []byte
+		peers       []string
+		port        string
 		info        gagent.Archive
 	)
 
-	rootdir := filepath.Join(t.global.user.HomeDir, credentialsDirDefault, credentialsDefault)
-	key := filepath.Join(rootdir, tlsclientKeyDefault)
-	cert := filepath.Join(rootdir, tlsclientCertDefault)
-	ca := filepath.Join(rootdir, tlscaCertDefault)
-	if creds, err = buildTLSClient("wambli.talla.io", key, cert, ca); err != nil {
-		return errors.WithStack(err)
+	log.Println("loading configuration", configDirectory(t.environment), t.environment)
+	if err = bw.ExpandAndDecodeFile(configDirectory(t.environment), &t.config); err != nil {
+		return err
 	}
 
-	coptions := []clustering.Option{
+	if creds, err = t.config.TLSConfig.buildClient(); err != nil {
+		return err
+	}
+
+	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
+		return errors.Wrap(err, "malformed address in configuration")
+	}
+
+	if coordinator, err = connect(t.config.Address, grpc.WithTransportCredentials(creds)); err != nil {
+		return err
+	}
+
+	// # TODO connect to event stream.
+
+	if peers, secret, err = coordinator.Credentials(); err != nil {
+		return err
+	}
+
+	log.Println("retrieved cluster credentials")
+
+	defaults := []clustering.Option{
+		clustering.OptionNodeID("deploy"),
+		clustering.OptionBindAddress(t.global.systemIP.String()),
+		clustering.OptionBindPort(0),
+		clustering.OptionEventDelegate(eventHandler{}),
+		clustering.OptionAliveDelegate(cp.AliveDefault{}),
 		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
 		clustering.OptionLogger(os.Stderr),
+		clustering.OptionSecret(secret),
 	}
 
-	if c, err = t.global.cluster.Join(coptions...); err != nil {
-		return err
+	if c, err = clustering.NewOptions(defaults...).NewCluster(); err != nil {
+		return errors.Wrap(err, "failed to join cluster")
 	}
 
-	if coordinator, err = connectToCoordinator(c, grpc.WithTransportCredentials(creds)); err != nil {
-		return err
-	}
+	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1))
+	attempts := clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts)
+	peerings := clustering.BootstrapOptionPeeringStrategies(
+		peering.Closure(func() ([]string, error) {
+			return peers, nil
+		}),
+	)
 
-	// # TODO connect to message stream.
+	if err = clustering.Bootstrap(c, peerings, joins, attempts); err != nil {
+		return errors.Wrap(err, "failed to connect to cluster")
+	}
 
 	log.Println("uploading archive")
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
@@ -139,10 +159,11 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Leader, hex.EncodeToString(info.DeploymentID), info.Location)
+	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
-		deployment.DeployOptionChecker(newStatus(grpc.WithTransportCredentials(creds))),
-		deployment.DeployOptionDeployer(deploy(info, grpc.WithTransportCredentials(creds))),
+		deployment.DeployOptionChecker(_connector),
+		deployment.DeployOptionDeployer(_connector.deploy(info)),
 	)
 	deployment.NewDeploy(
 		// ux.NewTermui(t.global.cleanup, t.global.ctx),
@@ -158,45 +179,32 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	return err
 }
 
-func connectToCoordinator(c clustering.Cluster, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
-	var (
-		randomness  []byte
-		coordinator agent.Client
-	)
-
-	if randomness, err = agent.GenerateID(); err != nil {
-		return _czero, err
-	}
-	// grpc.WithCompressor(grpc.NewGZIPCompressor()),
-	// grpc.WithDecompressor(grpc.NewGZIPDecompressor()),
-	if coordinator, err = connect(c.Get(randomness), doptions...); err != nil {
-		return _czero, err
-	}
-
-	return coordinator, err
-}
-
-func connect(peer *memberlist.Node, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
-	address := net.JoinHostPort(peer.Addr.String(), "2000")
+func connect(address string, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
 	return agent.DialClient(address, doptions...)
 }
 
-func newStatus(options ...grpc.DialOption) statusx {
-	return statusx{
+func newConnector(port string, options ...grpc.DialOption) connector {
+	return connector{
+		port:    port,
 		options: options,
 	}
 }
 
-type statusx struct {
+type connector struct {
+	port    string
 	options []grpc.DialOption
 }
 
-func (t statusx) Check(peer *memberlist.Node) (err error) {
+func (t connector) address(peer *memberlist.Node) string {
+	return net.JoinHostPort(peer.Addr.String(), t.port)
+}
+
+func (t connector) Check(peer *memberlist.Node) (err error) {
 	var (
 		c    agent.Client
 		info gagent.AgentInfo
 	)
-	if c, err = connect(peer, t.options...); err != nil {
+	if c, err = connect(t.address(peer), t.options...); err != nil {
 		return err
 	}
 	defer c.Close()
@@ -208,13 +216,13 @@ func (t statusx) Check(peer *memberlist.Node) (err error) {
 	return deployment.AgentStateToStatus(info.Status)
 }
 
-func deploy(info gagent.Archive, options ...grpc.DialOption) func(*memberlist.Node) error {
+func (t connector) deploy(info gagent.Archive) func(*memberlist.Node) error {
 	return func(peer *memberlist.Node) (err error) {
 		var (
 			c agent.Client
 		)
 		log.Println("connecting to peer")
-		if c, err = connect(peer, options...); err != nil {
+		if c, err = connect(t.address(peer), t.options...); err != nil {
 			return err
 		}
 		defer c.Close()

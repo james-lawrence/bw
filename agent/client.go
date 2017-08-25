@@ -81,6 +81,26 @@ func (t Client) Deploy(info agent.Archive) error {
 	return nil
 }
 
+// Credentials ...
+func (t Client) Credentials() ([]string, []byte, error) {
+	var (
+		err      error
+		_zeroReq agent.CredentialsRequest
+		response *agent.CredentialsResponse
+	)
+	rpc := agent.NewAgentClient(t.conn)
+	if response, err = rpc.Credentials(context.Background(), &_zeroReq); err != nil {
+		return []string(nil), nil, errors.WithStack(err)
+	}
+
+	peers := make([]string, 0, len(response.Peers))
+	for _, p := range response.Peers {
+		peers = append(peers, p.Ip)
+	}
+
+	return peers, response.Secret, nil
+}
+
 // Info ...
 func (t Client) Info() (_zeroInfo agent.AgentInfo, err error) {
 	var (

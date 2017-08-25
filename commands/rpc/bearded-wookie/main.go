@@ -18,17 +18,19 @@ import (
 )
 
 const (
-	workspaceDefault      = ".bw"
-	configDirDefault      = ".bwconfig"
-	credentialsDirDefault = ".bwcreds"
-	credentialsDefault    = "default"
-	environmentDefault    = "default"
-	tlscaKeyDefault       = "tlsca.key"
-	tlscaCertDefault      = "tlsca.cert"
-	tlsclientKeyDefault   = "tlsclient.key"
-	tlsclientCertDefault  = "tlsclient.cert"
-	tlsserverKeyDefault   = "tlsserver.key"
-	tlsserverCertDefault  = "tlsserver.cert"
+	workspaceDefault          = ".bw"
+	configDirDefault          = ".bwconfig"
+	credentialsDirDefault     = "bearded-wookie"
+	credentialsDefault        = "default"
+	environmentDefault        = "default"
+	tlscaKeyDefault           = "tlsca.key"
+	tlscaCertDefault          = "tlsca.cert"
+	tlsclientKeyDefault       = "tlsclient.key"
+	tlsclientCertDefault      = "tlsclient.cert"
+	tlsserverKeyDefault       = "tlsserver.key"
+	tlsserverCertDefault      = "tlsserver.cert"
+	configHome                = "/etc"
+	envConfigurationDirectory = "XDG_CONFIG_HOME"
 )
 
 type global struct {
@@ -40,11 +42,11 @@ type global struct {
 	user     *user.User
 }
 
-// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-maximum-join-attempts=10
-// agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946 --cluster-maximum-join-attempts=10
-// agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946 --cluster-maximum-join-attempts=10
-// agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-bootstrap=127.0.0.1:7946 --cluster-maximum-join-attempts=10
-// client: ./bin/bearded-wookie deploy --cluster-node-name="client" --cluster-bootstrap=127.0.0.1:7946 --cluster-bind=127.0.0.1:5000
+// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10
+// agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster=127.0.0.1:7946 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10
+// agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster=127.0.0.1:7946 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10
+// agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster=127.0.0.1:7946 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10
+// client: ./bin/bearded-wookie deploy
 
 func main() {
 	var (
@@ -60,15 +62,20 @@ func main() {
 			user:     systemx.MustUser(),
 		}
 		agent = &agentCmd{
+			config: agentConfig{
+				TLSConfig: newDefaultSystemServerTLS(global.user, credentialsDefault),
+			},
 			global: global,
 			network: &net.TCPAddr{
 				IP:   systemip,
 				Port: 2000,
 			},
-			listener:    netx.NewNoopListener(),
-			upnpEnabled: false,
+			listener: netx.NewNoopListener(),
 		}
 		client = &deployCmd{
+			config: deployConfig{
+				TLSConfig: newDefaultClientTLS(defaultUserCredentialsDirectory(global.user, credentialsDefault)),
+			},
 			global: global,
 		}
 		envinit = &initCmd{

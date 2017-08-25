@@ -22,9 +22,7 @@ func (t *dummy) attach(ctx *kingpin.ParseContext) error {
 	defer log.Println("registered dummy deployer")
 
 	return t.agentCmd.bind(
-		agent.NewServer(
-			t.listener.Addr(),
-			agent.ServerOptionDeployer(deployment.NewDummyCoordinator()),
-		),
+		t.listener.Addr(),
+		agent.ServerOptionDeployer(deployment.NewDummyCoordinator()),
 	)
 }

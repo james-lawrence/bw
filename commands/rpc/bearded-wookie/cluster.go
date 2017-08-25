@@ -14,18 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	joinModeSingle  = "single"
-	joinModeCluster = "cluster"
-)
-
 type clusterCmdOption func(*cluster)
-
-func clusterCmdOptionName(s string) clusterCmdOption {
-	return func(c *cluster) {
-		c.name = s
-	}
-}
 
 func clusterCmdOptionAddress(addresses ...*net.TCPAddr) clusterCmdOption {
 	return func(c *cluster) {
@@ -61,8 +50,8 @@ func (t *cluster) fromOptions(options ...clusterCmdOption) {
 
 func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOption) {
 	t.fromOptions(options...)
+	parent.Flag("cluster-node-name", "name of the node within the cluster").Default(t.network.String()).StringVar(&t.name)
 	parent.Flag("cluster", "addresses of the cluster to connect to").TCPListVar(&t.bootstrap)
-	parent.Flag("cluster-node-name", "name of the node within the cluster").Default(t.name).StringVar(&t.name)
 	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
 	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredPeers)
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)

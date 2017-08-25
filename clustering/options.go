@@ -51,7 +51,6 @@ func OptionNodeID(nodeID string) Option {
 func OptionBindAddress(addr string) Option {
 	return func(opts *Options) {
 		opts.Config.BindAddr = addr
-		opts.Config.AdvertiseAddr = addr
 	}
 }
 
@@ -59,6 +58,19 @@ func OptionBindAddress(addr string) Option {
 func OptionBindPort(port int) Option {
 	return func(opts *Options) {
 		opts.Config.BindPort = port
+	}
+}
+
+// OptionAdvertiseAddress specify the address to advertise.
+func OptionAdvertiseAddress(addr string) Option {
+	return func(opts *Options) {
+		opts.Config.AdvertiseAddr = addr
+	}
+}
+
+// OptionAdvertisePort specify the port to advertise.
+func OptionAdvertisePort(port int) Option {
+	return func(opts *Options) {
 		opts.Config.AdvertisePort = port
 	}
 }
@@ -89,6 +101,13 @@ func OptionAliveDelegate(d memberlist.AliveDelegate) Option {
 func OptionDelegate(delegate memberlist.Delegate) Option {
 	return func(opts *Options) {
 		opts.Config.Delegate = delegate
+	}
+}
+
+// OptionSecret set the secret for the cluster to encrypt communications.
+func OptionSecret(s []byte) Option {
+	return func(opts *Options) {
+		opts.Config.SecretKey = s
 	}
 }
 

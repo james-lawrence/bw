@@ -1,34 +1,32 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
-	"path/filepath"
-	"strconv"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 )
 
+type agentConfig struct {
+	TLSConfig TLSConfig
+}
+
 type agentCmd struct {
 	*global
-	network     *net.TCPAddr
-	server      *grpc.Server
-	listener    net.Listener
-	credentials string
-	upnpEnabled bool
+	config     agentConfig
+	configFile string
+	network    *net.TCPAddr
+	server     *grpc.Server
+	listener   net.Listener
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
@@ -42,49 +40,57 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 		),
 	)
 
-	parent.Flag("upnp-enabled", "enable upnp forwarding for the agent").Default(strconv.FormatBool(t.upnpEnabled)).Hidden().BoolVar(&t.upnpEnabled)
 	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
-	parent.Flag("credentials", "credentials to use").StringVar(&t.credentials)
+	parent.Flag("agent-config", "file containing the agent configuration").Default(defaultAgentConfigFile(t.global.user)).StringVar(&t.configFile)
 
-	t.operatingSystemSpecificConfiguration(parent)
+	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
+	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(a agent.Server) error {
+func (t *agentCmd) bind(addr net.Addr, aoptions ...agent.ServerOption) error {
 	var (
-		err   error
-		c     clustering.Cluster
-		creds credentials.TransportCredentials
+		err    error
+		c      clustering.Cluster
+		creds  credentials.TransportCredentials
+		secret []byte
 	)
 
 	log.Println("initiated binding rpc server", t.network.String())
 	defer log.Println("completed binding rpc server", t.network.String())
 
+	log.Println("loading configuration", t.configFile)
+	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
+		return err
+	}
+
+	log.Printf("%#v\n", t.config)
 	if t.listener, err = net.Listen("tcp", t.network.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
 	}
 
-	rootdir := filepath.Join(t.global.user.HomeDir, credentialsDirDefault, stringsx.DefaultIfBlank(t.credentials, credentialsDefault))
-	if creds, err = buildTLSServer(filepath.Join(rootdir, tlsserverKeyDefault), filepath.Join(rootdir, tlsserverCertDefault), filepath.Join(rootdir, tlscaCertDefault)); err != nil {
-		return errors.WithStack(err)
+	if secret, err = t.config.TLSConfig.fingerprint(); err != nil {
+		return err
 	}
 
-	t.server = grpc.NewServer(
-		grpc.Creds(creds),
-	)
+	if creds, err = t.config.TLSConfig.buildServer(); err != nil {
+		return err
+	}
 
-	agent.RegisterServer(
-		t.server,
-		a,
-	)
-
+	t.server = grpc.NewServer(grpc.Creds(creds))
 	options := []clustering.Option{
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogger(os.Stderr),
+		clustering.OptionSecret(secret),
 	}
 
 	if c, err = t.global.cluster.Join(options...); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
+
+	agent.RegisterServer(
+		t.server,
+		agent.NewServer(addr, append(aoptions, agent.ServerOptionCluster(c, secret))...),
+	)
 
 	go t.server.Serve(t.listener)
 	t.global.cleanup.Add(1)
@@ -97,68 +103,4 @@ func (t *agentCmd) bind(a agent.Server) error {
 	}()
 
 	return nil
-}
-
-func buildTLSServer(keyp, certp, cap string) (creds credentials.TransportCredentials, err error) {
-	var (
-		cert tls.Certificate
-		ca   []byte
-	)
-
-	if cert, err = tls.LoadX509KeyPair(certp, keyp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	pool := x509.NewCertPool()
-	if ca, err = ioutil.ReadFile(cap); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return nil, errors.New("failed to append client certs")
-	}
-
-	creds = credentials.NewTLS(
-		&tls.Config{
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			Certificates: []tls.Certificate{cert},
-			ClientCAs:    pool,
-		},
-	)
-
-	return creds, nil
-}
-
-func buildTLSClient(servername, keyp, certp, cap string) (creds credentials.TransportCredentials, err error) {
-	var (
-		cert tls.Certificate
-		ca   []byte
-	)
-
-	log.Println("loading client cert", certp)
-	log.Println("loading client key", keyp)
-	log.Println("loading authority cert", cap)
-	log.Println("using server name", servername)
-	if cert, err = tls.LoadX509KeyPair(certp, keyp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	pool := x509.NewCertPool()
-	if ca, err = ioutil.ReadFile(cap); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return nil, errors.New("failed to append client certs")
-	}
-
-	creds = credentials.NewTLS(
-		&tls.Config{
-			ServerName:   servername,
-			Certificates: []tls.Certificate{cert},
-			RootCAs:      pool,
-		},
-	)
-
-	return creds, nil
 }

@@ -45,5 +45,6 @@ func HostIP(host string) net.IP {
 		log.Println("failed to resolve ip for", host, "falling back to 127.0.0.1:", err)
 		return net.ParseIP("127.0.0.1")
 	}
+
 	return ip.IP
 }

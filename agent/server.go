@@ -3,10 +3,13 @@ package agent
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"hash"
 	"io"
 	"log"
 	"net"
+
+	"github.com/hashicorp/memberlist"
 
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -22,6 +25,10 @@ type deployer interface {
 	Deploy(*agent.Archive) error
 }
 
+type cluster interface {
+	Members() []*memberlist.Node
+}
+
 type noopDeployer struct{}
 
 func (t noopDeployer) Status() error {
@@ -30,6 +37,12 @@ func (t noopDeployer) Status() error {
 
 func (t noopDeployer) Deploy(*agent.Archive) error {
 	return nil
+}
+
+type noopCluster struct{}
+
+func (t noopCluster) Members() []*memberlist.Node {
+	return []*memberlist.Node(nil)
 }
 
 // ServerOption ...
@@ -42,10 +55,19 @@ func ServerOptionDeployer(d deployer) ServerOption {
 	}
 }
 
+// ServerOptionCluster ...
+func ServerOptionCluster(c cluster, k []byte) ServerOption {
+	return func(s *Server) {
+		s.cluster = c
+		s.clusterKey = k
+	}
+}
+
 // NewServer ...
 func NewServer(address net.Addr, options ...ServerOption) Server {
 	s := Server{
 		Address:     address,
+		cluster:     noopCluster{},
 		deployer:    noopDeployer{},
 		NewUploader: func() (Uploader, error) { return NewFileUploader() },
 		messages:    agent.MessageBuilder{Node: address},
@@ -61,6 +83,8 @@ func NewServer(address net.Addr, options ...ServerOption) Server {
 // Server ...
 type Server struct {
 	deployer    deployer
+	cluster     cluster
+	clusterKey  []byte
 	Address     net.Addr
 	NewUploader func() (Uploader, error)
 	messages    agent.MessageBuilder
@@ -131,6 +155,21 @@ func (t Server) Info(ctx context.Context, _ *agent.AgentInfoRequest) (*agent.Age
 	}
 
 	return nil, err
+}
+
+// Credentials ...
+func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_zeror *agent.CredentialsResponse, err error) {
+	xpeers := t.cluster.Members()
+	peers := make([]*agent.Node, 0, len(xpeers))
+
+	for _, p := range xpeers {
+		peers = append(peers, &agent.Node{
+			Hostname: p.Name,
+			Ip:       net.JoinHostPort(p.Addr.String(), fmt.Sprintf("%d", p.Port)),
+		})
+	}
+
+	return &agent.CredentialsResponse{Secret: t.clusterKey, Peers: peers}, nil
 }
 
 // Events ...

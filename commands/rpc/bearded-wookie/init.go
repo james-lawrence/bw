@@ -77,8 +77,8 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	rootdir := filepath.Join(t.global.user.HomeDir, credentialsDirDefault, t.credentials)
-	if err = os.MkdirAll(rootdir, 0700); err != nil {
+	rootdir := defaultUserCredentialsDirectory(t.global.user, t.credentials)
+	if err = os.MkdirAll(rootdir, 0755); err != nil {
 		return errors.WithStack(err)
 	}
 

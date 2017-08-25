@@ -38,7 +38,6 @@ func (t Cluster) Members() []*memberlist.Node {
 
 // Get - computes the peer that is responsible for the given key.
 func (t Cluster) Get(key []byte) *memberlist.Node {
-
 	return rendezvous.Max(key, t.Members())
 }
 
