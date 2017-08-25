@@ -1,5 +1,5 @@
-hash: 864f3905b626093c345021954b8254bba433addc2cfc5fe04cb8afa3eaff21e4
-updated: 2017-08-13T15:54:15.558610948-04:00
+hash: 71d6a72a0cdde455f88e80b26017374570f62b70333f0b6ff3b97f4e8896433a
+updated: 2017-08-25T15:34:19.239514515-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 1087e65c9441605df944fb12c33f0fe7072d18ca
@@ -12,19 +12,19 @@ imports:
 - name: github.com/armon/go-metrics
   version: 023a4bbe4bb9bfb23ee7e1afc8d0abad217641f3
 - name: github.com/aws/aws-sdk-go
-  version: 141625ada91e8fe4e1becb92b2343529026bf55e
+  version: 083ea27cb52a2bf0efa4dae2f5f1810b2f417b62
   subpackages:
   - aws
   - aws/session
   - service/ec2
 - name: github.com/circonus-labs/circonus-gometrics
-  version: c2344fc6143bb05f9f585aedd58a9444160149e1
+  version: 85eb4cccf312bf5868a05cceef09cf75dd18dddd
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
-  version: bd29ed602e2cf4207ebcabcd530259169e4289ba
+  version: 97646858c46433e4afb3432ad28c12e968efa298
 - name: github.com/golang/protobuf
-  version: 1909bc2f63dc92bb931deace8b8312c4db72d12f
+  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
   subpackages:
   - proto
   - ptypes/any
@@ -45,11 +45,11 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hashicorp/memberlist
-  version: ea4ef7f066304a8e6f28bdb958888fe899f3b44e
+  version: d6c1fb0b99c33d0a8e22acea9da9709b369b5d39
 - name: github.com/hashicorp/raft
-  version: ac704075e75b8626023224c76c56be4d6958a5dc
+  version: 3b4d64b29e422f04808b905005eb5a38bf9150e8
 - name: github.com/hashicorp/serf
-  version: e0e11d82226a61dd9b31c1df562dc9101ee86142
+  version: b84a66cc5575994cb672940d244a2404141688c0
   subpackages:
   - serf
 - name: github.com/huin/goupnp
@@ -65,13 +65,13 @@ imports:
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
 - name: github.com/maruel/panicparse
-  version: c139306d9b850f842c12be39998d2fcecfdf2e34
+  version: e097e77a230345db8ac8961861c81fb509c845c9
   subpackages:
   - stack
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/miekg/dns
-  version: 0598bd43cf51d0375c5bcd3a42e807cc19b3b7d9
+  version: e4205768578dc90c2669e75a2f8a8bf77e3083a4
 - name: github.com/mitchellh/go-wordwrap
   version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/nsf/termbox-go
@@ -81,7 +81,7 @@ imports:
 - name: github.com/sean-/seed
   version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: golang.org/x/net
-  version: 1c05540f6879653db88113bc4a2b70aec4bd491f
+  version: 57efc9c3d9f91fb3277f8da1cff370539c4d3dc5
   subpackages:
   - context
   - html
@@ -94,7 +94,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: b19bf474d317b857955b12035d2c5acb57ce8b01
+  version: ac87088df8ef557f1e32cd00ed0b6fbc3f7ddafb
   subpackages:
   - encoding
   - encoding/charmap
@@ -115,13 +115,14 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 09f6ed296fc66555a25fe4ce95173148778dfa85
+  version: ee236bd376b077c7a89f260c026c4735b195e459
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
-  version: b8669c35455183da6d5c474ea6e72fbf55183274
+  version: b3ddf786825de56a4178401b7e174ee332173b66
   subpackages:
   - codes
+  - connectivity
   - credentials
   - grpclb/grpc_lb_v1
   - grpclog
@@ -134,6 +135,8 @@ imports:
   - status
   - tap
   - transport
+- name: gopkg.in/yaml.v1
+  version: 9f9df34309c04878acc86042b16630b0f696e1de
 - name: gopkg.in/yaml.v2
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
@@ -173,6 +176,6 @@ testImports:
   - matchers/support/goraph/util
   - types
 - name: golang.org/x/sys
-  version: e42485b6e20ae7d2304ec72e535b103ed350cc02
+  version: 22e23b74325bf60e4cc1ce7bdc157eda0d8b5c13
   subpackages:
   - unix

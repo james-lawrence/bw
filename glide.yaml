@@ -25,6 +25,7 @@ import:
 - package: google.golang.org/grpc
   version: ~1.5.1
 - package: github.com/golang/protobuf
+- package: gopkg.in/yaml.v1
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
