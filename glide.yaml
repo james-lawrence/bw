@@ -26,6 +26,9 @@ import:
   version: ~1.5.1
 - package: github.com/golang/protobuf
 - package: gopkg.in/yaml.v1
+- package: github.com/icrowley/fake
+- package: github.com/corpix/uarand
+- package: github.com/gutengo/fil
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega

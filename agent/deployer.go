@@ -12,6 +12,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/directives"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
+	"bitbucket.org/jatone/bearded-wookie/downloads"
 )
 
 // DirectiveOption ...
@@ -43,6 +44,7 @@ func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
 		keepN:   3,
 		options: options,
+		dlreg:   downloads.New(),
 	}
 
 	return d
@@ -54,6 +56,7 @@ type Directive struct {
 	root    string
 	archive agent.Archive
 	sctx    shell.Context
+	dlreg   downloads.Registry
 	options []DirectiveOption
 }
 
@@ -91,7 +94,7 @@ func (t Directive) deploy(completed chan error) {
 	dpkg := directives.PackageLoader{}
 	dst := filepath.Join(t.root, hex.EncodeToString(t.archive.DeploymentID))
 
-	if err = archive.Unpack(dst, NewDownloader(t.archive.Location).Download()); err != nil {
+	if err = archive.Unpack(dst, t.dlreg.New(t.archive.Location).Download()); err != nil {
 		err = errors.Wrapf(err, "retrieve archive")
 		goto done
 	}

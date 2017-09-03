@@ -1,29 +1,23 @@
-package agent
+package downloads
 
 import (
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/pkg/errors"
 )
 
 const (
-	fileProtocol = "file://"
-	// s3Protocol   = "s3://"
+	fileProtocol = "file"
+	s3Protocol   = "s3"
+	// gitProtocol  = "git://"
 )
 
-// NewDownloader ...
-func NewDownloader(location string) Downloader {
-
-	switch {
-	case strings.HasPrefix(location, fileProtocol):
-		return DownloadFile{Path: strings.TrimPrefix(location, fileProtocol)}
-	default:
-		return downloader{newErrReader(errors.Errorf("unknown archive protocol: %s", location))}
-	}
+// Downloader ...
+type Downloader interface {
+	Download() io.ReadCloser
 }
 
 func newErrReader(err error) io.ReadCloser {
@@ -61,4 +55,12 @@ func (t DownloadFile) Download() (src io.ReadCloser) {
 	}
 	log.Println("created file reader", t.Path)
 	return src
+}
+
+func maybeIO(rc io.ReadCloser, err error) io.ReadCloser {
+	if err != nil {
+		return newErrReader(err)
+	}
+
+	return rc
 }

@@ -7,9 +7,13 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
-
-	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 )
+
+// Context global context for the agent.
+type Context struct {
+	Log           *log.Logger
+	RootDirectory string
+}
 
 // Directive ...
 type Directive interface {
@@ -88,32 +92,6 @@ type loader interface {
 	// extensions to match against.
 	Ext() []string
 	Build(io.Reader) (Directive, error)
-}
-
-// ShellLoader directive.
-type ShellLoader struct {
-	Context shell.Context
-}
-
-// Ext extensions to succeed against.
-func (ShellLoader) Ext() []string {
-	return []string{".bwcmd"}
-}
-
-// Build builds a directive from the reader.
-func (t ShellLoader) Build(r io.Reader) (Directive, error) {
-	var (
-		err  error
-		cmds []shell.Exec
-	)
-
-	if cmds, err = shell.ParseYAML(r); err != nil {
-		return nil, err
-	}
-
-	return closure(func() error {
-		return shell.Execute(t.Context, cmds...)
-	}), nil
 }
 
 type closure func() error

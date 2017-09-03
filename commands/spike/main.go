@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
+	"bitbucket.org/jatone/bearded-wookie/downloads"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -19,6 +19,7 @@ func main() {
 	app := kingpin.New("spike", "spike command line for testing functionality")
 	app.Flag("root", "root directory to archive").StringVar(&root)
 	app.Flag("dst", "dst directory to write into").StringVar(&dst)
+	dlreg := downloads.New()
 	app.Action(func(ctx *kingpin.ParseContext) error {
 		var (
 			pipe *os.File
@@ -36,7 +37,7 @@ func main() {
 		if err = pipe.Close(); err != nil {
 			return err
 		}
-		src := agent.NewDownloader("file://" + pipe.Name()).Download()
+		src := dlreg.New("file://" + pipe.Name()).Download()
 		defer src.Close()
 		return archive.Unpack(dst, src)
 	})

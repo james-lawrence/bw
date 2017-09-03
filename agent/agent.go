@@ -37,8 +37,8 @@ func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
 	agent.RegisterAgentServer(s, srv)
 }
 
-// Downloader ...
-type Downloader interface {
+// downloader ...
+type downloader interface {
 	Download() io.ReadCloser
 }
 

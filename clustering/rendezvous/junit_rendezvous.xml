@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-  <testsuite tests="6" failures="0" time="0.000202038">
-      <testcase name="Rendezvous Max single node" classname="Rendezvous Suite" time="4.3211e-05"></testcase>
-      <testcase name="Rendezvous Max multiple nodes" classname="Rendezvous Suite" time="1.5299e-05"></testcase>
-      <testcase name="Rendezvous Max different keys should return different nodes" classname="Rendezvous Suite" time="7.053e-06"></testcase>
-      <testcase name="Rendezvous MaxN cluster should return every node if n is larger than the number of peers" classname="Rendezvous Suite" time="3.8973e-05"></testcase>
-      <testcase name="Rendezvous MaxN cluster example 1" classname="Rendezvous Suite" time="1.068e-05"></testcase>
-      <testcase name="Rendezvous MaxN cluster example 2" classname="Rendezvous Suite" time="1.9407e-05"></testcase>
-  </testsuite>

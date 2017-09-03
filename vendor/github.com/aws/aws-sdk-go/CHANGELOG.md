@@ -1,3 +1,61 @@
+Release v1.10.37 (2017-09-01)
+===
+
+### Service Client Updates
+* `service/MobileHub`: Adds new service
+* `service/gamelift`: Updates service API and documentation
+  * GameLift VPC resources can be peered with any other AWS VPC. R4 memory-optimized instances now available to deploy.
+* `service/ssm`: Updates service API and documentation
+  * Adding KMS encryption support to SSM Inventory Resource Data Sync. Exposes the ClientToken parameter on SSM StartAutomationExecution to provide idempotent execution requests.
+
+Release v1.10.36 (2017-08-31)
+===
+
+### Service Client Updates
+* `service/codebuild`: Updates service API, documentation, and examples
+  * The AWS CodeBuild HTTP API now provides the BatchDeleteBuilds operation, which enables you to delete existing builds.
+* `service/ec2`: Updates service API and documentation
+  * Descriptions for Security Group Rules enables customers to be able to define a description for ingress and egress security group rules . The Descriptions for Security Group Rules feature supports one description field per Security Group rule for both ingress and egress rules . Descriptions for Security Group Rules provides a simple way to describe the purpose or function of a Security Group Rule allowing for easier customer identification of configuration elements .      Prior to the release of Descriptions for Security Group Rules , customers had to maintain a separate system outside of AWS if they wanted to track Security Group Rule mapping and their purpose for being implemented. If a security group rule has already been created and you would like to update or change your description for that security group rule you can use the UpdateSecurityGroupRuleDescription API.
+* `service/elasticloadbalancingv2`: Updates service API and documentation
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+* `service/lex-models`: Updates service API and documentation
+
+### SDK Bugs
+* `aws/signer/v4`: Revert [#1491](https://github.com/aws/aws-sdk-go/issues/1491) as change conflicts with an undocumented AWS v4 signature test case.
+  * Related to: [#1495](https://github.com/aws/aws-sdk-go/issues/1495).
+Release v1.10.35 (2017-08-30)
+===
+
+### Service Client Updates
+* `service/application-autoscaling`: Updates service API and documentation
+* `service/organizations`: Updates service API and documentation
+  * The exception ConstraintViolationException now contains a new reason subcode MASTERACCOUNT_MISSING_CONTACT_INFO to make it easier to understand why attempting to remove an account from an Organization can fail. We also improved several other of the text descriptions and examples.
+
+Release v1.10.34 (2017-08-29)
+===
+
+### Service Client Updates
+* `service/config`: Updates service API and documentation
+* `service/ec2`: Updates service API and documentation
+  * Provides capability to add secondary CIDR blocks to a VPC.
+
+### SDK Bugs
+* `aws/signer/v4`: Fix Signing Unordered Multi Value Query Parameters ([#1491](https://github.com/aws/aws-sdk-go/pull/1491))
+  * Removes sorting of query string values when calculating v4 signing as this is not part of the spec. The spec only requires the keys, not values, to be sorted which is achieved by Query.Encode().
+Release v1.10.33 (2017-08-25)
+===
+
+### Service Client Updates
+* `service/cloudformation`: Updates service API and documentation
+  * Rollback triggers enable you to have AWS CloudFormation monitor the state of your application during stack creation and updating, and to roll back that operation if the application breaches the threshold of any of the alarms you've specified.
+* `service/gamelift`: Updates service API
+  * Update spelling of MatchmakingTicket status values for internal consistency.
+* `service/rds`: Updates service API and documentation
+  * Option group options now contain additional properties that identify requirements for certain options. Check these properties to determine if your DB instance must be in a VPC or have auto minor upgrade turned on before you can use an option. Check to see if you can downgrade the version of an option after you have installed it.
+
+### SDK Enhancements
+* `example/service/ec2`: Add EC2 list instances example ([#1492](https://github.com/aws/aws-sdk-go/pull/1492))
+
 Release v1.10.32 (2017-08-25)
 ===
 

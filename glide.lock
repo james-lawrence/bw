@@ -1,8 +1,8 @@
-hash: 71d6a72a0cdde455f88e80b26017374570f62b70333f0b6ff3b97f4e8896433a
-updated: 2017-08-25T15:34:19.239514515-04:00
+hash: 60c20163d25799631cab7720540f3f8418d14a2424b083602f40a11094b4ded3
+updated: 2017-09-03T15:45:29.844310795-04:00
 imports:
 - name: github.com/alecthomas/kingpin
-  version: 1087e65c9441605df944fb12c33f0fe7072d18ca
+  version: 297a08eca3cfe76b1bc87a752ec3272fbac539ef
 - name: github.com/alecthomas/template
   version: a0175ee3bccc567396460bf5acd36800cb10c49c
   subpackages:
@@ -12,22 +12,26 @@ imports:
 - name: github.com/armon/go-metrics
   version: 023a4bbe4bb9bfb23ee7e1afc8d0abad217641f3
 - name: github.com/aws/aws-sdk-go
-  version: 083ea27cb52a2bf0efa4dae2f5f1810b2f417b62
+  version: 8d9e3039553a1f8ca137750a6eeed5fb5d62d7e6
   subpackages:
   - aws
   - aws/session
   - service/ec2
 - name: github.com/circonus-labs/circonus-gometrics
   version: 85eb4cccf312bf5868a05cceef09cf75dd18dddd
+- name: github.com/corpix/uarand
+  version: 2b8494104d86337cdd41d0a49cbed8e4583c0ab4
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/godbus/dbus
-  version: 97646858c46433e4afb3432ad28c12e968efa298
+  version: 7f21b8d03d62063e35a1088c6d675e7de3f4fe0d
 - name: github.com/golang/protobuf
-  version: ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e
+  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
   subpackages:
   - proto
   - ptypes/any
+- name: github.com/gutengo/fil
+  version: 6109b2e0b5cfdefdef3a254cc1a3eaa35bc89284
 - name: github.com/hashicorp/errwrap
   version: 7554cd9344cec97297fa6649b055a8c98c2a1e55
 - name: github.com/hashicorp/go-immutable-radix
@@ -49,17 +53,19 @@ imports:
 - name: github.com/hashicorp/raft
   version: 3b4d64b29e422f04808b905005eb5a38bf9150e8
 - name: github.com/hashicorp/serf
-  version: b84a66cc5575994cb672940d244a2404141688c0
+  version: 555c6fa2a11d1f8e08ac9964015e864a3f61e7c3
   subpackages:
   - serf
 - name: github.com/huin/goupnp
-  version: 9b81a7424f2384e4df098d4ac9096f9ed9d8ef95
+  version: 5b7801abd885f2f7458add715aee47e7df5370a0
   subpackages:
   - dcps/internetgateway2
   - httpu
   - scpd
   - soap
   - ssdp
+- name: github.com/icrowley/fake
+  version: e64cc2cf92049a299f359734c6ea76073f2a8b2c
 - name: github.com/kballard/go-shellquote
   version: cd60e84ee657ff3dc51de0b4f55dd299a3e136f2
 - name: github.com/manveru/faker
@@ -81,7 +87,7 @@ imports:
 - name: github.com/sean-/seed
   version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: golang.org/x/net
-  version: 57efc9c3d9f91fb3277f8da1cff370539c4d3dc5
+  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
   subpackages:
   - context
   - html
@@ -94,7 +100,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: ac87088df8ef557f1e32cd00ed0b6fbc3f7ddafb
+  version: bd91bbf73e9a4a801adbfb97133c992678533126
   subpackages:
   - encoding
   - encoding/charmap
@@ -141,7 +147,7 @@ imports:
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/onsi/ginkgo
-  version: 8382b23d18dbaaff8e5f7e83784c53ebb8ec2f47
+  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
   subpackages:
   - config
   - extensions/table
@@ -162,7 +168,7 @@ testImports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: c893efa28eb45626cdaa76c9f653b62488858837
+  version: dcabb60a477c2b6f456df65037cb6708210fbb02
   subpackages:
   - format
   - internal/assertion
@@ -176,6 +182,6 @@ testImports:
   - matchers/support/goraph/util
   - types
 - name: golang.org/x/sys
-  version: 22e23b74325bf60e4cc1ce7bdc157eda0d8b5c13
+  version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
   subpackages:
   - unix
