@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"google.golang.org/grpc"
@@ -26,24 +27,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-type deployConfig struct {
-	Address string
-	TLSConfig
-}
-
 type deployCmd struct {
-	config        deployConfig
+	config        agent.ConfigClient
 	global        *global
 	environment   string
-	workspace     string
+	deployspace   string
 	filteredIP    []net.IP
 	filteredRegex []*regexp.Regexp
 	doptions      []deployment.Option
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
-	parent.Flag("workspace", "root directory of the workspace to be deployed").Default(workspaceDefault).StringVar(&t.workspace)
-	parent.Arg("environment", "the environment").Default(environmentDefault).StringVar(&t.environment)
+	parent.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
+	parent.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) {
@@ -89,13 +85,12 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		port        string
 		info        gagent.Archive
 	)
-
-	log.Println("loading configuration", configDirectory(t.environment), t.environment)
-	if err = bw.ExpandAndDecodeFile(configDirectory(t.environment), &t.config); err != nil {
+	log.Println("deploying", t.deployspace)
+	if err = bw.ExpandAndDecodeFile(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment), &t.config); err != nil {
 		return err
 	}
 
-	if creds, err = t.config.TLSConfig.buildClient(); err != nil {
+	if creds, err = t.config.TLSConfig.BuildClient(); err != nil {
 		return err
 	}
 
@@ -149,7 +144,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = archive.Pack(dst, t.workspace); err != nil {
+	if err = archive.Pack(dst, t.deployspace); err != nil {
 		return err
 	}
 

@@ -29,6 +29,8 @@ import:
 - package: github.com/icrowley/fake
 - package: github.com/corpix/uarand
 - package: github.com/gutengo/fil
+- package: github.com/kr/pretty
+- package: github.com/kr/text
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega

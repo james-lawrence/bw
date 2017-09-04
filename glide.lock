@@ -1,5 +1,5 @@
-hash: 60c20163d25799631cab7720540f3f8418d14a2424b083602f40a11094b4ded3
-updated: 2017-09-03T15:45:29.844310795-04:00
+hash: 2b240cb7adb0e5e9512a83d86d69b700da9668f3c4680a60247d2c593c23ee3e
+updated: 2017-09-04T10:11:17.150493145-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 297a08eca3cfe76b1bc87a752ec3272fbac539ef
@@ -15,14 +15,32 @@ imports:
   version: 8d9e3039553a1f8ca137750a6eeed5fb5d62d7e6
   subpackages:
   - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/credentials
+  - aws/endpoints
+  - aws/request
   - aws/session
+  - aws/signer/v4
+  - internal/shareddefaults
+  - private/protocol
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
   - service/ec2
+  - service/s3
 - name: github.com/circonus-labs/circonus-gometrics
   version: 85eb4cccf312bf5868a05cceef09cf75dd18dddd
 - name: github.com/corpix/uarand
   version: 2b8494104d86337cdd41d0a49cbed8e4583c0ab4
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
+- name: github.com/go-ini/ini
+  version: c787282c39ac1fc618827141a1f762240def08a3
 - name: github.com/godbus/dbus
   version: 7f21b8d03d62063e35a1088c6d675e7de3f4fe0d
 - name: github.com/golang/protobuf
@@ -66,8 +84,14 @@ imports:
   - ssdp
 - name: github.com/icrowley/fake
   version: e64cc2cf92049a299f359734c6ea76073f2a8b2c
+- name: github.com/jmespath/go-jmespath
+  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/kballard/go-shellquote
   version: cd60e84ee657ff3dc51de0b4f55dd299a3e136f2
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+- name: github.com/kr/text
+  version: 7cafcd837844e784b526369c9bce262804aebc60
 - name: github.com/manveru/faker
   version: 717f7cf83fb78669bfab612749c2e8ff63d5be11
 - name: github.com/maruel/panicparse
@@ -121,7 +145,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: ee236bd376b077c7a89f260c026c4735b195e459
+  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc

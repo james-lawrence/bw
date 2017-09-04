@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/tlsx"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
@@ -25,7 +27,7 @@ type initCmd struct {
 func (t *initCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("duration", "how long the certificate should last").Default("8760h").DurationVar(&t.duration)
 	parent.Flag("rsa-bits", "size of RSA key to generate.").Default("4096").IntVar(&t.bits)
-	parent.Flag("credentials", "name of the credentials to generate").Default(credentialsDefault).StringVar(&t.credentials)
+	parent.Flag("credentials", "name of the credentials to generate").Default("default").StringVar(&t.credentials)
 	parent.Arg("common-name", "common name of the authority").StringVar(&t.common)
 	parent.Arg("hosts", "hosts the certificate should match").StringsVar(&t.hosts)
 	parent.Action(t.generate)
@@ -37,6 +39,7 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 		authority x509.Certificate
 		server    x509.Certificate
 		client    x509.Certificate
+		rootdir   = bw.DefaultDirLocation(t.credentials)
 	)
 	defer t.global.shutdown()
 
@@ -77,7 +80,6 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	rootdir := defaultUserCredentialsDirectory(t.global.user, t.credentials)
 	if err = os.MkdirAll(rootdir, 0755); err != nil {
 		return errors.WithStack(err)
 	}
@@ -107,15 +109,15 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 		}
 	}
 
-	if capriv, err = write(tlscaKeyDefault, tlscaCertDefault)(tlsx.SelfSignedRSAGen(t.bits, authority)); err != nil {
+	if capriv, err = write(agent.DefaultTLSKeyCA, agent.DefaultTLSCertCA)(tlsx.SelfSignedRSAGen(t.bits, authority)); err != nil {
 		return err
 	}
 
-	if _, err = write(tlsserverKeyDefault, tlsserverCertDefault)(tlsx.SignedRSAGen(t.bits, server, authority, capriv)); err != nil {
+	if _, err = write(agent.DefaultTLSKeyServer, agent.DefaultTLSCertServer)(tlsx.SignedRSAGen(t.bits, server, authority, capriv)); err != nil {
 		return err
 	}
 
-	if _, err = write(tlsclientKeyDefault, tlsclientCertDefault)(tlsx.SignedRSAGen(t.bits, client, authority, capriv)); err != nil {
+	if _, err = write(agent.DefaultTLSKeyClient, agent.DefaultTLSCertClient)(tlsx.SignedRSAGen(t.bits, client, authority, capriv)); err != nil {
 		return err
 	}
 

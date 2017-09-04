@@ -1,18 +1,18 @@
 package agent
 
 import (
-	"encoding/hex"
 	"log"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
+	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/directives"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 	"bitbucket.org/jatone/bearded-wookie/downloads"
+	"github.com/pkg/errors"
 )
 
 // DirectiveOption ...
@@ -62,8 +62,8 @@ type Directive struct {
 
 // Deploy ...
 func (t Directive) Deploy(archive *agent.Archive, completed chan error) error {
-	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
-	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
+	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", bw.RandomID(archive.DeploymentID), archive.Leader, archive.Location)
+	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", bw.RandomID(archive.DeploymentID), archive.Leader, archive.Location)
 
 	options := append(
 		t.options,
@@ -82,31 +82,42 @@ func (t Directive) Deploy(archive *agent.Archive, completed chan error) error {
 func (t Directive) deploy(completed chan error) {
 	var (
 		err         error
+		dctx        deployment.DeployContext
+		dshell      directives.ShellLoader
+		dpkg        directives.PackageLoader
+		dst         string
 		_directives []directives.Directive
 	)
+
 	log.Println("deploying")
 	defer log.Println("deploy complete")
 
-	dshell := directives.ShellLoader{
-		Context: t.sctx,
+	if dctx, err = deployment.NewDeployContext(t.root, t.archive); err != nil {
+		goto done
 	}
 
-	dpkg := directives.PackageLoader{}
-	dst := filepath.Join(t.root, hex.EncodeToString(t.archive.DeploymentID))
+	dshell = directives.ShellLoader{
+		Context: shell.NewContext(t.sctx, shell.OptionLogger(dctx.Log)),
+	}
+
+	dpkg = directives.PackageLoader{}
+	dst = filepath.Join(t.root, bw.RandomID(t.archive.DeploymentID).String(), "archive")
+
+	dctx.Log.Println("attempting to download", t.archive.Location)
 
 	if err = archive.Unpack(dst, t.dlreg.New(t.archive.Location).Download()); err != nil {
 		err = errors.Wrapf(err, "retrieve archive")
 		goto done
 	}
 
-	log.Println("workspace downloaded", dst)
+	dctx.Log.Println("completed download", dst)
 
 	if _directives, err = directives.Load(filepath.Join(dst, ".directives"), dshell, dpkg); err != nil {
 		err = errors.Wrapf(err, "failed to load directives")
 		goto done
 	}
 
-	log.Println("loaded", len(_directives), "directive(s)")
+	dctx.Log.Println("loaded", len(_directives), "directive(s)")
 	for _, l := range _directives {
 		if err = l.Run(); err != nil {
 			goto done
@@ -116,7 +127,7 @@ func (t Directive) deploy(completed chan error) {
 done:
 	// cleanup workspace directory.
 	if soft := agentutil.MaybeClean(agentutil.KeepNewestN(t.keepN))(agentutil.Dirs(t.root)); soft != nil {
-		log.Println("failed to clean workspace directory", soft)
+		dctx.Log.Println("failed to clean workspace directory", soft)
 	}
-	completed <- err
+	completed <- dctx.Done(err)
 }

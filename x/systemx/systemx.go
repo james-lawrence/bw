@@ -28,6 +28,21 @@ func HostnameOrDefault(fallback string) string {
 	return hostname
 }
 
+// WorkingDirectoryOrDefault loads the working directory or fallsback to the provided
+// path when an error occurs.
+func WorkingDirectoryOrDefault(fallback string) (dir string) {
+	var (
+		err error
+	)
+
+	if dir, err = os.Getwd(); err != nil {
+		log.Println("failed to get working directory", err)
+		return fallback
+	}
+
+	return dir
+}
+
 // MustUser ...
 func MustUser() *user.User {
 	u, err := user.Current()
@@ -36,6 +51,22 @@ func MustUser() *user.User {
 	}
 
 	return u
+}
+
+// CurrentUserOrDefault returns the current user or the default configured user.
+// (usually root)
+func CurrentUserOrDefault(d user.User) (result *user.User) {
+	var (
+		err error
+	)
+
+	if result, err = user.Current(); err != nil {
+		log.Println("failed to retrieve current user, using default", err)
+		tmp := d
+		return &tmp
+	}
+
+	return result
 }
 
 // HostIP ...

@@ -5,10 +5,10 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/user"
 	"sync"
 	"syscall"
 
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"bitbucket.org/jatone/bearded-wookie/x/netx"
@@ -17,29 +17,12 @@ import (
 	"github.com/alecthomas/kingpin"
 )
 
-const (
-	workspaceDefault          = ".bw"
-	configDirDefault          = ".bwconfig"
-	credentialsDirDefault     = "bearded-wookie"
-	credentialsDefault        = "default"
-	environmentDefault        = "default"
-	tlscaKeyDefault           = "tlsca.key"
-	tlscaCertDefault          = "tlsca.cert"
-	tlsclientKeyDefault       = "tlsclient.key"
-	tlsclientCertDefault      = "tlsclient.cert"
-	tlsserverKeyDefault       = "tlsserver.key"
-	tlsserverCertDefault      = "tlsserver.cert"
-	configHome                = "/etc"
-	envConfigurationDirectory = "XDG_CONFIG_HOME"
-)
-
 type global struct {
 	systemIP net.IP
 	cluster  *cluster
 	ctx      context.Context
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
-	user     *user.User
 }
 
 // agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:7946 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10
@@ -59,12 +42,9 @@ func main() {
 			ctx:      cleanup,
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},
-			user:     systemx.MustUser(),
 		}
-		agent = &agentCmd{
-			config: agentConfig{
-				TLSConfig: newDefaultSystemServerTLS(global.user, credentialsDefault),
-			},
+		agentcmd = &agentCmd{
+			config: agent.NewConfig(),
 			global: global,
 			network: &net.TCPAddr{
 				IP:   systemip,
@@ -73,9 +53,7 @@ func main() {
 			listener: netx.NewNoopListener(),
 		}
 		client = &deployCmd{
-			config: deployConfig{
-				TLSConfig: newDefaultClientTLS(defaultUserCredentialsDirectory(global.user, credentialsDefault)),
-			},
+			config: agent.NewConfigClient(),
 			global: global,
 		}
 		envinit = &initCmd{
@@ -87,7 +65,7 @@ func main() {
 	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
 
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
-	agent.configure(app.Command("agent", "agent that manages deployments"))
+	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	client.deployCmd(app.Command("deploy", "deploy to all nodes within the cluster").Default())
 	client.filteredCmd(app.Command("filtered", "allows for filtering the instances within the cluster"))
 	envinit.configure(app.Command("init", "generate tls cert/key for an environment"))

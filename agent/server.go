@@ -11,8 +11,10 @@ import (
 
 	"github.com/hashicorp/memberlist"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"golang.org/x/net/context"
 )
 
@@ -48,6 +50,15 @@ func (t noopCluster) Members() []*memberlist.Node {
 // ServerOption ...
 type ServerOption func(*Server)
 
+// ComposeServerOptions turns a set of server options into a single server option.
+func ComposeServerOptions(options ...ServerOption) ServerOption {
+	return func(s *Server) {
+		for _, opt := range options {
+			opt(s)
+		}
+	}
+}
+
 // ServerOptionDeployer ...
 func ServerOptionDeployer(d deployer) ServerOption {
 	return func(s *Server) {
@@ -66,11 +77,15 @@ func ServerOptionCluster(c cluster, k []byte) ServerOption {
 // NewServer ...
 func NewServer(address net.Addr, options ...ServerOption) Server {
 	s := Server{
-		Address:     address,
-		cluster:     noopCluster{},
-		deployer:    noopDeployer{},
-		NewUploader: func() (Uploader, error) { return NewFileUploader() },
-		messages:    agent.MessageBuilder{Node: address},
+		Address:  address,
+		cluster:  noopCluster{},
+		deployer: noopDeployer{},
+		UploadProtocol: uploads.ProtocolFunc(
+			func(uid []byte, _ uint64) (uploads.Uploader, error) {
+				return uploads.NewTempFileUploader()
+			},
+		),
+		messages: agent.MessageBuilder{Node: address},
 	}
 
 	for _, opt := range options {
@@ -82,12 +97,12 @@ func NewServer(address net.Addr, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
-	deployer    deployer
-	cluster     cluster
-	clusterKey  []byte
-	Address     net.Addr
-	NewUploader func() (Uploader, error)
-	messages    agent.MessageBuilder
+	deployer       deployer
+	cluster        cluster
+	clusterKey     []byte
+	Address        net.Addr
+	UploadProtocol uploads.Protocol
+	messages       agent.MessageBuilder
 }
 
 // Upload ...
@@ -99,11 +114,11 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 		dst          Uploader
 	)
 
-	if deploymentID, err = GenerateID(); err != nil {
+	if deploymentID, err = bw.GenerateID(); err != nil {
 		return err
 	}
 
-	if dst, err = t.NewUploader(); err != nil {
+	if dst, err = t.UploadProtocol.NewUpload(deploymentID, 0); err != nil {
 		return err
 	}
 

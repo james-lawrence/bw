@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// GenerateContext creates the context for the current machine.
-func GenerateContext() (ctx Context, err error) {
+// DefaultContext creates the context for the current machine.
+func DefaultContext() (ctx Context, err error) {
 	var (
 		hostname string
 		// machineID string
@@ -41,7 +41,27 @@ func GenerateContext() (ctx Context, err error) {
 		Domain:    _domain(fqdn),
 		MachineID: _machineID(),
 		Environ:   os.Environ(),
+		output:    ioutil.Discard,
 	}, nil
+}
+
+// Option context option.
+type Option func(*Context)
+
+// OptionLogger set the logger for the context.
+func OptionLogger(l *log.Logger) Option {
+	return func(ctx *Context) {
+		ctx.output = logging{logger: l}
+	}
+}
+
+// NewContext creates a new context using the provided context as a base and then applies options.
+func NewContext(tmp Context, options ...Option) Context {
+	for _, opt := range options {
+		opt(&tmp)
+	}
+
+	return tmp
 }
 
 // Context ...

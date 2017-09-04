@@ -3,7 +3,6 @@ package downloads
 import (
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/pkg/errors"
@@ -12,7 +11,7 @@ import (
 const (
 	fileProtocol = "file"
 	s3Protocol   = "s3"
-	// gitProtocol  = "git://"
+	// gitProtocol  = "git"
 )
 
 // Downloader ...
@@ -53,7 +52,7 @@ func (t DownloadFile) Download() (src io.ReadCloser) {
 	if src, err = os.Open(t.Path); err != nil {
 		return newErrReader(errors.Wrapf(err, "failed to open file: %s", t.Path))
 	}
-	log.Println("created file reader", t.Path)
+
 	return src
 }
 

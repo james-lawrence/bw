@@ -16,13 +16,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type agentConfig struct {
-	TLSConfig TLSConfig
-}
-
 type agentCmd struct {
 	*global
-	config     agentConfig
+	config     agent.Config
 	configFile string
 	network    *net.TCPAddr
 	server     *grpc.Server
@@ -41,38 +37,40 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	)
 
 	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
-	parent.Flag("agent-config", "file containing the agent configuration").Default(defaultAgentConfigFile(t.global.user)).StringVar(&t.configFile)
+	parent.Flag("agent-config", "file containing the agent configuration").
+		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
 
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(addr net.Addr, aoptions ...agent.ServerOption) error {
+func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
 		creds  credentials.TransportCredentials
 		secret []byte
 	)
+	log.SetPrefix("[AGENT] ")
 
 	log.Println("initiated binding rpc server", t.network.String())
 	defer log.Println("completed binding rpc server", t.network.String())
 
-	log.Println("loading configuration", t.configFile)
 	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
 		return err
 	}
 
-	log.Printf("%#v\n", t.config)
+	log.Printf("configuration: %#v\n", t.config)
+
 	if t.listener, err = net.Listen("tcp", t.network.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
 	}
 
-	if secret, err = t.config.TLSConfig.fingerprint(); err != nil {
+	if secret, err = t.config.TLSConfig.Hash(); err != nil {
 		return err
 	}
 
-	if creds, err = t.config.TLSConfig.buildServer(); err != nil {
+	if creds, err = t.config.TLSConfig.BuildServer(); err != nil {
 		return err
 	}
 
@@ -89,7 +87,7 @@ func (t *agentCmd) bind(addr net.Addr, aoptions ...agent.ServerOption) error {
 
 	agent.RegisterServer(
 		t.server,
-		agent.NewServer(addr, append(aoptions, agent.ServerOptionCluster(c, secret))...),
+		agent.NewServer(addr, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret))),
 	)
 
 	go t.server.Serve(t.listener)

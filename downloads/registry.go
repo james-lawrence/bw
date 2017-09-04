@@ -1,6 +1,7 @@
 package downloads
 
 import (
+	"log"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -49,11 +50,13 @@ type Registry struct {
 // New connect to the specified location by creating a io.ReadCloser
 func (t Registry) New(location string) Downloader {
 	if strings.HasPrefix(location, fileProtocol) {
-		return DownloadFile{Path: strings.TrimPrefix(location, fileProtocol)}
+		log.Println("downloading from local file")
+		return DownloadFile{Path: strings.TrimPrefix(location, fileProtocol+"://")}
 	}
 
 	for prefix, p := range t.protocols {
 		if strings.HasPrefix(location, prefix) {
+			log.Println("downloading from", prefix)
 			return p.New(location)
 		}
 	}

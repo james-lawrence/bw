@@ -2,7 +2,14 @@ package deployment
 
 import (
 	"encoding/gob"
+	"fmt"
+	"log"
+	"os"
+	"path/filepath"
 
+	"github.com/pkg/errors"
+
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
@@ -155,4 +162,44 @@ type Coordinator interface {
 	Status() error
 	// Deploy trigger a deploy
 	Deploy(*agent.Archive) error
+}
+
+func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err error) {
+	var (
+		logfile *os.File
+		logger  *log.Logger
+	)
+
+	id := bw.RandomID(a.DeploymentID)
+	root := filepath.Join(workdir, id.String())
+	if err = os.MkdirAll(root, 0755); err != nil {
+		return _did, errors.WithMessage(err, "failed to create deployment directory")
+	}
+
+	if logfile, logger, err = newLogger(root, fmt.Sprintf("[DEPLOY] %s ", id)); err != nil {
+		return _did, err
+	}
+
+	return DeployContext{
+		ID:      id,
+		Root:    root,
+		Log:     logger,
+		archive: a,
+		logfile: logfile,
+	}, nil
+}
+
+type DeployContext struct {
+	ID      bw.RandomID
+	Root    string
+	Log     *log.Logger
+	logfile *os.File
+	archive agent.Archive
+}
+
+func (t DeployContext) Done(result error) error {
+	logErr(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
+	logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
+
+	return result
 }

@@ -23,6 +23,8 @@ func (t *dummy) attach(ctx *kingpin.ParseContext) error {
 
 	return t.agentCmd.bind(
 		t.listener.Addr(),
-		agent.ServerOptionDeployer(deployment.NewDummyCoordinator()),
+		func(agent.Config) agent.ServerOption {
+			return agent.ServerOptionDeployer(deployment.NewDummyCoordinator())
+		},
 	)
 }
