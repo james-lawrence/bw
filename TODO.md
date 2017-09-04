@@ -2,7 +2,7 @@ ordering of tasks in priority order.
 
 #### cleanup
 - [ ] change `locked` to `canary`
-- [ ] change `lurker` to `deployed`
+- [ ] change `lurker` to `deploy`
 - [ ] ux improvements
 - [ ] change `bw filtered deploy` to `bw deploy filtered`
 
