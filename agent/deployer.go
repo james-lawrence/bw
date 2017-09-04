@@ -39,6 +39,13 @@ func DirectiveOptionRoot(root string) DirectiveOption {
 	}
 }
 
+// DirectiveOptionKeepN the number of previous deploys to keep.
+func DirectiveOptionKeepN(n int) DirectiveOption {
+	return func(d *Directive) {
+		d.keepN = n
+	}
+}
+
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
@@ -112,7 +119,7 @@ func (t Directive) deploy(completed chan error) {
 
 	dctx.Log.Println("completed download", dst)
 
-	if _directives, err = directives.Load(filepath.Join(dst, ".directives"), dshell, dpkg); err != nil {
+	if _directives, err = directives.Load(filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
 		err = errors.Wrapf(err, "failed to load directives")
 		goto done
 	}

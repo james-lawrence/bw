@@ -1,10 +1,18 @@
 ordering of tasks in priority order.
 
 #### cleanup
-- [ ] rename .directives to .remote
+
+#### implement event stream.
+- [ ] send noteworthy events from each agent to the leader during a deploy.
+- [ ] store events in a file on the leader.
+- [ ] allow clients to receive these events and display them.
+- [ ] allow additional clients stream the events.
 
 #### implement initial deploy on agent startup (when possible).
 when an agent joins a cluster the cluster leader it should contact the leader and check if it has deployed the latest version of the software.
+
+#### retrieve detailed logs of a deploy for a particular agent.
+allow the client to specify the deploy id it wants logs for and the agents to pull from, then print those logs to the client.
 
 #### initial setup work
 - [ ] generate skeleton directories. ie) `.bw .bwconfig`

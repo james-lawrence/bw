@@ -32,6 +32,7 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 			deployments := deployment.New(
 				agent.NewDirective(
 					agent.DirectiveOptionRoot(config.Root),
+					agent.DirectiveOptionKeepN(config.KeepN),
 					agent.DirectiveOptionShellContext(sctx),
 				),
 			)

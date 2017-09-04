@@ -26,6 +26,7 @@ type ConfigClient struct {
 func NewConfig() Config {
 	return Config{
 		Root:      filepath.Join("/", "var", "cache", bw.DefaultDir),
+		KeepN:     3,
 		TLSConfig: NewTLSAgent(DefaultTLSCredentialsRoot, ""),
 		Storage:   uploads.Config{Backend: "local"},
 	}
@@ -34,6 +35,7 @@ func NewConfig() Config {
 // Config - configuration for the agent.
 type Config struct {
 	Root      string // root directory to store long term data.
+	KeepN     int    `yaml:"keepN"`
 	Storage   uploads.Config
 	TLSConfig TLSConfig
 }
