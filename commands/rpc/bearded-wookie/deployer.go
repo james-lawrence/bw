@@ -38,21 +38,24 @@ type deployCmd struct {
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
-	parent.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
-	parent.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
+	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
+		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
+		return cmd
+	}
+
+	t.deployCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
+	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
 }
 
-func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) {
-	t.configure(parent)
-	parent.Action(t.deploy)
+func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.deploy)
 }
 
-func (t *deployCmd) filteredCmd(parent *kingpin.CmdClause) {
-	cmd := parent.Command("deploy", "deploy to and nodes that match one of the provided filters")
-	t.configure(cmd)
-	cmd.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
-	cmd.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
-	cmd.Action(t.filtered)
+func (t *deployCmd) filteredCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
+	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
+	return parent.Action(t.filtered)
 }
 
 func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {

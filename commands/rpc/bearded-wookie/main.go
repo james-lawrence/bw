@@ -66,8 +66,7 @@ func main() {
 
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
-	client.deployCmd(app.Command("deploy", "deploy to all nodes within the cluster").Default())
-	client.filteredCmd(app.Command("filtered", "allows for filtering the instances within the cluster"))
+	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
 	envinit.configure(app.Command("init", "generate tls cert/key for an environment"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
