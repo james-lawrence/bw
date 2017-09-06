@@ -119,7 +119,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		clustering.OptionBindPort(0),
 		clustering.OptionEventDelegate(eventHandler{}),
 		clustering.OptionAliveDelegate(cp.AliveDefault{}),
-		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Lurker))),
+		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Deploy))),
 		clustering.OptionLogger(os.Stderr),
 		clustering.OptionSecret(secret),
 	}

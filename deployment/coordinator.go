@@ -35,7 +35,6 @@ func (t *deployment) init() {
 		} else {
 			t.update(ready{})
 		}
-
 	}
 }
 

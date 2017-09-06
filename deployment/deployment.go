@@ -2,8 +2,6 @@ package deployment
 
 import (
 	"encoding/gob"
-	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -15,7 +13,7 @@ import (
 
 func init() {
 	gob.Register(ready{})
-	gob.Register(locked{})
+	gob.Register(canary{})
 	gob.Register(deploying{})
 	gob.Register(failed{})
 }
@@ -28,9 +26,9 @@ const (
 	StatusReady StatusEnum = iota
 	// StatusDeploying the system is currently deploying.
 	StatusDeploying
-	// StatusLocked the system is currently locked this will
+	// StatusCanary the system is currently locked this will
 	// cause it to ignore any deployment requests.
-	StatusLocked
+	StatusCanary
 	// StatusFailed the system failed to deploy.
 	StatusFailed
 )
@@ -41,8 +39,8 @@ func NewStatus(s StatusEnum) Status {
 		return ready{}
 	case StatusDeploying:
 		return deploying{}
-	case StatusLocked:
-		return locked{}
+	case StatusCanary:
+		return canary{}
 	default:
 		return failed{}
 	}
@@ -74,14 +72,14 @@ func (t deploying) Status() StatusEnum {
 	return StatusDeploying
 }
 
-type locked struct{}
+type canary struct{}
 
-func (t locked) Error() string {
+func (t canary) Error() string {
 	return "locked and refusing deployments"
 }
 
-func (t locked) Status() StatusEnum {
-	return StatusLocked
+func (t canary) Status() StatusEnum {
+	return StatusCanary
 }
 
 type failed struct{}
@@ -98,7 +96,7 @@ func AgentStateFromStatus(status Status) agent.AgentInfo_State {
 	switch status.Status() {
 	case StatusReady:
 		return agent.AgentInfo_Ready
-	case StatusLocked:
+	case StatusCanary:
 		return agent.AgentInfo_Locked
 	case StatusDeploying:
 		return agent.AgentInfo_Deploying
@@ -112,7 +110,7 @@ func AgentStateToStatus(info agent.AgentInfo_State) Status {
 	case agent.AgentInfo_Ready:
 		return ready{}
 	case agent.AgentInfo_Locked:
-		return locked{}
+		return canary{}
 	case agent.AgentInfo_Deploying:
 		return deploying{}
 	default:
@@ -125,9 +123,9 @@ func IsReady(err error) bool {
 	return isStatus(err, StatusReady)
 }
 
-// IsLocked returns true if the node is in a locked state.
-func IsLocked(err error) bool {
-	return isStatus(err, StatusLocked)
+// IsCanary returns true if the node is in a canary state.
+func IsCanary(err error) bool {
+	return isStatus(err, StatusCanary)
 }
 
 // IsDeploying returns true if the node is in a deploying state.
@@ -167,7 +165,7 @@ type Coordinator interface {
 func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err error) {
 	var (
 		logfile *os.File
-		logger  *log.Logger
+		logger  dlog
 	)
 
 	id := bw.RandomID(a.DeploymentID)
@@ -176,7 +174,7 @@ func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err 
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
 
-	if logfile, logger, err = newLogger(root, fmt.Sprintf("[DEPLOY] %s ", id)); err != nil {
+	if logfile, logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
 		return _did, err
 	}
 
@@ -192,7 +190,7 @@ func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err 
 type DeployContext struct {
 	ID      bw.RandomID
 	Root    string
-	Log     *log.Logger
+	Log     logger
 	logfile *os.File
 	archive agent.Archive
 }
@@ -202,4 +200,10 @@ func (t DeployContext) Done(result error) error {
 	logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
 
 	return result
+}
+
+type logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
 }

@@ -13,7 +13,7 @@ type AliveDefault struct{}
 
 // NotifyAlive implements the memberlist.AliveDelegate
 func (AliveDefault) NotifyAlive(peer *memberlist.Node) error {
-	if BitField(peer.Meta).Has(Lurker) {
+	if BitField(peer.Meta).Has(Deploy) {
 		log.Println("NotifyAlive ignoring", peer.Name)
 		return fmt.Errorf("ignoring peer: %s", peer.Name)
 	}

@@ -3,10 +3,10 @@ package cluster
 import "log"
 
 const (
-	// Lurker represents a node that communicates with the cluster but isn't an actual
+	// Deploy represents a node that communicates with the cluster but isn't an actual
 	// member. Useful for agents that perform things like monitoring, commandline interfaces, etc.
 	// by default a node is not a lurker.
-	Lurker int = iota
+	Deploy int = iota
 	// LastCapability just marks the maximum ability integer value.
 	// useful for looping over abilities: for i := 0; i < LastCapability; i++
 	LastCapability

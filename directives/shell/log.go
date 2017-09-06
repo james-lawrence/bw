@@ -3,10 +3,9 @@ package shell
 import (
 	"bufio"
 	"bytes"
-	"log"
 )
 
-func newLogging(l *log.Logger) logging {
+func newLogging(l logger) logging {
 	return logging{
 		logger: l,
 	}
@@ -14,7 +13,7 @@ func newLogging(l *log.Logger) logging {
 
 // writes a buffer stream by line to the logs.
 type logging struct {
-	logger *log.Logger
+	logger logger
 }
 
 func (t logging) Write(p []byte) (int, error) {

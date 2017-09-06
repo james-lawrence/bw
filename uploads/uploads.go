@@ -1,6 +1,7 @@
 package uploads
 
 import (
+	"crypto/sha256"
 	"hash"
 	"io"
 
@@ -69,4 +70,10 @@ func (t errUploader) Upload(io.Reader) (hash.Hash, error) {
 // file, the string uri of its location or an error.
 func (t errUploader) Info() (hash.Hash, string, error) {
 	return nil, "", t.err
+}
+
+func upload(src io.Reader, sha hash.Hash, dst io.Writer) (hash.Hash, error) {
+	crc := sha256.New()
+	_, err := io.Copy(io.MultiWriter(sha, crc, dst), src)
+	return crc, errors.WithStack(err)
 }

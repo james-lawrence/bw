@@ -49,7 +49,7 @@ func DefaultContext() (ctx Context, err error) {
 type Option func(*Context)
 
 // OptionLogger set the logger for the context.
-func OptionLogger(l *log.Logger) Option {
+func OptionLogger(l logger) Option {
 	return func(ctx *Context) {
 		ctx.output = logging{logger: l}
 	}

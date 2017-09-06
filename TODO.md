@@ -1,10 +1,9 @@
-ordering of tasks in priority order.
+ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup
 - [ ] change `locked` to `canary`
 - [ ] change `lurker` to `deploy`
 - [ ] ux improvements
-- [ ] change `bw filtered deploy` to `bw deploy filtered`
 
 #### implement event stream.
 - [ ] send noteworthy events from each agent to the leader during a deploy.

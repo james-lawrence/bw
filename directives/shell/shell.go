@@ -76,3 +76,9 @@ func ParseYAML(r io.Reader) ([]Exec, error) {
 
 	return results, nil
 }
+
+type logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
+}

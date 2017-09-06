@@ -59,10 +59,7 @@ type File struct {
 
 // Upload ...
 func (t File) Upload(r io.Reader) (hash.Hash, error) {
-	crc := sha256.New()
-	dst := io.MultiWriter(t.sha, t.dst)
-	_, err := io.Copy(io.MultiWriter(dst, crc), r)
-	return crc, err
+	return upload(r, t.sha, t.dst)
 }
 
 // Info ...
