@@ -10,10 +10,11 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+// Stage ...
 type Stage int
 
 const (
-	// StageAwaitingForReady - deployer is waiting for all nodes to be ready for deployment.
+	// StageWaitingForReady - deployer is waiting for all nodes to be ready for deployment.
 	StageWaitingForReady Stage = iota
 	// StageDeploying - deployer is deploying.
 	StageDeploying
@@ -21,11 +22,13 @@ const (
 	StageDone
 )
 
+// NodeUpdate ...
 type NodeUpdate struct {
 	Peer   *memberlist.Node
 	Status error
 }
 
+// NewEvents ...
 func NewEvents() *Events {
 	return &Events{
 		NodesFound:     make(chan int64),
@@ -35,6 +38,7 @@ func NewEvents() *Events {
 	}
 }
 
+// Events ...
 type Events struct {
 	NodesFound     chan int64
 	NodesCompleted chan int64
@@ -46,6 +50,7 @@ type Events struct {
 // PercentagePartitioner size is based on the percentage. has an upper bound of 1.0.
 type PercentagePartitioner float64
 
+// Partition ...
 func (t PercentagePartitioner) Partition(length int) int {
 	ratio := math.Min(float64(t), 1.0)
 	computed := int(math.Max(math.Floor(float64(length)*ratio), 1.0))
@@ -83,6 +88,7 @@ type cluster interface {
 	Members() []*memberlist.Node
 }
 
+// Option ...
 type Option func(*Deploy)
 
 func DeployOptionFilter(x Filter) Option {
@@ -188,6 +194,7 @@ func (t Deploy) Deploy(c cluster) {
 	awaitCompletion(t.worker.handler, t.worker.checker, nodes...)
 
 	t.worker.handler.StageUpdate <- StageDeploying
+
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)
 	}

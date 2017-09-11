@@ -33,6 +33,7 @@ const (
 	StatusFailed
 )
 
+// NewStatus ...
 func NewStatus(s StatusEnum) Status {
 	switch s {
 	case StatusReady:
@@ -92,12 +93,13 @@ func (t failed) Status() StatusEnum {
 	return StatusFailed
 }
 
+// AgentStateFromStatus ...
 func AgentStateFromStatus(status Status) agent.AgentInfo_State {
 	switch status.Status() {
 	case StatusReady:
 		return agent.AgentInfo_Ready
 	case StatusCanary:
-		return agent.AgentInfo_Locked
+		return agent.AgentInfo_Canary
 	case StatusDeploying:
 		return agent.AgentInfo_Deploying
 	default:
@@ -105,11 +107,12 @@ func AgentStateFromStatus(status Status) agent.AgentInfo_State {
 	}
 }
 
+// AgentStateToStatus ...
 func AgentStateToStatus(info agent.AgentInfo_State) Status {
 	switch info {
 	case agent.AgentInfo_Ready:
 		return ready{}
-	case agent.AgentInfo_Locked:
+	case agent.AgentInfo_Canary:
 		return canary{}
 	case agent.AgentInfo_Deploying:
 		return deploying{}
@@ -150,18 +153,19 @@ func isStatus(err error, expected StatusEnum) bool {
 }
 
 type deployer interface {
-	Deploy(archive *agent.Archive, completed chan error) error
+	Deploy(dctx DeployContext, completed chan error) error
 }
 
 // Coordinator is in charge of coordinating deployments.
 type Coordinator interface {
-	// Status of the deployment coordinator
-	// idle, deploying, locked
-	Status() error
+	// Info about the deployment coordinator
+	// idle, canary, deploying, locked, and the list of recent deployments.
+	Info() (agent.AgentInfo, error)
 	// Deploy trigger a deploy
 	Deploy(*agent.Archive) error
 }
 
+// NewDeployContext ...
 func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err error) {
 	var (
 		logfile *os.File
@@ -182,19 +186,21 @@ func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err 
 		ID:      id,
 		Root:    root,
 		Log:     logger,
-		archive: a,
+		Archive: a,
 		logfile: logfile,
 	}, nil
 }
 
+// DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
 	ID      bw.RandomID
 	Root    string
 	Log     logger
 	logfile *os.File
-	archive agent.Archive
+	Archive agent.Archive
 }
 
+// Done is responsible for closing out the deployment context.
 func (t DeployContext) Done(result error) error {
 	logErr(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
 	logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))

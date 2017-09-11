@@ -31,10 +31,10 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 		func(config agent.Config) agent.ServerOption {
 			deployments := deployment.New(
 				agent.NewDirective(
-					agent.DirectiveOptionRoot(config.Root),
-					agent.DirectiveOptionKeepN(config.KeepN),
 					agent.DirectiveOptionShellContext(sctx),
 				),
+				deployment.CoordinatorOptionRoot(config.Root),
+				deployment.CoordinatorOptionKeepN(config.KeepN),
 			)
 			return agent.ServerOptionDeployer(deployments)
 		},

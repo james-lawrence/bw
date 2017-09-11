@@ -1,13 +1,10 @@
 package deployment
 
 import (
-	"encoding/hex"
 	"fmt"
 	"log"
 	"math/rand"
 	"time"
-
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.
@@ -22,19 +19,19 @@ type dummy struct {
 	sleepy int
 }
 
-func (t dummy) Deploy(archive *agent.Archive, completed chan error) error {
+func (t dummy) Deploy(dctx DeployContext, completed chan error) error {
 	go func() {
-		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
-		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", hex.EncodeToString(archive.DeploymentID), archive.Leader, archive.Location)
+		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
+		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
 
 		completedDuration := time.Duration(rand.Intn(t.sleepy)) * time.Second
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second
 		select {
 		case _ = <-time.After(completedDuration):
-			completed <- nil
+			completed <- dctx.Done(nil)
 		case _ = <-time.After(failedDuration):
 			log.Println("failed deployment due to timeout", failedDuration)
-			completed <- timeout{Duration: failedDuration}
+			completed <- dctx.Done(timeout{Duration: failedDuration})
 		}
 	}()
 

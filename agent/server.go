@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/memberlist"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"golang.org/x/net/context"
@@ -20,9 +19,9 @@ import (
 
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
-	// Status of the deployment coordinator
-	// idle, deploying, locked
-	Status() error
+	// Info obout the deployment coordinator
+	// idle, canary, deploying, locked, and the list of recent deployments.
+	Info() (agent.AgentInfo, error)
 	// Deploy trigger a deploy
 	Deploy(*agent.Archive) error
 }
@@ -39,6 +38,12 @@ func (t noopDeployer) Status() error {
 
 func (t noopDeployer) Deploy(*agent.Archive) error {
 	return nil
+}
+
+func (t noopDeployer) Info() (agent.AgentInfo, error) {
+	return agent.AgentInfo{
+		Status: agent.AgentInfo_Ready,
+	}, nil
 }
 
 type noopCluster struct{}
@@ -162,14 +167,16 @@ func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.Depl
 
 // Info ...
 func (t Server) Info(ctx context.Context, _ *agent.AgentInfoRequest) (*agent.AgentInfo, error) {
-	err := t.deployer.Status()
-	if status, ok := err.(deployment.Status); ok {
-		return &agent.AgentInfo{
-			Status: deployment.AgentStateFromStatus(status),
-		}, nil
-	}
-
-	return nil, err
+	info, err := t.deployer.Info()
+	return &info, err
+	// err := t.deployer.Status()
+	// if status, ok := err.(deployment.Status); ok {
+	// 	return &agent.AgentInfo{
+	// 		Status: deployment.AgentStateFromStatus(status),
+	// 	}, nil
+	// }
+	//
+	// return nil, err
 }
 
 // Credentials ...

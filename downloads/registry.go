@@ -61,5 +61,5 @@ func (t Registry) New(location string) Downloader {
 		}
 	}
 
-	return downloader{newErrReader(errors.Errorf("unknown protocol: %s", location))}
+	return downloader{newErrReader(errors.Errorf("unknown protocol: [%s]", location))}
 }

@@ -65,16 +65,15 @@ func (t cleanerFunc) Clean(infos ...FileInfo) error {
 	return t(infos...)
 }
 
-// KeepNewestN keeps newest n directories.
-func KeepNewestN(n int) Cleaner {
+func _cleanerFunc(n int, sorter func(i, j FileInfo) bool) Cleaner {
 	return cleanerFunc(func(infos ...FileInfo) (err error) {
-		sort.Slice(infos, func(i, j int) bool {
-			return infos[i].Info.ModTime().After(infos[j].Info.ModTime())
-		})
-
 		if len(infos) <= n {
 			return nil
 		}
+
+		sort.Slice(infos, func(i, j int) bool {
+			return sorter(infos[i], infos[j])
+		})
 
 		for _, info := range infos[n:] {
 			if err = os.RemoveAll(info.Path); err != nil {
@@ -83,5 +82,19 @@ func KeepNewestN(n int) Cleaner {
 		}
 
 		return nil
+	})
+}
+
+// KeepOldestN keeps oldest n directories.
+func KeepOldestN(n int) Cleaner {
+	return _cleanerFunc(n, func(i, j FileInfo) bool {
+		return i.Info.ModTime().Before(j.Info.ModTime())
+	})
+}
+
+// KeepNewestN keeps newest n directories.
+func KeepNewestN(n int) Cleaner {
+	return _cleanerFunc(n, func(i, j FileInfo) bool {
+		return i.Info.ModTime().After(j.Info.ModTime())
 	})
 }

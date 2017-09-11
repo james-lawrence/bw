@@ -32,9 +32,17 @@ message Log {
   string log = 1;
 }
 
+message UploadMetadata {
+  int64 bytes = 1;
+}
+
 message ArchiveChunk {
   bytes data = 1;
   bytes checksum = 2;
+  oneof initialChunkMetadata {
+    bool none = 3;
+    UploadMetadata metadata = 4;
+  }
 }
 
 message Archive {
@@ -47,8 +55,9 @@ message Archive {
 message DeployResult {}
 
 message AgentInfo {
-  enum State { Ready = 0; Locked = 1; Deploying = 2; Failed = 3; }
+  enum State { Ready = 0; Canary = 1; Deploying = 2; Failed = 3; }
   State Status = 1;
+  repeated Archive Deployments = 2;
 }
 
 message AgentInfoRequest {}
