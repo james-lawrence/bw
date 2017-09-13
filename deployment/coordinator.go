@@ -82,12 +82,21 @@ func (t *deployment) init() {
 }
 
 // Info about the state of the agent.
-func (t *deployment) Info() (agent.AgentInfo, error) {
+func (t *deployment) Info() (_ignored agent.AgentInfo, err error) {
+	var (
+		archives []agent.Archive
+	)
+
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 
+	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
+		return _ignored, err
+	}
+
 	return agent.AgentInfo{
-		Status: AgentStateFromStatus(t.status),
+		Status:      AgentStateFromStatus(t.status),
+		Deployments: archivePointers(archives...),
 	}, nil
 }
 

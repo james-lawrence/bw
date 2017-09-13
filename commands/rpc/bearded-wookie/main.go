@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/commands"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
@@ -18,6 +19,7 @@ import (
 )
 
 type global struct {
+	node     string
 	systemIP net.IP
 	cluster  *cluster
 	ctx      context.Context
@@ -37,13 +39,15 @@ func main() {
 		cleanup, cancel = context.WithCancel(context.Background())
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
 		global          = &global{
+			node:     bw.MustGenerateID().String(),
 			systemIP: systemx.HostIP(systemx.HostnameOrLocalhost()),
 			cluster:  &cluster{},
 			ctx:      cleanup,
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},
 		}
-		agentcmd = &agentCmd{
+		clientConfig = agent.NewConfigClient()
+		agentcmd     = &agentCmd{
 			config: agent.NewConfig(),
 			global: global,
 			network: &net.TCPAddr{
@@ -53,7 +57,11 @@ func main() {
 			listener: netx.NewNoopListener(),
 		}
 		client = &deployCmd{
-			config: agent.NewConfigClient(),
+			config: clientConfig,
+			global: global,
+		}
+		info = &agentInfo{
+			config: clientConfig,
 			global: global,
 		}
 		envinit = &initCmd{
@@ -67,6 +75,7 @@ func main() {
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
+	info.configure(app.Command("info", "retrieve info about nodes within the cluster"))
 	envinit.configure(app.Command("init", "generate tls cert/key for an environment"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {

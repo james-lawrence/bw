@@ -29,3 +29,13 @@ func GenerateID() (_ignored RandomID, err error) {
 
 	return randIDHash.Sum(nil), nil
 }
+
+// MustGenerateID generates a random ID, or panics.
+func MustGenerateID() RandomID {
+	id, err := GenerateID()
+	if err != nil {
+		panic(err)
+	}
+
+	return id
+}

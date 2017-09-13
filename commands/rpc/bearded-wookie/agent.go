@@ -36,6 +36,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 		),
 	)
 
+	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
@@ -76,6 +77,7 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 
 	t.server = grpc.NewServer(grpc.Creds(creds))
 	options := []clustering.Option{
+		clustering.OptionNodeID(t.config.Name),
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogger(os.Stderr),
 		clustering.OptionSecret(secret),

@@ -169,14 +169,6 @@ func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.Depl
 func (t Server) Info(ctx context.Context, _ *agent.AgentInfoRequest) (*agent.AgentInfo, error) {
 	info, err := t.deployer.Info()
 	return &info, err
-	// err := t.deployer.Status()
-	// if status, ok := err.(deployment.Status); ok {
-	// 	return &agent.AgentInfo{
-	// 		Status: deployment.AgentStateFromStatus(status),
-	// 	}, nil
-	// }
-	//
-	// return nil, err
 }
 
 // Credentials ...

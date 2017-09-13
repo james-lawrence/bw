@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/hex"
 	"io"
 	"io/ioutil"
 	"log"
@@ -16,9 +15,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
-	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/ux"
@@ -83,62 +80,32 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		c           clustering.Cluster
 		creds       credentials.TransportCredentials
 		coordinator agent.Client
-		secret      []byte
-		peers       []string
 		port        string
 		info        gagent.Archive
 	)
+
 	log.Println("deploying", t.deployspace)
 	if err = bw.ExpandAndDecodeFile(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment), &t.config); err != nil {
 		return err
 	}
 
-	if creds, err = t.config.TLSConfig.BuildClient(); err != nil {
+	defaults := []clustering.Option{
+		clustering.OptionNodeID("deploy"),
+		clustering.OptionBindAddress(t.global.systemIP.String()),
+		clustering.OptionEventDelegate(eventHandler{}),
+	}
+
+	if creds, coordinator, c, err = t.config.Connect(defaults, []clustering.BootstrapOption{}); err != nil {
 		return err
 	}
+
+	log.Println("connected to cluster cluster")
 
 	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
 		return errors.Wrap(err, "malformed address in configuration")
 	}
 
-	if coordinator, err = connect(t.config.Address, grpc.WithTransportCredentials(creds)); err != nil {
-		return err
-	}
-
 	// # TODO connect to event stream.
-
-	if peers, secret, err = coordinator.Credentials(); err != nil {
-		return err
-	}
-
-	log.Println("retrieved cluster credentials")
-
-	defaults := []clustering.Option{
-		clustering.OptionNodeID("deploy"),
-		clustering.OptionBindAddress(t.global.systemIP.String()),
-		clustering.OptionBindPort(0),
-		clustering.OptionEventDelegate(eventHandler{}),
-		clustering.OptionAliveDelegate(cp.AliveDefault{}),
-		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Deploy))),
-		clustering.OptionLogger(os.Stderr),
-		clustering.OptionSecret(secret),
-	}
-
-	if c, err = clustering.NewOptions(defaults...).NewCluster(); err != nil {
-		return errors.Wrap(err, "failed to join cluster")
-	}
-
-	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1))
-	attempts := clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts)
-	peerings := clustering.BootstrapOptionPeeringStrategies(
-		peering.Closure(func() ([]string, error) {
-			return peers, nil
-		}),
-	)
-
-	if err = clustering.Bootstrap(c, peerings, joins, attempts); err != nil {
-		return errors.Wrap(err, "failed to connect to cluster")
-	}
 
 	log.Println("uploading archive")
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
@@ -156,7 +123,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
-	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Leader, hex.EncodeToString(info.DeploymentID), info.Location)
+	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Leader, bw.RandomID(info.DeploymentID), info.Location)
 	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
@@ -197,17 +164,24 @@ func (t connector) address(peer *memberlist.Node) string {
 	return net.JoinHostPort(peer.Addr.String(), t.port)
 }
 
-func (t connector) Check(peer *memberlist.Node) (err error) {
+func (t connector) Check2(peer *memberlist.Node) (info gagent.AgentInfo, err error) {
 	var (
-		c    agent.Client
-		info gagent.AgentInfo
+		c agent.Client
 	)
 	if c, err = connect(t.address(peer), t.options...); err != nil {
-		return err
+		return info, err
 	}
 	defer c.Close()
 
-	if info, err = c.Info(); err != nil {
+	return c.Info()
+}
+
+func (t connector) Check(peer *memberlist.Node) (err error) {
+	var (
+		info gagent.AgentInfo
+	)
+
+	if info, err = t.Check2(peer); err != nil {
 		return err
 	}
 
