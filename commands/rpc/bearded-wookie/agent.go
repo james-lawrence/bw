@@ -4,11 +4,13 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -83,15 +85,36 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 		clustering.OptionSecret(secret),
 	}
 
-	if c, err = t.global.cluster.Join(options...); err != nil {
+	fssnapshot := peering.File{
+		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
+	}
+
+	if c, err = t.global.cluster.Join(fssnapshot, options...); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
+	server := agent.NewServer(addr, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
 	agent.RegisterServer(
 		t.server,
-		agent.NewServer(addr, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret))),
+		server,
 	)
 
+	t.runServer(c)
+	t.global.cluster.Snapshot(
+		c,
+		fssnapshot,
+		clustering.SnapshotOptionFrequency(t.config.Cluster.SnapshotFrequency),
+		clustering.SnapshotOptionContext(t.global.ctx),
+	)
+
+	// agent.DetermineLatestArchive(c, agentPort, DialOptions)
+	// server.Deploy(ctx, archive)
+	// t.bootstrapDeployment(server, c)
+
+	return nil
+}
+
+func (t *agentCmd) runServer(c clustering.Cluster) {
 	go t.server.Serve(t.listener)
 	t.global.cleanup.Add(1)
 	go func() {
@@ -101,6 +124,4 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 		log.Println("left cluster", c.Shutdown())
 		log.Println("agent shutdown", t.listener.Close())
 	}()
-
-	return nil
 }

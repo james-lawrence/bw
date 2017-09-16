@@ -50,6 +50,7 @@ message Archive {
   string Leader = 2;
   string Location = 3;
   bytes checksum = 4;
+  int64 ts = 5; // unix timestamp.
 }
 
 message DeployResult {}

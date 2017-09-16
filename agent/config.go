@@ -3,6 +3,7 @@ package agent
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -86,7 +87,14 @@ func NewConfig() Config {
 		KeepN:     3,
 		TLSConfig: NewTLSAgent(DefaultTLSCredentialsRoot, ""),
 		Storage:   uploads.Config{Backend: "local"},
+		Cluster: clusteringConfig{
+			SnapshotFrequency: time.Hour,
+		},
 	}
+}
+
+type clusteringConfig struct {
+	SnapshotFrequency time.Duration
 }
 
 // Config - configuration for the agent.
@@ -96,4 +104,5 @@ type Config struct {
 	KeepN     int    `yaml:"keepN"`
 	Storage   uploads.Config
 	TLSConfig TLSConfig
+	Cluster   clusteringConfig
 }

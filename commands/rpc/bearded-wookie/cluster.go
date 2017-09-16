@@ -57,7 +57,7 @@ func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOpti
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
 }
 
-func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error) {
+func (t *cluster) Join(snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
 	var (
 		err error
 		c   clustering.Cluster
@@ -90,6 +90,7 @@ func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error)
 
 			return addresses, nil
 		}),
+		snap,
 	)
 
 	if err = clustering.Bootstrap(c, peerings, joins, attempts); err != nil {
@@ -97,6 +98,14 @@ func (t *cluster) Join(options ...clustering.Option) (clustering.Cluster, error)
 	}
 
 	return c, nil
+}
+
+func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
+	go clustering.Snapshot(
+		c,
+		fssnapshot,
+		options...,
+	)
 }
 
 type eventHandler struct{}
