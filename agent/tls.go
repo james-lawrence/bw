@@ -95,11 +95,17 @@ func (t TLSConfig) BuildServer() (creds credentials.TransportCredentials, err er
 		return nil, errors.New("failed to append client certs")
 	}
 
+	log.Println("loading client cert", t.Cert)
+	log.Println("loading client key", t.Key)
+	log.Println("loading authority cert", t.CA)
+	log.Println("using server name", t.ServerName)
 	creds = credentials.NewTLS(
 		&tls.Config{
+			ServerName:   t.ServerName,
 			ClientAuth:   tls.RequireAndVerifyClientCert,
 			Certificates: []tls.Certificate{cert},
 			ClientCAs:    pool,
+			RootCAs:      pool,
 		},
 	)
 

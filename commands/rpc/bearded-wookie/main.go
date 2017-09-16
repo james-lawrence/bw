@@ -19,7 +19,6 @@ import (
 )
 
 type global struct {
-	node     string
 	systemIP net.IP
 	cluster  *cluster
 	ctx      context.Context
@@ -39,7 +38,6 @@ func main() {
 		cleanup, cancel = context.WithCancel(context.Background())
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
 		global          = &global{
-			node:     bw.MustGenerateID().String(),
 			systemIP: systemx.HostIP(systemx.HostnameOrLocalhost()),
 			cluster:  &cluster{},
 			ctx:      cleanup,
@@ -61,6 +59,7 @@ func main() {
 			global: global,
 		}
 		info = &agentInfo{
+			node:   bw.MustGenerateID().String(),
 			config: clientConfig,
 			global: global,
 		}

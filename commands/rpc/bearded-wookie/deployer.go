@@ -77,6 +77,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	var (
 		err         error
 		dst         *os.File
+		dstinfo     os.FileInfo
 		c           clustering.Cluster
 		creds       credentials.TransportCredentials
 		coordinator agent.Client
@@ -118,8 +119,15 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
-	dst.Seek(0, io.SeekStart)
-	if info, err = coordinator.Upload(dst); err != nil {
+	if dstinfo, err = dst.Stat(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if _, err = dst.Seek(0, io.SeekStart); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if info, err = coordinator.Upload(uint64(dstinfo.Size()), dst); err != nil {
 		return err
 	}
 

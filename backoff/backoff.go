@@ -1,10 +1,24 @@
 package backoff
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 // Strategy strategy to compute how long to wait before retrying message.
 type Strategy interface {
 	Backoff(attempt int) time.Duration
+}
+
+// Maximum sets an upper bound for the strategy.
+func Maximum(d time.Duration, s Strategy) Strategy {
+	return StrategyFunc(func(attempt int) time.Duration {
+		if x := s.Backoff(attempt); x < d {
+			return x
+		}
+
+		return d
+	})
 }
 
 // StrategyFunc convience helper to convert a pure function into a backoff strategy.
@@ -23,34 +37,26 @@ func Constant(d time.Duration) Strategy {
 }
 
 type exponential struct {
-	current time.Duration
+	scale time.Duration
 }
 
 func (t *exponential) Backoff(attempt int) time.Duration {
-	d := t.current
-	t.current = t.current * 2
-	return d
+	// if the exponential wraps around fall back to using maximum.
+	if exp := time.Duration(1 << uint(attempt)); exp > 0 {
+		return exp * t.scale
+	}
+
+	return time.Duration(math.MaxInt64)
 }
 
 // Exponential implements expoential backoff.
-func Exponential(initial time.Duration) Strategy {
-	if initial == 0 {
-		panic("exponential backoff can't start at 0")
+func Exponential(scale time.Duration) Strategy {
+	if scale == 0 {
+		panic("exponential backoff can't be scaled by 0")
 	}
 	return &exponential{
-		current: initial,
+		scale: scale,
 	}
-}
-
-// Maximum - applies a maximum backoff to a strategy.
-func Maximum(max time.Duration, s Strategy) Strategy {
-	return StrategyFunc(func(attempt int) time.Duration {
-		computed := s.Backoff(attempt)
-		if max < computed {
-			return max
-		}
-		return computed
-	})
 }
 
 // Explicit an explicit set of delays to use. if the attempt is larger than

@@ -2,14 +2,15 @@ package agent
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"hash"
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -67,7 +68,7 @@ func ComposeServerOptions(options ...ServerOption) ServerOption {
 // ServerOptionDeployer ...
 func ServerOptionDeployer(d deployer) ServerOption {
 	return func(s *Server) {
-		s.deployer = d
+		s.Deployer = d
 	}
 }
 
@@ -84,7 +85,7 @@ func NewServer(address net.Addr, options ...ServerOption) Server {
 	s := Server{
 		Address:  address,
 		cluster:  noopCluster{},
-		deployer: noopDeployer{},
+		Deployer: noopDeployer{},
 		UploadProtocol: uploads.ProtocolFunc(
 			func(uid []byte, _ uint64) (uploads.Uploader, error) {
 				return uploads.NewTempFileUploader()
@@ -102,7 +103,7 @@ func NewServer(address net.Addr, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
-	deployer       deployer
+	Deployer       deployer
 	cluster        cluster
 	clusterKey     []byte
 	Address        net.Addr
@@ -117,13 +118,18 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 		checksum     hash.Hash
 		location     string
 		dst          Uploader
+		chunk        *agent.ArchiveChunk
 	)
 
 	if deploymentID, err = bw.GenerateID(); err != nil {
 		return err
 	}
 
-	if dst, err = t.UploadProtocol.NewUpload(deploymentID, 0); err != nil {
+	if chunk, err = stream.Recv(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if dst, err = t.UploadProtocol.NewUpload(deploymentID, chunk.GetMetadata().Bytes); err != nil {
 		return err
 	}
 
@@ -141,6 +147,7 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 				Location:     location,
 				Checksum:     checksum.Sum(nil),
 				DeploymentID: deploymentID,
+				Ts:           time.Now().UTC().Unix(),
 			})
 		}
 
@@ -158,7 +165,7 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 
 // Deploy ...
 func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.DeployResult, error) {
-	if err := t.deployer.Deploy(archive); err != nil {
+	if err := t.Deployer.Deploy(archive); err != nil {
 		return nil, err
 	}
 
@@ -167,7 +174,7 @@ func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.Depl
 
 // Info ...
 func (t Server) Info(ctx context.Context, _ *agent.AgentInfoRequest) (*agent.AgentInfo, error) {
-	info, err := t.deployer.Info()
+	info, err := t.Deployer.Info()
 	return &info, err
 }
 

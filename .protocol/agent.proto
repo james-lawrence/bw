@@ -33,7 +33,7 @@ message Log {
 }
 
 message UploadMetadata {
-  int64 bytes = 1;
+  uint64 bytes = 1;
 }
 
 message ArchiveChunk {

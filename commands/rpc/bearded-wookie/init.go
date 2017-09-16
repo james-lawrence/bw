@@ -15,6 +15,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+// bearded-wookie init talla.io *.talla.io 127.0.0.1 127.0.0.2
+// bearded-wookie init
+// bearded-wookie init talla.io wambli.talla.io
+// bearded-wookie init talla.io wambli.talla.io
+
 type initCmd struct {
 	global      *global
 	credentials string
@@ -52,7 +57,7 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 
 	servoptions := []tlsx.X509Option{
 		tlsx.X509OptionUsage(x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement),
-		tlsx.X509OptionUsageExt(x509.ExtKeyUsageServerAuth),
+		tlsx.X509OptionUsageExt(x509.ExtKeyUsageAny),
 		tlsx.X509OptionHosts(t.hosts...),
 		tlsx.X509OptionSubject(pkix.Name{
 			CommonName: "server",
@@ -89,13 +94,13 @@ func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
 			keydst  *os.File
 			certdst *os.File
 		)
-		if keydst, err = os.OpenFile(filepath.Join(rootdir, key), os.O_CREATE|os.O_RDWR, 0600); err != nil {
+		if keydst, err = os.OpenFile(filepath.Join(rootdir, key), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600); err != nil {
 			return func(*rsa.PrivateKey, []byte, error) (*rsa.PrivateKey, error) {
 				return nil, err
 			}
 		}
 
-		if certdst, err = os.OpenFile(filepath.Join(rootdir, cert), os.O_CREATE|os.O_RDWR, 0600); err != nil {
+		if certdst, err = os.OpenFile(filepath.Join(rootdir, cert), os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600); err != nil {
 			return func(*rsa.PrivateKey, []byte, error) (*rsa.PrivateKey, error) {
 				return nil, err
 			}

@@ -1,7 +1,9 @@
 package agent
 
 import (
-	"sort"
+	"net"
+
+	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -22,19 +24,24 @@ const (
 )
 
 // DetermineLatestArchive ...
-func DetermineLatestArchive(c clustering.Cluster, agentPort string, DialOptions ...grpc.DialOption) (latest agent.Archive, err error) {
+func DetermineLatestArchive(addr net.Addr, c clustering.Cluster, DialOptions ...grpc.DialOption) (latest agent.Archive, err error) {
 	type result struct {
 		a     *agent.Archive
 		count int
 	}
 
 	var (
-		max int
+		max  int
+		port string
 	)
+
+	if _, port, err = net.SplitHostPort(addr.String()); err != nil {
+		return latest, errors.WithStack(err)
+	}
 
 	operation := ClusterOperation{
 		Cluster:     c,
-		AgentPort:   agentPort,
+		AgentPort:   port,
 		DialOptions: DialOptions,
 	}
 
@@ -55,8 +62,9 @@ func DetermineLatestArchive(c clustering.Cluster, agentPort string, DialOptions 
 
 		key := string(a.DeploymentID)
 		if r, ok := counts[key]; ok {
-			r.count++
-			counts[key] = r
+			counts[key] = result{a: a, count: r.count + 1}
+		} else {
+			counts[key] = result{a: a, count: 1}
 		}
 
 		return nil
@@ -73,7 +81,8 @@ func DetermineLatestArchive(c clustering.Cluster, agentPort string, DialOptions 
 		}
 	}
 
-	if (len(c.Members()) / 2) >= max {
+	// check for quorum
+	if (len(c.Members()) / 2.0) >= max {
 		return latest, ErrFailedDeploymentQuorum
 	}
 
@@ -93,11 +102,6 @@ func LatestDeployment(c Client) (a *agent.Archive, err error) {
 	if len(info.Deployments) == 0 {
 		return nil, ErrNoDeployments
 	}
-
-	sort.Slice(info.Deployments, func(i int, j int) bool {
-		a, b := info.Deployments[i], info.Deployments[j]
-		return a.Ts < b.Ts
-	})
 
 	return info.Deployments[0], nil
 }

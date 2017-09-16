@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
@@ -93,6 +94,11 @@ func (t *deployment) Info() (_ignored agent.AgentInfo, err error) {
 	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
 		return _ignored, err
 	}
+
+	sort.Slice(archives, func(i int, j int) bool {
+		a, b := archives[i], archives[j]
+		return a.Ts > b.Ts
+	})
 
 	return agent.AgentInfo{
 		Status:      AgentStateFromStatus(t.status),

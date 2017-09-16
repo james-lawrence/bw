@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
@@ -18,6 +19,7 @@ import (
 type agentInfo struct {
 	config      agent.ConfigClient
 	global      *global
+	node        string
 	environment string
 }
 
@@ -52,7 +54,7 @@ func (t *agentInfo) _info() (err error) {
 	}
 
 	defaults := []clustering.Option{
-		clustering.OptionNodeID(t.global.node),
+		clustering.OptionNodeID(t.node),
 		clustering.OptionBindAddress(t.global.systemIP.String()),
 		clustering.OptionEventDelegate(eventHandler{}),
 	}
@@ -76,9 +78,9 @@ func (t *agentInfo) _info() (err error) {
 		}
 		log.Printf("Server: %s:%s\n", m.Name, m.Address())
 		log.Printf("Status: %s\n", info.Status.String())
-		log.Println("Previous Deployment: DeploymentID               - Checksum")
+		log.Println("Previous Deployment: Time                          - DeploymentID               - Checksum")
 		for _, d := range info.Deployments {
-			log.Printf("Previous Deployment: %s - %s", bw.RandomID(d.DeploymentID), bw.RandomID(d.Checksum))
+			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Ts, 0).UTC(), bw.RandomID(d.DeploymentID), bw.RandomID(d.Checksum))
 		}
 	}
 

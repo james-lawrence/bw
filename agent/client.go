@@ -38,16 +38,29 @@ func (t Client) Close() error {
 }
 
 // Upload ...
-func (t Client) Upload(src io.Reader) (info agent.Archive, err error) {
+func (t Client) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err error) {
 	var (
 		stream agent.Agent_UploadClient
 		_info  *agent.Archive
 	)
 
 	rpc := agent.NewAgentClient(t.conn)
-
 	if stream, err = rpc.Upload(context.Background()); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
+	}
+
+	initialChunk := &agent.ArchiveChunk{
+		Checksum: []byte{},
+		Data:     []byte{},
+		InitialChunkMetadata: &agent.ArchiveChunk_Metadata{
+			Metadata: &agent.UploadMetadata{Bytes: srcbytes},
+		},
+	}
+
+	// send initial empty chunk with metadata.
+	if err = stream.Send(initialChunk); err != nil {
+		stream.CloseSend()
+		return info, err
 	}
 
 	checksum := sha256.New()
@@ -120,8 +133,9 @@ func (t Client) streamArchive(src io.Reader, stream agent.Agent_UploadClient) (e
 	emit := func(chunk, checksum []byte) error {
 		log.Println("writing chunk", len(chunk))
 		return errors.Wrap(stream.Send(&agent.ArchiveChunk{
-			Checksum: checksum,
-			Data:     chunk,
+			Checksum:             checksum,
+			Data:                 chunk,
+			InitialChunkMetadata: &agent.ArchiveChunk_None{},
 		}), "failed to write chunk")
 	}
 

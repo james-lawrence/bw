@@ -18,13 +18,15 @@ const archiveMetadataName = "archive.metadata"
 func archivePointers(archives ...agent.Archive) []*agent.Archive {
 	out := make([]*agent.Archive, 0, len(archives))
 	for _, a := range archives {
-		out = append(out, &a)
+		tmp := a
+		out = append(out, &tmp)
 	}
 	return out
 }
 
 func readAllArchiveMetadata(root string) ([]agent.Archive, error) {
 	archives := make([]agent.Archive, 0, 5)
+
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		var (
 			a agent.Archive
@@ -42,6 +44,7 @@ func readAllArchiveMetadata(root string) ([]agent.Archive, error) {
 
 		return filepath.SkipDir
 	})
+
 	return archives, err
 }
 

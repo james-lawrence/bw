@@ -5,12 +5,16 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/backoff"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
+	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -47,7 +51,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerOption) error {
+func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
@@ -79,7 +83,7 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 
 	t.server = grpc.NewServer(grpc.Creds(creds))
 	options := []clustering.Option{
-		clustering.OptionNodeID(t.config.Name),
+		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String())),
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogger(os.Stderr),
 		clustering.OptionSecret(secret),
@@ -93,7 +97,7 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
-	server := agent.NewServer(addr, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
+	server := agent.NewServer(t.listener.Addr(), agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
 	agent.RegisterServer(
 		t.server,
 		server,
@@ -107,11 +111,40 @@ func (t *agentCmd) bind(addr net.Addr, aoptions func(agent.Config) agent.ServerO
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
-	// agent.DetermineLatestArchive(c, agentPort, DialOptions)
-	// server.Deploy(ctx, archive)
-	// t.bootstrapDeployment(server, c)
+	go t.bootstrapDeployment(server, c, grpc.WithTransportCredentials(creds))
 
 	return nil
+}
+
+func (t *agentCmd) bootstrapDeployment(s agent.Server, c clustering.Cluster, doptions ...grpc.DialOption) {
+	var (
+		err error
+	)
+
+	if len(c.Members()) == 1 {
+		log.Println("no peers in cluster, skipping bootstrap deployment")
+		return
+	}
+
+	maybeDeploy := func(latest gagent.Archive, err error) error {
+		if err != nil {
+			return err
+		}
+		return s.Deployer.Deploy(&latest)
+	}
+
+	b := backoff.Maximum(time.Hour, backoff.Exponential(200*time.Millisecond))
+
+	for attempt := 0; true; attempt++ {
+		if err = maybeDeploy(agent.DetermineLatestArchive(s.Address, c, doptions...)); err == nil {
+			log.Println("successfully bootstrapped")
+			break
+		}
+
+		d := b.Backoff(attempt)
+		log.Println("failed to determine latest archive, will retry in", d, err)
+		time.Sleep(d)
+	}
 }
 
 func (t *agentCmd) runServer(c clustering.Cluster) {
