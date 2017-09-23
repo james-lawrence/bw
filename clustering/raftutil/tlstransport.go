@@ -9,20 +9,18 @@ import (
 )
 
 // NewTLSStreamLayer ...
-func NewTLSStreamLayer(port int, l net.Listener, cs *tls.Config) StreamLayer {
+func NewTLSStreamLayer(l net.Listener, cs *tls.Config) StreamLayer {
 	l = tls.NewListener(l, cs)
 	return StreamLayer{
 		Listener: l,
 		c:        cs,
-		port:     port,
 	}
 }
 
 // StreamLayer ...
 type StreamLayer struct {
 	net.Listener
-	c    *tls.Config
-	port int
+	c *tls.Config
 }
 
 // Dial is used to create a new outgoing connection

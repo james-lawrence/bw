@@ -143,7 +143,7 @@ func (t *cluster) Raft(ctx context.Context, conf agent.Config) (p raftutil.Proto
 	if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
 		return p, errors.WithStack(err)
 	}
-	streaml = raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(t.raftNetwork.Port, l, cs), 3, 2*time.Second, os.Stderr)
+	streaml = raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(l, cs), 3, 2*time.Second, os.Stderr)
 
 	return raftutil.NewProtocol(
 		ctx,
