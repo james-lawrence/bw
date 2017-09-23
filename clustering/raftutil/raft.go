@@ -345,16 +345,3 @@ func peersToString(port uint16, peers ...*memberlist.Node) []string {
 func peerToString(port uint16, peer *memberlist.Node) string {
 	return (&net.TCPAddr{IP: peer.Addr, Port: int(port)}).String()
 }
-
-func periodicForceState(ctx context.Context, d time.Duration, c *sync.Cond) {
-	t := time.NewTicker(d)
-	defer t.Stop()
-	for {
-		select {
-		case _ = <-t.C:
-			c.Broadcast()
-		case _ = <-ctx.Done():
-			return
-		}
-	}
-}
