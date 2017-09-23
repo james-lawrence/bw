@@ -19,7 +19,6 @@ func (t passive) Update(c cluster) state {
 		store    raft.PeerStore
 		protocol *raft.Raft
 	)
-
 	debugx.Println("passive update invoked")
 	// if we're not a leader or something goes wrong during this update process
 	// maintain our current state.

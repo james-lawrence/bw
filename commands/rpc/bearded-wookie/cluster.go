@@ -1,10 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
+	"context"
+	"crypto/tls"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	xcluster "bitbucket.org/jatone/bearded-wookie/cluster"
@@ -121,40 +124,31 @@ func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, option
 	)
 }
 
-func (t *cluster) Raft(conf agent.Config) (p raftutil.Protocol, err error) {
+func (t *cluster) Raft(ctx context.Context, conf agent.Config) (p raftutil.Protocol, err error) {
 	var (
-		// cs      *tls.Config
-		// cc      *tls.Config
-		// l       net.Listener
-		snaps raft.SnapshotStore
-		// streaml *raft.NetworkTransport
+		cs      *tls.Config
+		l       net.Listener
+		snaps   raft.SnapshotStore
+		streaml *raft.NetworkTransport
 	)
 
-	// if cs, err = conf.TLSConfig.BuildServer(); err != nil {
-	// 	return p, errors.WithStack(err)
-	// }
-	//
-	// if cc, err = conf.TLSConfig.BuildClient(); err != nil {
-	// 	return p, errors.WithStack(err)
-	// }
-
-	if snaps, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft"), 2, ioutil.Discard); err != nil {
+	if cs, err = conf.TLSConfig.BuildServer(); err != nil {
 		return p, errors.WithStack(err)
 	}
 
-	// if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
-	// 	return p, errors.WithStack(err)
-	// }
-	// streaml = raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(t.raftNetwork.Port, l, cs, cc), 3, 2*time.Second, os.Stderr)
+	if snaps, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft"), 2, nil); err != nil {
+		return p, errors.WithStack(err)
+	}
 
-	// if streaml, err = raft.NewTCPTransport(t.raftNetwork.String(), t.raftNetwork, 3, 2*time.Second, nil); err != nil {
-	// 	return p, errors.WithStack(err)
-	// }
+	if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
+		return p, errors.WithStack(err)
+	}
+	streaml = raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(t.raftNetwork.Port, l, cs), 3, 2*time.Second, os.Stderr)
 
 	return raftutil.NewProtocol(
-		// t.raftNetwork.Port,
-		t.raftNetwork,
-		// streaml,
+		ctx,
+		uint16(t.raftNetwork.Port),
+		streaml,
 		snaps,
 	)
 }

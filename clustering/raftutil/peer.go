@@ -4,6 +4,8 @@ import (
 	"log"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+
 	"github.com/hashicorp/raft"
 )
 
@@ -20,14 +22,23 @@ func (t peer) Update(c cluster) state {
 			cond: t.raftp.ClusterChange,
 		}
 	)
+	debugx.Println("peer update invoked")
+	debugx.Println("current leader", t.protocol.Leader(), t.protocol.LastContact().Format(time.Stamp))
 
-	switch t.protocol.State() {
+	switch s := t.protocol.State(); s {
 	case raft.Leader:
 		nextState = leader{
 			raftp:    t.raftp,
 			protocol: t.protocol,
 			peers:    t.peers,
 		}.Update(c)
+	case raft.Follower:
+		if t.refreshPeers() {
+			log.Printf("force refreshing peers due to missing leader: (%s)\n", t.protocol.Leader())
+			t.protocol.SetPeers(t.raftp.getPeers(c))
+		}
+	default:
+		debugx.Println("current state", s)
 	}
 
 	if maybeLeave(t.protocol, c) {
@@ -39,32 +50,19 @@ func (t peer) Update(c cluster) state {
 		}
 	}
 
-	if t.refreshPeers() {
-		peers := t.raftp.getPeers(c)
-		log.Println("force refreshing peers due to missing leader. self:", peersToString(t.raftp.Port, c.LocalNode()), "peers:", peers)
-		t.protocol.SetPeers(peers)
-	}
-
 	return nextState
 }
 
 func (t peer) refreshPeers() bool {
 	const (
-		gracePeriod = 5 * time.Second
+		gracePeriod = 30 * time.Second
 	)
+	deadline := t.protocol.LastContact().Add(gracePeriod)
 
-	if err := t.protocol.VerifyLeader().Error(); err != nil {
-		log.Println("verify leader", err)
+	debugx.Println("deadline", deadline.Format(time.Stamp), "now", time.Now().Format(time.Stamp), deadline.Before(time.Now()))
+	if deadline.Before(time.Now()) {
+		return true
 	}
 
-	if t.protocol.Leader() != "" {
-		log.Println("leader is empty")
-		return false
-	}
-
-	if t.protocol.LastContact().Add(gracePeriod).After(time.Now()) {
-		return false
-	}
-
-	return true
+	return false
 }

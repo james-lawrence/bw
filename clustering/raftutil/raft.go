@@ -4,17 +4,16 @@ package raftutil
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
 	"net"
 	"sync"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie/x/contextx"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	"github.com/pkg/errors"
 )
 
 type cluster interface {
@@ -27,6 +26,18 @@ type state interface {
 	Update(cluster) state
 }
 
+type clusterEventType int
+
+const (
+	clusterEventJoined = iota
+	clusterEventLeft
+)
+
+type clusterEvent struct {
+	clusterEventType
+	Peer *memberlist.Node
+}
+
 // ProtocolOption options for the raft protocol.
 type ProtocolOption func(*Protocol)
 
@@ -37,63 +48,20 @@ func ProtocolOptionStateMachine(m func() raft.FSM) ProtocolOption {
 	}
 }
 
-// NewTLSStreamLayer ...
-func NewTLSStreamLayer(port int, l net.Listener, cs, cc *tls.Config) StreamLayer {
-	l = tls.NewListener(l, cs)
-	return StreamLayer{
-		Listener: l,
-		c:        cc,
-		port:     port,
-	}
-}
-
-// StreamLayer ...
-type StreamLayer struct {
-	net.Listener
-	c    *tls.Config
-	port int
-}
-
-// Dial is used to create a new outgoing connection
-func (t StreamLayer) Dial(address string, timeout time.Duration) (conn net.Conn, err error) {
-	d := &net.Dialer{
-		Timeout:   timeout,
-		KeepAlive: 5 * time.Second,
-	}
-
-	if conn, err = tls.DialWithDialer(d, t.Listener.Addr().Network(), address, t.c); err != nil {
-		return conn, errors.WithStack(err)
-	}
-
-	return conn, nil
-}
-
 // NewProtocol ...
-// func NewProtocol(port int, transport *raft.NetworkTransport, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
-func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
-	var (
-		network *raft.NetworkTransport
-	)
-	// ioutil.Discard
-	if network, err = raft.NewTCPTransport(inet.String(), inet, 3, time.Second, nil); err != nil {
-		return _ignored, errors.Wrap(err, "failed to build raft transport")
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
+func NewProtocol(ctx context.Context, port uint16, network *raft.NetworkTransport, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
-		context:   ctx,
-		shutdown:  cancel,
-		Port:      inet.Port,
+		Context:   ctx,
+		Port:      port,
 		Network:   network,
 		Snapshots: snaps,
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
 		},
 		ClusterChange: sync.NewCond(&sync.Mutex{}),
-		NotifyCh:      make(chan bool),
 		init:          &sync.Once{},
 		sgroup:        &sync.WaitGroup{},
+		events:        make(chan clusterEvent, 100),
 	}
 
 	for _, opt := range options {
@@ -108,17 +76,16 @@ func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore, options ...Protoco
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	NotifyCh        chan bool
+	Context         context.Context
+	Port            uint16
 	ClusterChange   *sync.Cond
-	Port            int
 	Snapshots       raft.SnapshotStore
 	getStateMachine func() raft.FSM
 	Network         *raft.NetworkTransport
 	init            *sync.Once
 	cluster         *raft.Raft
 	sgroup          *sync.WaitGroup
-	context         context.Context
-	shutdown        context.CancelFunc
+	events          chan clusterEvent
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
@@ -132,45 +99,36 @@ func (t Protocol) Overlay(c cluster) {
 	t.sgroup.Add(1)
 	defer t.sgroup.Done()
 
+	t.sgroup.Add(1)
+	go t.background()
+
 	for {
 		select {
-		case <-t.context.Done():
+		case <-t.Context.Done():
 			debugx.Println("overlay shutting down")
 			return
 		default:
-			debugx.Printf("raft state transition %T\n", s)
+			// debugx.Printf("raft state transition %T\n", s)
 			s = s.Update(c)
+		}
+	}
+}
+
+func (t Protocol) background() {
+	defer t.sgroup.Done()
+	for {
+		select {
+		case <-t.Context.Done():
+			return
+		case e := <-t.events:
+			handleClusterEvent(t.cluster, e)
+			t.ClusterChange.Broadcast()
 		}
 	}
 }
 
 func (t Protocol) getPeers(c cluster) []string {
 	return peersToString(t.Port, possiblePeers(c)...)
-}
-
-// Apply apply the command to the raft cluster.
-func (t *Protocol) Apply(cmd []byte, timeout time.Duration) raft.ApplyFuture {
-	if t.cluster != nil {
-		return t.cluster.Apply(cmd, timeout)
-	}
-
-	return errApply{cause: errors.New("not part of the cluster")}
-}
-
-type errApply struct {
-	cause error
-}
-
-func (t errApply) Error() error {
-	return t.cause
-}
-
-func (t errApply) Index() uint64 {
-	return 0
-}
-
-func (t errApply) Response() interface{} {
-	return nil
 }
 
 // connect - connect to the raft protocol overlay within the given cluster.
@@ -180,13 +138,11 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 		protocol *raft.Raft
 	)
 
-	log.Println("connect invoked")
 	conf := raft.DefaultConfig()
-	conf.HeartbeatTimeout = 2 * time.Second
-	conf.ElectionTimeout = 5 * time.Second
+	conf.HeartbeatTimeout = 5 * time.Second
+	conf.ElectionTimeout = 10 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
-	conf.NotifyCh = t.NotifyCh
 	// ShutdownOnRemove important setting, otherwise peers cannot rejoin the cluster....
 	conf.ShutdownOnRemove = false
 
@@ -196,8 +152,16 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 		return nil, nil, err
 	}
 
+	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
+		log.Printf("raft observation: %T, %#v\n", o.Data, o.Data)
+		return false
+	}))
+
 	t.init.Do(func() {
-		go periodicForceState(t.context, 5*time.Second, t.ClusterChange)
+		// add this to the parent context waitgroup
+		contextx.WaitGroupAdd(t.Context, 1)
+		go t.waitShutdown()
+		go periodicForceState(t.Context, 1*time.Second, t.ClusterChange)
 	})
 
 	t.cluster = protocol
@@ -205,26 +169,20 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	return protocol, speers, nil
 }
 
-// Shutdown ...
-func (t Protocol) Shutdown() {
+func (t Protocol) waitShutdown() {
 	defer log.Println("raft protocol clean shutdown")
-	t.shutdown()
-
+	defer contextx.WaitGroupDone(t.Context)
+	<-t.Context.Done()
 	debugx.Println("initiating shutdown for raft protocol")
 	// notify the overlay function that something has occurred.
 	t.ClusterChange.Broadcast()
-
 	debugx.Println("waiting for overlay to complete")
 	// wait for the overlay to complete.
 	t.sgroup.Wait()
-
 	debugx.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
 	t.maybeShutdown()
-
-	debugx.Println("closing notification channel")
-	// finally shutdown leadership channel.
-	close(t.NotifyCh)
+	debugx.Println("signaling wait group of completion")
 }
 
 func (t Protocol) maybeShutdown() {
@@ -237,9 +195,71 @@ func (t Protocol) maybeShutdown() {
 	}
 }
 
+// NotifyJoin is invoked when a node is detected to have joined.
+// The Node argument must not be modified.
+func (t Protocol) NotifyJoin(peer *memberlist.Node) {
+	log.Println("Join:", peer.Name, peer.Addr.String(), int(peer.Port))
+	if t.cluster != nil && t.cluster.State() == raft.Leader {
+		dup := *peer
+		dup.Port = t.Port
+		t.events <- clusterEvent{
+			Peer:             &dup,
+			clusterEventType: clusterEventJoined,
+		}
+	}
+}
+
+// NotifyLeave is invoked when a node is detected to have left.
+// The Node argument must not be modified.
+func (t Protocol) NotifyLeave(peer *memberlist.Node) {
+	log.Println("Leave:", peer.Name, peer.Addr.String(), int(peer.Port))
+	if t.cluster != nil && t.cluster.State() == raft.Leader {
+		dup := *peer
+		dup.Port = t.Port
+		t.events <- clusterEvent{
+			Peer:             peer,
+			clusterEventType: clusterEventLeft,
+		}
+	}
+}
+
+// NotifyUpdate is invoked when a node is detected to have
+// updated, usually involving the meta data. The Node argument
+// must not be modified.
+func (t Protocol) NotifyUpdate(peer *memberlist.Node) {
+	log.Println("Update:", peer.Name, peer.Addr.String(), int(peer.Port))
+	t.ClusterChange.Broadcast()
+}
+
+func handleClusterEvent(c *raft.Raft, e clusterEvent) {
+	if c == nil {
+		return
+	}
+
+	if c.State() != raft.Leader {
+		return
+	}
+
+	switch e.clusterEventType {
+	case clusterEventJoined:
+		if err := c.AddPeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+			log.Println("failed to add peer", err)
+		}
+	case clusterEventLeft:
+		if err := c.RemovePeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+			log.Println("failed to remove peer", err)
+		}
+	}
+}
+
 // key used for determining possible candidates for the raft protocol
 // within the cluster.
 var leaderKey = []byte("leaders")
+
+// Leader - returns the leader of the cluster.
+func Leader(c cluster) *memberlist.Node {
+	return c.Get(leaderKey)
+}
 
 // maybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
@@ -255,11 +275,6 @@ func maybeLeave(protocol *raft.Raft, c cluster) bool {
 	}
 
 	return true
-}
-
-// Leader - returns the leader of the cluster.
-func Leader(c cluster) *memberlist.Node {
-	return c.Get(leaderKey)
 }
 
 // isMember utility function for checking if the local node of the cluster is a member
@@ -286,7 +301,7 @@ func isPossiblePeer(local *memberlist.Node, peers ...*memberlist.Node) bool {
 }
 
 // peersToString ...
-func peersToString(port int, peers ...*memberlist.Node) []string {
+func peersToString(port uint16, peers ...*memberlist.Node) []string {
 	results := make([]string, 0, len(peers))
 	for _, peer := range peers {
 		results = append(results, peerToString(port, peer))
@@ -295,8 +310,8 @@ func peersToString(port int, peers ...*memberlist.Node) []string {
 }
 
 // peerToString ...
-func peerToString(port int, peer *memberlist.Node) string {
-	return (&net.TCPAddr{IP: peer.Addr, Port: port}).String()
+func peerToString(port uint16, peer *memberlist.Node) string {
+	return (&net.TCPAddr{IP: peer.Addr, Port: int(port)}).String()
 }
 
 func periodicForceState(ctx context.Context, d time.Duration, c *sync.Cond) {

@@ -90,7 +90,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		return err
 	}
 
-	if p, err = t.global.cluster.Raft(t.config); err != nil {
+	if p, err = t.global.cluster.Raft(t.global.ctx, t.config); err != nil {
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
-		clustering.OptionEventDelegate(cp.NewEvents(p.ClusterChange)),
+		clustering.OptionEventDelegate(p),
 	}
 
 	fssnapshot := peering.File{
