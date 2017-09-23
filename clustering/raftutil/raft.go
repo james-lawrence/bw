@@ -27,7 +27,7 @@ type state interface {
 }
 
 // NewProtocol ...
-func NewProtocol(ctx context.Context, inet *net.TCPAddr, snaps raft.SnapshotStore) (_ignored Protocol, err error) {
+func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore) (_ignored Protocol, err error) {
 	var (
 		network *raft.NetworkTransport
 	)
@@ -36,8 +36,10 @@ func NewProtocol(ctx context.Context, inet *net.TCPAddr, snaps raft.SnapshotStor
 		return _ignored, errors.Wrap(err, "failed to build raft transport")
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return Protocol{
-		Context:       ctx,
+		context:       ctx,
+		shutdown:      cancel,
 		Address:       inet,
 		Network:       network,
 		Snapshots:     snaps,
@@ -53,7 +55,6 @@ func NewProtocol(ctx context.Context, inet *net.TCPAddr, snaps raft.SnapshotStor
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	Context       context.Context
 	NotifyCh      chan bool
 	ClusterChange *sync.Cond
 	Address       *net.TCPAddr
@@ -62,32 +63,39 @@ type Protocol struct {
 	init          *sync.Once
 	cluster       *raft.Raft
 	sgroup        *sync.WaitGroup
+	context       context.Context
+	shutdown      context.CancelFunc
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
 func (t Protocol) Overlay(c cluster) {
 	var (
 		s state = passive{
-			raftp: t,
+			raftp: &t,
 		}
 	)
-	defer debug.Println("overlay shutdown")
+	defer debugx.Println("overlay shutdown")
 	t.sgroup.Add(1)
 	defer t.sgroup.Done()
 
 	for {
 		select {
-		case <-t.Context.Done():
-			debug.Println("overlay shutting down")
+		case <-t.context.Done():
+			debugx.Println("overlay shutting down")
 			return
 		default:
+			debugx.Printf("raft state transition %T\n", s)
 			s = s.Update(c)
 		}
 	}
 }
 
+func (t Protocol) getPeers(c cluster) []string {
+	return peersToString(t.Address.Port, possiblePeers(c)...)
+}
+
 // connect - connect to the raft protocol overlay within the given cluster.
-func (t Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
+func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	var (
 		err      error
 		protocol *raft.Raft
@@ -104,34 +112,40 @@ func (t Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 
 	store := raft.NewInmemStore()
 	fsm := &noopFSM{}
-	speers := &raft.StaticPeers{StaticPeers: peersToString(t.Address.Port, possiblePeers(c)...)}
+	speers := &raft.StaticPeers{StaticPeers: t.getPeers(c)}
 	if protocol, err = raft.NewRaft(conf, fsm, store, store, t.Snapshots, speers, t.Network); err != nil {
 		return nil, nil, err
 	}
 
 	t.init.Do(func() {
-		go t.waitShutdown()
+		go periodicForceState(t.context, 5*time.Second, t.ClusterChange)
 	})
+
+	t.cluster = protocol
 
 	return protocol, speers, nil
 }
 
-func (t Protocol) waitShutdown() {
+// Shutdown ...
+func (t Protocol) Shutdown() {
 	defer log.Println("raft protocol clean shutdown")
-	<-t.Context.Done()
+	t.shutdown()
+
 	debugx.Println("initiating shutdown for raft protocol")
 	// notify the overlay function that something has occurred.
 	t.ClusterChange.Broadcast()
+
 	debugx.Println("waiting for overlay to complete")
 	// wait for the overlay to complete.
 	t.sgroup.Wait()
+
 	debugx.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
 	t.maybeShutdown()
+
 	debugx.Println("closing notification channel")
 	// finally shutdown leadership channel.
 	close(t.NotifyCh)
-	debugx.Println("signaling wait group of completion")
 }
 
 func (t Protocol) maybeShutdown() {
@@ -167,10 +181,7 @@ func maybeLeave(protocol *raft.Raft, c cluster) bool {
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
 func isMember(c cluster) bool {
-	local := c.LocalNode()
-	peers := possiblePeers(c)
-
-	return isPossiblePeer(local, peers...)
+	return isPossiblePeer(c.LocalNode(), possiblePeers(c)...)
 }
 
 // possiblePeers utility function for locating N possible peers for the raft protocol.
@@ -202,4 +213,17 @@ func peersToString(port int, peers ...*memberlist.Node) []string {
 // peerToString ...
 func peerToString(port int, peer *memberlist.Node) string {
 	return (&net.TCPAddr{IP: peer.Addr, Port: port}).String()
+}
+
+func periodicForceState(ctx context.Context, d time.Duration, c *sync.Cond) {
+	t := time.NewTicker(d)
+	defer t.Stop()
+	for {
+		select {
+		case _ = <-t.C:
+			c.Broadcast()
+		case _ = <-ctx.Done():
+			return
+		}
+	}
 }

@@ -91,24 +91,28 @@ type cluster interface {
 // Option ...
 type Option func(*Deploy)
 
+// DeployOptionFilter filter nodes to deploy to.
 func DeployOptionFilter(x Filter) Option {
 	return func(d *Deploy) {
 		d.filter = x
 	}
 }
 
+// DeployOptionPartitioner set the strategy for partitioning the cluster into sets.
 func DeployOptionPartitioner(x partitioner) Option {
 	return func(d *Deploy) {
 		d.partitioner = x
 	}
 }
 
+// DeployOptionChecker set the strategy for checking the state of a node.
 func DeployOptionChecker(x checker) Option {
 	return func(d *Deploy) {
 		d.checker = x
 	}
 }
 
+// DeployOptionDeployer set the strategy for deploying.
 func DeployOptionDeployer(deployer func(peer *memberlist.Node) error) Option {
 	return func(d *Deploy) {
 		d.worker.deployer = deployer
@@ -175,12 +179,14 @@ func (t worker) DeployTo(peer *memberlist.Node) {
 	}
 }
 
+// Deploy - handles a deployment.
 type Deploy struct {
 	filter Filter
 	partitioner
 	worker
 }
 
+// Deploy ...
 func (t Deploy) Deploy(c cluster) {
 	nodes := _filter(c.Members(), t.filter)
 	t.worker.handler.NodesFound <- int64(len(nodes))

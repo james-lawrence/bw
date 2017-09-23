@@ -13,13 +13,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
-//
-// // Archive ...
-// type Archive agent.Archive
-//
-// // Message ...
-// type Message agent.Message
-
 // RegisterServer ...
 func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
 	agent.RegisterAgentServer(s, srv)

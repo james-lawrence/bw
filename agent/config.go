@@ -55,7 +55,7 @@ func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.Boot
 		clustering.OptionBindPort(0),
 		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Deploy))),
 		clustering.OptionAliveDelegate(cp.AliveDefault{}),
-		clustering.OptionLogger(os.Stderr),
+		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 	}, copts...)
 

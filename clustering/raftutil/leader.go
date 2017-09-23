@@ -3,12 +3,14 @@ package raftutil
 import (
 	"log"
 
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 )
 
 type leader struct {
-	raftp    Protocol
+	raftp    *Protocol
 	protocol *raft.Raft
 	peers    raft.PeerStore
 }
@@ -18,8 +20,6 @@ func (t leader) Update(c cluster) state {
 		next: t,
 		cond: t.raftp.ClusterChange,
 	}
-
-	log.Println("current state", t.protocol.State())
 
 	switch t.protocol.State() {
 	case raft.Leader:
@@ -53,6 +53,8 @@ func (t leader) cleanupPeers(peers ...*memberlist.Node) {
 		return
 	}
 
+	debugx.Println("peers", peersToString(t.raftp.Address.Port, peers...))
+	debugx.Println("leaders", leaders)
 	for _, peer := range peers {
 		p := peerToString(t.raftp.Address.Port, peer)
 		if !raft.PeerContained(leaders, p) {
@@ -64,6 +66,7 @@ func (t leader) cleanupPeers(peers ...*memberlist.Node) {
 		}
 	}
 
+	debugx.Println("dead nodes", leaders)
 	for _, peer := range leaders {
 		if err = t.protocol.RemovePeer(peer).Error(); err != nil {
 			log.Println("failed to remove peer", err)

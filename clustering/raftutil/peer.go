@@ -2,12 +2,13 @@ package raftutil
 
 import (
 	"log"
+	"time"
 
 	"github.com/hashicorp/raft"
 )
 
 type peer struct {
-	raftp    Protocol
+	raftp    *Protocol
 	protocol *raft.Raft
 	peers    raft.PeerStore
 }
@@ -20,7 +21,6 @@ func (t peer) Update(c cluster) state {
 		}
 	)
 
-	log.Println("current state", t.protocol.State())
 	switch t.protocol.State() {
 	case raft.Leader:
 		nextState = leader{
@@ -39,5 +39,26 @@ func (t peer) Update(c cluster) state {
 		}
 	}
 
+	if t.refreshPeers() {
+		log.Println("force refreshing peers due to missing leader")
+		t.protocol.SetPeers(t.raftp.getPeers(c))
+	}
+
 	return nextState
+}
+
+func (t peer) refreshPeers() bool {
+	const (
+		gracePeriod = 30 * time.Second
+	)
+
+	if t.protocol.Leader() != "" {
+		return false
+	}
+
+	if t.protocol.LastContact().Add(gracePeriod).After(time.Now()) {
+		return false
+	}
+
+	return true
 }

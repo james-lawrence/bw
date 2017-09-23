@@ -6,8 +6,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-
-	"bitbucket.org/jatone/bearded-wookie/backoff"
 )
 
 // ErrPeeringOptionsExhausted returned by bootstrap methods when the strategies for peering have been exhausted.
@@ -20,6 +18,16 @@ type BootstrapOption func(*bootstrap)
 // within the cluster that was joined, or an error.
 // should return true if the join was considered successful.
 type joinStrategy func(peers int) bool
+
+type backoff interface {
+	Backoff(attempt int) time.Duration
+}
+
+type backoffDefault struct{}
+
+func (t backoffDefault) Backoff(int) time.Duration {
+	return 5 * time.Second
+}
 
 // AllowSingleNode ...
 func AllowSingleNode(peers int) bool {
@@ -71,14 +79,14 @@ func BootstrapOptionPeeringStrategies(p ...peering) BootstrapOption {
 }
 
 // BootstrapOptionBackoff - backoff strategy to use.
-func BootstrapOptionBackoff(s backoff.Strategy) BootstrapOption {
+func BootstrapOptionBackoff(s backoff) BootstrapOption {
 	return func(b *bootstrap) {
 		b.Backoff = s
 	}
 }
 
 type bootstrap struct {
-	Backoff      backoff.Strategy
+	Backoff      backoff
 	AllowRetry   allowRetry
 	JoinStrategy joinStrategy
 	Peering      []peering
@@ -86,7 +94,7 @@ type bootstrap struct {
 
 func newBootstrap(options ...BootstrapOption) bootstrap {
 	b := bootstrap{
-		Backoff:      backoff.Maximum(15*time.Second, backoff.Exponential(500*time.Millisecond)),
+		Backoff:      backoffDefault{},
 		AllowRetry:   MaximumAttempts(100),
 		JoinStrategy: MinimumPeers(1),
 	}

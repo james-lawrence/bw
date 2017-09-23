@@ -9,6 +9,8 @@ import (
 	"net"
 	"time"
 
+	"google.golang.org/grpc/credentials"
+
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 
@@ -81,8 +83,9 @@ func ServerOptionCluster(c cluster, k []byte) ServerOption {
 }
 
 // NewServer ...
-func NewServer(address net.Addr, options ...ServerOption) Server {
+func NewServer(address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
 	s := Server{
+		creds:    creds,
 		Address:  address,
 		cluster:  noopCluster{},
 		Deployer: noopDeployer{},
@@ -103,6 +106,7 @@ func NewServer(address net.Addr, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
+	creds          credentials.TransportCredentials
 	Deployer       deployer
 	cluster        cluster
 	clusterKey     []byte

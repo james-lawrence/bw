@@ -19,7 +19,7 @@ type dummy struct {
 	sleepy int
 }
 
-func (t dummy) Deploy(dctx DeployContext, completed chan error) error {
+func (t dummy) Deploy(dctx DeployContext) error {
 	go func() {
 		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
 		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
@@ -28,10 +28,10 @@ func (t dummy) Deploy(dctx DeployContext, completed chan error) error {
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second
 		select {
 		case _ = <-time.After(completedDuration):
-			completed <- dctx.Done(nil)
+			dctx.Done(nil)
 		case _ = <-time.After(failedDuration):
 			log.Println("failed deployment due to timeout", failedDuration)
-			completed <- dctx.Done(timeout{Duration: failedDuration})
+			dctx.Done(timeout{Duration: failedDuration})
 		}
 	}()
 

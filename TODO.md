@@ -1,8 +1,6 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup
-- [ ] change `locked` to `canary`
-- [ ] change `lurker` to `deploy`
 - [ ] ux improvements
 
 #### implement event stream.

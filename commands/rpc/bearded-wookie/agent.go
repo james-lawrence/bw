@@ -85,7 +85,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	options := []clustering.Option{
 		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String())),
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
-		clustering.OptionLogger(os.Stderr),
+		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 	}
 
@@ -97,7 +97,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
-	server := agent.NewServer(t.listener.Addr(), agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
+	server := agent.NewServer(t.listener.Addr(), creds, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
 	agent.RegisterServer(
 		t.server,
 		server,

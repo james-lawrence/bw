@@ -153,7 +153,7 @@ func isStatus(err error, expected StatusEnum) bool {
 }
 
 type deployer interface {
-	Deploy(dctx DeployContext, completed chan error) error
+	Deploy(dctx DeployContext) error
 }
 
 // Coordinator is in charge of coordinating deployments.
@@ -162,11 +162,21 @@ type Coordinator interface {
 	// idle, canary, deploying, locked, and the list of recent deployments.
 	Info() (agent.AgentInfo, error)
 	// Deploy trigger a deploy
-	Deploy(*agent.Archive) error
+	Deploy(a *agent.Archive) error
+}
+
+// DeployContextOption options for a DeployContext
+type DeployContextOption func(dctx *DeployContext)
+
+// DeployContextOptionCompleted allows sending a signal that the deploy completed.
+func DeployContextOptionCompleted(completed chan DeployResult) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.completed = completed
+	}
 }
 
 // NewDeployContext ...
-func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err error) {
+func NewDeployContext(workdir string, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
 		logfile *os.File
 		logger  dlog
@@ -182,30 +192,48 @@ func NewDeployContext(workdir string, a agent.Archive) (_did DeployContext, err 
 		return _did, err
 	}
 
-	return DeployContext{
+	dctx := DeployContext{
 		ID:      id,
 		Root:    root,
 		Log:     logger,
 		Archive: a,
 		logfile: logfile,
-	}, nil
+	}
+
+	for _, opt := range options {
+		opt(&dctx)
+	}
+
+	return dctx, nil
+}
+
+// DeployResult - result of a deploy.
+type DeployResult struct {
+	DeployContext
+	Error error
 }
 
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
-	ID      bw.RandomID
-	Root    string
-	Log     logger
-	logfile *os.File
-	Archive agent.Archive
+	ID        bw.RandomID
+	Root      string
+	Log       logger
+	logfile   *os.File
+	Archive   agent.Archive
+	completed chan DeployResult
 }
 
 // Done is responsible for closing out the deployment context.
-func (t DeployContext) Done(result error) error {
+func (t DeployContext) Done(result error) {
 	logErr(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
 	logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
 
-	return result
+	if t.completed != nil {
+		t.completed <- DeployResult{
+			Error:         result,
+			DeployContext: t,
+		}
+	}
 }
 
 type logger interface {

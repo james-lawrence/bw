@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/clustering/rendezvous"
+
 	"github.com/hashicorp/memberlist"
 )
 

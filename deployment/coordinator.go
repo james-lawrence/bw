@@ -8,27 +8,31 @@ import (
 	"sync"
 
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // New Builds a deployment Coordinator.
 func New(d deployer, options ...CoordinatorOption) Coordinator {
+	const (
+		defaultKeepN = 3
+	)
+
 	coord := &deployment{
-		keepN:     3,
 		deployer:  d,
 		Mutex:     &sync.Mutex{},
 		status:    ready{},
-		completed: make(chan error),
+		completed: make(chan DeployResult),
 	}
 
 	// default options.
 	CoordinatorOptionRoot(os.TempDir())(coord)
+	CoordinatorOptionKeepN(defaultKeepN)
 
 	for _, opt := range options {
 		opt(coord)
 	}
 
-	go coord.init()
+	go coord.background()
 
 	return coord
 }
@@ -48,44 +52,44 @@ func CoordinatorOptionRoot(root string) CoordinatorOption {
 func CoordinatorOptionKeepN(n int) CoordinatorOption {
 	return func(d *deployment) {
 		d.keepN = n
+		d.cleanup = agentutil.KeepOldestN(n)
 	}
 }
 
 type deployment struct {
-	keepN       int
+	keepN       int // never set manually. always set by CoordinatorOptionKeepN
 	root        string
 	deploysRoot string // never set manually. always set by CoordinatorOptionRoot
 	deployer
+	cleanup agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	*sync.Mutex
 	status    Status
-	completed chan error
+	completed chan DeployResult
 }
 
-func (t *deployment) init() {
-	// TODO change completed to be a channel of DeployResult, which is a DeployContext, and an error.
-	for err := range t.completed {
-		// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
-		cleanup := agentutil.KeepOldestN(t.keepN)
-
-		if err != nil {
-			log.Printf("deployment failed: %+v\n", err)
-			t.update(failed{})
-		} else {
-			t.update(ready{})
-			cleanup = agentutil.KeepNewestN(t.keepN)
-		}
-
-		// cleanup workspace directory.
-		if soft := agentutil.MaybeClean(cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
+func (t *deployment) background() {
+	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
+	for done := range t.completed {
+		// cleanup workspace directory prior to execution. this leaves the last deployment
+		// available until the next run.
+		if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
 			log.Println("failed to clean workspace directory", soft)
 		}
+
+		if done.Error != nil {
+			log.Printf("deployment failed: %+v\n", done.Error)
+			t.update(failed{}, agentutil.KeepOldestN(t.keepN))
+			continue
+		}
+
+		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
 	}
 }
 
 // Info about the state of the agent.
-func (t *deployment) Info() (_ignored agent.AgentInfo, err error) {
+func (t *deployment) Info() (_ignored gagent.AgentInfo, err error) {
 	var (
-		archives []agent.Archive
+		archives []gagent.Archive
 	)
 
 	t.Mutex.Lock()
@@ -100,22 +104,22 @@ func (t *deployment) Info() (_ignored agent.AgentInfo, err error) {
 		return a.Ts > b.Ts
 	})
 
-	return agent.AgentInfo{
+	return gagent.AgentInfo{
 		Status:      AgentStateFromStatus(t.status),
 		Deployments: archivePointers(archives...),
 	}, nil
 }
 
-func (t *deployment) Deploy(archive *agent.Archive) (err error) {
+func (t *deployment) Deploy(archive *gagent.Archive) (err error) {
 	var (
 		dctx DeployContext
 	)
 
-	if err := t.startDeploy(); err != nil {
+	if err := t.start(); err != nil {
 		return err
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, *archive); err != nil {
+	if dctx, err = NewDeployContext(t.deploysRoot, *archive, DeployContextOptionCompleted(t.completed)); err != nil {
 		return err
 	}
 
@@ -123,21 +127,25 @@ func (t *deployment) Deploy(archive *agent.Archive) (err error) {
 		return err
 	}
 
-	return t.deployer.Deploy(dctx, t.completed)
+	return t.deployer.Deploy(dctx)
 }
 
-func (t *deployment) startDeploy() Status {
+func (t *deployment) start() Status {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
+
 	if !(IsReady(t.status) || IsFailed(t.status)) {
 		return t.status
 	}
+
 	t.status = deploying{}
+
 	return nil
 }
 
-func (t *deployment) update(s Status) {
+func (t *deployment) update(s Status, c agentutil.Cleaner) {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 	t.status = s
+	t.cleanup = c
 }

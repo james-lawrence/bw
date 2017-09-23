@@ -1,11 +1,10 @@
-package agent
+package deployment
 
 import (
 	"log"
 	"path/filepath"
 
 	"bitbucket.org/jatone/bearded-wookie/archive"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/directives"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 	"bitbucket.org/jatone/bearded-wookie/downloads"
@@ -23,7 +22,7 @@ func DirectiveOptionShellContext(ctx shell.Context) DirectiveOption {
 }
 
 // DirectiveOptionDeployContext ...
-func DirectiveOptionDeployContext(dctx deployment.DeployContext) DirectiveOption {
+func DirectiveOptionDeployContext(dctx DeployContext) DirectiveOption {
 	return func(d *Directive) {
 		d.dctx = dctx
 	}
@@ -41,14 +40,14 @@ func NewDirective(options ...DirectiveOption) Directive {
 
 // Directive ...
 type Directive struct {
-	dctx    deployment.DeployContext
+	dctx    DeployContext
 	sctx    shell.Context
 	dlreg   downloads.Registry
 	options []DirectiveOption
 }
 
 // Deploy ...
-func (t Directive) Deploy(dctx deployment.DeployContext, completed chan error) error {
+func (t Directive) Deploy(dctx DeployContext) error {
 	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
 	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
 
@@ -61,12 +60,12 @@ func (t Directive) Deploy(dctx deployment.DeployContext, completed chan error) e
 		opt(&t)
 	}
 
-	go t.deploy(completed)
+	go t.deploy()
 
 	return nil
 }
 
-func (t Directive) deploy(completed chan error) {
+func (t Directive) deploy() {
 	var (
 		err         error
 		dshell      directives.ShellLoader
@@ -87,8 +86,7 @@ func (t Directive) deploy(completed chan error) {
 
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
-	if err = archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()); err != nil {
-		err = errors.Wrapf(err, "retrieve archive")
+	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {
 		goto done
 	}
 
@@ -107,5 +105,5 @@ func (t Directive) deploy(completed chan error) {
 	}
 
 done:
-	completed <- t.dctx.Done(err)
+	t.dctx.Done(err)
 }

@@ -29,8 +29,8 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	return t.agentCmd.bind(
 		func(config agent.Config) agent.ServerOption {
 			deployments := deployment.New(
-				agent.NewDirective(
-					agent.DirectiveOptionShellContext(sctx),
+				deployment.NewDirective(
+					deployment.DirectiveOptionShellContext(sctx),
 				),
 				deployment.CoordinatorOptionRoot(config.Root),
 				deployment.CoordinatorOptionKeepN(config.KeepN),

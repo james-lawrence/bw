@@ -61,6 +61,27 @@ func OptionBindPort(port int) Option {
 	}
 }
 
+// OptionLogger sets the logger for the memberlist.
+func OptionLogger(l *log.Logger) Option {
+	return func(opts *Options) {
+		opts.Config.Logger = l
+	}
+}
+
+// OptionLogOutput sets the logger for the memberlist.
+func OptionLogOutput(l io.Writer) Option {
+	return func(opts *Options) {
+		opts.Config.LogOutput = l
+	}
+}
+
+// OptionEventDelegate set the event delegate for the cluster.
+func OptionEventDelegate(d memberlist.EventDelegate) Option {
+	return func(opts *Options) {
+		opts.Config.Events = d
+	}
+}
+
 // OptionAdvertiseAddress specify the address to advertise.
 func OptionAdvertiseAddress(addr string) Option {
 	return func(opts *Options) {
@@ -72,20 +93,6 @@ func OptionAdvertiseAddress(addr string) Option {
 func OptionAdvertisePort(port int) Option {
 	return func(opts *Options) {
 		opts.Config.AdvertisePort = port
-	}
-}
-
-// OptionLogger sets the logger for the memberlist.
-func OptionLogger(l io.Writer) Option {
-	return func(opts *Options) {
-		opts.Config.LogOutput = l
-	}
-}
-
-// OptionEventDelegate set the event delegate for the cluster.
-func OptionEventDelegate(d memberlist.EventDelegate) Option {
-	return func(opts *Options) {
-		opts.Config.Events = d
 	}
 }
 
@@ -158,7 +165,9 @@ func (t Options) NewCluster() (Cluster, error) {
 		return c, errors.Wrap(err, "failed to create cluster")
 	}
 
-	return Cluster{
+	c = Cluster{
 		list: members,
-	}, nil
+	}
+
+	return c, nil
 }

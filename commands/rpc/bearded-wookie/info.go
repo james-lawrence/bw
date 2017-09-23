@@ -48,6 +48,7 @@ func (t *agentInfo) _info() (err error) {
 		info        gagent.AgentInfo
 		port        string
 	)
+	defer t.global.shutdown()
 
 	if err = bw.ExpandAndDecodeFile(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment), &t.config); err != nil {
 		return err
