@@ -2,6 +2,7 @@ package raftutil
 
 import (
 	"io"
+	"log"
 	"sync"
 
 	"github.com/hashicorp/raft"
@@ -14,7 +15,7 @@ type noopFSM struct {
 func (m *noopFSM) Apply(alog *raft.Log) interface{} {
 	m.Lock()
 	defer m.Unlock()
-
+	log.Println("applying", alog.Type, alog.Term, alog.Index)
 	return 0
 }
 

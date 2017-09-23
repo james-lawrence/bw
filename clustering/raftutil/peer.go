@@ -34,7 +34,7 @@ func (t peer) Update(c cluster) state {
 		}.Update(c)
 	case raft.Follower:
 		if t.refreshPeers() {
-			log.Printf("force refreshing peers due to missing leader: (%s)\n", t.protocol.Leader())
+			log.Println("force refreshing peers due to missing leader")
 			t.protocol.SetPeers(t.raftp.getPeers(c))
 		}
 	default:

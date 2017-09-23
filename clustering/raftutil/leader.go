@@ -2,6 +2,7 @@ package raftutil
 
 import (
 	"log"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 
@@ -16,18 +17,22 @@ type leader struct {
 }
 
 func (t leader) Update(c cluster) state {
-	maintainState := conditionTransition{
-		next: t,
-		cond: t.raftp.ClusterChange,
-	}
+	var (
+		maintainState state = conditionTransition{
+			next: t,
+			cond: t.raftp.ClusterChange,
+		}
+	)
+
 	debugx.Println("leader update invoked")
 	switch t.protocol.State() {
 	case raft.Leader:
 		debugx.Println("still the leader")
-		t.cleanupPeers(possiblePeers(c)...)
-		debugx.Println("cleaned peers")
+		if t.cleanupPeers(possiblePeers(c)...) {
+			go t.raftp.unstable(time.Second)
+		}
+
 		if maybeLeave(t.protocol, c) {
-			log.Println("leader is leaving raft cluster")
 			return conditionTransition{
 				next: passive{
 					raftp: t.raftp,
@@ -46,31 +51,39 @@ func (t leader) Update(c cluster) state {
 	}
 }
 
-func (t leader) cleanupPeers(peers ...*memberlist.Node) {
-	candidates, err := t.peers.Peers()
+// cleanupPeers returns true if the peer set was unstable.
+func (t leader) cleanupPeers(candidates ...*memberlist.Node) (unstable bool) {
+	peers, err := t.peers.Peers()
 	if err != nil {
 		log.Println("failed to retrieve peers", err)
-		return
+		return true
 	}
 
-	debugx.Println("peers", peersToString(t.raftp.Port, peers...))
-	debugx.Println("candidates", candidates)
-	for _, peer := range peers {
-		p := peerToString(t.raftp.Port, peer)
-		if !raft.PeerContained(candidates, p) {
-			log.Println()
-			if err = t.protocol.AddPeer(p).Error(); err != nil {
-				log.Println("failed to add peer", err)
-			}
-		} else {
-			candidates = raft.ExcludePeer(candidates, p)
-		}
-	}
+	debugx.Println("candidates", peersToString(t.raftp.Port, candidates...))
+	debugx.Println("peers", peers)
 
-	debugx.Println("dead nodes", candidates)
 	for _, peer := range candidates {
+		p := peerToString(t.raftp.Port, peer)
+		if raft.PeerContained(peers, p) {
+			peers = raft.ExcludePeer(peers, p)
+			continue
+		}
+
+		if err = t.protocol.AddPeer(p).Error(); err != nil {
+			log.Println("failed to add peer", err)
+		}
+
+		unstable = true
+	}
+
+	debugx.Println("dead nodes", peers)
+	for _, peer := range peers {
 		if err = t.protocol.RemovePeer(peer).Error(); err != nil {
 			log.Println("failed to remove peer", err)
 		}
+
+		unstable = true
 	}
+
+	return unstable
 }

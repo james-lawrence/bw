@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
+	"github.com/pkg/errors"
 )
 
 type cluster interface {
@@ -31,6 +32,7 @@ type clusterEventType int
 const (
 	clusterEventJoined = iota
 	clusterEventLeft
+	clusterEventUnstable
 )
 
 type clusterEvent struct {
@@ -48,15 +50,32 @@ func ProtocolOptionStateMachine(m func() raft.FSM) ProtocolOption {
 	}
 }
 
+// ProtocolOptionSnapshotStorage set the state machine for the protocol
+func ProtocolOptionSnapshotStorage(snaps raft.SnapshotStore) ProtocolOption {
+	return func(p *Protocol) {
+		p.Snapshots = snaps
+	}
+}
+
+// ProtocolOptionTransport set the state machine for the protocol
+func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
+	return func(p *Protocol) {
+		p.getTransport = t
+	}
+}
+
 // NewProtocol ...
-func NewProtocol(ctx context.Context, port uint16, network *raft.NetworkTransport, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
+func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
 		Context:   ctx,
 		Port:      port,
-		Network:   network,
-		Snapshots: snaps,
+		Snapshots: raft.NewDiscardSnapshotStore(),
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
+		},
+		getTransport: func() (raft.Transport, error) {
+			_, trans := raft.NewInmemTransport("")
+			return trans, nil
 		},
 		ClusterChange: sync.NewCond(&sync.Mutex{}),
 		init:          &sync.Once{},
@@ -81,7 +100,7 @@ type Protocol struct {
 	ClusterChange   *sync.Cond
 	Snapshots       raft.SnapshotStore
 	getStateMachine func() raft.FSM
-	Network         *raft.NetworkTransport
+	getTransport    func() (raft.Transport, error)
 	init            *sync.Once
 	cluster         *raft.Raft
 	sgroup          *sync.WaitGroup
@@ -131,12 +150,23 @@ func (t Protocol) getPeers(c cluster) []string {
 	return peersToString(t.Port, possiblePeers(c)...)
 }
 
+func (t Protocol) unstable(d time.Duration) {
+	log.Println("peers unstable, will refresh in", d)
+	time.Sleep(d)
+	t.ClusterChange.Broadcast()
+}
+
 // connect - connect to the raft protocol overlay within the given cluster.
 func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	var (
 		err      error
 		protocol *raft.Raft
+		network  raft.Transport
 	)
+
+	if network, err = t.getTransport(); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
 
 	conf := raft.DefaultConfig()
 	conf.HeartbeatTimeout = 5 * time.Second
@@ -148,12 +178,13 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 
 	store := raft.NewInmemStore()
 	speers := &raft.StaticPeers{StaticPeers: t.getPeers(c)}
-	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, speers, t.Network); err != nil {
+	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, speers, network); err != nil {
 		return nil, nil, err
 	}
 
 	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		log.Printf("raft observation: %T, %#v\n", o.Data, o.Data)
+		log.Printf("raft observation (broadcasting change): %T, %#v\n", o.Data, o.Data)
+		t.ClusterChange.Broadcast()
 		return false
 	}))
 
@@ -161,7 +192,6 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 		// add this to the parent context waitgroup
 		contextx.WaitGroupAdd(t.Context, 1)
 		go t.waitShutdown()
-		go periodicForceState(t.Context, 1*time.Second, t.ClusterChange)
 	})
 
 	t.cluster = protocol
@@ -198,7 +228,7 @@ func (t Protocol) maybeShutdown() {
 // NotifyJoin is invoked when a node is detected to have joined.
 // The Node argument must not be modified.
 func (t Protocol) NotifyJoin(peer *memberlist.Node) {
-	log.Println("Join:", peer.Name, peer.Addr.String(), int(peer.Port))
+	log.Println("Join:", peer.Name, peer.Addr.String(), t.Port)
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
@@ -207,12 +237,13 @@ func (t Protocol) NotifyJoin(peer *memberlist.Node) {
 			clusterEventType: clusterEventJoined,
 		}
 	}
+	t.ClusterChange.Broadcast()
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 // The Node argument must not be modified.
 func (t Protocol) NotifyLeave(peer *memberlist.Node) {
-	log.Println("Leave:", peer.Name, peer.Addr.String(), int(peer.Port))
+	log.Println("Leave:", peer.Name, peer.Addr.String(), t.Port)
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
@@ -221,6 +252,7 @@ func (t Protocol) NotifyLeave(peer *memberlist.Node) {
 			clusterEventType: clusterEventLeft,
 		}
 	}
+	t.ClusterChange.Broadcast()
 }
 
 // NotifyUpdate is invoked when a node is detected to have
