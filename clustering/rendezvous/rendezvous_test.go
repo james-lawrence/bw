@@ -3,8 +3,8 @@ package rendezvous_test
 import (
 	"net"
 
-	"github.com/TallaInc/mailman/clustering/clusteringtestutil"
-	. "github.com/TallaInc/mailman/clustering/rendezvous"
+	"bitbucket.org/jatone/bearded-wookie/clustering/clusteringtestutil"
+	. "bitbucket.org/jatone/bearded-wookie/clustering/rendezvous"
 	"github.com/hashicorp/memberlist"
 
 	. "github.com/onsi/ginkgo"

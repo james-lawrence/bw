@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"crypto/tls"
 	"os"
 	"path/filepath"
 	"time"
@@ -37,13 +38,14 @@ func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.Boot
 	var (
 		secret []byte
 		peers  []string
+		conf   *tls.Config
 	)
 
-	if creds, err = t.TLSConfig.BuildClient(); err != nil {
+	if conf, err = t.TLSConfig.BuildClient(); err != nil {
 		return creds, client, c, err
 	}
 
-	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
+	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(credentials.NewTLS(conf))); err != nil {
 		return creds, client, c, err
 	}
 

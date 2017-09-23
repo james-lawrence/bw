@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net"
 	"os"
@@ -13,6 +14,7 @@ import (
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
@@ -40,6 +42,12 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 				Port: 2001,
 			},
 		),
+		clusterCmdOptionRaftBind(
+			&net.TCPAddr{
+				IP:   t.global.systemIP,
+				Port: 2002,
+			},
+		),
 	)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
@@ -55,8 +63,9 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
-		creds  credentials.TransportCredentials
+		creds  *tls.Config
 		secret []byte
+		p      raftutil.Protocol
 	)
 	log.SetPrefix("[AGENT] ")
 
@@ -69,7 +78,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 
 	log.Printf("configuration: %#v\n", t.config)
 
-	if t.listener, err = net.Listen("tcp", t.network.String()); err != nil {
+	if t.listener, err = net.Listen(t.network.Network(), t.network.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
 	}
 
@@ -81,12 +90,17 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		return err
 	}
 
-	t.server = grpc.NewServer(grpc.Creds(creds))
+	if p, err = t.global.cluster.Raft(t.config); err != nil {
+		return err
+	}
+
+	t.server = grpc.NewServer(grpc.Creds(credentials.NewTLS(creds)))
 	options := []clustering.Option{
 		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String())),
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
+		clustering.OptionEventDelegate(cp.NewEvents(p.ClusterChange)),
 	}
 
 	fssnapshot := peering.File{
@@ -97,13 +111,6 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
-	server := agent.NewServer(t.listener.Addr(), creds, agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)))
-	agent.RegisterServer(
-		t.server,
-		server,
-	)
-
-	t.runServer(c)
 	t.global.cluster.Snapshot(
 		c,
 		fssnapshot,
@@ -111,7 +118,20 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
-	go t.bootstrapDeployment(server, c, grpc.WithTransportCredentials(creds))
+	server := agent.NewServer(
+		t.listener.Addr(),
+		credentials.NewTLS(creds),
+		agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)),
+	)
+
+	agent.RegisterServer(
+		t.server,
+		server,
+	)
+
+	t.runServer(c)
+	// go t.bootstrapDeployment(server, c, grpc.WithTransportCredentials(credentials.NewTLS(creds)))
+	go p.Overlay(c)
 
 	return nil
 }

@@ -53,16 +53,17 @@ func (t leader) cleanupPeers(peers ...*memberlist.Node) {
 		return
 	}
 
-	debugx.Println("peers", peersToString(t.raftp.Address.Port, peers...))
+	debugx.Println("peers", peersToString(t.raftp.Port, peers...))
 	debugx.Println("leaders", leaders)
 	for _, peer := range peers {
-		p := peerToString(t.raftp.Address.Port, peer)
-		if !raft.PeerContained(leaders, p) {
-			if err = t.protocol.AddPeer(p).Error(); err != nil {
-				log.Println("failed to add peer", err)
-			}
-		} else {
+		p := peerToString(t.raftp.Port, peer)
+		if raft.PeerContained(leaders, p) {
 			leaders = raft.ExcludePeer(leaders, p)
+			continue
+		}
+
+		if err = t.protocol.AddPeer(p).Error(); err != nil {
+			log.Println("failed to add peer", err)
 		}
 	}
 

@@ -4,7 +4,7 @@ package raftutil
 
 import (
 	"context"
-	"io/ioutil"
+	"crypto/tls"
 	"log"
 	"net"
 	"sync"
@@ -19,6 +19,7 @@ import (
 
 type cluster interface {
 	LocalNode() *memberlist.Node
+	Get([]byte) *memberlist.Node
 	GetN(int, []byte) []*memberlist.Node
 }
 
@@ -26,28 +27,80 @@ type state interface {
 	Update(cluster) state
 }
 
+// ProtocolOption options for the raft protocol.
+type ProtocolOption func(*Protocol)
+
+// ProtocolOptionStateMachine set the state machine for the protocol
+func ProtocolOptionStateMachine(m func() raft.FSM) ProtocolOption {
+	return func(p *Protocol) {
+		p.getStateMachine = m
+	}
+}
+
+// NewTLSStreamLayer ...
+func NewTLSStreamLayer(port int, l net.Listener, cs, cc *tls.Config) StreamLayer {
+	l = tls.NewListener(l, cs)
+	return StreamLayer{
+		Listener: l,
+		c:        cc,
+		port:     port,
+	}
+}
+
+// StreamLayer ...
+type StreamLayer struct {
+	net.Listener
+	c    *tls.Config
+	port int
+}
+
+// Dial is used to create a new outgoing connection
+func (t StreamLayer) Dial(address string, timeout time.Duration) (conn net.Conn, err error) {
+	d := &net.Dialer{
+		Timeout:   timeout,
+		KeepAlive: 5 * time.Second,
+	}
+
+	if conn, err = tls.DialWithDialer(d, t.Listener.Addr().Network(), address, t.c); err != nil {
+		return conn, errors.WithStack(err)
+	}
+
+	return conn, nil
+}
+
 // NewProtocol ...
-func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore) (_ignored Protocol, err error) {
+// func NewProtocol(port int, transport *raft.NetworkTransport, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
+func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore, options ...ProtocolOption) (_ignored Protocol, err error) {
 	var (
 		network *raft.NetworkTransport
 	)
-
-	if network, err = raft.NewTCPTransport(inet.String(), inet, 3, time.Second, ioutil.Discard); err != nil {
+	// ioutil.Discard
+	if network, err = raft.NewTCPTransport(inet.String(), inet, 3, time.Second, nil); err != nil {
 		return _ignored, errors.Wrap(err, "failed to build raft transport")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	return Protocol{
-		context:       ctx,
-		shutdown:      cancel,
-		Address:       inet,
-		Network:       network,
-		Snapshots:     snaps,
+
+	p := Protocol{
+		context:   ctx,
+		shutdown:  cancel,
+		Port:      inet.Port,
+		Network:   network,
+		Snapshots: snaps,
+		getStateMachine: func() raft.FSM {
+			return &noopFSM{}
+		},
 		ClusterChange: sync.NewCond(&sync.Mutex{}),
 		NotifyCh:      make(chan bool),
 		init:          &sync.Once{},
 		sgroup:        &sync.WaitGroup{},
-	}, nil
+	}
+
+	for _, opt := range options {
+		opt(&p)
+	}
+
+	return p, nil
 }
 
 // Protocol - utility data structure for holding information about a raft protocol
@@ -55,16 +108,17 @@ func NewProtocol(inet *net.TCPAddr, snaps raft.SnapshotStore) (_ignored Protocol
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	NotifyCh      chan bool
-	ClusterChange *sync.Cond
-	Address       *net.TCPAddr
-	Snapshots     raft.SnapshotStore
-	Network       *raft.NetworkTransport
-	init          *sync.Once
-	cluster       *raft.Raft
-	sgroup        *sync.WaitGroup
-	context       context.Context
-	shutdown      context.CancelFunc
+	NotifyCh        chan bool
+	ClusterChange   *sync.Cond
+	Port            int
+	Snapshots       raft.SnapshotStore
+	getStateMachine func() raft.FSM
+	Network         *raft.NetworkTransport
+	init            *sync.Once
+	cluster         *raft.Raft
+	sgroup          *sync.WaitGroup
+	context         context.Context
+	shutdown        context.CancelFunc
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
@@ -91,7 +145,32 @@ func (t Protocol) Overlay(c cluster) {
 }
 
 func (t Protocol) getPeers(c cluster) []string {
-	return peersToString(t.Address.Port, possiblePeers(c)...)
+	return peersToString(t.Port, possiblePeers(c)...)
+}
+
+// Apply apply the command to the raft cluster.
+func (t *Protocol) Apply(cmd []byte, timeout time.Duration) raft.ApplyFuture {
+	if t.cluster != nil {
+		return t.cluster.Apply(cmd, timeout)
+	}
+
+	return errApply{cause: errors.New("not part of the cluster")}
+}
+
+type errApply struct {
+	cause error
+}
+
+func (t errApply) Error() error {
+	return t.cause
+}
+
+func (t errApply) Index() uint64 {
+	return 0
+}
+
+func (t errApply) Response() interface{} {
+	return nil
 }
 
 // connect - connect to the raft protocol overlay within the given cluster.
@@ -101,9 +180,10 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 		protocol *raft.Raft
 	)
 
+	log.Println("connect invoked")
 	conf := raft.DefaultConfig()
-	conf.HeartbeatTimeout = 5 * time.Second
-	conf.ElectionTimeout = 10 * time.Second
+	conf.HeartbeatTimeout = 2 * time.Second
+	conf.ElectionTimeout = 5 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
 	conf.NotifyCh = t.NotifyCh
@@ -111,9 +191,8 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	conf.ShutdownOnRemove = false
 
 	store := raft.NewInmemStore()
-	fsm := &noopFSM{}
 	speers := &raft.StaticPeers{StaticPeers: t.getPeers(c)}
-	if protocol, err = raft.NewRaft(conf, fsm, store, store, t.Snapshots, speers, t.Network); err != nil {
+	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, speers, t.Network); err != nil {
 		return nil, nil, err
 	}
 
@@ -176,6 +255,11 @@ func maybeLeave(protocol *raft.Raft, c cluster) bool {
 	}
 
 	return true
+}
+
+// Leader - returns the leader of the cluster.
+func Leader(c cluster) *memberlist.Node {
+	return c.Get(leaderKey)
 }
 
 // isMember utility function for checking if the local node of the cluster is a member

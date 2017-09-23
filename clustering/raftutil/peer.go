@@ -40,8 +40,9 @@ func (t peer) Update(c cluster) state {
 	}
 
 	if t.refreshPeers() {
-		log.Println("force refreshing peers due to missing leader")
-		t.protocol.SetPeers(t.raftp.getPeers(c))
+		peers := t.raftp.getPeers(c)
+		log.Println("force refreshing peers due to missing leader. self:", peersToString(t.raftp.Port, c.LocalNode()), "peers:", peers)
+		t.protocol.SetPeers(peers)
 	}
 
 	return nextState
@@ -49,10 +50,15 @@ func (t peer) Update(c cluster) state {
 
 func (t peer) refreshPeers() bool {
 	const (
-		gracePeriod = 30 * time.Second
+		gracePeriod = 5 * time.Second
 	)
 
+	if err := t.protocol.VerifyLeader().Error(); err != nil {
+		log.Println("verify leader", err)
+	}
+
 	if t.protocol.Leader() != "" {
+		log.Println("leader is empty")
 		return false
 	}
 

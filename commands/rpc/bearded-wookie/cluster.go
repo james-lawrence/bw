@@ -1,16 +1,21 @@
 package main
 
 import (
+	"io/ioutil"
 	"log"
 	"net"
+	"path/filepath"
 
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	xcluster "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
+	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
@@ -28,6 +33,12 @@ func clusterCmdOptionBind(b *net.TCPAddr) clusterCmdOption {
 	}
 }
 
+func clusterCmdOptionRaftBind(b *net.TCPAddr) clusterCmdOption {
+	return func(c *cluster) {
+		c.raftNetwork = b
+	}
+}
+
 func clusterCmdOptionMinPeers(b int) clusterCmdOption {
 	return func(c *cluster) {
 		c.minimumRequiredPeers = 1
@@ -37,6 +48,7 @@ func clusterCmdOptionMinPeers(b int) clusterCmdOption {
 type cluster struct {
 	name                 string
 	network              *net.TCPAddr
+	raftNetwork          *net.TCPAddr
 	bootstrap            []*net.TCPAddr
 	minimumRequiredPeers int
 	maximumAttempts      int
@@ -53,6 +65,7 @@ func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOpti
 	parent.Flag("cluster-node-name", "name of the node within the cluster").Default(t.network.String()).StringVar(&t.name)
 	parent.Flag("cluster", "addresses of the cluster to connect to").TCPListVar(&t.bootstrap)
 	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
+	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").Default(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
 	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredPeers)
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
 }
@@ -105,6 +118,44 @@ func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, option
 		c,
 		fssnapshot,
 		options...,
+	)
+}
+
+func (t *cluster) Raft(conf agent.Config) (p raftutil.Protocol, err error) {
+	var (
+		// cs      *tls.Config
+		// cc      *tls.Config
+		// l       net.Listener
+		snaps raft.SnapshotStore
+		// streaml *raft.NetworkTransport
+	)
+
+	// if cs, err = conf.TLSConfig.BuildServer(); err != nil {
+	// 	return p, errors.WithStack(err)
+	// }
+	//
+	// if cc, err = conf.TLSConfig.BuildClient(); err != nil {
+	// 	return p, errors.WithStack(err)
+	// }
+
+	if snaps, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft"), 2, ioutil.Discard); err != nil {
+		return p, errors.WithStack(err)
+	}
+
+	// if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
+	// 	return p, errors.WithStack(err)
+	// }
+	// streaml = raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(t.raftNetwork.Port, l, cs, cc), 3, 2*time.Second, os.Stderr)
+
+	// if streaml, err = raft.NewTCPTransport(t.raftNetwork.String(), t.raftNetwork, 3, 2*time.Second, nil); err != nil {
+	// 	return p, errors.WithStack(err)
+	// }
+
+	return raftutil.NewProtocol(
+		// t.raftNetwork.Port,
+		t.raftNetwork,
+		// streaml,
+		snaps,
 	)
 }
 

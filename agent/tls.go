@@ -12,7 +12,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -76,44 +75,43 @@ func (t TLSConfig) Hash() (raw []byte, err error) {
 }
 
 // BuildServer ...
-func (t TLSConfig) BuildServer() (creds credentials.TransportCredentials, err error) {
+func (t TLSConfig) BuildServer() (creds *tls.Config, err error) {
 	var (
 		cert tls.Certificate
 		ca   []byte
 	)
 
 	if cert, err = tls.LoadX509KeyPair(t.Cert, t.Key); err != nil {
-		return nil, errors.WithStack(err)
+		return creds, errors.WithStack(err)
 	}
 
 	pool := x509.NewCertPool()
 	if ca, err = ioutil.ReadFile(t.CA); err != nil {
-		return nil, errors.WithStack(err)
+		return creds, errors.WithStack(err)
 	}
 
 	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return nil, errors.New("failed to append client certs")
+		return creds, errors.New("failed to append client certs")
 	}
 
 	log.Println("loading client cert", t.Cert)
 	log.Println("loading client key", t.Key)
 	log.Println("loading authority cert", t.CA)
 	log.Println("using server name", t.ServerName)
-	creds = credentials.NewTLS(
-		&tls.Config{
-			ServerName:   t.ServerName,
-			ClientAuth:   tls.RequireAndVerifyClientCert,
-			Certificates: []tls.Certificate{cert},
-			ClientCAs:    pool,
-			RootCAs:      pool,
-		},
-	)
+
+	creds = &tls.Config{
+		ServerName:   t.ServerName,
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		Certificates: []tls.Certificate{cert},
+		ClientCAs:    pool,
+		RootCAs:      pool,
+	}
 
 	return creds, nil
 }
 
 // BuildClient ...
-func (t TLSConfig) BuildClient() (creds credentials.TransportCredentials, err error) {
+func (t TLSConfig) BuildClient() (creds *tls.Config, err error) {
 	var (
 		cert tls.Certificate
 		ca   []byte
@@ -136,13 +134,12 @@ func (t TLSConfig) BuildClient() (creds credentials.TransportCredentials, err er
 		return nil, errors.New("failed to append client certs")
 	}
 
-	creds = credentials.NewTLS(
-		&tls.Config{
-			ServerName:   t.ServerName,
-			Certificates: []tls.Certificate{cert},
-			RootCAs:      pool,
-		},
-	)
+	creds = &tls.Config{
+		ServerName:         t.ServerName,
+		Certificates:       []tls.Certificate{cert},
+		RootCAs:            pool,
+		InsecureSkipVerify: true,
+	}
 
 	return creds, nil
 }
