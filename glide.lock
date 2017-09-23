@@ -1,5 +1,5 @@
 hash: 2b240cb7adb0e5e9512a83d86d69b700da9668f3c4680a60247d2c593c23ee3e
-updated: 2017-09-04T10:11:17.150493145-04:00
+updated: 2017-09-23T13:00:03.785410988-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: 297a08eca3cfe76b1bc87a752ec3272fbac539ef
@@ -10,16 +10,22 @@ imports:
 - name: github.com/alecthomas/units
   version: 2efee857e7cfd4f3d0138cc3cbb1b4966962b93a
 - name: github.com/armon/go-metrics
-  version: 023a4bbe4bb9bfb23ee7e1afc8d0abad217641f3
+  version: 0a12dc6f6b9da6da644031a1b9b5a85478c5ee27
 - name: github.com/aws/aws-sdk-go
-  version: 8d9e3039553a1f8ca137750a6eeed5fb5d62d7e6
+  version: 4c984c1f412ef5c5cdbb1a3f1c6ce5e3155ca9ab
   subpackages:
   - aws
   - aws/awserr
   - aws/awsutil
   - aws/client
   - aws/client/metadata
+  - aws/corehandlers
   - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
   - aws/endpoints
   - aws/request
   - aws/session
@@ -33,8 +39,11 @@ imports:
   - private/protocol/xml/xmlutil
   - service/ec2
   - service/s3
+  - service/s3/s3iface
+  - service/s3/s3manager
+  - service/sts
 - name: github.com/circonus-labs/circonus-gometrics
-  version: 85eb4cccf312bf5868a05cceef09cf75dd18dddd
+  version: efbf5b0bb26c98837afb6b3ec17f1a69f5be861f
 - name: github.com/corpix/uarand
   version: 2b8494104d86337cdd41d0a49cbed8e4583c0ab4
 - name: github.com/gizak/termui
@@ -42,9 +51,9 @@ imports:
 - name: github.com/go-ini/ini
   version: c787282c39ac1fc618827141a1f762240def08a3
 - name: github.com/godbus/dbus
-  version: 7f21b8d03d62063e35a1088c6d675e7de3f4fe0d
+  version: a389bdde4dd695d414e47b755e95e72b7826432c
 - name: github.com/golang/protobuf
-  version: 17ce1425424ab154092bbb43af630bd647f3bb0d
+  version: 130e6b02ab059e7b717a096f397c5b60111cae74
   subpackages:
   - proto
   - ptypes/any
@@ -67,7 +76,7 @@ imports:
   subpackages:
   - simplelru
 - name: github.com/hashicorp/memberlist
-  version: d6c1fb0b99c33d0a8e22acea9da9709b369b5d39
+  version: 687988a0b5daaf7ed5051e5e374aef27f8254822
 - name: github.com/hashicorp/raft
   version: 3b4d64b29e422f04808b905005eb5a38bf9150e8
 - name: github.com/hashicorp/serf
@@ -101,17 +110,17 @@ imports:
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/miekg/dns
-  version: e4205768578dc90c2669e75a2f8a8bf77e3083a4
+  version: 689d334b0197696eac0afdaa67224aca9ce93eff
 - name: github.com/mitchellh/go-wordwrap
   version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/nsf/termbox-go
   version: 4ed959e0540971545eddb8c75514973d670cf739
 - name: github.com/pkg/errors
-  version: c605e284fe17294bda444b34710735b29d1a9d90
+  version: 2b3a18b5f0fb6b4f9190549597d3f962c02bc5eb
 - name: github.com/sean-/seed
   version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: golang.org/x/net
-  version: 66aacef3dd8a676686c7ae3716979581e8b03c47
+  version: 0744d001aa8470aaa53df28d32e5ceeb8af9bd70
   subpackages:
   - context
   - html
@@ -124,7 +133,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: bd91bbf73e9a4a801adbfb97133c992678533126
+  version: 1cbadb444a806fd9430d14ad08967ed91da4fa0a
   subpackages:
   - encoding
   - encoding/charmap
@@ -145,7 +154,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: 595979c8a7bf586b2d293fb42246bf91a0b893d9
+  version: 1e559d0a00eef8a9a43151db4665280bd8dd5886
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -206,6 +215,6 @@ testImports:
   - matchers/support/goraph/util
   - types
 - name: golang.org/x/sys
-  version: 7ddbeae9ae08c6a06a59597f0c9edbc5ff2444ce
+  version: 429f518978ab01db8bb6f44b66785088e7fba58b
   subpackages:
   - unix
