@@ -6,6 +6,7 @@ import (
 	"context"
 	"log"
 	"net"
+	"strconv"
 	"sync"
 	"time"
 
@@ -184,6 +185,11 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 
 	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
 		log.Printf("raft observation (broadcasting change): %T, %#v\n", o.Data, o.Data)
+		switch o.Data.(type) {
+		case raft.RequestVoteRequest:
+			speers.SetPeers(t.getPeers(c))
+		}
+
 		t.ClusterChange.Broadcast()
 		return false
 	}))
@@ -228,7 +234,7 @@ func (t Protocol) maybeShutdown() {
 // NotifyJoin is invoked when a node is detected to have joined.
 // The Node argument must not be modified.
 func (t Protocol) NotifyJoin(peer *memberlist.Node) {
-	log.Println("Join:", peer.Name, peer.Addr.String(), t.Port)
+	log.Println("Join:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
@@ -243,7 +249,7 @@ func (t Protocol) NotifyJoin(peer *memberlist.Node) {
 // NotifyLeave is invoked when a node is detected to have left.
 // The Node argument must not be modified.
 func (t Protocol) NotifyLeave(peer *memberlist.Node) {
-	log.Println("Leave:", peer.Name, peer.Addr.String(), t.Port)
+	log.Println("Leave:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
@@ -259,7 +265,7 @@ func (t Protocol) NotifyLeave(peer *memberlist.Node) {
 // updated, usually involving the meta data. The Node argument
 // must not be modified.
 func (t Protocol) NotifyUpdate(peer *memberlist.Node) {
-	log.Println("Update:", peer.Name, peer.Addr.String(), int(peer.Port))
+	log.Println("Update:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
 	t.ClusterChange.Broadcast()
 }
 

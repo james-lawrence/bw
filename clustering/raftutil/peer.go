@@ -1,7 +1,6 @@
 package raftutil
 
 import (
-	"log"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
@@ -22,6 +21,7 @@ func (t peer) Update(c cluster) state {
 			cond: t.raftp.ClusterChange,
 		}
 	)
+
 	debugx.Println("peer update invoked")
 	debugx.Println("current leader", t.protocol.Leader(), t.protocol.LastContact().Format(time.Stamp))
 
@@ -32,11 +32,6 @@ func (t peer) Update(c cluster) state {
 			protocol: t.protocol,
 			peers:    t.peers,
 		}.Update(c)
-	case raft.Follower:
-		if t.refreshPeers() {
-			log.Println("force refreshing peers due to missing leader")
-			t.protocol.SetPeers(t.raftp.getPeers(c))
-		}
 	default:
 		debugx.Println("current state", s)
 	}
@@ -51,18 +46,4 @@ func (t peer) Update(c cluster) state {
 	}
 
 	return nextState
-}
-
-func (t peer) refreshPeers() bool {
-	const (
-		gracePeriod = 30 * time.Second
-	)
-	deadline := t.protocol.LastContact().Add(gracePeriod)
-
-	debugx.Println("deadline", deadline.Format(time.Stamp), "now", time.Now().Format(time.Stamp), deadline.Before(time.Now()))
-	if deadline.Before(time.Now()) {
-		return true
-	}
-
-	return false
 }

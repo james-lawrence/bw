@@ -135,10 +135,9 @@ func (t TLSConfig) BuildClient() (creds *tls.Config, err error) {
 	}
 
 	creds = &tls.Config{
-		ServerName:         t.ServerName,
-		Certificates:       []tls.Certificate{cert},
-		RootCAs:            pool,
-		InsecureSkipVerify: true,
+		ServerName:   t.ServerName,
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      pool,
 	}
 
 	return creds, nil
