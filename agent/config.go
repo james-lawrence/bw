@@ -179,7 +179,7 @@ type Config struct {
 // Peer - builds the agent.Peer information from the configuration. by default
 // a peer starts in the unknown state.
 func (t Config) Peer() agent.Peer {
-	// TODO: have a separate advertise address.
+	// TODO: have a separate advertise address for the IP field.
 	return agent.Peer{
 		Status:   agent.Peer_Ready,
 		Name:     t.Name,
