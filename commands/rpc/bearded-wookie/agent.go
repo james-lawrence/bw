@@ -25,7 +25,6 @@ type agentCmd struct {
 	*global
 	config     agent.Config
 	configFile string
-	network    *net.TCPAddr
 	server     *grpc.Server
 	listener   net.Listener
 }
@@ -33,22 +32,13 @@ type agentCmd struct {
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	t.cluster.configure(
 		parent,
-		clusterCmdOptionBind(
-			&net.TCPAddr{
-				IP:   t.global.systemIP,
-				Port: 2001,
-			},
-		),
-		clusterCmdOptionRaftBind(
-			&net.TCPAddr{
-				IP:   t.global.systemIP,
-				Port: 2002,
-			},
-		),
+		clusterCmdOptionName(t.config.Name),
+		clusterCmdOptionBind(t.config.SWIMBind),
+		clusterCmdOptionRaftBind(t.config.RaftBind),
 	)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
-	parent.Flag("agent-bind", "network interface to listen on").Default(t.network.String()).TCPVar(&t.network)
+	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
 
@@ -66,17 +56,14 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	)
 	log.SetPrefix("[AGENT] ")
 
-	log.Println("initiated binding rpc server", t.network.String())
-	defer log.Println("completed binding rpc server", t.network.String())
-
 	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
 		return err
 	}
 
 	log.Printf("configuration: %#v\n", t.config)
 
-	if t.listener, err = net.Listen(t.network.Network(), t.network.String()); err != nil {
-		return errors.Wrapf(err, "failed to bind agent to %s", t.network)
+	if t.listener, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
+		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
 	}
 
 	if secret, err = t.config.TLSConfig.Hash(); err != nil {
@@ -116,6 +103,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	)
 
 	server := agent.NewServer(
+		t.config.Peer(),
 		t.listener.Addr(),
 		credentials.NewTLS(creds),
 		agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)),

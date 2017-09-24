@@ -87,7 +87,7 @@ func (t *deployment) background() {
 }
 
 // Info about the state of the agent.
-func (t *deployment) Info() (_ignored gagent.AgentInfo, err error) {
+func (t *deployment) Deployments() (_psIgnored gagent.Peer_State, _ignored []*gagent.Archive, err error) {
 	var (
 		archives []gagent.Archive
 	)
@@ -96,7 +96,7 @@ func (t *deployment) Info() (_ignored gagent.AgentInfo, err error) {
 	defer t.Mutex.Unlock()
 
 	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
-		return _ignored, err
+		return gagent.Peer_Unknown, _ignored, err
 	}
 
 	sort.Slice(archives, func(i int, j int) bool {
@@ -104,10 +104,7 @@ func (t *deployment) Info() (_ignored gagent.AgentInfo, err error) {
 		return a.Ts > b.Ts
 	})
 
-	return gagent.AgentInfo{
-		Status:      AgentStateFromStatus(t.status),
-		Deployments: archivePointers(archives...),
-	}, nil
+	return AgentStateFromStatus(t.status), archivePointers(archives...), nil
 }
 
 func (t *deployment) Deploy(archive *gagent.Archive) (err error) {

@@ -21,8 +21,8 @@ type dummy struct {
 
 func (t dummy) Deploy(dctx DeployContext) error {
 	go func() {
-		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
-		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
+		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 		completedDuration := time.Duration(rand.Intn(t.sleepy)) * time.Second
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second

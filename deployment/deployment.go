@@ -94,27 +94,27 @@ func (t failed) Status() StatusEnum {
 }
 
 // AgentStateFromStatus ...
-func AgentStateFromStatus(status Status) agent.AgentInfo_State {
+func AgentStateFromStatus(status Status) agent.Peer_State {
 	switch status.Status() {
 	case StatusReady:
-		return agent.AgentInfo_Ready
+		return agent.Peer_Ready
 	case StatusCanary:
-		return agent.AgentInfo_Canary
+		return agent.Peer_Canary
 	case StatusDeploying:
-		return agent.AgentInfo_Deploying
+		return agent.Peer_Deploying
 	default:
-		return agent.AgentInfo_Failed
+		return agent.Peer_Failed
 	}
 }
 
 // AgentStateToStatus ...
-func AgentStateToStatus(info agent.AgentInfo_State) Status {
+func AgentStateToStatus(info agent.Peer_State) Status {
 	switch info {
-	case agent.AgentInfo_Ready:
+	case agent.Peer_Ready:
 		return ready{}
-	case agent.AgentInfo_Canary:
+	case agent.Peer_Canary:
 		return canary{}
-	case agent.AgentInfo_Deploying:
+	case agent.Peer_Deploying:
 		return deploying{}
 	default:
 		return failed{}
@@ -158,9 +158,9 @@ type deployer interface {
 
 // Coordinator is in charge of coordinating deployments.
 type Coordinator interface {
-	// Info about the deployment coordinator
+	// Deployments info about the deployment coordinator
 	// idle, canary, deploying, locked, and the list of recent deployments.
-	Info() (agent.AgentInfo, error)
+	Deployments() (agent.Peer_State, []*agent.Archive, error)
 	// Deploy trigger a deploy
 	Deploy(a *agent.Archive) error
 }

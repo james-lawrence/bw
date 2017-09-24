@@ -96,7 +96,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		clustering.OptionEventDelegate(eventHandler{}),
 	}
 
-	if creds, coordinator, c, err = t.config.Connect(defaults, []clustering.BootstrapOption{}); err != nil {
+	if creds, coordinator, c, err = t.config.Connect(defaults, nil); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
-	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Leader, bw.RandomID(info.DeploymentID), info.Location)
+	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location)
 	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
@@ -172,7 +172,7 @@ func (t connector) address(peer *memberlist.Node) string {
 	return net.JoinHostPort(peer.Addr.String(), t.port)
 }
 
-func (t connector) Check2(peer *memberlist.Node) (info gagent.AgentInfo, err error) {
+func (t connector) Check2(peer *memberlist.Node) (info gagent.Status, err error) {
 	var (
 		c agent.Client
 	)
@@ -186,14 +186,14 @@ func (t connector) Check2(peer *memberlist.Node) (info gagent.AgentInfo, err err
 
 func (t connector) Check(peer *memberlist.Node) (err error) {
 	var (
-		info gagent.AgentInfo
+		info gagent.Status
 	)
 
 	if info, err = t.Check2(peer); err != nil {
 		return err
 	}
 
-	return deployment.AgentStateToStatus(info.Status)
+	return deployment.AgentStateToStatus(info.Peer.Status)
 }
 
 func (t connector) deploy(info gagent.Archive) func(*memberlist.Node) error {

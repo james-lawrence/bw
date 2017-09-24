@@ -14,7 +14,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
-	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
@@ -24,6 +23,12 @@ import (
 
 type clusterCmdOption func(*cluster)
 
+func clusterCmdOptionName(n string) clusterCmdOption {
+	return func(c *cluster) {
+		c.name = n
+	}
+}
+
 func clusterCmdOptionAddress(addresses ...*net.TCPAddr) clusterCmdOption {
 	return func(c *cluster) {
 		c.bootstrap = addresses
@@ -32,7 +37,7 @@ func clusterCmdOptionAddress(addresses ...*net.TCPAddr) clusterCmdOption {
 
 func clusterCmdOptionBind(b *net.TCPAddr) clusterCmdOption {
 	return func(c *cluster) {
-		c.network = b
+		c.swimNetwork = b
 	}
 }
 
@@ -44,13 +49,13 @@ func clusterCmdOptionRaftBind(b *net.TCPAddr) clusterCmdOption {
 
 func clusterCmdOptionMinPeers(b int) clusterCmdOption {
 	return func(c *cluster) {
-		c.minimumRequiredPeers = 1
+		c.minimumRequiredPeers = b
 	}
 }
 
 type cluster struct {
 	name                 string
-	network              *net.TCPAddr
+	swimNetwork          *net.TCPAddr
 	raftNetwork          *net.TCPAddr
 	bootstrap            []*net.TCPAddr
 	minimumRequiredPeers int
@@ -65,10 +70,9 @@ func (t *cluster) fromOptions(options ...clusterCmdOption) {
 
 func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOption) {
 	t.fromOptions(options...)
-	parent.Flag("cluster-node-name", "name of the node within the cluster").Default(t.network.String()).StringVar(&t.name)
-	parent.Flag("cluster", "addresses of the cluster to connect to").TCPListVar(&t.bootstrap)
-	parent.Flag("cluster-bind", "address to bind").Default(t.network.String()).TCPVar(&t.network)
-	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").Default(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
+	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(t.swimNetwork.String()).TCPListVar(&t.bootstrap)
+	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.swimNetwork.String()).TCPVar(&t.swimNetwork)
+	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
 	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredPeers)
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
 }
@@ -83,9 +87,8 @@ func (t *cluster) Join(snap peering.File, options ...clustering.Option) (cluster
 	defer log.Println("connection to cluster complete")
 
 	defaults := []clustering.Option{
-		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.name, t.network.IP.String())),
-		clustering.OptionBindAddress(t.network.IP.String()),
-		clustering.OptionBindPort(t.network.Port),
+		clustering.OptionBindAddress(t.swimNetwork.IP.String()),
+		clustering.OptionBindPort(t.swimNetwork.Port),
 		clustering.OptionEventDelegate(eventHandler{}),
 		clustering.OptionAliveDelegate(xcluster.AliveDefault{}),
 	}

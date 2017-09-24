@@ -5,12 +5,32 @@ import (
 	"io"
 	"net"
 
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
-
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
+
+// idealized interfaces, for reference while building so end goal isn't lost.
+// type leader interface {
+// 	Record(...agent.Message) error
+// 	Watch(chan<- agent.Message) error
+// }
+//
+// type agent interface {
+// 	// Leader - used to retrieve the status of the leader.
+// 	Leader() (agent.Status, error)
+// 	// Latest - returns the latest deployment.
+// 	Latest() (agent.Archive, error)
+// 	// Info about the peer.
+// 	// idle, canary, deploying, locked, and the list of recent deployments.
+// 	Info() (agent.Status, error)
+// 	// Deploy trigger a deploy
+// 	Deploy(a agent.Archive) error
+// 	// Upload
+// 	Upload() (agent.Archive, error)
+// }
 
 // RegisterServer ...
 func RegisterServer(s *grpc.Server, srv agent.AgentServer) {

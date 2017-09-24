@@ -7,6 +7,8 @@ import (
 	"encoding/hex"
 	"io"
 	"log"
+	"net"
+	"strconv"
 
 	"google.golang.org/grpc"
 
@@ -108,17 +110,17 @@ func (t Client) Credentials() ([]string, []byte, error) {
 
 	peers := make([]string, 0, len(response.Peers))
 	for _, p := range response.Peers {
-		peers = append(peers, p.Ip)
+		peers = append(peers, net.JoinHostPort(p.Ip, strconv.Itoa(int(p.SWIMPort))))
 	}
 
 	return peers, response.Secret, nil
 }
 
 // Info ...
-func (t Client) Info() (_zeroInfo agent.AgentInfo, err error) {
+func (t Client) Info() (_zeroInfo agent.Status, err error) {
 	var (
-		_zero agent.AgentInfoRequest
-		info  *agent.AgentInfo
+		_zero agent.StatusRequest
+		info  *agent.Status
 	)
 	rpc := agent.NewAgentClient(t.conn)
 	if info, err = rpc.Info(context.Background(), &_zero); err != nil {

@@ -3,29 +3,18 @@ package agent;
 
 // Deployment Event.
 message Message {
-  enum Type { PackageInfo = 0; CommandInfo = 1; Log = 2; }
+  enum Type { PeerEvent = 0; LogEvent = 1; }
 
   // Identifies which field is filled in.
   Type type = 1;
-  string node = 2;
+  Peer peer = 2;
   int64 ts = 3; // unix timestamp.
 
   oneof Event {
     // One of the following will be filled in.
-    PackageInfo package = 4;
-    CommandInfo command = 5;
-    Log logEvent = 6;
+    bool none = 4;
+    Log log = 5;
   }
-}
-
-message PackageInfo {
-  string name = 1;
-  float progress = 2;
-}
-
-message CommandInfo {
-  enum State { Started = 0; Info = 1; Completed = 2; Failed = 3; }
-  string command = 1;
 }
 
 message Log {
@@ -47,37 +36,48 @@ message ArchiveChunk {
 
 message Archive {
   bytes deploymentID = 1;
-  string Leader = 2;
-  string Location = 3;
+  Peer peer = 2;
+  string location = 3;
   bytes checksum = 4;
   int64 ts = 5; // unix timestamp.
 }
 
 message DeployResult {}
 
-message AgentInfo {
-  enum State { Ready = 0; Canary = 1; Deploying = 2; Failed = 3; }
-  State Status = 1;
+message StatusRequest {}
+message Status {
+  Peer Peer = 1;
   repeated Archive Deployments = 2;
 }
 
-message AgentInfoRequest {}
-
-message Node {
-  string ip = 1;
-  string hostname = 2;
+message Peer {
+  enum State { Unknown = 0; Ready = 1; Canary = 2; Deploying = 3; Failed = 4; Left = 5;}
+  State Status = 1;
+  string ip = 2;
+  string name = 3;
+  uint32 RPCPort = 4;
+  uint32 RaftPort = 5;
+  uint32 SWIMPort = 6;
 }
 
 message CredentialsRequest {}
 message CredentialsResponse {
   bytes secret = 1;
-  repeated Node peers = 2;
+  Peer leader = 2;
+  repeated Peer peers = 3;
+}
+
+message WatchRequest {}
+message RecordResponse {}
+
+service Leader {
+  rpc Watch(WatchRequest) returns (stream Message) {}
+  rpc Record(stream Message) returns (RecordResponse) {}
 }
 
 service Agent {
   rpc Credentials(CredentialsRequest) returns (CredentialsResponse) {}
   rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Deploy(Archive) returns (DeployResult) {}
-  rpc Info(AgentInfoRequest) returns (AgentInfo) {}
-  rpc Events(Archive) returns (stream Message) {}
+  rpc Info(StatusRequest) returns (Status) {}
 }

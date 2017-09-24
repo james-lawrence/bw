@@ -2,7 +2,6 @@ package agent
 
 import (
 	"bytes"
-	"fmt"
 	"hash"
 	"io"
 	"log"
@@ -22,9 +21,6 @@ import (
 
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
-	// Info obout the deployment coordinator
-	// idle, canary, deploying, locked, and the list of recent deployments.
-	Info() (agent.AgentInfo, error)
 	// Deploy trigger a deploy
 	Deploy(*agent.Archive) error
 }
@@ -35,18 +31,8 @@ type cluster interface {
 
 type noopDeployer struct{}
 
-func (t noopDeployer) Status() error {
-	return nil
-}
-
 func (t noopDeployer) Deploy(*agent.Archive) error {
 	return nil
-}
-
-func (t noopDeployer) Info() (agent.AgentInfo, error) {
-	return agent.AgentInfo{
-		Status: agent.AgentInfo_Ready,
-	}, nil
 }
 
 type noopCluster struct{}
@@ -83,8 +69,9 @@ func ServerOptionCluster(c cluster, k []byte) ServerOption {
 }
 
 // NewServer ...
-func NewServer(address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
+func NewServer(info agent.Peer, address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
 	s := Server{
+		info:     info,
 		creds:    creds,
 		Address:  address,
 		cluster:  noopCluster{},
@@ -94,7 +81,6 @@ func NewServer(address net.Addr, creds credentials.TransportCredentials, options
 				return uploads.NewTempFileUploader()
 			},
 		),
-		messages: agent.MessageBuilder{Node: address},
 	}
 
 	for _, opt := range options {
@@ -106,13 +92,13 @@ func NewServer(address net.Addr, creds credentials.TransportCredentials, options
 
 // Server ...
 type Server struct {
+	Address        net.Addr
+	info           agent.Peer
 	creds          credentials.TransportCredentials
 	Deployer       deployer
 	cluster        cluster
 	clusterKey     []byte
-	Address        net.Addr
 	UploadProtocol uploads.Protocol
-	messages       agent.MessageBuilder
 }
 
 // Upload ...
@@ -147,7 +133,7 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 			}
 
 			return stream.SendAndClose(&agent.Archive{
-				Leader:       t.Address.String(),
+				Peer:         &t.info,
 				Location:     location,
 				Checksum:     checksum.Sum(nil),
 				DeploymentID: deploymentID,
@@ -177,27 +163,32 @@ func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.Depl
 }
 
 // Info ...
-func (t Server) Info(ctx context.Context, _ *agent.AgentInfoRequest) (*agent.AgentInfo, error) {
-	info, err := t.Deployer.Info()
-	return &info, err
+func (t Server) Info(ctx context.Context, _ *agent.StatusRequest) (*agent.Status, error) {
+	return &agent.Status{
+		Peer: &t.info,
+	}, nil
 }
 
 // Credentials ...
 func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_zeror *agent.CredentialsResponse, err error) {
 	xpeers := t.cluster.Members()
-	peers := make([]*agent.Node, 0, len(xpeers))
+	peers := make([]*agent.Peer, 0, len(xpeers))
 
 	for _, p := range xpeers {
-		peers = append(peers, &agent.Node{
-			Hostname: p.Name,
-			Ip:       net.JoinHostPort(p.Addr.String(), fmt.Sprintf("%d", p.Port)),
+		peers = append(peers, &agent.Peer{
+			Status:   agent.Peer_Unknown,
+			Name:     p.Name,
+			Ip:       p.Addr.String(),
+			RPCPort:  t.info.RPCPort,
+			SWIMPort: t.info.SWIMPort,
+			RaftPort: t.info.RaftPort,
 		})
 	}
 
 	return &agent.CredentialsResponse{Secret: t.clusterKey, Peers: peers}, nil
 }
 
-// Events ...
-func (t Server) Events(archive *agent.Archive, stream agent.Agent_EventsServer) error {
-	return errors.New("not implemented")
-}
+// // Events ...
+// func (t Server) Events(archive *agent.Archive, stream agent.Agent_EventsServer) error {
+// 	return errors.New("not implemented")
+// }

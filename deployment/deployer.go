@@ -48,8 +48,8 @@ type Directive struct {
 
 // Deploy ...
 func (t Directive) Deploy(dctx DeployContext) error {
-	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
-	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Leader, dctx.Archive.Location)
+	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 	options := append(
 		t.options,

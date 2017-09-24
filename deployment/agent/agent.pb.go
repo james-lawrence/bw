@@ -9,18 +9,18 @@ It is generated from these files:
 
 It has these top-level messages:
 	Message
-	PackageInfo
-	CommandInfo
 	Log
 	UploadMetadata
 	ArchiveChunk
 	Archive
 	DeployResult
-	AgentInfo
-	AgentInfoRequest
-	Node
+	StatusRequest
+	Status
+	Peer
 	CredentialsRequest
 	CredentialsResponse
+	WatchRequest
+	RecordResponse
 */
 package agent
 
@@ -47,20 +47,17 @@ const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 type Message_Type int32
 
 const (
-	Message_PackageInfo Message_Type = 0
-	Message_CommandInfo Message_Type = 1
-	Message_Log         Message_Type = 2
+	Message_PeerEvent Message_Type = 0
+	Message_LogEvent  Message_Type = 1
 )
 
 var Message_Type_name = map[int32]string{
-	0: "PackageInfo",
-	1: "CommandInfo",
-	2: "Log",
+	0: "PeerEvent",
+	1: "LogEvent",
 }
 var Message_Type_value = map[string]int32{
-	"PackageInfo": 0,
-	"CommandInfo": 1,
-	"Log":         2,
+	"PeerEvent": 0,
+	"LogEvent":  1,
 }
 
 func (x Message_Type) String() string {
@@ -68,70 +65,48 @@ func (x Message_Type) String() string {
 }
 func (Message_Type) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{0, 0} }
 
-type CommandInfo_State int32
+type Peer_State int32
 
 const (
-	CommandInfo_Started   CommandInfo_State = 0
-	CommandInfo_Info      CommandInfo_State = 1
-	CommandInfo_Completed CommandInfo_State = 2
-	CommandInfo_Failed    CommandInfo_State = 3
+	Peer_Unknown   Peer_State = 0
+	Peer_Ready     Peer_State = 1
+	Peer_Canary    Peer_State = 2
+	Peer_Deploying Peer_State = 3
+	Peer_Failed    Peer_State = 4
+	Peer_Left      Peer_State = 5
 )
 
-var CommandInfo_State_name = map[int32]string{
-	0: "Started",
-	1: "Info",
-	2: "Completed",
-	3: "Failed",
+var Peer_State_name = map[int32]string{
+	0: "Unknown",
+	1: "Ready",
+	2: "Canary",
+	3: "Deploying",
+	4: "Failed",
+	5: "Left",
 }
-var CommandInfo_State_value = map[string]int32{
-	"Started":   0,
-	"Info":      1,
-	"Completed": 2,
-	"Failed":    3,
-}
-
-func (x CommandInfo_State) String() string {
-	return proto.EnumName(CommandInfo_State_name, int32(x))
-}
-func (CommandInfo_State) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{2, 0} }
-
-type AgentInfo_State int32
-
-const (
-	AgentInfo_Ready     AgentInfo_State = 0
-	AgentInfo_Canary    AgentInfo_State = 1
-	AgentInfo_Deploying AgentInfo_State = 2
-	AgentInfo_Failed    AgentInfo_State = 3
-)
-
-var AgentInfo_State_name = map[int32]string{
-	0: "Ready",
-	1: "Canary",
-	2: "Deploying",
-	3: "Failed",
-}
-var AgentInfo_State_value = map[string]int32{
-	"Ready":     0,
-	"Canary":    1,
-	"Deploying": 2,
-	"Failed":    3,
+var Peer_State_value = map[string]int32{
+	"Unknown":   0,
+	"Ready":     1,
+	"Canary":    2,
+	"Deploying": 3,
+	"Failed":    4,
+	"Left":      5,
 }
 
-func (x AgentInfo_State) String() string {
-	return proto.EnumName(AgentInfo_State_name, int32(x))
+func (x Peer_State) String() string {
+	return proto.EnumName(Peer_State_name, int32(x))
 }
-func (AgentInfo_State) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{8, 0} }
+func (Peer_State) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{8, 0} }
 
 // Deployment Event.
 type Message struct {
 	// Identifies which field is filled in.
 	Type Message_Type `protobuf:"varint,1,opt,name=type,enum=agent.Message_Type" json:"type,omitempty"`
-	Node string       `protobuf:"bytes,2,opt,name=node" json:"node,omitempty"`
+	Peer *Peer        `protobuf:"bytes,2,opt,name=peer" json:"peer,omitempty"`
 	Ts   int64        `protobuf:"varint,3,opt,name=ts" json:"ts,omitempty"`
 	// Types that are valid to be assigned to Event:
-	//	*Message_Package
-	//	*Message_Command
-	//	*Message_LogEvent
+	//	*Message_None
+	//	*Message_Log
 	Event isMessage_Event `protobuf_oneof:"Event"`
 }
 
@@ -144,19 +119,15 @@ type isMessage_Event interface {
 	isMessage_Event()
 }
 
-type Message_Package struct {
-	Package *PackageInfo `protobuf:"bytes,4,opt,name=package,oneof"`
+type Message_None struct {
+	None bool `protobuf:"varint,4,opt,name=none,oneof"`
 }
-type Message_Command struct {
-	Command *CommandInfo `protobuf:"bytes,5,opt,name=command,oneof"`
-}
-type Message_LogEvent struct {
-	LogEvent *Log `protobuf:"bytes,6,opt,name=logEvent,oneof"`
+type Message_Log struct {
+	Log *Log `protobuf:"bytes,5,opt,name=log,oneof"`
 }
 
-func (*Message_Package) isMessage_Event()  {}
-func (*Message_Command) isMessage_Event()  {}
-func (*Message_LogEvent) isMessage_Event() {}
+func (*Message_None) isMessage_Event() {}
+func (*Message_Log) isMessage_Event()  {}
 
 func (m *Message) GetEvent() isMessage_Event {
 	if m != nil {
@@ -169,14 +140,14 @@ func (m *Message) GetType() Message_Type {
 	if m != nil {
 		return m.Type
 	}
-	return Message_PackageInfo
+	return Message_PeerEvent
 }
 
-func (m *Message) GetNode() string {
+func (m *Message) GetPeer() *Peer {
 	if m != nil {
-		return m.Node
+		return m.Peer
 	}
-	return ""
+	return nil
 }
 
 func (m *Message) GetTs() int64 {
@@ -186,23 +157,16 @@ func (m *Message) GetTs() int64 {
 	return 0
 }
 
-func (m *Message) GetPackage() *PackageInfo {
-	if x, ok := m.GetEvent().(*Message_Package); ok {
-		return x.Package
+func (m *Message) GetNone() bool {
+	if x, ok := m.GetEvent().(*Message_None); ok {
+		return x.None
 	}
-	return nil
+	return false
 }
 
-func (m *Message) GetCommand() *CommandInfo {
-	if x, ok := m.GetEvent().(*Message_Command); ok {
-		return x.Command
-	}
-	return nil
-}
-
-func (m *Message) GetLogEvent() *Log {
-	if x, ok := m.GetEvent().(*Message_LogEvent); ok {
-		return x.LogEvent
+func (m *Message) GetLog() *Log {
+	if x, ok := m.GetEvent().(*Message_Log); ok {
+		return x.Log
 	}
 	return nil
 }
@@ -210,9 +174,8 @@ func (m *Message) GetLogEvent() *Log {
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Message) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Message_OneofMarshaler, _Message_OneofUnmarshaler, _Message_OneofSizer, []interface{}{
-		(*Message_Package)(nil),
-		(*Message_Command)(nil),
-		(*Message_LogEvent)(nil),
+		(*Message_None)(nil),
+		(*Message_Log)(nil),
 	}
 }
 
@@ -220,19 +183,16 @@ func _Message_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	m := msg.(*Message)
 	// Event
 	switch x := m.Event.(type) {
-	case *Message_Package:
-		b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Package); err != nil {
-			return err
+	case *Message_None:
+		t := uint64(0)
+		if x.None {
+			t = 1
 		}
-	case *Message_Command:
+		b.EncodeVarint(4<<3 | proto.WireVarint)
+		b.EncodeVarint(t)
+	case *Message_Log:
 		b.EncodeVarint(5<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Command); err != nil {
-			return err
-		}
-	case *Message_LogEvent:
-		b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.LogEvent); err != nil {
+		if err := b.EncodeMessage(x.Log); err != nil {
 			return err
 		}
 	case nil:
@@ -245,29 +205,20 @@ func _Message_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 func _Message_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
 	m := msg.(*Message)
 	switch tag {
-	case 4: // Event.package
-		if wire != proto.WireBytes {
+	case 4: // Event.none
+		if wire != proto.WireVarint {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(PackageInfo)
-		err := b.DecodeMessage(msg)
-		m.Event = &Message_Package{msg}
+		x, err := b.DecodeVarint()
+		m.Event = &Message_None{x != 0}
 		return true, err
-	case 5: // Event.command
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(CommandInfo)
-		err := b.DecodeMessage(msg)
-		m.Event = &Message_Command{msg}
-		return true, err
-	case 6: // Event.logEvent
+	case 5: // Event.log
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(Log)
 		err := b.DecodeMessage(msg)
-		m.Event = &Message_LogEvent{msg}
+		m.Event = &Message_Log{msg}
 		return true, err
 	default:
 		return false, nil
@@ -278,19 +229,12 @@ func _Message_OneofSizer(msg proto.Message) (n int) {
 	m := msg.(*Message)
 	// Event
 	switch x := m.Event.(type) {
-	case *Message_Package:
-		s := proto.Size(x.Package)
-		n += proto.SizeVarint(4<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_Command:
-		s := proto.Size(x.Command)
+	case *Message_None:
+		n += proto.SizeVarint(4<<3 | proto.WireVarint)
+		n += 1
+	case *Message_Log:
+		s := proto.Size(x.Log)
 		n += proto.SizeVarint(5<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Message_LogEvent:
-		s := proto.Size(x.LogEvent)
-		n += proto.SizeVarint(6<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case nil:
@@ -300,46 +244,6 @@ func _Message_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PackageInfo struct {
-	Name     string  `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
-	Progress float32 `protobuf:"fixed32,2,opt,name=progress" json:"progress,omitempty"`
-}
-
-func (m *PackageInfo) Reset()                    { *m = PackageInfo{} }
-func (m *PackageInfo) String() string            { return proto.CompactTextString(m) }
-func (*PackageInfo) ProtoMessage()               {}
-func (*PackageInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *PackageInfo) GetName() string {
-	if m != nil {
-		return m.Name
-	}
-	return ""
-}
-
-func (m *PackageInfo) GetProgress() float32 {
-	if m != nil {
-		return m.Progress
-	}
-	return 0
-}
-
-type CommandInfo struct {
-	Command string `protobuf:"bytes,1,opt,name=command" json:"command,omitempty"`
-}
-
-func (m *CommandInfo) Reset()                    { *m = CommandInfo{} }
-func (m *CommandInfo) String() string            { return proto.CompactTextString(m) }
-func (*CommandInfo) ProtoMessage()               {}
-func (*CommandInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *CommandInfo) GetCommand() string {
-	if m != nil {
-		return m.Command
-	}
-	return ""
-}
-
 type Log struct {
 	Log string `protobuf:"bytes,1,opt,name=log" json:"log,omitempty"`
 }
@@ -347,7 +251,7 @@ type Log struct {
 func (m *Log) Reset()                    { *m = Log{} }
 func (m *Log) String() string            { return proto.CompactTextString(m) }
 func (*Log) ProtoMessage()               {}
-func (*Log) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*Log) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
 func (m *Log) GetLog() string {
 	if m != nil {
@@ -363,7 +267,7 @@ type UploadMetadata struct {
 func (m *UploadMetadata) Reset()                    { *m = UploadMetadata{} }
 func (m *UploadMetadata) String() string            { return proto.CompactTextString(m) }
 func (*UploadMetadata) ProtoMessage()               {}
-func (*UploadMetadata) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (*UploadMetadata) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
 func (m *UploadMetadata) GetBytes() uint64 {
 	if m != nil {
@@ -384,7 +288,7 @@ type ArchiveChunk struct {
 func (m *ArchiveChunk) Reset()                    { *m = ArchiveChunk{} }
 func (m *ArchiveChunk) String() string            { return proto.CompactTextString(m) }
 func (*ArchiveChunk) ProtoMessage()               {}
-func (*ArchiveChunk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (*ArchiveChunk) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
 type isArchiveChunk_InitialChunkMetadata interface {
 	isArchiveChunk_InitialChunkMetadata()
@@ -510,8 +414,8 @@ func _ArchiveChunk_OneofSizer(msg proto.Message) (n int) {
 
 type Archive struct {
 	DeploymentID []byte `protobuf:"bytes,1,opt,name=deploymentID,proto3" json:"deploymentID,omitempty"`
-	Leader       string `protobuf:"bytes,2,opt,name=Leader" json:"Leader,omitempty"`
-	Location     string `protobuf:"bytes,3,opt,name=Location" json:"Location,omitempty"`
+	Peer         *Peer  `protobuf:"bytes,2,opt,name=peer" json:"peer,omitempty"`
+	Location     string `protobuf:"bytes,3,opt,name=location" json:"location,omitempty"`
 	Checksum     []byte `protobuf:"bytes,4,opt,name=checksum,proto3" json:"checksum,omitempty"`
 	Ts           int64  `protobuf:"varint,5,opt,name=ts" json:"ts,omitempty"`
 }
@@ -519,7 +423,7 @@ type Archive struct {
 func (m *Archive) Reset()                    { *m = Archive{} }
 func (m *Archive) String() string            { return proto.CompactTextString(m) }
 func (*Archive) ProtoMessage()               {}
-func (*Archive) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (*Archive) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
 func (m *Archive) GetDeploymentID() []byte {
 	if m != nil {
@@ -528,11 +432,11 @@ func (m *Archive) GetDeploymentID() []byte {
 	return nil
 }
 
-func (m *Archive) GetLeader() string {
+func (m *Archive) GetPeer() *Peer {
 	if m != nil {
-		return m.Leader
+		return m.Peer
 	}
-	return ""
+	return nil
 }
 
 func (m *Archive) GetLocation() string {
@@ -562,62 +466,94 @@ type DeployResult struct {
 func (m *DeployResult) Reset()                    { *m = DeployResult{} }
 func (m *DeployResult) String() string            { return proto.CompactTextString(m) }
 func (*DeployResult) ProtoMessage()               {}
-func (*DeployResult) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+func (*DeployResult) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
 
-type AgentInfo struct {
-	Status      AgentInfo_State `protobuf:"varint,1,opt,name=Status,enum=agent.AgentInfo_State" json:"Status,omitempty"`
-	Deployments []*Archive      `protobuf:"bytes,2,rep,name=Deployments" json:"Deployments,omitempty"`
+type StatusRequest struct {
 }
 
-func (m *AgentInfo) Reset()                    { *m = AgentInfo{} }
-func (m *AgentInfo) String() string            { return proto.CompactTextString(m) }
-func (*AgentInfo) ProtoMessage()               {}
-func (*AgentInfo) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (m *StatusRequest) Reset()                    { *m = StatusRequest{} }
+func (m *StatusRequest) String() string            { return proto.CompactTextString(m) }
+func (*StatusRequest) ProtoMessage()               {}
+func (*StatusRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
-func (m *AgentInfo) GetStatus() AgentInfo_State {
+type Status struct {
+	Peer        *Peer      `protobuf:"bytes,1,opt,name=Peer" json:"Peer,omitempty"`
+	Deployments []*Archive `protobuf:"bytes,2,rep,name=Deployments" json:"Deployments,omitempty"`
+}
+
+func (m *Status) Reset()                    { *m = Status{} }
+func (m *Status) String() string            { return proto.CompactTextString(m) }
+func (*Status) ProtoMessage()               {}
+func (*Status) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
+
+func (m *Status) GetPeer() *Peer {
 	if m != nil {
-		return m.Status
+		return m.Peer
 	}
-	return AgentInfo_Ready
+	return nil
 }
 
-func (m *AgentInfo) GetDeployments() []*Archive {
+func (m *Status) GetDeployments() []*Archive {
 	if m != nil {
 		return m.Deployments
 	}
 	return nil
 }
 
-type AgentInfoRequest struct {
+type Peer struct {
+	Status   Peer_State `protobuf:"varint,1,opt,name=Status,enum=agent.Peer_State" json:"Status,omitempty"`
+	Ip       string     `protobuf:"bytes,2,opt,name=ip" json:"ip,omitempty"`
+	Name     string     `protobuf:"bytes,3,opt,name=name" json:"name,omitempty"`
+	RPCPort  uint32     `protobuf:"varint,4,opt,name=RPCPort" json:"RPCPort,omitempty"`
+	RaftPort uint32     `protobuf:"varint,5,opt,name=RaftPort" json:"RaftPort,omitempty"`
+	SWIMPort uint32     `protobuf:"varint,6,opt,name=SWIMPort" json:"SWIMPort,omitempty"`
 }
 
-func (m *AgentInfoRequest) Reset()                    { *m = AgentInfoRequest{} }
-func (m *AgentInfoRequest) String() string            { return proto.CompactTextString(m) }
-func (*AgentInfoRequest) ProtoMessage()               {}
-func (*AgentInfoRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+func (m *Peer) Reset()                    { *m = Peer{} }
+func (m *Peer) String() string            { return proto.CompactTextString(m) }
+func (*Peer) ProtoMessage()               {}
+func (*Peer) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
-type Node struct {
-	Ip       string `protobuf:"bytes,1,opt,name=ip" json:"ip,omitempty"`
-	Hostname string `protobuf:"bytes,2,opt,name=hostname" json:"hostname,omitempty"`
+func (m *Peer) GetStatus() Peer_State {
+	if m != nil {
+		return m.Status
+	}
+	return Peer_Unknown
 }
 
-func (m *Node) Reset()                    { *m = Node{} }
-func (m *Node) String() string            { return proto.CompactTextString(m) }
-func (*Node) ProtoMessage()               {}
-func (*Node) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
-
-func (m *Node) GetIp() string {
+func (m *Peer) GetIp() string {
 	if m != nil {
 		return m.Ip
 	}
 	return ""
 }
 
-func (m *Node) GetHostname() string {
+func (m *Peer) GetName() string {
 	if m != nil {
-		return m.Hostname
+		return m.Name
 	}
 	return ""
+}
+
+func (m *Peer) GetRPCPort() uint32 {
+	if m != nil {
+		return m.RPCPort
+	}
+	return 0
+}
+
+func (m *Peer) GetRaftPort() uint32 {
+	if m != nil {
+		return m.RaftPort
+	}
+	return 0
+}
+
+func (m *Peer) GetSWIMPort() uint32 {
+	if m != nil {
+		return m.SWIMPort
+	}
+	return 0
 }
 
 type CredentialsRequest struct {
@@ -626,17 +562,18 @@ type CredentialsRequest struct {
 func (m *CredentialsRequest) Reset()                    { *m = CredentialsRequest{} }
 func (m *CredentialsRequest) String() string            { return proto.CompactTextString(m) }
 func (*CredentialsRequest) ProtoMessage()               {}
-func (*CredentialsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+func (*CredentialsRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
 type CredentialsResponse struct {
 	Secret []byte  `protobuf:"bytes,1,opt,name=secret,proto3" json:"secret,omitempty"`
-	Peers  []*Node `protobuf:"bytes,2,rep,name=peers" json:"peers,omitempty"`
+	Leader *Peer   `protobuf:"bytes,2,opt,name=leader" json:"leader,omitempty"`
+	Peers  []*Peer `protobuf:"bytes,3,rep,name=peers" json:"peers,omitempty"`
 }
 
 func (m *CredentialsResponse) Reset()                    { *m = CredentialsResponse{} }
 func (m *CredentialsResponse) String() string            { return proto.CompactTextString(m) }
 func (*CredentialsResponse) ProtoMessage()               {}
-func (*CredentialsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+func (*CredentialsResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
 
 func (m *CredentialsResponse) GetSecret() []byte {
 	if m != nil {
@@ -645,30 +582,52 @@ func (m *CredentialsResponse) GetSecret() []byte {
 	return nil
 }
 
-func (m *CredentialsResponse) GetPeers() []*Node {
+func (m *CredentialsResponse) GetLeader() *Peer {
+	if m != nil {
+		return m.Leader
+	}
+	return nil
+}
+
+func (m *CredentialsResponse) GetPeers() []*Peer {
 	if m != nil {
 		return m.Peers
 	}
 	return nil
 }
 
+type WatchRequest struct {
+}
+
+func (m *WatchRequest) Reset()                    { *m = WatchRequest{} }
+func (m *WatchRequest) String() string            { return proto.CompactTextString(m) }
+func (*WatchRequest) ProtoMessage()               {}
+func (*WatchRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{11} }
+
+type RecordResponse struct {
+}
+
+func (m *RecordResponse) Reset()                    { *m = RecordResponse{} }
+func (m *RecordResponse) String() string            { return proto.CompactTextString(m) }
+func (*RecordResponse) ProtoMessage()               {}
+func (*RecordResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{12} }
+
 func init() {
 	proto.RegisterType((*Message)(nil), "agent.Message")
-	proto.RegisterType((*PackageInfo)(nil), "agent.PackageInfo")
-	proto.RegisterType((*CommandInfo)(nil), "agent.CommandInfo")
 	proto.RegisterType((*Log)(nil), "agent.Log")
 	proto.RegisterType((*UploadMetadata)(nil), "agent.UploadMetadata")
 	proto.RegisterType((*ArchiveChunk)(nil), "agent.ArchiveChunk")
 	proto.RegisterType((*Archive)(nil), "agent.Archive")
 	proto.RegisterType((*DeployResult)(nil), "agent.DeployResult")
-	proto.RegisterType((*AgentInfo)(nil), "agent.AgentInfo")
-	proto.RegisterType((*AgentInfoRequest)(nil), "agent.AgentInfoRequest")
-	proto.RegisterType((*Node)(nil), "agent.Node")
+	proto.RegisterType((*StatusRequest)(nil), "agent.StatusRequest")
+	proto.RegisterType((*Status)(nil), "agent.Status")
+	proto.RegisterType((*Peer)(nil), "agent.Peer")
 	proto.RegisterType((*CredentialsRequest)(nil), "agent.CredentialsRequest")
 	proto.RegisterType((*CredentialsResponse)(nil), "agent.CredentialsResponse")
+	proto.RegisterType((*WatchRequest)(nil), "agent.WatchRequest")
+	proto.RegisterType((*RecordResponse)(nil), "agent.RecordResponse")
 	proto.RegisterEnum("agent.Message_Type", Message_Type_name, Message_Type_value)
-	proto.RegisterEnum("agent.CommandInfo_State", CommandInfo_State_name, CommandInfo_State_value)
-	proto.RegisterEnum("agent.AgentInfo_State", AgentInfo_State_name, AgentInfo_State_value)
+	proto.RegisterEnum("agent.Peer_State", Peer_State_name, Peer_State_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -679,14 +638,171 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
+// Client API for Leader service
+
+type LeaderClient interface {
+	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Leader_WatchClient, error)
+	Record(ctx context.Context, opts ...grpc.CallOption) (Leader_RecordClient, error)
+}
+
+type leaderClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewLeaderClient(cc *grpc.ClientConn) LeaderClient {
+	return &leaderClient{cc}
+}
+
+func (c *leaderClient) Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Leader_WatchClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Leader_serviceDesc.Streams[0], c.cc, "/agent.Leader/Watch", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &leaderWatchClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Leader_WatchClient interface {
+	Recv() (*Message, error)
+	grpc.ClientStream
+}
+
+type leaderWatchClient struct {
+	grpc.ClientStream
+}
+
+func (x *leaderWatchClient) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *leaderClient) Record(ctx context.Context, opts ...grpc.CallOption) (Leader_RecordClient, error) {
+	stream, err := grpc.NewClientStream(ctx, &_Leader_serviceDesc.Streams[1], c.cc, "/agent.Leader/Record", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &leaderRecordClient{stream}
+	return x, nil
+}
+
+type Leader_RecordClient interface {
+	Send(*Message) error
+	CloseAndRecv() (*RecordResponse, error)
+	grpc.ClientStream
+}
+
+type leaderRecordClient struct {
+	grpc.ClientStream
+}
+
+func (x *leaderRecordClient) Send(m *Message) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *leaderRecordClient) CloseAndRecv() (*RecordResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(RecordResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// Server API for Leader service
+
+type LeaderServer interface {
+	Watch(*WatchRequest, Leader_WatchServer) error
+	Record(Leader_RecordServer) error
+}
+
+func RegisterLeaderServer(s *grpc.Server, srv LeaderServer) {
+	s.RegisterService(&_Leader_serviceDesc, srv)
+}
+
+func _Leader_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(WatchRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(LeaderServer).Watch(m, &leaderWatchServer{stream})
+}
+
+type Leader_WatchServer interface {
+	Send(*Message) error
+	grpc.ServerStream
+}
+
+type leaderWatchServer struct {
+	grpc.ServerStream
+}
+
+func (x *leaderWatchServer) Send(m *Message) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _Leader_Record_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(LeaderServer).Record(&leaderRecordServer{stream})
+}
+
+type Leader_RecordServer interface {
+	SendAndClose(*RecordResponse) error
+	Recv() (*Message, error)
+	grpc.ServerStream
+}
+
+type leaderRecordServer struct {
+	grpc.ServerStream
+}
+
+func (x *leaderRecordServer) SendAndClose(m *RecordResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *leaderRecordServer) Recv() (*Message, error) {
+	m := new(Message)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+var _Leader_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "agent.Leader",
+	HandlerType: (*LeaderServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Watch",
+			Handler:       _Leader_Watch_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Record",
+			Handler:       _Leader_Record_Handler,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "agent.proto",
+}
+
 // Client API for Agent service
 
 type AgentClient interface {
 	Credentials(ctx context.Context, in *CredentialsRequest, opts ...grpc.CallOption) (*CredentialsResponse, error)
 	Upload(ctx context.Context, opts ...grpc.CallOption) (Agent_UploadClient, error)
 	Deploy(ctx context.Context, in *Archive, opts ...grpc.CallOption) (*DeployResult, error)
-	Info(ctx context.Context, in *AgentInfoRequest, opts ...grpc.CallOption) (*AgentInfo, error)
-	Events(ctx context.Context, in *Archive, opts ...grpc.CallOption) (Agent_EventsClient, error)
+	Info(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*Status, error)
 }
 
 type agentClient struct {
@@ -749,45 +865,13 @@ func (c *agentClient) Deploy(ctx context.Context, in *Archive, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *agentClient) Info(ctx context.Context, in *AgentInfoRequest, opts ...grpc.CallOption) (*AgentInfo, error) {
-	out := new(AgentInfo)
+func (c *agentClient) Info(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*Status, error) {
+	out := new(Status)
 	err := grpc.Invoke(ctx, "/agent.Agent/Info", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
-}
-
-func (c *agentClient) Events(ctx context.Context, in *Archive, opts ...grpc.CallOption) (Agent_EventsClient, error) {
-	stream, err := grpc.NewClientStream(ctx, &_Agent_serviceDesc.Streams[1], c.cc, "/agent.Agent/Events", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &agentEventsClient{stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-type Agent_EventsClient interface {
-	Recv() (*Message, error)
-	grpc.ClientStream
-}
-
-type agentEventsClient struct {
-	grpc.ClientStream
-}
-
-func (x *agentEventsClient) Recv() (*Message, error) {
-	m := new(Message)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 // Server API for Agent service
@@ -796,8 +880,7 @@ type AgentServer interface {
 	Credentials(context.Context, *CredentialsRequest) (*CredentialsResponse, error)
 	Upload(Agent_UploadServer) error
 	Deploy(context.Context, *Archive) (*DeployResult, error)
-	Info(context.Context, *AgentInfoRequest) (*AgentInfo, error)
-	Events(*Archive, Agent_EventsServer) error
+	Info(context.Context, *StatusRequest) (*Status, error)
 }
 
 func RegisterAgentServer(s *grpc.Server, srv AgentServer) {
@@ -867,7 +950,7 @@ func _Agent_Deploy_Handler(srv interface{}, ctx context.Context, dec func(interf
 }
 
 func _Agent_Info_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AgentInfoRequest)
+	in := new(StatusRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -879,30 +962,9 @@ func _Agent_Info_Handler(srv interface{}, ctx context.Context, dec func(interfac
 		FullMethod: "/agent.Agent/Info",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AgentServer).Info(ctx, req.(*AgentInfoRequest))
+		return srv.(AgentServer).Info(ctx, req.(*StatusRequest))
 	}
 	return interceptor(ctx, in, info, handler)
-}
-
-func _Agent_Events_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(Archive)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(AgentServer).Events(m, &agentEventsServer{stream})
-}
-
-type Agent_EventsServer interface {
-	Send(*Message) error
-	grpc.ServerStream
-}
-
-type agentEventsServer struct {
-	grpc.ServerStream
-}
-
-func (x *agentEventsServer) Send(m *Message) error {
-	return x.ServerStream.SendMsg(m)
 }
 
 var _Agent_serviceDesc = grpc.ServiceDesc{
@@ -928,11 +990,6 @@ var _Agent_serviceDesc = grpc.ServiceDesc{
 			Handler:       _Agent_Upload_Handler,
 			ClientStreams: true,
 		},
-		{
-			StreamName:    "Events",
-			Handler:       _Agent_Events_Handler,
-			ServerStreams: true,
-		},
 	},
 	Metadata: "agent.proto",
 }
@@ -940,51 +997,52 @@ var _Agent_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("agent.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 734 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x6c, 0x54, 0x4d, 0x93, 0xe3, 0x34,
-	0x10, 0xb5, 0x9d, 0x38, 0x1f, 0x9d, 0x10, 0x5c, 0x3d, 0xc3, 0x6c, 0xc8, 0x69, 0xd0, 0x01, 0x72,
-	0xa0, 0xc2, 0x6e, 0xe6, 0xc4, 0x81, 0xc3, 0x6e, 0x86, 0xad, 0xd9, 0xaa, 0x59, 0x6a, 0x4b, 0x0b,
-	0x3f, 0x40, 0x13, 0x37, 0x1e, 0xd7, 0xd8, 0x96, 0xb1, 0x94, 0xad, 0xca, 0x8f, 0xe0, 0xca, 0x89,
-	0x0b, 0x37, 0x7e, 0x26, 0xa5, 0x0f, 0x7b, 0xe3, 0x0c, 0x37, 0xb5, 0xfa, 0xa9, 0xf5, 0x5e, 0xf7,
-	0x93, 0x60, 0x26, 0x32, 0xaa, 0xf4, 0xa6, 0x6e, 0xa4, 0x96, 0x18, 0xdb, 0x80, 0xfd, 0x1d, 0xc1,
-	0xf8, 0x3d, 0x29, 0x25, 0x32, 0xc2, 0xef, 0x60, 0xa8, 0x8f, 0x35, 0x2d, 0xc3, 0xeb, 0x70, 0xbd,
-	0xd8, 0x5e, 0x6c, 0x1c, 0xdc, 0x67, 0x37, 0xbf, 0x1e, 0x6b, 0xe2, 0x16, 0x80, 0x08, 0xc3, 0x4a,
-	0xa6, 0xb4, 0x8c, 0xae, 0xc3, 0xf5, 0x94, 0xdb, 0x35, 0x2e, 0x20, 0xd2, 0x6a, 0x39, 0xb8, 0x0e,
-	0xd7, 0x03, 0x1e, 0x69, 0x85, 0x1b, 0x18, 0xd7, 0x62, 0xff, 0x24, 0x32, 0x5a, 0x0e, 0xaf, 0xc3,
-	0xf5, 0x6c, 0x8b, 0xbe, 0xde, 0x07, 0xb7, 0xfb, 0xae, 0xfa, 0x5d, 0xde, 0x05, 0xbc, 0x05, 0x19,
-	0xfc, 0x5e, 0x96, 0xa5, 0xa8, 0xd2, 0x65, 0xdc, 0xc3, 0xef, 0xdc, 0x6e, 0x8b, 0xf7, 0x20, 0x5c,
-	0xc3, 0xa4, 0x90, 0xd9, 0xcf, 0x9f, 0xa8, 0xd2, 0xcb, 0x91, 0x3d, 0x00, 0xfe, 0xc0, 0xbd, 0xcc,
-	0xee, 0x02, 0xde, 0x65, 0xd9, 0x2b, 0x18, 0x1a, 0xee, 0xf8, 0x25, 0xcc, 0x4e, 0xee, 0x4e, 0x02,
-	0xb3, 0x71, 0x52, 0x3c, 0x09, 0x71, 0x0c, 0x83, 0x7b, 0x99, 0x25, 0xd1, 0x9b, 0x31, 0xc4, 0xee,
-	0xec, 0x4f, 0xbd, 0x33, 0x56, 0xb8, 0x28, 0x5d, 0x87, 0x8c, 0x70, 0x51, 0x12, 0xae, 0x60, 0x52,
-	0x37, 0x32, 0x6b, 0x48, 0x29, 0xdb, 0x90, 0x88, 0x77, 0x31, 0x7b, 0xe8, 0xdd, 0x80, 0xcb, 0xcf,
-	0x1a, 0x5d, 0x85, 0x36, 0x64, 0x3f, 0x42, 0xfc, 0x51, 0x0b, 0x4d, 0x38, 0x83, 0xf1, 0x47, 0x2d,
-	0x1a, 0x4d, 0x69, 0x12, 0xe0, 0x04, 0x86, 0x9e, 0xd9, 0x17, 0x30, 0xdd, 0xc9, 0xb2, 0x2e, 0xc8,
-	0x24, 0x22, 0x04, 0x18, 0xbd, 0x15, 0x79, 0x41, 0x69, 0x32, 0x60, 0x2f, 0x2c, 0x69, 0x4c, 0x60,
-	0x50, 0xc8, 0xcc, 0xd7, 0x35, 0x4b, 0xf6, 0x2d, 0x2c, 0x7e, 0xab, 0x0b, 0x29, 0xd2, 0xf7, 0xa4,
-	0x45, 0x2a, 0xb4, 0xc0, 0x4b, 0x88, 0x1f, 0x8e, 0x9a, 0x94, 0x45, 0x0d, 0xb9, 0x0b, 0xd8, 0x3f,
-	0x21, 0xcc, 0x5f, 0x37, 0xfb, 0xc7, 0xfc, 0x13, 0xed, 0x1e, 0x0f, 0xd5, 0x93, 0x51, 0x69, 0xe0,
-	0x16, 0x35, 0xe7, 0x76, 0x6d, 0x54, 0xee, 0x1f, 0x69, 0xff, 0xa4, 0x0e, 0xa5, 0x55, 0x39, 0xe7,
-	0x5d, 0x8c, 0x97, 0xc6, 0x0e, 0x15, 0xd9, 0xe1, 0x4f, 0xee, 0x02, 0x6e, 0x23, 0xbc, 0x81, 0x49,
-	0xe9, 0x2f, 0xf6, 0x0e, 0xf8, 0xca, 0x0f, 0xa8, 0xcf, 0xca, 0xcc, 0xaa, 0x05, 0xbe, 0xb9, 0x82,
-	0xcb, 0xbc, 0xca, 0x75, 0x2e, 0x0a, 0x4b, 0xa5, 0xc5, 0xb0, 0x3f, 0x43, 0x18, 0x7b, 0x8e, 0xc8,
-	0x60, 0x9e, 0x52, 0x5d, 0xc8, 0x63, 0x49, 0x95, 0x7e, 0x77, 0xeb, 0x69, 0xf6, 0xf6, 0xf0, 0x0a,
-	0x46, 0xf7, 0x24, 0x52, 0x6a, 0xbc, 0x47, 0x7d, 0x64, 0x64, 0xdc, 0xcb, 0xbd, 0xd0, 0xb9, 0xac,
-	0x2c, 0xdd, 0x29, 0xef, 0xe2, 0x9e, 0xc4, 0xe1, 0x99, 0x44, 0xe7, 0xee, 0xb8, 0x75, 0x37, 0x5b,
-	0xc0, 0xfc, 0xd6, 0xde, 0xc7, 0x49, 0x1d, 0x0a, 0xcd, 0xfe, 0x0d, 0x61, 0xfa, 0xda, 0x88, 0xb3,
-	0x73, 0xde, 0xc0, 0xc8, 0x4c, 0xf3, 0xa0, 0xfc, 0x53, 0xba, 0xf2, 0xc2, 0x3b, 0xc4, 0xc6, 0x0e,
-	0x9b, 0x7b, 0x14, 0xbe, 0x84, 0xd9, 0x6d, 0xc7, 0xde, 0xb8, 0x68, 0xb0, 0x9e, 0x6d, 0x17, 0xed,
-	0x21, 0x27, 0x9b, 0x9f, 0x42, 0x3e, 0xfb, 0x65, 0x0a, 0x31, 0x27, 0x91, 0x1e, 0x93, 0xc0, 0x98,
-	0x62, 0x27, 0x2a, 0xd1, 0x1c, 0x9d, 0x5f, 0x1c, 0x3c, 0xaf, 0xb2, 0x33, 0xbf, 0x20, 0x24, 0x1d,
-	0x0f, 0x4e, 0x7f, 0x1c, 0x48, 0x69, 0xb6, 0x85, 0xe1, 0x2f, 0xfe, 0x11, 0xe7, 0xb5, 0xf7, 0x50,
-	0x94, 0xd7, 0xa6, 0x25, 0x8f, 0x52, 0x69, 0xeb, 0x79, 0xd7, 0xc8, 0x2e, 0x66, 0x97, 0x80, 0xbb,
-	0x86, 0x52, 0xaa, 0xcc, 0xb4, 0x54, 0x5b, 0xe9, 0x03, 0x5c, 0xf4, 0x76, 0x55, 0x2d, 0x2b, 0x45,
-	0x66, 0x1e, 0x8a, 0xf6, 0x0d, 0x69, 0x3f, 0x2d, 0x1f, 0xe1, 0x37, 0x10, 0xd7, 0x44, 0x4d, 0xab,
-	0x79, 0xe6, 0x35, 0x1b, 0x32, 0xdc, 0x65, 0xb6, 0x7f, 0x45, 0x10, 0x5b, 0xc2, 0xf8, 0x16, 0x66,
-	0x27, 0xb5, 0xf1, 0xeb, 0xf6, 0x83, 0x78, 0xc6, 0x62, 0xb5, 0xfa, 0xbf, 0x94, 0xa3, 0xc2, 0x02,
-	0x7c, 0x05, 0x23, 0x67, 0x41, 0xbc, 0xe8, 0xf7, 0xd8, 0x7a, 0x6e, 0x75, 0xd6, 0x78, 0x16, 0xac,
-	0x43, 0xfc, 0x01, 0x46, 0xae, 0x9f, 0x78, 0x96, 0x5d, 0xb5, 0x25, 0x7a, 0x76, 0x08, 0xf0, 0xc6,
-	0x3d, 0x5d, 0x7c, 0x71, 0x3e, 0xfa, 0x96, 0x62, 0x72, 0x9e, 0x60, 0x01, 0x7e, 0x0f, 0x23, 0xfb,
-	0xed, 0xa8, 0x67, 0xb7, 0x2c, 0xfa, 0x9f, 0x31, 0x0b, 0x5e, 0x86, 0x0f, 0x23, 0xfb, 0x91, 0xdf,
-	0xfc, 0x17, 0x00, 0x00, 0xff, 0xff, 0x3b, 0x5e, 0xbe, 0x8c, 0xd7, 0x05, 0x00, 0x00,
+	// 744 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x84, 0x54, 0xd1, 0x8e, 0xdb, 0x44,
+	0x14, 0xb5, 0x13, 0xdb, 0x49, 0xae, 0xb3, 0xc6, 0xdc, 0x86, 0x12, 0xfc, 0x00, 0xc1, 0x95, 0x20,
+	0x3c, 0xb0, 0x2c, 0xd9, 0x2f, 0x68, 0x77, 0xa9, 0x76, 0xa5, 0xac, 0xb4, 0x9a, 0x52, 0xf5, 0x81,
+	0xa7, 0x69, 0x7c, 0x37, 0x6b, 0xad, 0x33, 0x63, 0xec, 0x49, 0x51, 0x7e, 0x84, 0x77, 0xbe, 0x86,
+	0xff, 0xe0, 0x2f, 0x78, 0x43, 0x33, 0x1e, 0x5b, 0x71, 0xa8, 0xd4, 0x97, 0xc8, 0x77, 0xce, 0xc9,
+	0x99, 0x73, 0xee, 0xdc, 0x19, 0x08, 0xf9, 0x96, 0x84, 0x3a, 0x2f, 0x2b, 0xa9, 0x24, 0xfa, 0xa6,
+	0x48, 0xff, 0x76, 0x61, 0x74, 0x47, 0x75, 0xcd, 0xb7, 0x84, 0xdf, 0x83, 0xa7, 0x0e, 0x25, 0xcd,
+	0xdd, 0x85, 0xbb, 0x8c, 0x56, 0xcf, 0xce, 0x1b, 0xba, 0x45, 0xcf, 0x7f, 0x3d, 0x94, 0xc4, 0x0c,
+	0x01, 0xbf, 0x01, 0xaf, 0x24, 0xaa, 0xe6, 0x83, 0x85, 0xbb, 0x0c, 0x57, 0xa1, 0x25, 0xde, 0x13,
+	0x55, 0xcc, 0x00, 0x18, 0xc1, 0x40, 0xd5, 0xf3, 0xe1, 0xc2, 0x5d, 0x0e, 0xd9, 0x40, 0xd5, 0x38,
+	0x03, 0x4f, 0x48, 0x41, 0x73, 0x6f, 0xe1, 0x2e, 0xc7, 0x37, 0x0e, 0x33, 0x15, 0x7e, 0x0d, 0xc3,
+	0x42, 0x6e, 0xe7, 0xbe, 0x51, 0x01, 0xab, 0xb2, 0x96, 0xdb, 0x1b, 0x87, 0x69, 0x20, 0x7d, 0x01,
+	0x9e, 0xde, 0x14, 0xcf, 0x60, 0xa2, 0xb5, 0x7f, 0xf9, 0x40, 0x42, 0xc5, 0x0e, 0x4e, 0x61, 0xbc,
+	0x96, 0xdb, 0xa6, 0x72, 0x5f, 0x8d, 0xc0, 0x37, 0x9f, 0xe9, 0x97, 0x30, 0x5c, 0xcb, 0x2d, 0xc6,
+	0x8d, 0xa8, 0xce, 0x30, 0x69, 0x64, 0xbe, 0x83, 0xe8, 0x6d, 0x59, 0x48, 0x9e, 0xdd, 0x91, 0xe2,
+	0x19, 0x57, 0x1c, 0x67, 0xe0, 0xbf, 0x3f, 0x28, 0xaa, 0x0d, 0xcb, 0x63, 0x4d, 0x91, 0xfe, 0xe5,
+	0xc2, 0xf4, 0x65, 0xb5, 0x79, 0xcc, 0x3f, 0xd0, 0xd5, 0xe3, 0x5e, 0x3c, 0x21, 0x82, 0xa7, 0xe9,
+	0x86, 0x35, 0x65, 0xe6, 0x1b, 0x13, 0x18, 0x6f, 0x1e, 0x69, 0xf3, 0x54, 0xef, 0x77, 0x26, 0xfe,
+	0x94, 0x75, 0x75, 0x97, 0x72, 0xd8, 0x4b, 0x79, 0x09, 0xe3, 0x9d, 0xdd, 0xd8, 0xe4, 0x0f, 0x57,
+	0x5f, 0xd8, 0xa8, 0x7d, 0x57, 0x37, 0x0e, 0xeb, 0x88, 0xaf, 0x9e, 0xc3, 0x2c, 0x17, 0xb9, 0xca,
+	0x79, 0x61, 0xac, 0xb4, 0x9c, 0xf4, 0x4f, 0x17, 0x46, 0xd6, 0x23, 0xa6, 0x30, 0xcd, 0xa8, 0x2c,
+	0xe4, 0x61, 0x47, 0x42, 0xdd, 0x5e, 0x5b, 0x9b, 0xbd, 0xb5, 0x4f, 0x9f, 0x54, 0x02, 0xe3, 0x42,
+	0x6e, 0xb8, 0xca, 0xa5, 0x30, 0xbe, 0x27, 0xac, 0xab, 0x7b, 0x59, 0xbd, 0x93, 0xac, 0xcd, 0x09,
+	0xfb, 0xed, 0x09, 0xa7, 0x11, 0x4c, 0xaf, 0xcd, 0xc6, 0x8c, 0xea, 0x7d, 0xa1, 0xd2, 0xcf, 0xe0,
+	0xec, 0x8d, 0xe2, 0x6a, 0x5f, 0x33, 0xfa, 0x7d, 0x4f, 0xb5, 0x4a, 0x7f, 0x83, 0xa0, 0x59, 0xd0,
+	0x9e, 0xb4, 0x01, 0xe3, 0xf7, 0xd4, 0x93, 0xfe, 0xc5, 0x0b, 0x08, 0xaf, 0xbb, 0x10, 0xf5, 0x7c,
+	0xb0, 0x18, 0x2e, 0xc3, 0x55, 0x64, 0x79, 0x36, 0x3d, 0x3b, 0xa6, 0xa4, 0xff, 0xba, 0x8d, 0x26,
+	0xfe, 0xd0, 0xee, 0x62, 0x87, 0xf8, 0xf3, 0x23, 0xf5, 0x73, 0x8d, 0x10, 0x6b, 0x6d, 0x44, 0x30,
+	0xc8, 0x4b, 0xd3, 0x98, 0x09, 0x1b, 0xe4, 0xa5, 0x3e, 0x6d, 0xc1, 0x77, 0x64, 0xbb, 0x60, 0xbe,
+	0x71, 0x0e, 0x23, 0x76, 0x7f, 0x75, 0x2f, 0x2b, 0x65, 0x1a, 0x70, 0xc6, 0xda, 0x52, 0xf7, 0x86,
+	0xf1, 0x07, 0x65, 0x20, 0xdf, 0x40, 0x5d, 0xad, 0xb1, 0x37, 0xef, 0x6e, 0xef, 0x0c, 0x16, 0x34,
+	0x58, 0x5b, 0xa7, 0xf7, 0xe0, 0x1b, 0x1b, 0x18, 0xc2, 0xe8, 0xad, 0x78, 0x12, 0xf2, 0x0f, 0x11,
+	0x3b, 0x38, 0x01, 0x9f, 0x11, 0xcf, 0x0e, 0xb1, 0x8b, 0x00, 0xc1, 0x15, 0x17, 0xbc, 0x3a, 0xc4,
+	0x03, 0x3d, 0xf8, 0x4d, 0xca, 0x5c, 0x6c, 0xe3, 0xa1, 0x86, 0x5e, 0xf3, 0xbc, 0xa0, 0x2c, 0xf6,
+	0x70, 0x0c, 0xde, 0x9a, 0x1e, 0x54, 0xec, 0xa7, 0x33, 0xc0, 0xab, 0x8a, 0x32, 0x12, 0x7a, 0x5a,
+	0xba, 0x76, 0xef, 0xe1, 0x59, 0x6f, 0xb5, 0x2e, 0xa5, 0xa8, 0x09, 0x9f, 0x43, 0x50, 0xd3, 0xa6,
+	0x22, 0x65, 0xa7, 0xc5, 0x56, 0xf8, 0x02, 0x82, 0x82, 0x78, 0xf6, 0xf1, 0x49, 0xb1, 0x10, 0x7e,
+	0x0b, 0xbe, 0x9e, 0x19, 0x7d, 0xb1, 0x87, 0xa7, 0x9c, 0x06, 0xd1, 0x63, 0xf0, 0x8e, 0xab, 0xcd,
+	0x63, 0x6b, 0x23, 0x86, 0x88, 0xd1, 0x46, 0x56, 0x59, 0xeb, 0x60, 0x25, 0x21, 0x58, 0x37, 0x72,
+	0x17, 0xe0, 0x1b, 0x2e, 0xb6, 0x2f, 0xcd, 0xf1, 0x3f, 0x93, 0xa8, 0xff, 0xfc, 0xa4, 0xce, 0x85,
+	0x8b, 0x97, 0x10, 0x34, 0x6a, 0x78, 0x82, 0x26, 0xed, 0x95, 0xea, 0x6f, 0x96, 0x3a, 0x4b, 0x77,
+	0xf5, 0x8f, 0x0b, 0xfe, 0x4b, 0x0d, 0xe2, 0x6b, 0x08, 0x8f, 0x7a, 0x82, 0x5f, 0xd9, 0xff, 0xfc,
+	0xbf, 0x7b, 0x49, 0xf2, 0x31, 0xa8, 0xd5, 0xc4, 0x9f, 0x21, 0x68, 0xae, 0x6e, 0xe7, 0xfc, 0xf8,
+	0xd9, 0x48, 0x4e, 0x26, 0x55, 0x9b, 0xc0, 0x9f, 0x20, 0x68, 0x4e, 0x12, 0x4f, 0xd0, 0xa4, 0x95,
+	0xe8, 0xdd, 0x1e, 0x07, 0x7f, 0x04, 0xef, 0x56, 0x3c, 0x48, 0x9c, 0x59, 0xb8, 0x77, 0x99, 0x92,
+	0xb3, 0xde, 0x6a, 0xea, 0xbc, 0x0f, 0xcc, 0xa3, 0x7e, 0xf9, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff,
+	0xd0, 0x43, 0xd5, 0x0b, 0xe3, 0x05, 0x00, 0x00,
 }

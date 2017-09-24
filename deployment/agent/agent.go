@@ -1,25 +1,34 @@
 package agent
 
 import (
-	"net"
 	"time"
 )
 
 // MessageBuilder ...
 type MessageBuilder struct {
-	Node net.Addr
+	Peer
 }
 
-// NewLogEvent ...
-func (t MessageBuilder) NewLogEvent(s string) *Message {
+// LogEvent ...
+func (t MessageBuilder) LogEvent(s string) *Message {
 	return &Message{
-		Type: Message_CommandInfo,
-		Node: t.Node.String(),
+		Type: Message_LogEvent,
+		Peer: &t.Peer,
 		Ts:   time.Now().Unix(),
-		Event: &Message_LogEvent{
-			LogEvent: &Log{
+		Event: &Message_Log{
+			Log: &Log{
 				Log: s,
 			},
 		},
+	}
+}
+
+// PeerEvent ...
+func PeerEvent(p Peer) *Message {
+	return &Message{
+		Type:  Message_PeerEvent,
+		Peer:  &p,
+		Ts:    time.Now().Unix(),
+		Event: &Message_None{},
 	}
 }

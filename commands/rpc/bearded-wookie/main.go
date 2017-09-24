@@ -26,12 +26,13 @@ type global struct {
 	cleanup  *sync.WaitGroup
 }
 
-// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.2:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent1/agent.config"
-// agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent2/agent.config"
-// agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent3/agent.config"
-// agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent4/agent.config"
+// agent: NETWORK=127.0.0.1; ./bin/bearded-wookie agent --agent-name="node1" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.2:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent1/agent.config"
+// agent: NETWORK=127.0.0.2; ./bin/bearded-wookie agent --agent-name="node2" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent2/agent.config"
+// agent: NETWORK=127.0.0.3; ./bin/bearded-wookie agent --agent-name="node3" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent3/agent.config"
+// agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-name="node4" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent4/agent.config"
 // client: NETWORK=127.0.0.6; ./bin/bearded-wookie deploy --cluster-bind=$NETWORK:2001
 
+// order of precedence for options: environment overrides command line overrides configuration file.
 func main() {
 	var (
 		err             error
@@ -46,12 +47,8 @@ func main() {
 		}
 		clientConfig = agent.NewConfigClient()
 		agentcmd     = &agentCmd{
-			config: agent.NewConfig(),
-			global: global,
-			network: &net.TCPAddr{
-				IP:   systemip,
-				Port: 2000,
-			},
+			config:   agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
+			global:   global,
 			listener: netx.NewNoopListener(),
 		}
 		client = &deployCmd{

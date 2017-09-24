@@ -45,7 +45,7 @@ func (t *agentInfo) _info() (err error) {
 		c           clustering.Cluster
 		creds       credentials.TransportCredentials
 		coordinator agent.Client
-		info        gagent.AgentInfo
+		info        gagent.Status
 		port        string
 	)
 	defer t.global.shutdown()
@@ -78,7 +78,7 @@ func (t *agentInfo) _info() (err error) {
 			log.Println("failed to retrieve info for", m.Name, m.Address())
 		}
 		log.Printf("Server: %s:%s\n", m.Name, m.Address())
-		log.Printf("Status: %s\n", info.Status.String())
+		log.Printf("Status: %s\n", info.Peer.Status.String())
 		log.Println("Previous Deployment: Time                          - DeploymentID               - Checksum")
 		for _, d := range info.Deployments {
 			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Ts, 0).UTC(), bw.RandomID(d.DeploymentID), bw.RandomID(d.Checksum))

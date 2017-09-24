@@ -156,7 +156,7 @@ func DetermineLatestArchive(addr net.Addr, c cluster, DialOptions ...grpc.DialOp
 // LatestDeployment ...
 func LatestDeployment(c Client) (a *agent.Archive, err error) {
 	var (
-		info agent.AgentInfo
+		info agent.Status
 	)
 
 	if info, err = c.Info(); err != nil {
