@@ -45,7 +45,9 @@ func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.Boot
 		return creds, client, c, err
 	}
 
-	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(credentials.NewTLS(conf))); err != nil {
+	creds = credentials.NewTLS(conf)
+
+	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
 		return creds, client, c, err
 	}
 

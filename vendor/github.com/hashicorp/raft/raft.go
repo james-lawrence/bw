@@ -1074,6 +1074,7 @@ func (r *Raft) checkLeaderLease() time.Duration {
 				r.logger.Printf("[WARN] raft: Failed to contact %v in %v", peer, diff)
 			} else {
 				r.logger.Printf("[DEBUG] raft: Failed to contact %v in %v", peer, diff)
+				r.observe(FailedHeartbeatObversation{Peer: peer, Elapsed: diff})
 			}
 		}
 		metrics.AddSample([]string{"raft", "leader", "lastContact"}, float32(diff/time.Millisecond))
@@ -1250,6 +1251,7 @@ func (r *Raft) processLog(l *Log, future *logFuture, precommit bool) (stepDown b
 				if _, ok := r.leaderState.replState[p]; !ok {
 					r.logger.Printf("[INFO] raft: Added peer %v, starting replication", p)
 					r.startReplication(p)
+					r.observe(PeerObservation{Peer: p, Alive: true})
 				}
 			}
 		}
@@ -1260,11 +1262,11 @@ func (r *Raft) processLog(l *Log, future *logFuture, precommit bool) (stepDown b
 			for _, repl := range r.leaderState.replState {
 				if !PeerContained(r.peers, repl.peer) {
 					r.logger.Printf("[INFO] raft: Removed peer %v, stopping replication (Index: %d)", repl.peer, l.Index)
-
 					// Replicate up to this index and stop
 					repl.stopCh <- l.Index
 					close(repl.stopCh)
 					toDelete = append(toDelete, repl.peer)
+					r.observe(PeerObservation{Peer: repl.peer, Alive: false})
 				}
 			}
 			for _, name := range toDelete {

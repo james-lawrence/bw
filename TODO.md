@@ -1,6 +1,7 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup
+- [ ] Fork raft protocol to add enhancements around observations.
 - [ ] ux improvements
 
 #### implement event stream.

@@ -6,16 +6,13 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/backoff"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
-	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -100,7 +97,7 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		clustering.OptionDelegate(cp.NewLocal([]byte{})),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
-		clustering.OptionEventDelegate(p),
+		clustering.OptionEventDelegate(&p),
 	}
 
 	fssnapshot := peering.File{
@@ -130,41 +127,14 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 	)
 
 	t.runServer(c)
-	// go t.bootstrapDeployment(server, c, grpc.WithTransportCredentials(credentials.NewTLS(creds)))
-	go p.Overlay(c)
+
+	b := agent.NewBootstrapper(server)
+	robs := raftutil.ProtocolOptionClusterObserver(
+		b,
+	)
+	go p.Overlay(c, robs)
 
 	return nil
-}
-
-func (t *agentCmd) bootstrapDeployment(s agent.Server, c clustering.Cluster, doptions ...grpc.DialOption) {
-	var (
-		err error
-	)
-
-	if len(c.Members()) == 1 {
-		log.Println("no peers in cluster, skipping bootstrap deployment")
-		return
-	}
-
-	maybeDeploy := func(latest gagent.Archive, err error) error {
-		if err != nil {
-			return err
-		}
-		return s.Deployer.Deploy(&latest)
-	}
-
-	b := backoff.Maximum(time.Hour, backoff.Exponential(200*time.Millisecond))
-
-	for attempt := 0; true; attempt++ {
-		if err = maybeDeploy(agent.DetermineLatestArchive(s.Address, c, doptions...)); err == nil {
-			log.Println("successfully bootstrapped")
-			break
-		}
-
-		d := b.Backoff(attempt)
-		log.Println("failed to determine latest archive, will retry in", d, err)
-		time.Sleep(d)
-	}
 }
 
 func (t *agentCmd) runServer(c clustering.Cluster) {

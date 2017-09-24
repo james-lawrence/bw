@@ -1,12 +1,12 @@
 package agent
 
 import (
+	"log"
 	"net"
 
-	"github.com/pkg/errors"
-
-	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -23,16 +23,79 @@ const (
 	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
 )
 
+// NewBootstrapper generates a new bootstrapper for the given server.
+func NewBootstrapper(s Server) Bootstrapper {
+	buffer := make(chan raftutil.Event, 100)
+
+	b := Bootstrapper{
+		In:     buffer,
+		Server: s,
+	}
+
+	go b.background()
+
+	return b
+}
+
+// Bootstrapper monitors the raft cluster for new nodes and bootstraps them.
+type Bootstrapper struct {
+	Server
+	In chan raftutil.Event
+}
+
+// Observer implements raftutil.clusterObserver
+func (t Bootstrapper) Observer(e raftutil.Event) {
+	t.In <- e
+}
+
+// Start ...
+func (t Bootstrapper) background() {
+	var (
+		err    error
+		latest agent.Archive
+		port   string
+		c      Client
+	)
+
+	for o := range t.In {
+		if o.Type != raftutil.EventJoined {
+			log.Println("ignoring bootstrap event, node did not have join type")
+			continue
+		}
+
+		log.Println("--------------- bootstrap observed -------------", o)
+		if _, port, err = net.SplitHostPort(t.Server.Address.String()); err != nil {
+			log.Println("failed to determine rpc port", err)
+			continue
+		}
+
+		if latest, err = DetermineLatestArchive(t.Server.Address, t.Server.cluster, grpc.WithTransportCredentials(t.Server.creds)); err != nil {
+			log.Println("failed to determine latest archive prior to bootstrapping", err)
+			continue
+		}
+
+		if c, err = DialClient(net.JoinHostPort(o.Peer.Addr.String(), port), grpc.WithTransportCredentials(t.Server.creds)); err != nil {
+			log.Println("failed to connect to new peer", o.Peer.String(), c)
+			continue
+		}
+
+		if err = c.Deploy(latest); err != nil {
+			log.Println("failed to deploy to new peer", o.Peer.String(), err)
+			continue
+		}
+	}
+}
+
 // DetermineLatestArchive ...
-func DetermineLatestArchive(addr net.Addr, c clustering.Cluster, DialOptions ...grpc.DialOption) (latest agent.Archive, err error) {
+func DetermineLatestArchive(addr net.Addr, c cluster, DialOptions ...grpc.DialOption) (latest agent.Archive, err error) {
 	type result struct {
 		a     *agent.Archive
 		count int
 	}
 
 	var (
-		max  int
-		port string
+		quorum int
+		port   string
 	)
 
 	if _, port, err = net.SplitHostPort(addr.String()); err != nil {
@@ -75,14 +138,15 @@ func DetermineLatestArchive(addr net.Addr, c clustering.Cluster, DialOptions ...
 	}
 
 	for _, v := range counts {
-		if v.count > max {
+		if v.count > quorum {
 			latest = *v.a
-			max = v.count
+			quorum = v.count
 		}
 	}
 
 	// check for quorum
-	if (len(c.Members()) / 2.0) >= max {
+	log.Printf("members(%d) / 2.0: min(%f) >= quorum(%f)\n", len(c.Members())-1, float64((len(c.Members())-1))/2.0, float64(quorum))
+	if (float64((len(c.Members()) - 1)) / 2.0) >= float64(quorum) {
 		return latest, ErrFailedDeploymentQuorum
 	}
 

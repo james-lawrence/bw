@@ -9,7 +9,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
@@ -46,7 +45,7 @@ func (t operationFunc) Visit(c Client) error {
 
 // ClusterOperation ...
 type ClusterOperation struct {
-	Cluster     clustering.Cluster
+	Cluster     cluster
 	AgentPort   string
 	DialOptions []grpc.DialOption
 }

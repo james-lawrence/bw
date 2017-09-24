@@ -124,7 +124,7 @@ func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, option
 	)
 }
 
-func (t *cluster) Raft(ctx context.Context, conf agent.Config) (p raftutil.Protocol, err error) {
+func (t *cluster) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs    *tls.Config
 		l     net.Listener
@@ -139,9 +139,7 @@ func (t *cluster) Raft(ctx context.Context, conf agent.Config) (p raftutil.Proto
 		return p, errors.WithStack(err)
 	}
 
-	return raftutil.NewProtocol(
-		ctx,
-		uint16(t.raftNetwork.Port),
+	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionTransport(func() (raft.Transport, error) {
 			if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
 				return nil, errors.WithStack(err)
@@ -149,6 +147,12 @@ func (t *cluster) Raft(ctx context.Context, conf agent.Config) (p raftutil.Proto
 			return raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(l, cs), 3, 2*time.Second, os.Stderr), nil
 		}),
 		raftutil.ProtocolOptionSnapshotStorage(snaps),
+	}
+
+	return raftutil.NewProtocol(
+		ctx,
+		uint16(t.raftNetwork.Port),
+		append(defaultOptions, options...)...,
 	)
 }
 

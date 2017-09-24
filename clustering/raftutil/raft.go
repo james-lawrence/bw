@@ -31,14 +31,23 @@ type state interface {
 type clusterEventType int
 
 const (
-	clusterEventJoined = iota
-	clusterEventLeft
-	clusterEventUnstable
+	// EventJoined ...
+	EventJoined = iota
+	// EventLeft ...
+	EventLeft
+	// EventUnstable ...
+	EventUnstable
 )
 
-type clusterEvent struct {
-	clusterEventType
+type clusterObserver interface {
+	Observer(Event)
+}
+
+// Event ...
+type Event struct {
+	Type clusterEventType
 	Peer *memberlist.Node
+	Raft *raft.Raft
 }
 
 // ProtocolOption options for the raft protocol.
@@ -65,6 +74,20 @@ func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 	}
 }
 
+// ProtocolOptionObservers set the observers for the protocol
+func ProtocolOptionObservers(o ...*raft.Observer) ProtocolOption {
+	return func(p *Protocol) {
+		p.observers = o
+	}
+}
+
+// ProtocolOptionClusterObserver set the observers for the protocol
+func ProtocolOptionClusterObserver(o clusterObserver) ProtocolOption {
+	return func(p *Protocol) {
+		p.clusterObserver = o
+	}
+}
+
 // NewProtocol ...
 func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
@@ -81,7 +104,7 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 		ClusterChange: sync.NewCond(&sync.Mutex{}),
 		init:          &sync.Once{},
 		sgroup:        &sync.WaitGroup{},
-		events:        make(chan clusterEvent, 100),
+		events:        make(chan Event, 100),
 	}
 
 	for _, opt := range options {
@@ -104,17 +127,24 @@ type Protocol struct {
 	getTransport    func() (raft.Transport, error)
 	init            *sync.Once
 	cluster         *raft.Raft
+	observers       []*raft.Observer
 	sgroup          *sync.WaitGroup
-	events          chan clusterEvent
+	clusterObserver clusterObserver
+	events          chan Event
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
-func (t Protocol) Overlay(c cluster) {
+func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
+	for _, opt := range options {
+		opt(t)
+	}
+
 	var (
 		s state = passive{
-			raftp: &t,
+			raftp: t,
 		}
 	)
+
 	defer debugx.Println("overlay shutdown")
 	t.sgroup.Add(1)
 	defer t.sgroup.Done()
@@ -141,7 +171,7 @@ func (t Protocol) background() {
 		case <-t.Context.Done():
 			return
 		case e := <-t.events:
-			handleClusterEvent(t.cluster, e)
+			handleClusterEvent(e, t.clusterObserver)
 			t.ClusterChange.Broadcast()
 		}
 	}
@@ -185,14 +215,13 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 
 	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
 		log.Printf("raft observation (broadcasting change): %T, %#v\n", o.Data, o.Data)
-		switch o.Data.(type) {
-		case raft.RequestVoteRequest:
-			speers.SetPeers(t.getPeers(c))
-		}
-
 		t.ClusterChange.Broadcast()
 		return false
 	}))
+
+	for _, o := range t.observers {
+		protocol.RegisterObserver(o)
+	}
 
 	t.init.Do(func() {
 		// add this to the parent context waitgroup
@@ -233,60 +262,62 @@ func (t Protocol) maybeShutdown() {
 
 // NotifyJoin is invoked when a node is detected to have joined.
 // The Node argument must not be modified.
-func (t Protocol) NotifyJoin(peer *memberlist.Node) {
+func (t *Protocol) NotifyJoin(peer *memberlist.Node) {
 	log.Println("Join:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
+	t.ClusterChange.Broadcast()
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
-		t.events <- clusterEvent{
-			Peer:             &dup,
-			clusterEventType: clusterEventJoined,
+		t.events <- Event{
+			Peer: &dup,
+			Type: EventJoined,
+			Raft: t.cluster,
 		}
 	}
-	t.ClusterChange.Broadcast()
 }
 
 // NotifyLeave is invoked when a node is detected to have left.
 // The Node argument must not be modified.
-func (t Protocol) NotifyLeave(peer *memberlist.Node) {
+func (t *Protocol) NotifyLeave(peer *memberlist.Node) {
 	log.Println("Leave:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
+	t.ClusterChange.Broadcast()
 	if t.cluster != nil && t.cluster.State() == raft.Leader {
 		dup := *peer
 		dup.Port = t.Port
-		t.events <- clusterEvent{
-			Peer:             peer,
-			clusterEventType: clusterEventLeft,
+		t.events <- Event{
+			Peer: peer,
+			Type: EventLeft,
+			Raft: t.cluster,
 		}
 	}
-	t.ClusterChange.Broadcast()
 }
 
 // NotifyUpdate is invoked when a node is detected to have
 // updated, usually involving the meta data. The Node argument
 // must not be modified.
-func (t Protocol) NotifyUpdate(peer *memberlist.Node) {
+func (t *Protocol) NotifyUpdate(peer *memberlist.Node) {
 	log.Println("Update:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
 	t.ClusterChange.Broadcast()
 }
 
-func handleClusterEvent(c *raft.Raft, e clusterEvent) {
-	if c == nil {
+func handleClusterEvent(e Event, obs ...clusterObserver) {
+	if e.Raft.State() != raft.Leader {
 		return
 	}
 
-	if c.State() != raft.Leader {
-		return
-	}
-
-	switch e.clusterEventType {
-	case clusterEventJoined:
-		if err := c.AddPeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+	switch e.Type {
+	case EventJoined:
+		if err := e.Raft.AddPeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
 			log.Println("failed to add peer", err)
 		}
-	case clusterEventLeft:
-		if err := c.RemovePeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+	case EventLeft:
+		if err := e.Raft.RemovePeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
 			log.Println("failed to remove peer", err)
 		}
+	}
+
+	for _, o := range obs {
+		o.Observer(e)
 	}
 }
 
