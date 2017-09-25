@@ -88,6 +88,13 @@ func ProtocolOptionClusterObserver(o clusterObserver) ProtocolOption {
 	}
 }
 
+// ProtocolOptionEnableSingleNode enables single node operation.
+func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
+	return func(p *Protocol) {
+		p.enableSingleNode = b
+	}
+}
+
 // NewProtocol ...
 func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
@@ -119,18 +126,24 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	Context         context.Context
-	Port            uint16
-	ClusterChange   *sync.Cond
-	Snapshots       raft.SnapshotStore
-	getStateMachine func() raft.FSM
-	getTransport    func() (raft.Transport, error)
-	init            *sync.Once
-	cluster         *raft.Raft
-	observers       []*raft.Observer
-	sgroup          *sync.WaitGroup
-	clusterObserver clusterObserver
-	events          chan Event
+	Context          context.Context
+	Port             uint16
+	ClusterChange    *sync.Cond
+	Snapshots        raft.SnapshotStore
+	getStateMachine  func() raft.FSM
+	getTransport     func() (raft.Transport, error)
+	init             *sync.Once
+	cluster          *raft.Raft
+	observers        []*raft.Observer
+	sgroup           *sync.WaitGroup
+	clusterObserver  clusterObserver
+	events           chan Event
+	enableSingleNode bool
+}
+
+// Raft returns the underlying raft instance, can be nil.
+func (t *Protocol) Raft() *raft.Raft {
+	return t.cluster
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
@@ -206,6 +219,7 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	conf.TrailingLogs = 128
 	// ShutdownOnRemove important setting, otherwise peers cannot rejoin the cluster....
 	conf.ShutdownOnRemove = false
+	conf.EnableSingleNode = t.enableSingleNode
 
 	store := raft.NewInmemStore()
 	speers := &raft.StaticPeers{StaticPeers: t.getPeers(c)}

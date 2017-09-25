@@ -72,7 +72,7 @@ message RecordResponse {}
 
 service Leader {
   rpc Watch(WatchRequest) returns (stream Message) {}
-  rpc Record(stream Message) returns (RecordResponse) {}
+  rpc Dispatch(stream Message) returns (RecordResponse) {}
 }
 
 service Agent {

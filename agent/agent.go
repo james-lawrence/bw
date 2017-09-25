@@ -5,11 +5,14 @@ import (
 	"io"
 	"net"
 
+	"bitbucket.org/jatone/bearded-wookie"
+	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // idealized interfaces, for reference while building so end goal isn't lost.
@@ -35,6 +38,54 @@ import (
 // RegisterServer ...
 func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
 	agent.RegisterAgentServer(s, srv)
+}
+
+// RegisterLeader ...
+func RegisterLeader(s *grpc.Server, srv agent.LeaderServer) {
+	agent.RegisterLeaderServer(s, srv)
+}
+
+// ConnectOption - options for connecting to the cluster.
+type ConnectOption func(*connect)
+
+// ConnectOptionConfigPath path of the configuration file to load.
+func ConnectOptionConfigPath(path string) ConnectOption {
+	return func(c *connect) {
+		c.Path = path
+	}
+}
+
+// ConnectOptionClustering set clustering options for connect.
+func ConnectOptionClustering(options ...clustering.Option) ConnectOption {
+	return func(c *connect) {
+		c.clustering.Options = options
+	}
+}
+
+type connect struct {
+	Path       string
+	clustering struct {
+		Options   []clustering.Option
+		Bootstrap []clustering.BootstrapOption
+		Snapshot  []clustering.SnapshotOption
+	}
+}
+
+// ConnectClient ...
+func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+	var (
+		conn connect
+	)
+
+	for _, opt := range options {
+		opt(&conn)
+	}
+
+	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
+		return creds, client, c, err
+	}
+
+	return config.Connect(conn.clustering.Options, conn.clustering.Bootstrap)
 }
 
 // downloader ...

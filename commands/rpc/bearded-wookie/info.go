@@ -42,34 +42,33 @@ func (t *agentInfo) info(ctx *kingpin.ParseContext) error {
 
 func (t *agentInfo) _info() (err error) {
 	var (
-		c           clustering.Cluster
-		creds       credentials.TransportCredentials
-		coordinator agent.Client
-		info        gagent.Status
-		port        string
+		c      clustering.Cluster
+		creds  credentials.TransportCredentials
+		client agent.Client
+		info   gagent.Status
+		port   string
 	)
 	defer t.global.shutdown()
 
-	if err = bw.ExpandAndDecodeFile(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment), &t.config); err != nil {
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
+		agent.ConnectOptionClustering(
+			clustering.OptionNodeID(t.node),
+			clustering.OptionBindAddress(t.global.systemIP.String()),
+			clustering.OptionEventDelegate(eventHandler{}),
+		),
+	}
+
+	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
 		return err
 	}
 
-	defaults := []clustering.Option{
-		clustering.OptionNodeID(t.node),
-		clustering.OptionBindAddress(t.global.systemIP.String()),
-		clustering.OptionEventDelegate(eventHandler{}),
-	}
-
-	if creds, coordinator, c, err = t.config.Connect(defaults, []clustering.BootstrapOption{}); err != nil {
-		return err
-	}
-
-	if err = coordinator.Close(); err != nil {
-		log.Println("failed to close coordinator")
+	if err = client.Close(); err != nil {
+		log.Println("failed to close client")
 	}
 
 	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
-		return errors.Wrap(err, "malformed address in configuration")
+		return errors.Wrapf(err, "malformed address in configuration: %s", t.config.Address)
 	}
 
 	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
@@ -85,5 +84,17 @@ func (t *agentInfo) _info() (err error) {
 		}
 	}
 
-	return nil
+	events := make(chan gagent.Message, 100)
+	func() {
+		log.Println("awaiting event")
+		for m := range events {
+			switch m.Type {
+			default:
+				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
+			}
+			log.Println("awaiting event")
+		}
+	}()
+
+	return client.Watch(events)
 }

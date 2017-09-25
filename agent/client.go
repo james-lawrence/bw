@@ -130,6 +130,45 @@ func (t Client) Info() (_zeroInfo agent.Status, err error) {
 	return *info, nil
 }
 
+// Watch watch for messages sent to the leader. blocks.
+func (t Client) Watch(out chan<- agent.Message) (err error) {
+	var (
+		src agent.Leader_WatchClient
+		msg *agent.Message
+	)
+
+	c := agent.NewLeaderClient(t.conn)
+	if src, err = c.Watch(context.Background(), &agent.WatchRequest{}); err != nil {
+		return errors.WithStack(err)
+	}
+
+	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
+		out <- *msg
+	}
+
+	return errors.WithStack(err)
+}
+
+// Dispatch messages to the leader.
+func (t Client) Dispatch(messages ...agent.Message) (err error) {
+	var (
+		dst agent.Leader_DispatchClient
+	)
+	c := agent.NewLeaderClient(t.conn)
+
+	if dst, err = c.Dispatch(context.Background()); err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, m := range messages {
+		if err = dst.Send(&m); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	return nil
+}
+
 func (t Client) streamArchive(src io.Reader, stream agent.Agent_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {

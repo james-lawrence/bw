@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -75,28 +76,27 @@ func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
 
 func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	var (
-		err         error
-		dst         *os.File
-		dstinfo     os.FileInfo
-		c           clustering.Cluster
-		creds       credentials.TransportCredentials
-		coordinator agent.Client
-		port        string
-		info        gagent.Archive
+		err     error
+		dst     *os.File
+		dstinfo os.FileInfo
+		c       clustering.Cluster
+		creds   credentials.TransportCredentials
+		client  agent.Client
+		port    string
+		info    gagent.Archive
 	)
 
 	log.Println("deploying", t.deployspace)
-	if err = bw.ExpandAndDecodeFile(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment), &t.config); err != nil {
-		return err
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
+		agent.ConnectOptionClustering(
+			clustering.OptionNodeID("deploy"),
+			clustering.OptionBindAddress(t.global.systemIP.String()),
+			clustering.OptionEventDelegate(eventHandler{}),
+		),
 	}
 
-	defaults := []clustering.Option{
-		clustering.OptionNodeID("deploy"),
-		clustering.OptionBindAddress(t.global.systemIP.String()),
-		clustering.OptionEventDelegate(eventHandler{}),
-	}
-
-	if creds, coordinator, c, err = t.config.Connect(defaults, nil); err != nil {
+	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
 		return err
 	}
 
@@ -106,6 +106,16 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return errors.Wrap(err, "malformed address in configuration")
 	}
 
+	events := make(chan gagent.Message, 100)
+	go client.Watch(events)
+	go func() {
+		for m := range events {
+			switch m.Type {
+			default:
+				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
+			}
+		}
+	}()
 	// # TODO connect to event stream.
 
 	log.Println("uploading archive")
@@ -127,7 +137,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return errors.WithStack(err)
 	}
 
-	if info, err = coordinator.Upload(uint64(dstinfo.Size()), dst); err != nil {
+	if info, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
 		return err
 	}
 

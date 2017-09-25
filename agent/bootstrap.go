@@ -59,7 +59,7 @@ func (t Bootstrapper) background() {
 
 	for o := range t.In {
 		if o.Type != raftutil.EventJoined {
-			log.Println("ignoring bootstrap event, node did not have join type")
+			log.Println("ignoring bootstrap event, peer did not join", o.Peer.Name, o.Peer.Address())
 			continue
 		}
 

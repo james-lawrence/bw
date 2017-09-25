@@ -49,7 +49,7 @@ func clusterCmdOptionRaftBind(b *net.TCPAddr) clusterCmdOption {
 
 func clusterCmdOptionMinPeers(b int) clusterCmdOption {
 	return func(c *cluster) {
-		c.minimumRequiredPeers = b
+		c.minimumRequiredNodes = b
 	}
 }
 
@@ -58,7 +58,7 @@ type cluster struct {
 	swimNetwork          *net.TCPAddr
 	raftNetwork          *net.TCPAddr
 	bootstrap            []*net.TCPAddr
-	minimumRequiredPeers int
+	minimumRequiredNodes int
 	maximumAttempts      int
 }
 
@@ -73,7 +73,7 @@ func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOpti
 	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(t.swimNetwork.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.swimNetwork.String()).TCPVar(&t.swimNetwork)
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
-	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredPeers)
+	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredNodes)
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
 }
 
@@ -98,7 +98,7 @@ func (t *cluster) Join(snap peering.File, options ...clustering.Option) (cluster
 		return c, errors.Wrap(err, "failed to join cluster")
 	}
 
-	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(t.minimumRequiredPeers))
+	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(t.minimumRequiredNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(t.maximumAttempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(
 		peering.Closure(func() ([]string, error) {
@@ -143,6 +143,7 @@ func (t *cluster) Raft(ctx context.Context, conf agent.Config, options ...raftut
 	}
 
 	defaultOptions := []raftutil.ProtocolOption{
+		raftutil.ProtocolOptionEnableSingleNode(t.minimumRequiredNodes == 1),
 		raftutil.ProtocolOptionTransport(func() (raft.Transport, error) {
 			if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
 				return nil, errors.WithStack(err)

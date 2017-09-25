@@ -187,8 +187,3 @@ func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_
 
 	return &agent.CredentialsResponse{Secret: t.clusterKey, Peers: peers}, nil
 }
-
-// // Events ...
-// func (t Server) Events(archive *agent.Archive, stream agent.Agent_EventsServer) error {
-// 	return errors.New("not implemented")
-// }

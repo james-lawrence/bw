@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
@@ -114,14 +116,22 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		server,
 	)
 
+	leader := agent.NewLeader(&p, server)
+	agent.RegisterLeader(t.server, leader)
+
 	t.runServer(c)
 
-	b := agent.NewBootstrapper(server)
-	robs := raftutil.ProtocolOptionClusterObserver(
-		b,
+	go p.Overlay(
+		c,
+		raftutil.ProtocolOptionClusterObserver(agent.NewBootstrapper(server)),
 	)
-	go p.Overlay(c, robs)
-
+	go func() {
+		i, _ := server.Info(context.Background(), nil)
+		for _ = range time.Tick(time.Second) {
+			leader.EventBus.Dispatch(agent.PeerEvent(*i.Peer))
+			log.Println("dispatched peer event")
+		}
+	}()
 	return nil
 }
 
