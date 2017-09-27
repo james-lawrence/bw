@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie"
+	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"golang.org/x/net/context"
@@ -27,6 +28,9 @@ type deployer interface {
 
 type cluster interface {
 	Members() []*memberlist.Node
+	Get([]byte) *memberlist.Node
+	GetN(int, []byte) []*memberlist.Node
+	LocalNode() *memberlist.Node
 }
 
 type noopDeployer struct{}
@@ -39,6 +43,18 @@ type noopCluster struct{}
 
 func (t noopCluster) Members() []*memberlist.Node {
 	return []*memberlist.Node(nil)
+}
+
+func (t noopCluster) Get([]byte) *memberlist.Node {
+	return nil
+}
+
+func (t noopCluster) GetN(int, []byte) []*memberlist.Node {
+	return nil
+}
+
+func (t noopCluster) LocalNode() *memberlist.Node {
+	return nil
 }
 
 // ServerOption ...
@@ -174,6 +190,16 @@ func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_
 	xpeers := t.cluster.Members()
 	peers := make([]*agent.Peer, 0, len(xpeers))
 
+	l := raftutil.Leader(t.cluster)
+	leader := &agent.Peer{
+		Status:   agent.Peer_Unknown,
+		Name:     l.Name,
+		Ip:       l.Addr.String(),
+		RPCPort:  t.info.RPCPort,
+		SWIMPort: t.info.SWIMPort,
+		RaftPort: t.info.RaftPort,
+	}
+
 	for _, p := range xpeers {
 		peers = append(peers, &agent.Peer{
 			Status:   agent.Peer_Unknown,
@@ -185,5 +211,5 @@ func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_
 		})
 	}
 
-	return &agent.CredentialsResponse{Secret: t.clusterKey, Peers: peers}, nil
+	return &agent.CredentialsResponse{Leader: leader, Secret: t.clusterKey, Peers: peers}, nil
 }

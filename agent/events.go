@@ -14,6 +14,7 @@ func NewEventBus() EventBus {
 		buffer:    make(chan []agent.Message, 1000),
 		m:         &sync.RWMutex{},
 		observers: map[int64]eventBusObserver{},
+		serial:    new(int64),
 	}
 
 	go e.background()
@@ -33,17 +34,17 @@ type EventBusObserver struct {
 // EventBus - message bus for events on the leader node.
 type EventBus struct {
 	buffer    chan []agent.Message
-	serial    int64
+	serial    *int64
 	m         *sync.RWMutex
 	observers map[int64]eventBusObserver
 }
 
-func (t *EventBus) background() {
+func (t EventBus) background() {
 	for m := range t.buffer {
 		t.m.RLock()
 		obs := t.observers
 		t.m.RUnlock()
-		log.Println("receiving messages", len(obs))
+		log.Printf("receiving messages(%d), observers(%d)\n", len(m), len(obs))
 		for id, o := range obs {
 			if err := o.Receive(m...); err != nil {
 				log.Println("failed to receive messages", id, err)
@@ -53,25 +54,27 @@ func (t *EventBus) background() {
 }
 
 // Dispatch ...
-func (t *EventBus) Dispatch(messages ...agent.Message) {
+func (t EventBus) Dispatch(messages ...agent.Message) {
+	log.Println("dispatching messages", len(messages))
 	t.buffer <- messages
 }
 
 // Register ...
-func (t *EventBus) Register(o eventBusObserver) EventBusObserver {
+func (t EventBus) Register(o eventBusObserver) EventBusObserver {
 	t.m.Lock()
 	defer t.m.Unlock()
 	obs := EventBusObserver{
-		id: atomic.AddInt64(&t.serial, 1),
+		id: atomic.AddInt64(t.serial, 1),
 	}
 
+	log.Println("registering", obs.id)
 	t.observers[obs.id] = o
 
 	return obs
 }
 
 // Remove ...
-func (t *EventBus) Remove(e EventBusObserver) {
+func (t EventBus) Remove(e EventBusObserver) {
 	t.m.Lock()
 	defer t.m.Unlock()
 

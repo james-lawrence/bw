@@ -62,6 +62,25 @@ func ConnectOptionClustering(options ...clustering.Option) ConnectOption {
 	}
 }
 
+// ConnectOptionBootstrap set clustering options for bootstrap.
+func ConnectOptionBootstrap(options ...clustering.BootstrapOption) ConnectOption {
+	return func(c *connect) {
+		c.clustering.Bootstrap = options
+	}
+}
+
+func newConnect(options ...ConnectOption) connect {
+	var (
+		conn connect
+	)
+
+	for _, opt := range options {
+		opt(&conn)
+	}
+
+	return conn
+}
+
 type connect struct {
 	Path       string
 	clustering struct {
@@ -73,19 +92,30 @@ type connect struct {
 
 // ConnectClient ...
 func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
-	var (
-		conn connect
-	)
-
-	for _, opt := range options {
-		opt(&conn)
-	}
+	conn := newConnect(options...)
 
 	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
 		return creds, client, c, err
 	}
 
-	return config.Connect(conn.clustering.Options, conn.clustering.Bootstrap)
+	return config.Connect(
+		ConnectOptionClustering(conn.clustering.Options...),
+		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
+	)
+}
+
+// ConnectLeader ...
+func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+	conn := newConnect(options...)
+
+	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
+		return creds, client, c, err
+	}
+
+	return config.ConnectLeader(
+		ConnectOptionClustering(conn.clustering.Options...),
+		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
+	)
 }
 
 // downloader ...

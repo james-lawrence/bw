@@ -59,12 +59,8 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
+	if creds, client, c, err = agent.ConnectLeader(&t.config, coptions...); err != nil {
 		return err
-	}
-
-	if err = client.Close(); err != nil {
-		log.Println("failed to close client")
 	}
 
 	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
@@ -85,10 +81,13 @@ func (t *agentInfo) _info() (err error) {
 	}
 
 	events := make(chan gagent.Message, 100)
-	func() {
+	go func() {
 		log.Println("awaiting event")
 		for m := range events {
 			switch m.Type {
+			case gagent.Message_PeerEvent:
+				p := m.GetPeer()
+				log.Printf("%s - %s: %s, %s, %s\n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type, p.Name, p.Ip, p.Status)
 			default:
 				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
 			}

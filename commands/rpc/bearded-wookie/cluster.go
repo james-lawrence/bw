@@ -143,7 +143,7 @@ func (t *cluster) Raft(ctx context.Context, conf agent.Config, options ...raftut
 	}
 
 	defaultOptions := []raftutil.ProtocolOption{
-		raftutil.ProtocolOptionEnableSingleNode(t.minimumRequiredNodes == 1),
+		raftutil.ProtocolOptionEnableSingleNode(t.minimumRequiredNodes == 0),
 		raftutil.ProtocolOptionTransport(func() (raft.Transport, error) {
 			if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
 				return nil, errors.WithStack(err)

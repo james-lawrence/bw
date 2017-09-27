@@ -97,7 +97,7 @@ func (t Client) Deploy(info agent.Archive) error {
 }
 
 // Credentials ...
-func (t Client) Credentials() ([]string, []byte, error) {
+func (t Client) Credentials() (agent.Peer, []string, []byte, error) {
 	var (
 		err      error
 		_zeroReq agent.CredentialsRequest
@@ -105,7 +105,7 @@ func (t Client) Credentials() ([]string, []byte, error) {
 	)
 	rpc := agent.NewAgentClient(t.conn)
 	if response, err = rpc.Credentials(context.Background(), &_zeroReq); err != nil {
-		return []string(nil), nil, errors.WithStack(err)
+		return agent.Peer{}, []string(nil), nil, errors.WithStack(err)
 	}
 
 	peers := make([]string, 0, len(response.Peers))
@@ -113,7 +113,7 @@ func (t Client) Credentials() ([]string, []byte, error) {
 		peers = append(peers, net.JoinHostPort(p.Ip, strconv.Itoa(int(p.SWIMPort))))
 	}
 
-	return peers, response.Secret, nil
+	return *response.Leader, peers, response.Secret, nil
 }
 
 // Info ...
@@ -136,13 +136,18 @@ func (t Client) Watch(out chan<- agent.Message) (err error) {
 		src agent.Leader_WatchClient
 		msg *agent.Message
 	)
+	log.Println("watch started")
+	defer log.Println("watch finished")
 
 	c := agent.NewLeaderClient(t.conn)
 	if src, err = c.Watch(context.Background(), &agent.WatchRequest{}); err != nil {
+		log.Println("failed to connect to server", err)
 		return errors.WithStack(err)
 	}
 
+	log.Println("receiving messages")
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
+		log.Println("message received")
 		out <- *msg
 	}
 

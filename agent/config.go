@@ -2,16 +2,16 @@ package agent
 
 import (
 	"crypto/tls"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
-	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	cp "bitbucket.org/jatone/bearded-wookie/cluster"
@@ -36,28 +36,68 @@ type ConfigClient struct {
 	TLSConfig
 }
 
-// Connect to the cluster.
-func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.BootstrapOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+// Connect to the address in the config client.
+func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
 	var (
 		secret []byte
 		peers  []string
-		conf   *tls.Config
 	)
+	conn := newConnect(options...)
 
-	if conf, err = t.TLSConfig.BuildClient(); err != nil {
+	if creds, client, _, peers, secret, err = t.connect(); err != nil {
 		return creds, client, c, err
 	}
 
-	creds = credentials.NewTLS(conf)
+	if c, err = t.cluster(secret, peers, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
+		return creds, client, c, err
+	}
+
+	return creds, client, c, nil
+}
+
+// ConnectLeader ...
+func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+	var (
+		secret []byte
+		peers  []string
+		tmp    Client
+		leader agent.Peer
+	)
+	conn := newConnect(options...)
+
+	if creds, tmp, leader, peers, secret, err = t.connect(); err != nil {
+		return creds, client, c, err
+	}
+	defer tmp.Close()
+
+	if client, err = DialClient(net.JoinHostPort(leader.Ip, strconv.Itoa(int(leader.RPCPort))), grpc.WithTransportCredentials(creds)); err != nil {
+		return creds, client, c, err
+	}
+
+	if c, err = t.cluster(secret, peers, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
+		return creds, client, c, err
+	}
+
+	return creds, client, c, nil
+}
+
+func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Client, leader agent.Peer, peers []string, secret []byte, err error) {
+	if creds, err = t.creds(); err != nil {
+		return creds, client, leader, peers, secret, err
+	}
 
 	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
-		return creds, client, c, err
+		return creds, client, leader, peers, secret, err
 	}
 
-	if peers, secret, err = client.Credentials(); err != nil {
-		return creds, client, c, err
+	if leader, peers, secret, err = client.Credentials(); err != nil {
+		return creds, client, leader, peers, secret, err
 	}
 
+	return creds, client, leader, peers, secret, nil
+}
+
+func (t ConfigClient) cluster(secret []byte, peers []string, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
 		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Deploy))),
@@ -65,12 +105,11 @@ func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.Boot
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 	}, copts...)
-
+	//
 	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
-		return creds, client, c, errors.Wrap(err, "failed to join cluster")
+		return c, errors.Wrap(err, "failed to join cluster")
 	}
 
-	log.Println("peers located", peers)
 	bopts = append([]clustering.BootstrapOption{
 		clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1)),
 		clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts),
@@ -82,10 +121,23 @@ func (t ConfigClient) Connect(copts []clustering.Option, bopts []clustering.Boot
 	}, bopts...)
 
 	if err = clustering.Bootstrap(c, bopts...); err != nil {
-		return creds, client, c, errors.Wrap(err, "failed to connect to cluster")
+		return c, errors.Wrap(err, "failed to connect to cluster")
 	}
 
-	return creds, client, c, nil
+	return c, nil
+}
+
+func (t ConfigClient) creds() (credentials.TransportCredentials, error) {
+	var (
+		err  error
+		conf *tls.Config
+	)
+
+	if conf, err = t.TLSConfig.BuildClient(); err != nil {
+		return nil, err
+	}
+
+	return credentials.NewTLS(conf), nil
 }
 
 // NewConfig creates a default configuration.
