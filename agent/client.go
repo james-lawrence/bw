@@ -7,8 +7,6 @@ import (
 	"encoding/hex"
 	"io"
 	"log"
-	"net"
-	"strconv"
 
 	"google.golang.org/grpc"
 
@@ -96,26 +94,22 @@ func (t Client) Deploy(info agent.Archive) error {
 	return nil
 }
 
-// Credentials ...
-func (t Client) Credentials() (agent.Peer, []string, []byte, error) {
+// Details ...
+func (t Client) Details() (d agent.Details, err error) {
 	var (
-		err      error
-		_zeroReq agent.DetailsRequest
 		response *agent.Details
 	)
+
 	rpc := agent.NewAgentClient(t.conn)
-	if response, err = rpc.Quorum(context.Background(), &_zeroReq); err != nil {
-		return agent.Peer{}, []string(nil), nil, errors.WithStack(err)
+	if response, err = rpc.Quorum(context.Background(), &agent.DetailsRequest{}); err != nil {
+		return d, errors.WithStack(err)
 	}
 
-	peers := make([]string, 0, len(response.Quorum))
-	quorum := make([]agent.Peer, 0, len(response.Quorum))
-	for _, p := range response.Quorum {
-		peers = append(peers, net.JoinHostPort(p.Ip, strconv.Itoa(int(p.SWIMPort))))
-		quorum = append(quorum, *p)
-	}
-
-	return quorum[0], peers, response.Secret, nil
+	return agent.Details{
+		Secret:      response.Secret,
+		Quorum:      response.Quorum,
+		Deployments: response.Deployments,
+	}, nil
 }
 
 // Info ...

@@ -105,6 +105,11 @@ func RPCAddress(p agent.Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
 }
 
+// SWIMAddress for peer.
+func SWIMAddress(p agent.Peer) string {
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort))
+}
+
 // NodeRPCAddress returns the node's rpc address.
 // if an error occurs it returns a blank string.
 func NodeRPCAddress(n *memberlist.Node) string {

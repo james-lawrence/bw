@@ -67,13 +67,6 @@ message Peer {
   uint32 SWIMPort = 6;
 }
 
-message CredentialsRequest {}
-message CredentialsResponse {
-  bytes secret = 1;
-  Peer leader = 2;
-  repeated Peer peers = 3;
-}
-
 message WatchRequest {}
 message RecordResponse {}
 

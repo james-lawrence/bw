@@ -35,7 +35,7 @@ func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, er
 type client interface {
 	Upload(srcbytes uint64, src io.Reader) (agent.Archive, error)
 	Deploy(info agent.Archive) error
-	Credentials() (agent.Peer, []string, []byte, error)
+	Details() (agent.Details, error)
 	Info() (agent.Status, error)
 	Watch(out chan<- agent.Message) error
 	Dispatch(messages ...agent.Message) error
