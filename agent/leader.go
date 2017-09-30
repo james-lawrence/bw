@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"log"
 
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
@@ -10,7 +11,7 @@ import (
 )
 
 type pbObserver struct {
-	dst  agent.Leader_WatchServer
+	dst  agent.Quorum_WatchServer
 	done chan struct{}
 }
 
@@ -41,8 +42,13 @@ type Leader struct {
 	EventBus EventBus
 }
 
+// Quorum - information about the cluster.
+func (t Leader) Quorum(ctx context.Context, dr *agent.DetailsRequest) (*agent.Details, error) {
+	return t.s.Quorum(ctx, dr)
+}
+
 // Watch watch for events.
-func (t Leader) Watch(_ *agent.WatchRequest, out agent.Leader_WatchServer) (err error) {
+func (t Leader) Watch(_ *agent.WatchRequest, out agent.Quorum_WatchServer) (err error) {
 	if _, err = t.getLeader(); err != nil {
 		return err
 	}
@@ -58,7 +64,7 @@ func (t Leader) Watch(_ *agent.WatchRequest, out agent.Leader_WatchServer) (err 
 }
 
 // Dispatch record deployment events.
-func (t Leader) Dispatch(in agent.Leader_DispatchServer) error {
+func (t Leader) Dispatch(in agent.Quorum_DispatchServer) error {
 	var (
 		err error
 		m   *agent.Message

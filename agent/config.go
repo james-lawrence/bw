@@ -100,7 +100,6 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 func (t ConfigClient) cluster(secret []byte, peers []string, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
-		clustering.OptionDelegate(cp.NewLocal(cp.BitFieldMerge([]byte(nil), cp.Deploy))),
 		clustering.OptionAliveDelegate(cp.AliveDefault{}),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),

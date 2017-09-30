@@ -15,7 +15,9 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
+	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -82,16 +84,24 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		c       clustering.Cluster
 		creds   credentials.TransportCredentials
 		client  agent.Client
-		port    string
 		info    gagent.Archive
+	)
+
+	local := cluster.NewLocal(
+		gagent.Peer{
+			Name: "deploy",
+			Ip:   t.global.systemIP.String(),
+		},
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
 	)
 
 	log.Println("deploying", t.deployspace)
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
 		agent.ConnectOptionClustering(
-			clustering.OptionNodeID("deploy"),
-			clustering.OptionBindAddress(t.global.systemIP.String()),
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(eventHandler{}),
 		),
 	}
@@ -101,10 +111,6 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	log.Println("connected to cluster cluster")
-
-	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
-		return errors.Wrap(err, "malformed address in configuration")
-	}
 
 	events := make(chan gagent.Message, 100)
 	go client.Watch(events)
@@ -142,7 +148,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location)
-	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
+	_connector := newConnector(grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
 		deployment.DeployOptionChecker(_connector),
@@ -166,9 +172,8 @@ func connect(address string, doptions ...grpc.DialOption) (_czero agent.Client, 
 	return agent.DialClient(address, doptions...)
 }
 
-func newConnector(port string, options ...grpc.DialOption) connector {
+func newConnector(options ...grpc.DialOption) connector {
 	return connector{
-		port:    port,
 		options: options,
 	}
 }
@@ -178,15 +183,11 @@ type connector struct {
 	options []grpc.DialOption
 }
 
-func (t connector) address(peer *memberlist.Node) string {
-	return net.JoinHostPort(peer.Addr.String(), t.port)
-}
-
-func (t connector) Check2(peer *memberlist.Node) (info gagent.Status, err error) {
+func (t connector) Check2(n *memberlist.Node) (info gagent.Status, err error) {
 	var (
 		c agent.Client
 	)
-	if c, err = connect(t.address(peer), t.options...); err != nil {
+	if c, err = connect(agentutil.NodeRPCAddress(n), t.options...); err != nil {
 		return info, err
 	}
 	defer c.Close()
@@ -207,12 +208,13 @@ func (t connector) Check(peer *memberlist.Node) (err error) {
 }
 
 func (t connector) deploy(info gagent.Archive) func(*memberlist.Node) error {
-	return func(peer *memberlist.Node) (err error) {
+	return func(n *memberlist.Node) (err error) {
 		var (
 			c agent.Client
 		)
+
 		log.Println("connecting to peer")
-		if c, err = connect(t.address(peer), t.options...); err != nil {
+		if c, err = connect(agentutil.NodeRPCAddress(n), t.options...); err != nil {
 			return err
 		}
 		defer c.Close()

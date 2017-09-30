@@ -100,20 +100,22 @@ func (t Client) Deploy(info agent.Archive) error {
 func (t Client) Credentials() (agent.Peer, []string, []byte, error) {
 	var (
 		err      error
-		_zeroReq agent.CredentialsRequest
-		response *agent.CredentialsResponse
+		_zeroReq agent.DetailsRequest
+		response *agent.Details
 	)
 	rpc := agent.NewAgentClient(t.conn)
-	if response, err = rpc.Credentials(context.Background(), &_zeroReq); err != nil {
+	if response, err = rpc.Quorum(context.Background(), &_zeroReq); err != nil {
 		return agent.Peer{}, []string(nil), nil, errors.WithStack(err)
 	}
 
-	peers := make([]string, 0, len(response.Peers))
-	for _, p := range response.Peers {
+	peers := make([]string, 0, len(response.Quorum))
+	quorum := make([]agent.Peer, 0, len(response.Quorum))
+	for _, p := range response.Quorum {
 		peers = append(peers, net.JoinHostPort(p.Ip, strconv.Itoa(int(p.SWIMPort))))
+		quorum = append(quorum, *p)
 	}
 
-	return *response.Leader, peers, response.Secret, nil
+	return quorum[0], peers, response.Secret, nil
 }
 
 // Info ...
@@ -133,13 +135,13 @@ func (t Client) Info() (_zeroInfo agent.Status, err error) {
 // Watch watch for messages sent to the leader. blocks.
 func (t Client) Watch(out chan<- agent.Message) (err error) {
 	var (
-		src agent.Leader_WatchClient
+		src agent.Quorum_WatchClient
 		msg *agent.Message
 	)
 	log.Println("watch started")
 	defer log.Println("watch finished")
 
-	c := agent.NewLeaderClient(t.conn)
+	c := agent.NewQuorumClient(t.conn)
 	if src, err = c.Watch(context.Background(), &agent.WatchRequest{}); err != nil {
 		log.Println("failed to connect to server", err)
 		return errors.WithStack(err)
@@ -157,9 +159,9 @@ func (t Client) Watch(out chan<- agent.Message) (err error) {
 // Dispatch messages to the leader.
 func (t Client) Dispatch(messages ...agent.Message) (err error) {
 	var (
-		dst agent.Leader_DispatchClient
+		dst agent.Quorum_DispatchClient
 	)
-	c := agent.NewLeaderClient(t.conn)
+	c := agent.NewQuorumClient(t.conn)
 
 	if dst, err = c.Dispatch(context.Background()); err != nil {
 		return errors.WithStack(err)

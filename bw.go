@@ -11,6 +11,7 @@ import (
 )
 
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:deployment/agent .protocol/agent.proto
+//go:generate protoc -I=.protocol --go_out=cluster .protocol/cluster.proto
 
 // RandomID a random identifier.
 type RandomID []byte

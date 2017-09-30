@@ -21,39 +21,39 @@ import (
 	"github.com/pkg/errors"
 )
 
-type clusterCmdOption func(*cluster)
+type clusterCmdOption func(*clusterCmd)
 
 func clusterCmdOptionName(n string) clusterCmdOption {
-	return func(c *cluster) {
+	return func(c *clusterCmd) {
 		c.name = n
 	}
 }
 
 func clusterCmdOptionAddress(addresses ...*net.TCPAddr) clusterCmdOption {
-	return func(c *cluster) {
+	return func(c *clusterCmd) {
 		c.bootstrap = addresses
 	}
 }
 
 func clusterCmdOptionBind(b *net.TCPAddr) clusterCmdOption {
-	return func(c *cluster) {
+	return func(c *clusterCmd) {
 		c.swimNetwork = b
 	}
 }
 
 func clusterCmdOptionRaftBind(b *net.TCPAddr) clusterCmdOption {
-	return func(c *cluster) {
+	return func(c *clusterCmd) {
 		c.raftNetwork = b
 	}
 }
 
 func clusterCmdOptionMinPeers(b int) clusterCmdOption {
-	return func(c *cluster) {
+	return func(c *clusterCmd) {
 		c.minimumRequiredNodes = b
 	}
 }
 
-type cluster struct {
+type clusterCmd struct {
 	name                 string
 	swimNetwork          *net.TCPAddr
 	raftNetwork          *net.TCPAddr
@@ -62,13 +62,13 @@ type cluster struct {
 	maximumAttempts      int
 }
 
-func (t *cluster) fromOptions(options ...clusterCmdOption) {
+func (t *clusterCmd) fromOptions(options ...clusterCmdOption) {
 	for _, opt := range options {
 		opt(t)
 	}
 }
 
-func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOption) {
+func (t *clusterCmd) configure(parent *kingpin.CmdClause, options ...clusterCmdOption) {
 	t.fromOptions(options...)
 	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(t.swimNetwork.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.swimNetwork.String()).TCPVar(&t.swimNetwork)
@@ -77,7 +77,7 @@ func (t *cluster) configure(parent *kingpin.CmdClause, options ...clusterCmdOpti
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
 }
 
-func (t *cluster) Join(snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
+func (t *clusterCmd) Join(snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
 	var (
 		err error
 		c   clustering.Cluster
@@ -119,7 +119,7 @@ func (t *cluster) Join(snap peering.File, options ...clustering.Option) (cluster
 	return c, nil
 }
 
-func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
+func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
 	go clustering.Snapshot(
 		c,
 		fssnapshot,
@@ -127,7 +127,7 @@ func (t *cluster) Snapshot(c clustering.Cluster, fssnapshot peering.File, option
 	)
 }
 
-func (t *cluster) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
+func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs    *tls.Config
 		l     net.Listener

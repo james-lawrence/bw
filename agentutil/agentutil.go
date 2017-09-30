@@ -3,13 +3,44 @@
 package agentutil
 
 import (
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 
+	"google.golang.org/grpc"
+
+	agentx "bitbucket.org/jatone/bearded-wookie/agent"
+	clusterp "bitbucket.org/jatone/bearded-wookie/cluster"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+
+	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
+
+// DialPeer dial the peer
+func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, err error) {
+	var (
+		addr string
+	)
+
+	if addr = RPCAddress(p); addr == "" {
+		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
+	}
+
+	return agentx.DialClient(addr, options...)
+}
+
+type client interface {
+	Upload(srcbytes uint64, src io.Reader) (agent.Archive, error)
+	Deploy(info agent.Archive) error
+	Credentials() (agent.Peer, []string, []byte, error)
+	Info() (agent.Status, error)
+	Watch(out chan<- agent.Message) error
+	Dispatch(messages ...agent.Message) error
+	Close() error
+}
 
 // Cleaner interface for cleaning workspace directories.
 type Cleaner interface {
@@ -97,4 +128,15 @@ func KeepNewestN(n int) Cleaner {
 	return _cleanerFunc(n, func(i, j FileInfo) bool {
 		return i.Info.ModTime().After(j.Info.ModTime())
 	})
+}
+
+// RPCAddress for peer.
+func RPCAddress(p agent.Peer) string {
+	return clusterp.RPCAddress(p)
+}
+
+// NodeRPCAddress returns the node's rpc address.
+// if an error occurs it returns a blank string.
+func NodeRPCAddress(n *memberlist.Node) string {
+	return clusterp.NodeRPCAddress(n)
 }

@@ -339,9 +339,9 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 // within the cluster.
 var leaderKey = []byte("leaders")
 
-// Leader - returns the leader of the cluster.
-func Leader(c cluster) *memberlist.Node {
-	return c.Get(leaderKey)
+// Quorum - returns the leader of the cluster.
+func Quorum(c cluster) []*memberlist.Node {
+	return possiblePeers(c)
 }
 
 // maybeLeave - uses the provided cluster and raft protocol to determine

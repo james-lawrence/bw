@@ -1,6 +1,6 @@
 package cluster
 
-import "log"
+import "bitbucket.org/jatone/bearded-wookie/x/debugx"
 
 const (
 	// Deploy represents a node that communicates with the cluster but isn't an actual
@@ -12,21 +12,26 @@ const (
 	LastCapability
 )
 
+// ZeroBitField represents an empty bitfield.
+var zeroBitField = []byte{}
+
 // Capability interface for determining the capability of the cluster.
 type Capability interface {
 	Has(ability int) bool
 }
 
-// NewBitField - creates a Capability from a bitfield vector.
-func NewBitField(abilities ...int) Capability {
-	return bitField(BitFieldMerge([]byte{}, abilities...))
+// NewCapability - creates a Capability from a bitfield vector.
+func NewCapability(abilities ...int) Capability {
+	return bitField(NewBitField(abilities...))
+}
+
+// NewBitField - creates a bitfield from a set of abilities.
+func NewBitField(abilities ...int) []byte {
+	return BitFieldMerge(zeroBitField, abilities...)
 }
 
 // BitField creates a Capability from the bitfield vector.
 func BitField(vector []byte, abilities ...int) Capability {
-	if len(abilities) == 0 {
-		return bitField(vector)
-	}
 	return bitField(BitFieldMerge(vector, abilities...))
 }
 
@@ -46,7 +51,7 @@ func (t bitField) Has(ability int) bool {
 	bitflags := t[quo]
 	actual := byte(1 << uint(1*rem))
 
-	log.Printf("bitflags[%.8b], actual[%.8b]\n", bitflags, actual)
+	debugx.Printf("bitflags[%.8b], actual[%.8b]\n", bitflags, actual)
 	// 11111111&00010000 = 00010000
 	return bitflags&actual == actual
 }

@@ -2,16 +2,15 @@ package main
 
 import (
 	"log"
-	"net"
 	"path/filepath"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/alecthomas/kingpin"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -46,15 +45,23 @@ func (t *agentInfo) _info() (err error) {
 		creds  credentials.TransportCredentials
 		client agent.Client
 		info   gagent.Status
-		port   string
 	)
 	defer t.global.shutdown()
+
+	local := cluster.NewLocal(
+		gagent.Peer{
+			Name: t.node,
+			Ip:   t.global.systemIP.String(),
+		},
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
+	)
 
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
 		agent.ConnectOptionClustering(
-			clustering.OptionNodeID(t.node),
-			clustering.OptionBindAddress(t.global.systemIP.String()),
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(eventHandler{}),
 		),
 	}
@@ -63,15 +70,13 @@ func (t *agentInfo) _info() (err error) {
 		return err
 	}
 
-	if _, port, err = net.SplitHostPort(t.config.Address); err != nil {
-		return errors.Wrapf(err, "malformed address in configuration: %s", t.config.Address)
-	}
-
-	_connector := newConnector(port, grpc.WithTransportCredentials(creds))
+	_connector := newConnector(grpc.WithTransportCredentials(creds))
 	for _, m := range c.Members() {
 		if info, err = _connector.Check2(m); err != nil {
 			log.Println("failed to retrieve info for", m.Name, m.Address())
+			continue
 		}
+
 		log.Printf("Server: %s:%s\n", m.Name, m.Address())
 		log.Printf("Status: %s\n", info.Peer.Status.String())
 		log.Println("Previous Deployment: Time                          - DeploymentID               - Checksum")

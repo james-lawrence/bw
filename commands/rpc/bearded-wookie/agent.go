@@ -1,20 +1,20 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	cp "bitbucket.org/jatone/bearded-wookie/cluster"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
+	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -80,10 +80,18 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		return err
 	}
 
+	local := cluster.NewLocal(gagent.Peer{
+		Ip:       t.global.systemIP.String(),
+		Name:     stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String()),
+		RPCPort:  uint32(t.config.RPCBind.Port),
+		SWIMPort: uint32(t.config.SWIMBind.Port),
+		RaftPort: uint32(t.config.RaftBind.Port),
+	})
+
 	t.server = grpc.NewServer(grpc.Creds(credentials.NewTLS(creds)))
 	options := []clustering.Option{
-		clustering.OptionNodeID(stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String())),
-		clustering.OptionDelegate(cp.NewLocal([]byte{})),
+		clustering.OptionNodeID(local.Peer.Name),
+		clustering.OptionDelegate(local),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 		clustering.OptionEventDelegate(&p),
@@ -104,11 +112,13 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
+	cx := cluster.New(local, c, secret)
+	tlscreds := credentials.NewTLS(creds)
 	server := agent.NewServer(
-		t.config.Peer(),
+		cx,
 		t.listener.Addr(),
-		credentials.NewTLS(creds),
-		agent.ComposeServerOptions(aoptions(t.config), agent.ServerOptionCluster(c, secret)),
+		tlscreds,
+		aoptions(t.config),
 	)
 
 	agent.RegisterServer(
@@ -123,15 +133,16 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 
 	go p.Overlay(
 		c,
-		raftutil.ProtocolOptionClusterObserver(agent.NewBootstrapper(server)),
+		raftutil.ProtocolOptionClusterObserver(agentutil.NewBootstrapper(cx, tlscreds)),
 	)
-	go func() {
-		i, _ := server.Info(context.Background(), nil)
-		for _ = range time.Tick(time.Second) {
-			leader.EventBus.Dispatch(agent.PeerEvent(*i.Peer))
-			log.Println("dispatched peer event")
-		}
-	}()
+
+	// go func() {
+	// 	i, _ := server.Info(context.Background(), nil)
+	// 	for _ = range time.Tick(time.Second) {
+	// 		leader.EventBus.Dispatch(agent.PeerEvent(*i.Peer))
+	// 		log.Println("dispatched peer event")
+	// 	}
+	// }()
 	return nil
 }
 

@@ -10,11 +10,9 @@ import (
 
 	"google.golang.org/grpc/credentials"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"golang.org/x/net/context"
@@ -26,34 +24,9 @@ type deployer interface {
 	Deploy(*agent.Archive) error
 }
 
-type cluster interface {
-	Members() []*memberlist.Node
-	Get([]byte) *memberlist.Node
-	GetN(int, []byte) []*memberlist.Node
-	LocalNode() *memberlist.Node
-}
-
 type noopDeployer struct{}
 
 func (t noopDeployer) Deploy(*agent.Archive) error {
-	return nil
-}
-
-type noopCluster struct{}
-
-func (t noopCluster) Members() []*memberlist.Node {
-	return []*memberlist.Node(nil)
-}
-
-func (t noopCluster) Get([]byte) *memberlist.Node {
-	return nil
-}
-
-func (t noopCluster) GetN(int, []byte) []*memberlist.Node {
-	return nil
-}
-
-func (t noopCluster) LocalNode() *memberlist.Node {
 	return nil
 }
 
@@ -77,20 +50,17 @@ func ServerOptionDeployer(d deployer) ServerOption {
 }
 
 // ServerOptionCluster ...
-func ServerOptionCluster(c cluster, k []byte) ServerOption {
+func ServerOptionCluster(c cluster) ServerOption {
 	return func(s *Server) {
 		s.cluster = c
-		s.clusterKey = k
 	}
 }
 
 // NewServer ...
-func NewServer(info agent.Peer, address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
+func NewServer(c cluster, address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
 	s := Server{
-		info:     info,
 		creds:    creds,
-		Address:  address,
-		cluster:  noopCluster{},
+		cluster:  c,
 		Deployer: noopDeployer{},
 		UploadProtocol: uploads.ProtocolFunc(
 			func(uid []byte, _ uint64) (uploads.Uploader, error) {
@@ -108,12 +78,9 @@ func NewServer(info agent.Peer, address net.Addr, creds credentials.TransportCre
 
 // Server ...
 type Server struct {
-	Address        net.Addr
-	info           agent.Peer
 	creds          credentials.TransportCredentials
 	Deployer       deployer
 	cluster        cluster
-	clusterKey     []byte
 	UploadProtocol uploads.Protocol
 }
 
@@ -147,9 +114,9 @@ func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
 				log.Println("error getting archive info", err)
 				return err
 			}
-
+			tmp := t.cluster.Local()
 			return stream.SendAndClose(&agent.Archive{
-				Peer:         &t.info,
+				Peer:         &tmp,
 				Location:     location,
 				Checksum:     checksum.Sum(nil),
 				DeploymentID: deploymentID,
@@ -180,36 +147,14 @@ func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.Depl
 
 // Info ...
 func (t Server) Info(ctx context.Context, _ *agent.StatusRequest) (*agent.Status, error) {
+	tmp := t.cluster.Local()
 	return &agent.Status{
-		Peer: &t.info,
+		Peer: &tmp,
 	}, nil
 }
 
-// Credentials ...
-func (t Server) Credentials(ctx context.Context, _ *agent.CredentialsRequest) (_zeror *agent.CredentialsResponse, err error) {
-	xpeers := t.cluster.Members()
-	peers := make([]*agent.Peer, 0, len(xpeers))
-
-	l := raftutil.Leader(t.cluster)
-	leader := &agent.Peer{
-		Status:   agent.Peer_Unknown,
-		Name:     l.Name,
-		Ip:       l.Addr.String(),
-		RPCPort:  t.info.RPCPort,
-		SWIMPort: t.info.SWIMPort,
-		RaftPort: t.info.RaftPort,
-	}
-
-	for _, p := range xpeers {
-		peers = append(peers, &agent.Peer{
-			Status:   agent.Peer_Unknown,
-			Name:     p.Name,
-			Ip:       p.Addr.String(),
-			RPCPort:  t.info.RPCPort,
-			SWIMPort: t.info.SWIMPort,
-			RaftPort: t.info.RaftPort,
-		})
-	}
-
-	return &agent.CredentialsResponse{Leader: leader, Secret: t.clusterKey, Peers: peers}, nil
+// Quorum ...
+func (t Server) Quorum(ctx context.Context, _ *agent.DetailsRequest) (_zeror *agent.Details, err error) {
+	details := t.cluster.Details()
+	return &details, nil
 }

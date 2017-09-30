@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 )
 
 // AliveDefault - default alive handler for the cluster.
@@ -12,8 +14,17 @@ import (
 type AliveDefault struct{}
 
 // NotifyAlive implements the memberlist.AliveDelegate
-func (AliveDefault) NotifyAlive(peer *memberlist.Node) error {
-	if BitField(peer.Meta).Has(Deploy) {
+func (AliveDefault) NotifyAlive(peer *memberlist.Node) (err error) {
+	var (
+		m Metadata
+	)
+
+	if err = proto.Unmarshal(peer.Meta, &m); err != nil {
+		log.Println("failed to decode metadata", err)
+		return errors.WithStack(err)
+	}
+
+	if BitField(m.Capability).Has(Deploy) {
 		log.Println("NotifyAlive ignoring", peer.Name)
 		return fmt.Errorf("ignoring peer: %s", peer.Name)
 	}

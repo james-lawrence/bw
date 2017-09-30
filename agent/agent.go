@@ -3,13 +3,10 @@ package agent
 import (
 	"hash"
 	"io"
-	"net"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
-
-	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -41,8 +38,8 @@ func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
 }
 
 // RegisterLeader ...
-func RegisterLeader(s *grpc.Server, srv agent.LeaderServer) {
-	agent.RegisterLeaderServer(s, srv)
+func RegisterLeader(s *grpc.Server, srv agent.QuorumServer) {
+	agent.RegisterQuorumServer(s, srv)
 }
 
 // ConnectOption - options for connecting to the cluster.
@@ -118,6 +115,12 @@ func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds creden
 	)
 }
 
+type cluster interface {
+	Local() agent.Peer
+	Peers() []agent.Peer
+	Details() agent.Details
+}
+
 // downloader ...
 type downloader interface {
 	Download() io.ReadCloser
@@ -132,41 +135,4 @@ type Uploader interface {
 // Eventer ...
 type Eventer interface {
 	Send(...agent.Message)
-}
-
-type operation interface {
-	Visit(Client) error
-}
-
-type operationFunc func(c Client) error
-
-func (t operationFunc) Visit(c Client) error {
-	return t(c)
-}
-
-// ClusterOperation ...
-type ClusterOperation struct {
-	Cluster     cluster
-	AgentPort   string
-	DialOptions []grpc.DialOption
-}
-
-// Perform ...
-func (t ClusterOperation) Perform(v operation) (err error) {
-	var (
-		client Client
-	)
-
-	for _, peer := range t.Cluster.Members() {
-		if client, err = DialClient(net.JoinHostPort(peer.Addr.String(), t.AgentPort), t.DialOptions...); err != nil {
-			return errors.WithStack(err)
-		}
-		defer client.Close()
-
-		if err = v.Visit(client); err != nil {
-			return errors.WithStack(err)
-		}
-	}
-
-	return nil
 }

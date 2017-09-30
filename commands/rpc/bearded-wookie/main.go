@@ -20,7 +20,7 @@ import (
 
 type global struct {
 	systemIP net.IP
-	cluster  *cluster
+	cluster  *clusterCmd
 	ctx      context.Context
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
@@ -32,6 +32,10 @@ type global struct {
 // agent: NETWORK=127.0.0.4; ./bin/bearded-wookie agent --agent-name="node4" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --cluster=127.0.0.1:2001 --cluster-minimum-required-peers=0 --cluster-maximum-join-attempts=10 --agent-config=".bwagent4/agent.config"
 // client: NETWORK=127.0.0.6; ./bin/bearded-wookie deploy --cluster-bind=$NETWORK:2001
 
+// [agents] -> peers within the cluster
+// [quorum] -> subset of agents responsible for managing cluster state
+// [client] -> perform actions within the cluster.
+
 // order of precedence for options: environment overrides command line overrides configuration file.
 func main() {
 	var (
@@ -40,7 +44,7 @@ func main() {
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
 		global          = &global{
 			systemIP: systemx.HostIP(systemx.HostnameOrLocalhost()),
-			cluster:  &cluster{},
+			cluster:  &clusterCmd{},
 			ctx:      cleanup,
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},

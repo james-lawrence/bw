@@ -1,0 +1,9 @@
+syntax = "proto3";
+package cluster;
+
+message metadata {
+  bytes capability = 1;
+  uint32 RPCPort = 2;
+  uint32 RaftPort = 3;
+  uint32 SWIMPort = 4;
+}

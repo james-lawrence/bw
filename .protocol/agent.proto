@@ -50,6 +50,13 @@ message Status {
   repeated Archive Deployments = 2;
 }
 
+message DetailsRequest{}
+message Details {
+  bytes secret = 1;
+  repeated Peer Quorum = 2;
+  repeated Archive Deployments = 3;
+}
+
 message Peer {
   enum State { Unknown = 0; Ready = 1; Canary = 2; Deploying = 3; Failed = 4; Left = 5;}
   State Status = 1;
@@ -70,13 +77,14 @@ message CredentialsResponse {
 message WatchRequest {}
 message RecordResponse {}
 
-service Leader {
+service Quorum {
+  rpc Quorum(DetailsRequest) returns (Details) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Dispatch(stream Message) returns (RecordResponse) {}
 }
 
 service Agent {
-  rpc Credentials(CredentialsRequest) returns (CredentialsResponse) {}
+  rpc Quorum(DetailsRequest) returns (Details) {}
   rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Deploy(Archive) returns (DeployResult) {}
   rpc Info(StatusRequest) returns (Status) {}
