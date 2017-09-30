@@ -37,8 +37,8 @@ func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
 	agent.RegisterAgentServer(s, srv)
 }
 
-// RegisterLeader ...
-func RegisterLeader(s *grpc.Server, srv agent.QuorumServer) {
+// RegisterQuorum ...
+func RegisterQuorum(s *grpc.Server, srv agent.QuorumServer) {
 	agent.RegisterQuorumServer(s, srv)
 }
 
@@ -118,7 +118,8 @@ func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds creden
 type cluster interface {
 	Local() agent.Peer
 	Peers() []agent.Peer
-	Details() agent.Details
+	Quorum() []agent.Peer
+	Connect() agent.ConnectInfo
 }
 
 // downloader ...

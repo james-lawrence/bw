@@ -4,16 +4,14 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
-
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // NewEventBus event bus.
 func NewEventBus() EventBus {
 	e := EventBus{
-		buffer:    make(chan []agent.Message, 1000),
+		buffer:    make(chan []Message, 1000),
 		m:         &sync.RWMutex{},
-		observers: map[int64]eventBusObserver{},
+		observers: map[int64]Observer{},
 		serial:    new(int64),
 	}
 
@@ -22,8 +20,9 @@ func NewEventBus() EventBus {
 	return e
 }
 
-type eventBusObserver interface {
-	Receive(...agent.Message) error
+// Observer ...
+type Observer interface {
+	Receive(...Message) error
 }
 
 // EventBusObserver used to unregister an observer.
@@ -33,10 +32,10 @@ type EventBusObserver struct {
 
 // EventBus - message bus for events on the leader node.
 type EventBus struct {
-	buffer    chan []agent.Message
+	buffer    chan []Message
 	serial    *int64
 	m         *sync.RWMutex
-	observers map[int64]eventBusObserver
+	observers map[int64]Observer
 }
 
 func (t EventBus) background() {
@@ -54,13 +53,13 @@ func (t EventBus) background() {
 }
 
 // Dispatch ...
-func (t EventBus) Dispatch(messages ...agent.Message) {
+func (t EventBus) Dispatch(messages ...Message) {
 	log.Println("dispatching messages", len(messages))
 	t.buffer <- messages
 }
 
 // Register ...
-func (t EventBus) Register(o eventBusObserver) EventBusObserver {
+func (t EventBus) Register(o Observer) EventBusObserver {
 	t.m.Lock()
 	defer t.m.Unlock()
 	obs := EventBusObserver{

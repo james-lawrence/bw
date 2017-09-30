@@ -7,6 +7,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -100,5 +101,10 @@ func (t *agentInfo) _info() (err error) {
 		}
 	}()
 
+	go func() {
+		for _ = range time.Tick(200 * time.Millisecond) {
+			client.Dispatch(agentutil.PeerEvent(local.Peer))
+		}
+	}()
 	return client.Watch(events)
 }

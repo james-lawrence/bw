@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"encoding/gob"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -175,8 +176,15 @@ func DeployContextOptionCompleted(completed chan DeployResult) DeployContextOpti
 	}
 }
 
+// DeployContextOptionDispatcher ...
+func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.dispatcher = d
+	}
+}
+
 // NewDeployContext ...
-func NewDeployContext(workdir string, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
 		logfile *os.File
 		logger  dlog
@@ -193,11 +201,13 @@ func NewDeployContext(workdir string, a agent.Archive, options ...DeployContextO
 	}
 
 	dctx := DeployContext{
-		ID:      id,
-		Root:    root,
-		Log:     logger,
-		Archive: a,
-		logfile: logfile,
+		Local:      p,
+		ID:         id,
+		Root:       root,
+		Log:        logger,
+		Archive:    a,
+		logfile:    logfile,
+		dispatcher: logDispatcher{},
 	}
 
 	for _, opt := range options {
@@ -213,14 +223,34 @@ type DeployResult struct {
 	Error error
 }
 
+type dispatcher interface {
+	Dispatch(...agent.Message) error
+}
+
+type logDispatcher struct{}
+
+func (t logDispatcher) Dispatch(ms ...agent.Message) error {
+	for _, m := range ms {
+		log.Printf("dispatched %#v\n", m)
+	}
+	return nil
+}
+
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
-	ID        bw.RandomID
-	Root      string
-	Log       logger
-	logfile   *os.File
-	Archive   agent.Archive
-	completed chan DeployResult
+	Local      agent.Peer
+	ID         bw.RandomID
+	Root       string
+	Log        logger
+	logfile    *os.File
+	Archive    agent.Archive
+	dispatcher dispatcher
+	completed  chan DeployResult
+}
+
+// Dispatch an event to the cluster
+func (t DeployContext) Dispatch(m agent.Message) error {
+	return t.dispatcher.Dispatch(m)
 }
 
 // Done is responsible for closing out the deployment context.

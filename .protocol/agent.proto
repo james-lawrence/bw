@@ -3,7 +3,7 @@ package agent;
 
 // Deployment Event.
 message Message {
-  enum Type { PeerEvent = 0; LogEvent = 1; }
+  enum Type { PeerEvent = 0; LogEvent = 1; DeployEvent = 2;}
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -14,6 +14,7 @@ message Message {
     // One of the following will be filled in.
     bool none = 4;
     Log log = 5;
+    Archive archive = 6;
   }
 }
 
@@ -57,6 +58,12 @@ message Details {
   repeated Archive Deployments = 3;
 }
 
+message ConnectRequest {}
+message ConnectInfo {
+  bytes secret = 1;
+  repeated Peer Quorum = 2;
+}
+
 message Peer {
   enum State { Unknown = 0; Ready = 1; Canary = 2; Deploying = 3; Failed = 4; Left = 5;}
   State Status = 1;
@@ -71,14 +78,13 @@ message WatchRequest {}
 message RecordResponse {}
 
 service Quorum {
-  rpc Quorum(DetailsRequest) returns (Details) {}
+  rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Dispatch(stream Message) returns (RecordResponse) {}
 }
 
 service Agent {
-  rpc Quorum(DetailsRequest) returns (Details) {}
-  rpc Upload(stream ArchiveChunk) returns (Archive) {}
+  rpc Connect(ConnectRequest) returns (ConnectInfo) {}
   rpc Deploy(Archive) returns (DeployResult) {}
   rpc Info(StatusRequest) returns (Status) {}
 }

@@ -4,6 +4,7 @@ import (
 	"log"
 	"path/filepath"
 
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/directives"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
@@ -84,6 +85,7 @@ func (t Directive) deploy() {
 	dpkg = directives.PackageLoader{}
 	dst = filepath.Join(t.dctx.Root, "archive")
 
+	t.dctx.Dispatch(agentutil.DeployEvent(t.dctx.Local, t.dctx.Archive))
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
 	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {

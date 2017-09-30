@@ -1,4 +1,4 @@
-package agent
+package agentutil
 
 import (
 	"time"
@@ -6,16 +6,11 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
-// MessageBuilder ...
-type MessageBuilder struct {
-	agent.Peer
-}
-
-// LogEvent ...
-func (t MessageBuilder) LogEvent(s string) agent.Message {
+// LogEvent create a log event message.
+func LogEvent(p agent.Peer, s string) agent.Message {
 	return agent.Message{
 		Type: agent.Message_LogEvent,
-		Peer: &t.Peer,
+		Peer: &p,
 		Ts:   time.Now().Unix(),
 		Event: &agent.Message_Log{
 			Log: &agent.Log{
@@ -32,5 +27,15 @@ func PeerEvent(p agent.Peer) agent.Message {
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
 		Event: &agent.Message_None{},
+	}
+}
+
+// DeployEvent represents a deploy being triggered.
+func DeployEvent(p agent.Peer, a agent.Archive) agent.Message {
+	return agent.Message{
+		Type:  agent.Message_DeployEvent,
+		Peer:  &p,
+		Ts:    time.Now().Unix(),
+		Event: &agent.Message_Archive{Archive: &a},
 	}
 }

@@ -10,9 +10,23 @@ import (
 
 	"google.golang.org/grpc"
 
+	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/pkg/errors"
 )
+
+// DialQuorum ...
+func DialQuorum(c cluster, options ...grpc.DialOption) (client Client, err error) {
+	for _, q := range c.Quorum() {
+		if client, err = DialClient(clusterx.RPCAddress(q), options...); err != nil {
+			continue
+		}
+
+		return client, nil
+	}
+
+	return client, errors.New("failed to connect to a quorum node")
+}
 
 // DialClient ...
 func DialClient(address string, options ...grpc.DialOption) (_ignored Client, err error) {
@@ -40,11 +54,11 @@ func (t Client) Close() error {
 // Upload ...
 func (t Client) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err error) {
 	var (
-		stream agent.Agent_UploadClient
+		stream agent.Quorum_UploadClient
 		_info  *agent.Archive
 	)
 
-	rpc := agent.NewAgentClient(t.conn)
+	rpc := agent.NewQuorumClient(t.conn)
 	if stream, err = rpc.Upload(context.Background()); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
@@ -94,21 +108,20 @@ func (t Client) Deploy(info agent.Archive) error {
 	return nil
 }
 
-// Details ...
-func (t Client) Details() (d agent.Details, err error) {
+// Connect ...
+func (t Client) Connect() (d agent.ConnectInfo, err error) {
 	var (
-		response *agent.Details
+		response *agent.ConnectInfo
 	)
 
 	rpc := agent.NewAgentClient(t.conn)
-	if response, err = rpc.Quorum(context.Background(), &agent.DetailsRequest{}); err != nil {
+	if response, err = rpc.Connect(context.Background(), &agent.ConnectRequest{}); err != nil {
 		return d, errors.WithStack(err)
 	}
 
-	return agent.Details{
-		Secret:      response.Secret,
-		Quorum:      response.Quorum,
-		Deployments: response.Deployments,
+	return agent.ConnectInfo{
+		Secret: response.Secret,
+		Quorum: response.Quorum,
 	}, nil
 }
 
@@ -158,19 +171,24 @@ func (t Client) Dispatch(messages ...agent.Message) (err error) {
 	c := agent.NewQuorumClient(t.conn)
 
 	if dst, err = c.Dispatch(context.Background()); err != nil {
+		log.Println("------------------------ failed to dispatch ----------------")
 		return errors.WithStack(err)
 	}
 
 	for _, m := range messages {
 		if err = dst.Send(&m); err != nil {
+			log.Println("------------------------ failed to dispatch ----------------")
 			return errors.WithStack(err)
 		}
+		log.Printf("------------------------ %#v ------------------------\n", m)
 	}
+
+	log.Println("------------------------ dispatched ------------------------")
 
 	return nil
 }
 
-func (t Client) streamArchive(src io.Reader, stream agent.Agent_UploadClient) (err error) {
+func (t Client) streamArchive(src io.Reader, stream agent.Quorum_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
 		log.Println("writing chunk", len(chunk))

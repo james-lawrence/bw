@@ -2,6 +2,7 @@ package deployment_test
 
 import (
 	. "bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 
 	. "github.com/onsi/ginkgo"
 )
@@ -9,6 +10,6 @@ import (
 var _ = Describe("Coordinator", func() {
 	var coordinator Coordinator
 	BeforeEach(func() {
-		coordinator = NewDummyCoordinator()
+		coordinator = NewDummyCoordinator(agent.Peer{})
 	})
 })

@@ -5,14 +5,18 @@ import (
 	"log"
 	"math/rand"
 	"time"
+
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.
-func NewDummyCoordinator() Coordinator {
+func NewDummyCoordinator(p agent.Peer) Coordinator {
 	const sleepy = 60
-	return New(dummy{
-		sleepy: sleepy,
-	})
+	return New(
+		p,
+		dummy{
+			sleepy: sleepy,
+		})
 }
 
 type dummy struct {

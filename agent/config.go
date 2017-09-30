@@ -39,7 +39,7 @@ type ConfigClient struct {
 // Connect to the address in the config client.
 func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
 	var (
-		details agent.Details
+		details agent.ConnectInfo
 	)
 
 	conn := newConnect(options...)
@@ -58,7 +58,7 @@ func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.Trans
 // ConnectLeader ...
 func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
 	var (
-		details agent.Details
+		details agent.ConnectInfo
 		success bool
 		tmp     Client
 	)
@@ -88,7 +88,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	return creds, client, c, nil
 }
 
-func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Client, details agent.Details, err error) {
+func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Client, details agent.ConnectInfo, err error) {
 	if creds, err = t.creds(); err != nil {
 		return creds, client, details, err
 	}
@@ -97,14 +97,14 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 		return creds, client, details, err
 	}
 
-	if details, err = client.Details(); err != nil {
+	if details, err = client.Connect(); err != nil {
 		return creds, client, details, err
 	}
 
 	return creds, client, details, nil
 }
 
-func (t ConfigClient) cluster(details agent.Details, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+func (t ConfigClient) cluster(details agent.ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
 		clustering.OptionAliveDelegate(cp.AliveDefault{}),

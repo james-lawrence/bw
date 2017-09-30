@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +49,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
+func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
@@ -88,7 +89,8 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		RaftPort: uint32(t.config.RaftBind.Port),
 	})
 
-	t.server = grpc.NewServer(grpc.Creds(credentials.NewTLS(creds)))
+	tlscreds := credentials.NewTLS(creds)
+	t.server = grpc.NewServer(grpc.Creds(tlscreds))
 	options := []clustering.Option{
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
@@ -112,13 +114,15 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
+	lq := gagent.NewQuorum()
 	cx := cluster.New(local, c, secret)
-	tlscreds := credentials.NewTLS(creds)
+	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
+	quorum := agent.NewQuorum(lq, cx, tlscreds)
 	server := agent.NewServer(
 		cx,
 		t.listener.Addr(),
 		tlscreds,
-		aoptions(t.config),
+		aoptions(dispatcher, local.Peer, t.config),
 	)
 
 	agent.RegisterServer(
@@ -126,23 +130,36 @@ func (t *agentCmd) bind(aoptions func(agent.Config) agent.ServerOption) error {
 		server,
 	)
 
-	leader := agent.NewLeader(&p, server)
-	agent.RegisterLeader(t.server, leader)
+	agent.RegisterQuorum(t.server, quorum)
 
 	t.runServer(c)
 
 	go p.Overlay(
 		c,
-		raftutil.ProtocolOptionClusterObserver(agentutil.NewBootstrapper(cx, tlscreds)),
+		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
+			return lq
+		}),
+		raftutil.ProtocolOptionClusterObserver(
+			agentutil.NewBootstrapper(cx, tlscreds),
+		),
+		raftutil.ProtocolOptionObservers(
+			raft.NewObserver(quorum.Events, true, func(o *raft.Observation) bool {
+				switch o.Data.(type) {
+				case raft.LeaderObservation, raft.PeerObservation:
+					return true
+				default:
+					return false
+				}
+			}),
+			// TODO: remove the ProtocolOptionClusterObserver and replace it with a cluster monitor.
+			// then wire bootstrap and other systems up to the cluster monitor.
+			// raft.NewObserver(clustermonitor.Events, true, func(o *raft.Observation) bool {
+			// 	_, ok := o.Data.(raft.LeaderObservation)
+			// 	return ok
+			// }),
+		),
 	)
 
-	// go func() {
-	// 	i, _ := server.Info(context.Background(), nil)
-	// 	for _ = range time.Tick(time.Second) {
-	// 		leader.EventBus.Dispatch(agent.PeerEvent(*i.Peer))
-	// 		log.Println("dispatched peer event")
-	// 	}
-	// }()
 	return nil
 }
 

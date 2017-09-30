@@ -1,8 +1,10 @@
 package main
 
 import (
-	agent "bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 
 	"github.com/alecthomas/kingpin"
@@ -27,11 +29,13 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	return t.agentCmd.bind(
-		func(config agent.Config) agent.ServerOption {
+		func(d agentutil.Dispatcher, p gagent.Peer, config agent.Config) agent.ServerOption {
 			deployments := deployment.New(
+				p,
 				deployment.NewDirective(
 					deployment.DirectiveOptionShellContext(sctx),
 				),
+				deployment.CoordinatorOptionDispatcher(d),
 				deployment.CoordinatorOptionRoot(config.Root),
 				deployment.CoordinatorOptionKeepN(config.KeepN),
 			)

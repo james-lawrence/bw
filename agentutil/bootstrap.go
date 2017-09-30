@@ -3,7 +3,6 @@ package agentutil
 import (
 	"log"
 
-	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"google.golang.org/grpc"
@@ -30,7 +29,7 @@ func NewBootstrapper(c cluster, creds credentials.TransportCredentials) Bootstra
 	b := Bootstrapper{
 		In:    buffer,
 		c:     c,
-		creds: creds,
+		creds: grpc.WithTransportCredentials(creds),
 	}
 
 	go b.background()
@@ -41,7 +40,7 @@ func NewBootstrapper(c cluster, creds credentials.TransportCredentials) Bootstra
 // Bootstrapper monitors the raft cluster for new nodes and bootstraps them.
 type Bootstrapper struct {
 	c     cluster
-	creds credentials.TransportCredentials
+	creds grpc.DialOption
 	In    chan raftutil.Event
 }
 
@@ -65,19 +64,19 @@ func (t Bootstrapper) background() {
 			continue
 		}
 
-		if peer, err = clusterx.NodeToPeer(o.Peer); err != nil {
+		if peer, err = NodeToPeer(o.Peer); err != nil {
 			log.Println("failed to convert node to peer", err)
 			continue
 		}
 
 		log.Println("--------------- bootstrap observed -------------", o)
 
-		if latest, err = DetermineLatestArchive(t.c, grpc.WithTransportCredentials(t.creds)); err != nil {
+		if latest, err = DetermineLatestArchive(t.c, t.creds); err != nil {
 			log.Println("failed to determine latest archive prior to bootstrapping", err)
 			continue
 		}
 
-		if c, err = DialPeer(peer, grpc.WithTransportCredentials(t.creds)); err != nil {
+		if c, err = DialPeer(peer, t.creds); err != nil {
 			log.Println("failed to connect to new peer", o.Peer.String(), c)
 			continue
 		}

@@ -1,20 +1,11 @@
 package agent
 
 import (
-	"bytes"
-	"hash"
-	"io"
-	"log"
 	"net"
-	"time"
 
 	"google.golang.org/grpc/credentials"
 
-	"github.com/pkg/errors"
-
-	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
-	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"golang.org/x/net/context"
 )
 
@@ -62,11 +53,6 @@ func NewServer(c cluster, address net.Addr, creds credentials.TransportCredentia
 		creds:    creds,
 		cluster:  c,
 		Deployer: noopDeployer{},
-		UploadProtocol: uploads.ProtocolFunc(
-			func(uid []byte, _ uint64) (uploads.Uploader, error) {
-				return uploads.NewTempFileUploader()
-			},
-		),
 	}
 
 	for _, opt := range options {
@@ -78,62 +64,9 @@ func NewServer(c cluster, address net.Addr, creds credentials.TransportCredentia
 
 // Server ...
 type Server struct {
-	creds          credentials.TransportCredentials
-	Deployer       deployer
-	cluster        cluster
-	UploadProtocol uploads.Protocol
-}
-
-// Upload ...
-func (t Server) Upload(stream agent.Agent_UploadServer) (err error) {
-	var (
-		deploymentID []byte
-		checksum     hash.Hash
-		location     string
-		dst          Uploader
-		chunk        *agent.ArchiveChunk
-	)
-
-	if deploymentID, err = bw.GenerateID(); err != nil {
-		return err
-	}
-
-	if chunk, err = stream.Recv(); err != nil {
-		return errors.WithStack(err)
-	}
-
-	if dst, err = t.UploadProtocol.NewUpload(deploymentID, chunk.GetMetadata().Bytes); err != nil {
-		return err
-	}
-
-	for {
-		chunk, err := stream.Recv()
-
-		if err == io.EOF {
-			if checksum, location, err = dst.Info(); err != nil {
-				log.Println("error getting archive info", err)
-				return err
-			}
-			tmp := t.cluster.Local()
-			return stream.SendAndClose(&agent.Archive{
-				Peer:         &tmp,
-				Location:     location,
-				Checksum:     checksum.Sum(nil),
-				DeploymentID: deploymentID,
-				Ts:           time.Now().UTC().Unix(),
-			})
-		}
-
-		if err != nil {
-			log.Println("error receiving chunk", err)
-			return err
-		}
-
-		if checksum, err = dst.Upload(bytes.NewBuffer(chunk.Data)); err != nil {
-			log.Println("error uploading chunk", err)
-			return err
-		}
-	}
+	creds    credentials.TransportCredentials
+	Deployer deployer
+	cluster  cluster
 }
 
 // Deploy ...
@@ -153,8 +86,8 @@ func (t Server) Info(ctx context.Context, _ *agent.StatusRequest) (*agent.Status
 	}, nil
 }
 
-// Quorum ...
-func (t Server) Quorum(ctx context.Context, _ *agent.DetailsRequest) (_zeror *agent.Details, err error) {
-	details := t.cluster.Details()
+// Connect ...
+func (t Server) Connect(ctx context.Context, _ *agent.ConnectRequest) (_zeror *agent.ConnectInfo, err error) {
+	details := t.cluster.Connect()
 	return &details, nil
 }

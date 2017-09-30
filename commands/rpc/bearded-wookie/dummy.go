@@ -4,7 +4,9 @@ import (
 	"log"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/alecthomas/kingpin"
 )
 
@@ -22,8 +24,8 @@ func (t *dummy) attach(ctx *kingpin.ParseContext) error {
 	defer log.Println("registered dummy deployer")
 
 	return t.agentCmd.bind(
-		func(agent.Config) agent.ServerOption {
-			return agent.ServerOptionDeployer(deployment.NewDummyCoordinator())
+		func(d agentutil.Dispatcher, p gagent.Peer, _ agent.Config) agent.ServerOption {
+			return agent.ServerOptionDeployer(deployment.NewDummyCoordinator(p))
 		},
 	)
 }

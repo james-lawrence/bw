@@ -12,12 +12,24 @@ import (
 	"google.golang.org/grpc"
 
 	agentx "bitbucket.org/jatone/bearded-wookie/agent"
-	clusterp "bitbucket.org/jatone/bearded-wookie/cluster"
+	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
+
+type cluster interface {
+	Local() agent.Peer
+	Peers() []agent.Peer
+	Quorum() []agent.Peer
+	Connect() agent.ConnectInfo
+}
+
+// DialQuorum connect to a quorum node.
+func DialQuorum(c cluster, options ...grpc.DialOption) (zeroc agentx.Client, err error) {
+	return agentx.DialQuorum(c, options...)
+}
 
 // DialPeer dial the peer
 func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, err error) {
@@ -35,7 +47,7 @@ func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, er
 type client interface {
 	Upload(srcbytes uint64, src io.Reader) (agent.Archive, error)
 	Deploy(info agent.Archive) error
-	Details() (agent.Details, error)
+	Connect() (agent.ConnectInfo, error)
 	Info() (agent.Status, error)
 	Watch(out chan<- agent.Message) error
 	Dispatch(messages ...agent.Message) error
@@ -130,13 +142,18 @@ func KeepNewestN(n int) Cleaner {
 	})
 }
 
+// NodeToPeer ...
+func NodeToPeer(n *memberlist.Node) (agent.Peer, error) {
+	return clusterx.NodeToPeer(n)
+}
+
 // RPCAddress for peer.
 func RPCAddress(p agent.Peer) string {
-	return clusterp.RPCAddress(p)
+	return clusterx.RPCAddress(p)
 }
 
 // NodeRPCAddress returns the node's rpc address.
 // if an error occurs it returns a blank string.
 func NodeRPCAddress(n *memberlist.Node) string {
-	return clusterp.NodeRPCAddress(n)
+	return clusterx.NodeRPCAddress(n)
 }

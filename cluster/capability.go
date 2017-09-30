@@ -7,6 +7,10 @@ const (
 	// member. Useful for agents that perform things like monitoring, commandline interfaces, etc.
 	// by default a node is not a lurker.
 	Deploy int = iota
+
+	// Quorum represents a node that is part of the quorum set.
+	Quorum
+
 	// LastCapability just marks the maximum ability integer value.
 	// useful for looping over abilities: for i := 0; i < LastCapability; i++
 	LastCapability

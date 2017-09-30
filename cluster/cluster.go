@@ -40,13 +40,16 @@ func (t Cluster) Peers() []agent.Peer {
 	return NodesToPeers(t.Cluster.Members()...)
 }
 
-// Details details about the cluster.
-func (t Cluster) Details() agent.Details {
-	quorum := NodesToPeers(raftutil.Quorum(t.Cluster)...)
+// Quorum ...
+func (t Cluster) Quorum() []agent.Peer {
+	return NodesToPeers(raftutil.Quorum(t.Cluster)...)
+}
 
-	return agent.Details{
+// Connect connection information for the cluster.
+func (t Cluster) Connect() agent.ConnectInfo {
+	return agent.ConnectInfo{
 		Secret: t.SharedSecret,
-		Quorum: PeersToPointers(quorum...),
+		Quorum: PeersToPointers(t.Quorum()...),
 	}
 }
 
@@ -108,6 +111,11 @@ func RPCAddress(p agent.Peer) string {
 // SWIMAddress for peer.
 func SWIMAddress(p agent.Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort))
+}
+
+// RaftAddress for peer.
+func RaftAddress(p agent.Peer) string {
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort))
 }
 
 // NodeRPCAddress returns the node's rpc address.

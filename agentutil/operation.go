@@ -1,14 +1,9 @@
 package agentutil
 
 import (
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
-
-type cluster interface {
-	Peers() []agent.Peer
-}
 
 type operation interface {
 	Visit(client) error

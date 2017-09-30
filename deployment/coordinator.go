@@ -8,16 +8,17 @@ import (
 	"sync"
 
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // New Builds a deployment Coordinator.
-func New(d deployer, options ...CoordinatorOption) Coordinator {
+func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator {
 	const (
 		defaultKeepN = 3
 	)
 
 	coord := &deployment{
+		local:     local,
 		deployer:  d,
 		Mutex:     &sync.Mutex{},
 		status:    ready{},
@@ -26,7 +27,8 @@ func New(d deployer, options ...CoordinatorOption) Coordinator {
 
 	// default options.
 	CoordinatorOptionRoot(os.TempDir())(coord)
-	CoordinatorOptionKeepN(defaultKeepN)
+	CoordinatorOptionKeepN(defaultKeepN)(coord)
+	CoordinatorOptionDispatcher(logDispatcher{})(coord)
 
 	for _, opt := range options {
 		opt(coord)
@@ -56,12 +58,21 @@ func CoordinatorOptionKeepN(n int) CoordinatorOption {
 	}
 }
 
+// CoordinatorOptionDispatcher sets the dispatcher for the coordinator.
+func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
+	return func(d *deployment) {
+		d.dispatcher = di
+	}
+}
+
 type deployment struct {
 	keepN       int // never set manually. always set by CoordinatorOptionKeepN
 	root        string
 	deploysRoot string // never set manually. always set by CoordinatorOptionRoot
-	deployer
-	cleanup agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	local       agent.Peer
+	deployer    deployer
+	dispatcher  dispatcher
+	cleanup     agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	*sync.Mutex
 	status    Status
 	completed chan DeployResult
@@ -87,16 +98,16 @@ func (t *deployment) background() {
 }
 
 // Info about the state of the agent.
-func (t *deployment) Deployments() (_psIgnored gagent.Peer_State, _ignored []*gagent.Archive, err error) {
+func (t *deployment) Deployments() (_psIgnored agent.Peer_State, _ignored []*agent.Archive, err error) {
 	var (
-		archives []gagent.Archive
+		archives []agent.Archive
 	)
 
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 
 	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
-		return gagent.Peer_Unknown, _ignored, err
+		return agent.Peer_Unknown, _ignored, err
 	}
 
 	sort.Slice(archives, func(i int, j int) bool {
@@ -107,7 +118,7 @@ func (t *deployment) Deployments() (_psIgnored gagent.Peer_State, _ignored []*ga
 	return AgentStateFromStatus(t.status), archivePointers(archives...), nil
 }
 
-func (t *deployment) Deploy(archive *gagent.Archive) (err error) {
+func (t *deployment) Deploy(archive *agent.Archive) (err error) {
 	var (
 		dctx DeployContext
 	)
@@ -116,7 +127,7 @@ func (t *deployment) Deploy(archive *gagent.Archive) (err error) {
 		return err
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, *archive, DeployContextOptionCompleted(t.completed)); err != nil {
+	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
 		return err
 	}
 
