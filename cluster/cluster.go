@@ -15,19 +15,17 @@ import (
 )
 
 // New ...
-func New(l Local, c clustering.Cluster, s []byte) Cluster {
+func New(l Local, c clustering.Cluster) Cluster {
 	return Cluster{
-		local:        l,
-		SharedSecret: s,
-		Cluster:      c,
+		local:   l,
+		Cluster: c,
 	}
 }
 
 // Cluster - represents a cluster.
 type Cluster struct {
 	clustering.Cluster
-	SharedSecret []byte
-	local        Local
+	local Local
 }
 
 // Local ...
@@ -47,8 +45,16 @@ func (t Cluster) Quorum() []agent.Peer {
 
 // Connect connection information for the cluster.
 func (t Cluster) Connect() agent.ConnectInfo {
+	var (
+		secret []byte
+	)
+
+	if c := t.Cluster.Config(); c != nil {
+		secret = c.SecretKey
+	}
+
 	return agent.ConnectInfo{
-		Secret: t.SharedSecret,
+		Secret: secret,
 		Quorum: PeersToPointers(t.Quorum()...),
 	}
 }

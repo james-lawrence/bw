@@ -88,11 +88,11 @@ type connect struct {
 }
 
 // ConnectClient ...
-func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
 
 	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
-		return creds, client, c, err
+		return creds, cl, c, err
 	}
 
 	return config.Connect(
@@ -102,11 +102,11 @@ func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds creden
 }
 
 // ConnectLeader ...
-func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
 
 	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
-		return creds, client, c, err
+		return creds, cl, c, err
 	}
 
 	return config.ConnectLeader(

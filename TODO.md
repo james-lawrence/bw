@@ -1,14 +1,10 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup
-- [ ] Fork raft protocol to add enhancements around observations.
 - [ ] ux improvements
 
 #### implement event stream.
-- [ ] send noteworthy events from each agent to the leader during a deploy.
 - [ ] store events in a file on the leader.
-- [ ] allow clients to receive these events and display them.
-- [ ] allow additional clients stream the events.
 
 #### implement initial deploy on agent startup (when possible).
 when an agent joins a cluster the cluster leader it should contact the leader and check if it has deployed the latest version of the software.

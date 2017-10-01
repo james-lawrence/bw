@@ -3,7 +3,6 @@
 package agentutil
 
 import (
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,12 +26,12 @@ type cluster interface {
 }
 
 // DialQuorum connect to a quorum node.
-func DialQuorum(c cluster, options ...grpc.DialOption) (zeroc agentx.Client, err error) {
+func DialQuorum(c cluster, options ...grpc.DialOption) (zeroc agent.Client, err error) {
 	return agentx.DialQuorum(c, options...)
 }
 
 // DialPeer dial the peer
-func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, err error) {
+func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err error) {
 	var (
 		addr string
 	)
@@ -41,17 +40,7 @@ func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agentx.Client, er
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
 
-	return agentx.DialClient(addr, options...)
-}
-
-type client interface {
-	Upload(srcbytes uint64, src io.Reader) (agent.Archive, error)
-	Deploy(info agent.Archive) error
-	Connect() (agent.ConnectInfo, error)
-	Info() (agent.Status, error)
-	Watch(out chan<- agent.Message) error
-	Dispatch(messages ...agent.Message) error
-	Close() error
+	return agentx.Dial(addr, options...)
 }
 
 // Cleaner interface for cleaning workspace directories.

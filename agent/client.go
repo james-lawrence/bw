@@ -16,20 +16,20 @@ import (
 )
 
 // DialQuorum ...
-func DialQuorum(c cluster, options ...grpc.DialOption) (client Client, err error) {
+func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
 	for _, q := range c.Quorum() {
-		if client, err = DialClient(clusterx.RPCAddress(q), options...); err != nil {
+		if conn, err = Dial(clusterx.RPCAddress(q), options...); err != nil {
 			continue
 		}
 
-		return client, nil
+		return conn, nil
 	}
 
-	return client, errors.New("failed to connect to a quorum node")
+	return conn, errors.New("failed to connect to a quorum node")
 }
 
-// DialClient ...
-func DialClient(address string, options ...grpc.DialOption) (_ignored Client, err error) {
+// Dial connects to a node at the given address.
+func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error) {
 	var (
 		conn *grpc.ClientConn
 	)
@@ -38,21 +38,21 @@ func DialClient(address string, options ...grpc.DialOption) (_ignored Client, er
 		return _ignored, errors.Wrap(err, "failed to connect to peer")
 	}
 
-	return Client{conn: conn}, nil
+	return Conn{conn: conn}, nil
 }
 
-// Client ...
-type Client struct {
+// Conn a connection to the cluster. implements the Client interface.
+type Conn struct {
 	conn *grpc.ClientConn
 }
 
 // Close ...
-func (t Client) Close() error {
+func (t Conn) Close() error {
 	return t.conn.Close()
 }
 
 // Upload ...
-func (t Client) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err error) {
+func (t Conn) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err error) {
 	var (
 		stream agent.Quorum_UploadClient
 		_info  *agent.Archive
@@ -95,7 +95,7 @@ func (t Client) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err 
 }
 
 // Deploy ...
-func (t Client) Deploy(info agent.Archive) error {
+func (t Conn) Deploy(info agent.Archive) error {
 	var (
 		err error
 	)
@@ -109,7 +109,7 @@ func (t Client) Deploy(info agent.Archive) error {
 }
 
 // Connect ...
-func (t Client) Connect() (d agent.ConnectInfo, err error) {
+func (t Conn) Connect() (d agent.ConnectInfo, err error) {
 	var (
 		response *agent.ConnectInfo
 	)
@@ -126,7 +126,7 @@ func (t Client) Connect() (d agent.ConnectInfo, err error) {
 }
 
 // Info ...
-func (t Client) Info() (_zeroInfo agent.Status, err error) {
+func (t Conn) Info() (_zeroInfo agent.Status, err error) {
 	var (
 		_zero agent.StatusRequest
 		info  *agent.Status
@@ -140,7 +140,7 @@ func (t Client) Info() (_zeroInfo agent.Status, err error) {
 }
 
 // Watch watch for messages sent to the leader. blocks.
-func (t Client) Watch(out chan<- agent.Message) (err error) {
+func (t Conn) Watch(out chan<- agent.Message) (err error) {
 	var (
 		src agent.Quorum_WatchClient
 		msg *agent.Message
@@ -161,7 +161,7 @@ func (t Client) Watch(out chan<- agent.Message) (err error) {
 }
 
 // Dispatch messages to the leader.
-func (t Client) Dispatch(messages ...agent.Message) (err error) {
+func (t Conn) Dispatch(messages ...agent.Message) (err error) {
 	var (
 		dst agent.Quorum_DispatchClient
 	)
@@ -181,7 +181,7 @@ func (t Client) Dispatch(messages ...agent.Message) (err error) {
 	return nil
 }
 
-func (t Client) streamArchive(src io.Reader, stream agent.Quorum_UploadClient) (err error) {
+func (t Conn) streamArchive(src io.Reader, stream agent.Quorum_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
 		return errors.Wrap(stream.Send(&agent.ArchiveChunk{

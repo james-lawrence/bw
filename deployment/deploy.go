@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/memberlist"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // Stage ...
@@ -24,7 +24,7 @@ const (
 
 // NodeUpdate ...
 type NodeUpdate struct {
-	Peer   *memberlist.Node
+	Peer   agent.Peer
 	Status error
 }
 
@@ -71,21 +71,29 @@ type partitioner interface {
 	Partition(length int) (size int)
 }
 
-// checker checks the current status of a node.
-type checker interface {
-	Check(*memberlist.Node) error
+// applies an operation to the node.
+type operation interface {
+	Visit(agent.Peer) error
+}
+
+// OperationFunc pure function operation.
+type OperationFunc func(agent.Peer) error
+
+// Visit implements operation.
+func (t OperationFunc) Visit(c agent.Peer) error {
+	return t(c)
 }
 
 type constantChecker struct {
 	Status
 }
 
-func (t constantChecker) Check(*memberlist.Node) error {
+func (t constantChecker) Visit(agent.Peer) error {
 	return t.Status
 }
 
 type cluster interface {
-	Members() []*memberlist.Node
+	Peers() []agent.Peer
 }
 
 // Option ...
@@ -106,16 +114,16 @@ func DeployOptionPartitioner(x partitioner) Option {
 }
 
 // DeployOptionChecker set the strategy for checking the state of a node.
-func DeployOptionChecker(x checker) Option {
+func DeployOptionChecker(x operation) Option {
 	return func(d *Deploy) {
-		d.checker = x
+		d.check = x
 	}
 }
 
 // DeployOptionDeployer set the strategy for deploying.
-func DeployOptionDeployer(deployer func(peer *memberlist.Node) error) Option {
+func DeployOptionDeployer(deployer operation) Option {
 	return func(d *Deploy) {
-		d.worker.deployer = deployer
+		d.worker.deploy = deployer
 	}
 }
 
@@ -124,11 +132,11 @@ func NewDeploy(h *Events, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:        make(chan func()),
-			wait:     &sync.WaitGroup{},
-			checker:  constantChecker{Status: ready{}},
-			deployer: loggingDeployer,
-			handler:  h,
+			c:       make(chan func()),
+			wait:    &sync.WaitGroup{},
+			check:   constantChecker{Status: ready{}},
+			deploy:  OperationFunc(loggingDeploy),
+			handler: h,
 		},
 		partitioner: ConstantPartitioner(1),
 	}
@@ -140,18 +148,18 @@ func NewDeploy(h *Events, options ...Option) Deploy {
 	return d
 }
 
-func loggingDeployer(peer *memberlist.Node) error {
+func loggingDeploy(peer agent.Peer) error {
 	log.Println("deploy triggered for peer", peer.String())
 	return nil
 }
 
 type worker struct {
-	c    chan func()
-	wait *sync.WaitGroup
-	checker
-	filter   Filter
-	deployer func(peer *memberlist.Node) error
-	handler  *Events
+	c       chan func()
+	wait    *sync.WaitGroup
+	check   operation
+	deploy  operation
+	filter  Filter
+	handler *Events
 }
 
 func (t worker) work() {
@@ -166,13 +174,14 @@ func (t worker) Complete() {
 	t.wait.Wait()
 }
 
-func (t worker) DeployTo(peer *memberlist.Node) {
+func (t worker) DeployTo(peer agent.Peer) {
 	t.c <- func() {
-		if err := t.deployer(peer); err != nil {
+		if err := t.deploy.Visit(peer); err != nil {
 			log.Printf("failed to deploy to: %s - %+v\n", peer.Name, err)
 			return
 		}
-		awaitCompletion(t.handler, t.checker, peer)
+
+		awaitCompletion(t.handler, t.check, peer)
 		log.Println("emitting completion")
 		t.handler.NodesCompleted <- atomic.AddInt64(&t.handler.completed, 1)
 		log.Println("emitted completion")
@@ -188,7 +197,7 @@ type Deploy struct {
 
 // Deploy ...
 func (t Deploy) Deploy(c cluster) {
-	nodes := _filter(c.Members(), t.filter)
+	nodes := _filter(t.filter, c.Peers()...)
 	t.worker.handler.NodesFound <- int64(len(nodes))
 
 	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
@@ -197,7 +206,7 @@ func (t Deploy) Deploy(c cluster) {
 	}
 
 	t.worker.handler.StageUpdate <- StageWaitingForReady
-	awaitCompletion(t.worker.handler, t.worker.checker, nodes...)
+	awaitCompletion(t.worker.handler, t.worker.check, nodes...)
 
 	t.worker.handler.StageUpdate <- StageDeploying
 
@@ -209,8 +218,8 @@ func (t Deploy) Deploy(c cluster) {
 	t.worker.handler.StageUpdate <- StageDone
 }
 
-func _filter(set []*memberlist.Node, s Filter) []*memberlist.Node {
-	subset := make([]*memberlist.Node, 0, len(set))
+func _filter(s Filter, set ...agent.Peer) []agent.Peer {
+	subset := make([]agent.Peer, 0, len(set))
 	for _, peer := range set {
 		if s.Match(peer) {
 			subset = append(subset, peer)
@@ -220,20 +229,19 @@ func _filter(set []*memberlist.Node, s Filter) []*memberlist.Node {
 	return subset
 }
 
-func awaitCompletion(e *Events, c checker, nodes ...*memberlist.Node) {
-	remaining := make([]*memberlist.Node, 0, len(nodes))
+func awaitCompletion(e *Events, check operation, nodes ...agent.Peer) {
+	remaining := make([]agent.Peer, 0, len(nodes))
 	for len(nodes) > 0 {
 		remaining = remaining[:0]
 		for _, peer := range nodes {
-			s := c.Check(peer)
+			err := check.Visit(peer)
+			e.Status <- NodeUpdate{Status: err, Peer: peer}
 
-			e.Status <- NodeUpdate{Status: s, Peer: peer}
-
-			if IsReady(s) {
+			if IsReady(err) {
 				continue
 			}
 
-			if IsFailed(s) {
+			if IsFailed(err) {
 				continue
 			}
 

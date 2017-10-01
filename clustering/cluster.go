@@ -29,7 +29,13 @@ type peering interface {
 
 // Cluster represents the cluster.
 type Cluster struct {
-	list *memberlist.Memberlist
+	config *memberlist.Config
+	list   *memberlist.Memberlist
+}
+
+// Config returns the configuration for the cluster.
+func (t Cluster) Config() *memberlist.Config {
+	return t.config
 }
 
 // Members returns the members of the cluster.

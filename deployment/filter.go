@@ -4,7 +4,7 @@ import (
 	"net"
 	"regexp"
 
-	"github.com/hashicorp/memberlist"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 )
 
 // And(Role("app"), Named("host1"))
@@ -12,44 +12,44 @@ import (
 // XOR(Role("app"), Named("host1"))
 // And(And(Role("app"), Named("host1")), NOT(Role("app"), Named("host1"))
 
-// Filter - Matches against Instances, returns true if the *memberlist.Node matches the filter,
+// Filter - Matches against Instances, returns true if the agent.Peer matches the filter,
 // false otherwise
-// matches := Role("app").Match(*memberlist.Node)
-// matches := Named("host1").Match(*memberlist.Node)
+// matches := Role("app").Match(agent.Peer)
+// matches := Named("host1").Match(agent.Peer)
 // type Filter interface {
-// 	// Returns true if the *memberlist.Node matches the criteria, false otherwise
-// 	Match(*memberlist.Node) bool
+// 	// Returns true if the agent.Peer matches the criteria, false otherwise
+// 	Match(agent.Peer) bool
 // }
 
 // Filter determines if a node should be deployed to based on some conditions.
 type Filter interface {
-	Match(*memberlist.Node) bool
+	Match(agent.Peer) bool
 }
 
-// Named matches an *memberlist.Node by name.
+// Named matches an agent.Peer by name.
 func Named(r *regexp.Regexp) Filter {
-	return FilterFunc(func(i *memberlist.Node) bool {
+	return FilterFunc(func(i agent.Peer) bool {
 		return r.MatchString(i.Name)
 	})
 }
 
-// IP matches an *memberlist.Node by ip.
+// IP matches an agent.Peer by ip.
 func IP(ip net.IP) Filter {
-	return FilterFunc(func(i *memberlist.Node) bool {
-		return ip.Equal(i.Addr)
+	return FilterFunc(func(i agent.Peer) bool {
+		return ip.Equal(net.ParseIP(i.Ip))
 	})
 }
 
 // FilterFunc - func that matches against Instances
-type FilterFunc func(*memberlist.Node) bool
+type FilterFunc func(agent.Peer) bool
 
 // Match - See Filter.Match
-func (t FilterFunc) Match(i *memberlist.Node) bool {
+func (t FilterFunc) Match(i agent.Peer) bool {
 	return t(i)
 }
 
 // Implement the FilterFunc interface
-func always(*memberlist.Node) bool {
+func always(agent.Peer) bool {
 	return true
 }
 
@@ -57,7 +57,7 @@ func always(*memberlist.Node) bool {
 var AlwaysMatch = FilterFunc(always)
 
 // Implement the FilterFunc interface
-func never(*memberlist.Node) bool {
+func never(agent.Peer) bool {
 	return false
 }
 
@@ -72,20 +72,20 @@ type FilterSet struct {
 // Composite filters
 
 // And - A composite filter, returns true iff all the component
-// filters match a given *memberlist.Node.
+// filters match a given agent.Peer.
 func And(filters ...Filter) Filter {
 	return and{filters}
 }
 
 // Or - A composite filter, returns false iff all the component filters
-// match a given *memberlist.Node.
+// match a given agent.Peer.
 func Or(filters ...Filter) Filter {
 	return or{filters}
 }
 
 type and FilterSet
 
-func (t and) Match(i *memberlist.Node) bool {
+func (t and) Match(i agent.Peer) bool {
 	for _, filter := range t.Filters {
 		if !filter.Match(i) {
 			return false
@@ -97,7 +97,7 @@ func (t and) Match(i *memberlist.Node) bool {
 
 type or FilterSet
 
-func (t or) Match(i *memberlist.Node) bool {
+func (t or) Match(i agent.Peer) bool {
 	for _, filter := range t.Filters {
 		if filter.Match(i) {
 			return true
@@ -105,15 +105,4 @@ func (t or) Match(i *memberlist.Node) bool {
 	}
 
 	return false
-}
-
-type nodeInstance struct {
-	n *memberlist.Node
-}
-
-func (t nodeInstance) Name() string {
-	return t.n.Name
-}
-func (t nodeInstance) IP() net.IP {
-	return t.n.Addr
 }

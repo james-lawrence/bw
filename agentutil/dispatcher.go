@@ -21,7 +21,7 @@ func NewDispatcher(c cluster, creds grpc.DialOption) Dispatcher {
 // Dispatcher - dispatches messages.
 type Dispatcher struct {
 	cluster
-	c     client
+	c     agent.Client
 	creds grpc.DialOption
 	m     *sync.Mutex
 }
@@ -30,7 +30,7 @@ type Dispatcher struct {
 func (t Dispatcher) Dispatch(m ...agent.Message) error {
 	var (
 		err error
-		c   client
+		c   agent.Client
 	)
 
 	if c, err = t.getClient(); err != nil {
@@ -41,7 +41,7 @@ func (t Dispatcher) Dispatch(m ...agent.Message) error {
 	return logx.MaybeLog(c.Dispatch(m...))
 }
 
-func (t Dispatcher) getClient() (c client, err error) {
+func (t Dispatcher) getClient() (c agent.Client, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if t.c != nil {

@@ -19,7 +19,7 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 	)
 
 	counts := make(map[string]result)
-	getlatest := func(c client) (err error) {
+	getlatest := func(c agent.Client) (err error) {
 		var (
 			a *agent.Archive
 		)
@@ -43,7 +43,7 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 		return nil
 	}
 
-	if err = NewClusterOperation(operationFunc(getlatest))(c, doptions...); err != nil {
+	if err = NewClusterOperation(Operation(getlatest))(c, doptions...); err != nil {
 		return latest, err
 	}
 
@@ -65,7 +65,7 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 }
 
 // LatestDeployment ...
-func LatestDeployment(c client) (a *agent.Archive, err error) {
+func LatestDeployment(c agent.Client) (a *agent.Archive, err error) {
 	var (
 		info agent.Status
 	)

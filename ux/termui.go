@@ -1,20 +1,21 @@
 package ux
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/gizak/termui"
-	"github.com/hashicorp/memberlist"
 )
 
-func NewTermui(wg *sync.WaitGroup, ctx context.Context) *deployment.Events {
+// NewTermui - terminal based ux.
+func NewTermui(ctx context.Context, wg *sync.WaitGroup) *deployment.Events {
 	events := deployment.NewEvents()
 
 	wg.Add(1)
@@ -23,7 +24,7 @@ func NewTermui(wg *sync.WaitGroup, ctx context.Context) *deployment.Events {
 
 		var (
 			storage = state{
-				Peers: map[*memberlist.Node]deployment.Status{},
+				Peers: map[agent.Peer]deployment.Status{},
 			}
 		)
 
@@ -96,7 +97,7 @@ func render(s state) {
 }
 
 func peersToList(s state) []string {
-	peers := make([]*memberlist.Node, 0, len(s.Peers))
+	peers := make([]agent.Peer, 0, len(s.Peers))
 	for peer := range s.Peers {
 		peers = append(peers, peer)
 	}
@@ -126,10 +127,10 @@ type state struct {
 	NodesFound     int64
 	NodesCompleted int64
 	Stage          deployment.Stage
-	Peers          map[*memberlist.Node]deployment.Status
+	Peers          map[agent.Peer]deployment.Status
 }
 
-type sortablePeers []*memberlist.Node
+type sortablePeers []agent.Peer
 
 // Len is part of sort.Interface.
 func (t sortablePeers) Len() int {
@@ -143,5 +144,5 @@ func (t sortablePeers) Swap(i, j int) {
 
 // Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
 func (t sortablePeers) Less(i, j int) bool {
-	return bytes.Compare([]byte(t[i].Addr), []byte(t[j].Addr)) == -1
+	return strings.Compare(t[i].Ip, t[j].Ip) == -1
 }

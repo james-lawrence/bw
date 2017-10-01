@@ -55,7 +55,7 @@ func (t Bootstrapper) background() {
 		err    error
 		peer   agent.Peer
 		latest agent.Archive
-		c      client
+		c      agent.Client
 	)
 
 	for o := range t.In {

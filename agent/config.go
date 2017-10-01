@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	cp "bitbucket.org/jatone/bearded-wookie/cluster"
+	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -37,7 +37,7 @@ type ConfigClient struct {
 }
 
 // Connect to the address in the config client.
-func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
 		details agent.ConnectInfo
 	)
@@ -56,11 +56,11 @@ func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.Trans
 }
 
 // ConnectLeader ...
-func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Client, c clustering.Cluster, err error) {
+func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
 		details agent.ConnectInfo
 		success bool
-		tmp     Client
+		tmp     Conn
 	)
 	conn := newConnect(options...)
 
@@ -70,7 +70,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	defer tmp.Close()
 
 	for _, p := range details.Quorum {
-		if client, err = DialClient(cp.RPCAddress(*p), grpc.WithTransportCredentials(creds)); err != nil {
+		if client, err = Dial(clusterx.RPCAddress(*p), grpc.WithTransportCredentials(creds)); err != nil {
 			log.Println("failed to connect to peer", p.Name, p.Ip, err)
 			continue
 		}
@@ -88,12 +88,12 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	return creds, client, c, nil
 }
 
-func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Client, details agent.ConnectInfo, err error) {
+func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details agent.ConnectInfo, err error) {
 	if creds, err = t.creds(); err != nil {
 		return creds, client, details, err
 	}
 
-	if client, err = DialClient(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
+	if client, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
 		return creds, client, details, err
 	}
 
@@ -107,14 +107,14 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 func (t ConfigClient) cluster(details agent.ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
-		clustering.OptionAliveDelegate(cp.AliveDefault{}),
+		clustering.OptionAliveDelegate(clusterx.AliveDefault{}),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(details.Secret),
 	}, copts...)
 
 	peers := make([]string, 0, len(details.Quorum))
 	for _, p := range details.Quorum {
-		peers = append(peers, cp.SWIMAddress(*p))
+		peers = append(peers, clusterx.SWIMAddress(*p))
 	}
 
 	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {

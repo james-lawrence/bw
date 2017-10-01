@@ -166,7 +166,8 @@ func (t Options) NewCluster() (Cluster, error) {
 	}
 
 	c = Cluster{
-		list: members,
+		config: t.Config,
+		list:   members,
 	}
 
 	return c, nil

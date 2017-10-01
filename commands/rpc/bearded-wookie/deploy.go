@@ -14,21 +14,20 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	agentx "bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
-	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/ux"
 	"github.com/alecthomas/kingpin"
-	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
 
 type deployCmd struct {
-	config        agent.ConfigClient
+	config        agentx.ConfigClient
 	global        *global
 	environment   string
 	deployspace   string
@@ -84,11 +83,11 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		c       clustering.Cluster
 		creds   credentials.TransportCredentials
 		client  agent.Client
-		info    gagent.Archive
+		info    agent.Archive
 	)
 
 	local := cluster.NewLocal(
-		gagent.Peer{
+		agent.Peer{
 			Name: "deploy",
 			Ip:   t.global.systemIP.String(),
 		},
@@ -96,9 +95,9 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	)
 
 	log.Println("deploying", t.deployspace)
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
-		agent.ConnectOptionClustering(
+	coptions := []agentx.ConnectOption{
+		agentx.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
+		agentx.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -106,13 +105,13 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
+	if creds, client, c, err = agentx.ConnectClient(&t.config, coptions...); err != nil {
 		return err
 	}
 
 	log.Println("connected to cluster cluster")
 
-	events := make(chan gagent.Message, 100)
+	events := make(chan agent.Message, 100)
 	go client.Watch(events)
 	go func() {
 		for m := range events {
@@ -147,18 +146,19 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
+	cx := cluster.New(local, c)
 	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location)
 	_connector := newConnector(grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
-		deployment.DeployOptionChecker(_connector),
-		deployment.DeployOptionDeployer(_connector.deploy(info)),
+		deployment.DeployOptionChecker(deployment.OperationFunc(_connector.Check)),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(_connector.deploy(info))),
 	)
 	deployment.NewDeploy(
 		// ux.NewTermui(t.global.cleanup, t.global.ctx),
 		ux.Logging(),
 		options...,
-	).Deploy(c)
+	).Deploy(cx)
 
 	log.Println("deployment complete")
 
@@ -169,7 +169,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 }
 
 func connect(address string, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
-	return agent.DialClient(address, doptions...)
+	return agentx.Dial(address, doptions...)
 }
 
 func newConnector(options ...grpc.DialOption) connector {
@@ -179,47 +179,39 @@ func newConnector(options ...grpc.DialOption) connector {
 }
 
 type connector struct {
-	port    string
 	options []grpc.DialOption
 }
 
-func (t connector) Check2(n *memberlist.Node) (info gagent.Status, err error) {
+func (t connector) Check(n agent.Peer) (err error) {
 	var (
-		c agent.Client
+		c    agent.Client
+		info agent.Status
 	)
-	if c, err = connect(agentutil.NodeRPCAddress(n), t.options...); err != nil {
-		return info, err
+
+	if c, err = connect(agentutil.RPCAddress(n), t.options...); err != nil {
+		return err
 	}
+
 	defer c.Close()
 
-	return c.Info()
-}
-
-func (t connector) Check(peer *memberlist.Node) (err error) {
-	var (
-		info gagent.Status
-	)
-
-	if info, err = t.Check2(peer); err != nil {
+	if info, err = c.Info(); err != nil {
 		return err
 	}
 
 	return deployment.AgentStateToStatus(info.Peer.Status)
 }
 
-func (t connector) deploy(info gagent.Archive) func(*memberlist.Node) error {
-	return func(n *memberlist.Node) (err error) {
+func (t connector) deploy(info agent.Archive) func(n agent.Peer) error {
+	return func(n agent.Peer) (err error) {
 		var (
 			c agent.Client
 		)
 
-		log.Println("connecting to peer")
-		if c, err = connect(agentutil.NodeRPCAddress(n), t.options...); err != nil {
+		if c, err = connect(agentutil.RPCAddress(n), t.options...); err != nil {
 			return err
 		}
 		defer c.Close()
 
-		log.Println("deploying to peer")
 		if err = c.Deploy(info); err != nil {
 			return err
 		}

@@ -115,7 +115,7 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.C
 	)
 
 	lq := gagent.NewQuorum()
-	cx := cluster.New(local, c, secret)
+	cx := cluster.New(local, c)
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
 	quorum := agent.NewQuorum(lq, cx, tlscreds)
 	server := agent.NewServer(

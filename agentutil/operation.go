@@ -1,17 +1,20 @@
 package agentutil
 
 import (
+	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
 type operation interface {
-	Visit(client) error
+	Visit(agent.Client) error
 }
 
-type operationFunc func(c client) error
+// Operation a pure function operation to apply to the entire cluster.
+type Operation func(c agent.Client) error
 
-func (t operationFunc) Visit(c client) error {
+// Visit - implements the operation interface.
+func (t Operation) Visit(c agent.Client) error {
 	return t(c)
 }
 
@@ -19,7 +22,7 @@ func (t operationFunc) Visit(c client) error {
 func NewClusterOperation(o operation) func(cluster, ...grpc.DialOption) error {
 	return func(c cluster, options ...grpc.DialOption) (err error) {
 		var (
-			cx client
+			cx agent.Client
 		)
 
 		for _, peer := range c.Peers() {

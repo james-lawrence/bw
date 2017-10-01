@@ -78,13 +78,13 @@ func (t proxyRaft) Apply(cmd []byte, d time.Duration) raft.ApplyFuture {
 type proxyQuorum struct {
 	dialOptions []grpc.DialOption
 	peader      agent.Peer
-	client      Client
+	client      Conn
 	o           *sync.Once
 }
 
 func (t *proxyQuorum) Dispatch(m agent.Message) (err error) {
 	t.o.Do(func() {
-		if t.client, err = DialClient(clusterx.RPCAddress(t.peader), t.dialOptions...); err != nil {
+		if t.client, err = Dial(clusterx.RPCAddress(t.peader), t.dialOptions...); err != nil {
 			t.o = &sync.Once{}
 		}
 	})
