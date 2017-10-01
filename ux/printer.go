@@ -2,37 +2,56 @@ package ux
 
 import (
 	"log"
+	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment"
+	bw "bitbucket.org/jatone/bearded-wookie"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 // Logging based ux
-func Logging() *deployment.Events {
-	events := deployment.NewEvents()
-	go func() {
-		for {
-			select {
-			case nodesFound := <-events.NodesFound:
-				log.Println("nodes found", nodesFound)
-			case _ = <-events.NodesCompleted:
-			case stage := <-events.StageUpdate:
-				switch stage {
-				case deployment.StageWaitingForReady:
-					log.Println("waiting for all nodes to become ready")
-				case deployment.StageDeploying:
-					log.Println("deploying to nodes")
-				case deployment.StageDone:
-					log.Println("completed")
-					return
-				}
-				if stage == deployment.StageDone {
-					return
-				}
-			case e := <-events.Status:
-				log.Println(e.Peer.Name, e.Status)
-			}
+func Logging(events chan agent.Message) {
+	for m := range events {
+		switch m.Type {
+		case agent.Message_PeersFoundEvent, agent.Message_PeersCompletedEvent:
+			log.Printf(
+				"%s %s:%s - %s: %d\n",
+				time.Unix(m.GetTs(), 0).Format(time.Stamp),
+				m.Peer.Name,
+				m.Peer.Ip,
+				m.Type,
+				m.GetInt(),
+			)
+		case agent.Message_PeerEvent:
+			log.Printf(
+				"%s %s:%s - %s: %s\n",
+				time.Unix(m.GetTs(), 0).Format(time.Stamp),
+				m.Peer.Name,
+				m.Peer.Ip,
+				m.Type,
+				m.Peer.Status,
+			)
+		case agent.Message_DeployEvent:
+			d := m.GetDeploy()
+			log.Printf(
+				"%s %s:%s - Deploy %s %s\n",
+				time.Unix(m.GetTs(), 0).Format(time.Stamp),
+				m.Peer.Name,
+				m.Peer.Ip,
+				bw.RandomID(d.Archive.DeploymentID),
+				d.Stage,
+			)
+		case agent.Message_LogEvent:
+			d := m.GetLog()
+			log.Printf(
+				"%s %s:%s %s - %s\n",
+				time.Unix(m.GetTs(), 0).Format(time.Stamp),
+				m.Peer.Name,
+				m.Peer.Ip,
+				m.Type,
+				d.Log,
+			)
+		default:
+			log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
 		}
-	}()
-
-	return events
+	}
 }

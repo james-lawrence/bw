@@ -9,6 +9,27 @@ import (
 	"google.golang.org/grpc"
 )
 
+// NewBusDispatcher creates a in memory bus for messages.
+func NewBusDispatcher(c chan agent.Message) BusDispatcher {
+	return BusDispatcher{
+		buff: c,
+	}
+}
+
+// BusDispatcher ...
+type BusDispatcher struct {
+	buff chan agent.Message
+}
+
+// Dispatch ...
+func (t BusDispatcher) Dispatch(msgs ...agent.Message) error {
+	for _, msg := range msgs {
+		t.buff <- msg
+	}
+
+	return nil
+}
+
 // NewDispatcher create a message dispatcher from the cluster and credentials.
 func NewDispatcher(c cluster, creds grpc.DialOption) Dispatcher {
 	return Dispatcher{

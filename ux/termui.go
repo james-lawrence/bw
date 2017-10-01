@@ -15,60 +15,55 @@ import (
 )
 
 // NewTermui - terminal based ux.
-func NewTermui(ctx context.Context, wg *sync.WaitGroup) *deployment.Events {
-	events := deployment.NewEvents()
-
+func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message) {
 	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	defer wg.Done()
 
-		var (
-			storage = state{
-				Peers: map[agent.Peer]deployment.Status{},
-			}
-		)
+	var (
+		storage = state{
+			Peers: map[agent.Peer]deployment.Status{},
+		}
+	)
 
-		if err := termui.Init(); err != nil {
-			log.Println("failed to initialized ui", err)
+	if err := termui.Init(); err != nil {
+		log.Println("failed to initialized ui", err)
+		return
+	}
+
+	defer termui.Close()
+	defer termui.Clear()
+
+	for {
+		select {
+		case <-ctx.Done():
 			return
+		case m := <-events:
+			storage = mergeEvent(storage, m)
 		}
-		defer termui.Close()
-		defer termui.Clear()
 
-		for {
-			select {
-			case storage.NodesFound = <-events.NodesFound:
-			case storage.NodesCompleted = <-events.NodesCompleted:
-			case <-ctx.Done():
-				return
-			case storage.Stage = <-events.StageUpdate:
-				if storage.Stage == deployment.StageDone {
-					time.Sleep(2 * time.Second)
-					return
-				}
-			case e := <-events.Status:
-				if deployment.IsReady(e.Status) {
-					delete(storage.Peers, e.Peer)
-				} else if s, ok := e.Status.(deployment.Status); ok {
-					storage.Peers[e.Peer] = s
-				} else {
-					// TODO failure
-				}
-			}
+		render(storage)
+	}
+}
 
-			render(storage)
-		}
-	}()
+func mergeEvent(s state, m agent.Message) state {
+	switch m.Type {
+	case agent.Message_PeerEvent:
 
-	return events
+	case agent.Message_DeployEvent:
+	case agent.Message_PeersCompletedEvent:
+		s.NodesCompleted = m.GetInt()
+	case agent.Message_PeersFoundEvent:
+		s.NodesFound = m.GetInt()
+	default:
+		log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
+	}
+
+	return s
 }
 
 func render(s state) {
 	termWidth := termui.TermWidth()
 	termHeight := termui.TermHeight()
-	title := termui.NewPar(stageToString(s))
-	title.Width = termWidth
-	title.Height = 5
 	completed := termui.NewGauge()
 	completed.Height = 5
 	completed.Width = termWidth
@@ -79,9 +74,6 @@ func render(s state) {
 	peers.Height = termHeight - 10
 
 	g := termui.NewGrid(
-		termui.NewRow(
-			termui.NewCol(6, 0, title),
-		),
 		termui.NewRow(
 			termui.NewCol(6, 0, completed),
 		),
@@ -110,23 +102,9 @@ func peersToList(s state) []string {
 	return result
 }
 
-func stageToString(s state) string {
-	switch s.Stage {
-	case deployment.StageWaitingForReady:
-		return "waiting for all nodes to become ready"
-	case deployment.StageDeploying:
-		return "deploying to nodes"
-	case deployment.StageDone:
-		return "completed"
-	default:
-		return ""
-	}
-}
-
 type state struct {
 	NodesFound     int64
 	NodesCompleted int64
-	Stage          deployment.Stage
 	Peers          map[agent.Peer]deployment.Status
 }
 

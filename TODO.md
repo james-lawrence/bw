@@ -3,14 +3,8 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 #### cleanup
 - [ ] ux improvements
 
-#### implement event stream.
-- [ ] store events in a file on the leader.
-
-#### implement initial deploy on agent startup (when possible).
-when an agent joins a cluster the cluster leader it should contact the leader and check if it has deployed the latest version of the software.
-
-#### retrieve detailed logs of a deploy for a particular agent.
-allow the client to specify the deploy id it wants logs for and the agents to pull from, then print those logs to the client.
+#### implement initial deploy on agent startup.
+when an agent joins a cluster it should automatically be deployed to with the latest version (if there is one).
 
 #### initial setup work
 - [ ] generate skeleton directories. ie) `.bw .bwconfig`
@@ -33,3 +27,9 @@ up the stack and continue running siblings.
 2) look at registry for executable to run.
 3) read the file contents and make them available via stdin to the plugin.
 ```
+
+#### improve event stream to have a historical record.
+- have the quorum nodes store the last n events and be able to scan/seek them.
+
+#### retrieve detailed logs of a deploy for a particular agent.
+allow the client to specify the deploy id it wants logs for and the agents to pull from, then print those logs to the client.

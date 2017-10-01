@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"sync"
@@ -8,44 +9,9 @@ import (
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	"bitbucket.org/jatone/bearded-wookie/x/logx"
 )
-
-// Stage ...
-type Stage int
-
-const (
-	// StageWaitingForReady - deployer is waiting for all nodes to be ready for deployment.
-	StageWaitingForReady Stage = iota
-	// StageDeploying - deployer is deploying.
-	StageDeploying
-	//StageDone - deployer has finished.
-	StageDone
-)
-
-// NodeUpdate ...
-type NodeUpdate struct {
-	Peer   agent.Peer
-	Status error
-}
-
-// NewEvents ...
-func NewEvents() *Events {
-	return &Events{
-		NodesFound:     make(chan int64),
-		NodesCompleted: make(chan int64),
-		Status:         make(chan NodeUpdate, 10),
-		StageUpdate:    make(chan Stage),
-	}
-}
-
-// Events ...
-type Events struct {
-	NodesFound     chan int64
-	NodesCompleted chan int64
-	completed      int64
-	StageUpdate    chan Stage
-	Status         chan NodeUpdate
-}
 
 // PercentagePartitioner size is based on the percentage. has an upper bound of 1.0.
 type PercentagePartitioner float64
@@ -128,15 +94,17 @@ func DeployOptionDeployer(deployer operation) Option {
 }
 
 // NewDeploy by default deploys operate in one-at-a-time mode.
-func NewDeploy(h *Events, options ...Option) Deploy {
+func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:       make(chan func()),
-			wait:    &sync.WaitGroup{},
-			check:   constantChecker{Status: ready{}},
-			deploy:  OperationFunc(loggingDeploy),
-			handler: h,
+			c:          make(chan func()),
+			wait:       new(sync.WaitGroup),
+			check:      constantChecker{Status: ready{}},
+			deploy:     OperationFunc(loggingDeploy),
+			dispatcher: di,
+			local:      p,
+			completed:  new(int64),
 		},
 		partitioner: ConstantPartitioner(1),
 	}
@@ -154,12 +122,14 @@ func loggingDeploy(peer agent.Peer) error {
 }
 
 type worker struct {
-	c       chan func()
-	wait    *sync.WaitGroup
-	check   operation
-	deploy  operation
-	filter  Filter
-	handler *Events
+	c          chan func()
+	wait       *sync.WaitGroup
+	local      agent.Peer
+	dispatcher dispatcher
+	check      operation
+	deploy     operation
+	filter     Filter
+	completed  *int64
 }
 
 func (t worker) work() {
@@ -181,10 +151,8 @@ func (t worker) DeployTo(peer agent.Peer) {
 			return
 		}
 
-		awaitCompletion(t.handler, t.check, peer)
-		log.Println("emitting completion")
-		t.handler.NodesCompleted <- atomic.AddInt64(&t.handler.completed, 1)
-		log.Println("emitted completion")
+		awaitCompletion(t.dispatcher, t.check, peer)
+		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 	}
 }
 
@@ -198,24 +166,31 @@ type Deploy struct {
 // Deploy ...
 func (t Deploy) Deploy(c cluster) {
 	nodes := _filter(t.filter, c.Peers()...)
-	t.worker.handler.NodesFound <- int64(len(nodes))
+	t.Dispatch(agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
 		t.worker.wait.Add(1)
 		go t.worker.work()
 	}
 
-	t.worker.handler.StageUpdate <- StageWaitingForReady
-	awaitCompletion(t.worker.handler, t.worker.check, nodes...)
+	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
 
-	t.worker.handler.StageUpdate <- StageDeploying
+	awaitCompletion(t, t.worker.check, nodes...)
+
+	t.Dispatch(agentutil.LogEvent(t.worker.local, "deploying, nodes are ready"))
 
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)
 	}
 
 	t.worker.Complete()
-	t.worker.handler.StageUpdate <- StageDone
+
+	t.Dispatch(agentutil.LogEvent(t.worker.local, "deploy completed"))
+}
+
+// Dispatch - implements dispatcher interface.
+func (t Deploy) Dispatch(m ...agent.Message) error {
+	return logx.MaybeLog(t.worker.dispatcher.Dispatch(m...))
 }
 
 func _filter(s Filter, set ...agent.Peer) []agent.Peer {
@@ -229,13 +204,14 @@ func _filter(s Filter, set ...agent.Peer) []agent.Peer {
 	return subset
 }
 
-func awaitCompletion(e *Events, check operation, nodes ...agent.Peer) {
-	remaining := make([]agent.Peer, 0, len(nodes))
-	for len(nodes) > 0 {
+func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
+	remaining := make([]agent.Peer, 0, len(peers))
+	for len(peers) > 0 {
 		remaining = remaining[:0]
-		for _, peer := range nodes {
+		for _, peer := range peers {
 			err := check.Visit(peer)
-			e.Status <- NodeUpdate{Status: err, Peer: peer}
+			d.Dispatch(agentutil.LogEvent(peer, fmt.Sprintf("state update - %s", err)))
+			// e.Status <- NodeUpdate{Status: err, Peer: peer}
 
 			if IsReady(err) {
 				continue
@@ -249,7 +225,7 @@ func awaitCompletion(e *Events, check operation, nodes ...agent.Peer) {
 			time.Sleep(time.Second)
 		}
 
-		nodes = remaining
+		peers = remaining
 	}
 }
 

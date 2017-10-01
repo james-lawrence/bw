@@ -8,18 +8,19 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/ux"
+	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 )
@@ -87,7 +88,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	local := cluster.NewLocal(
 		agent.Peer{
 			Name: "deploy",
-			Ip:   t.global.systemIP.String(),
+			Ip:   systemx.HostnameOrLocalhost(),
 		},
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
 	)
@@ -112,15 +113,8 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 
 	events := make(chan agent.Message, 100)
 	go client.Watch(events)
-	go func() {
-		for m := range events {
-			switch m.Type {
-			default:
-				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
-			}
-		}
-	}()
-	// # TODO connect to event stream.
+	go ux.Logging(events)
+	// go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("uploading archive")
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
@@ -154,8 +148,8 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		deployment.DeployOptionDeployer(deployment.OperationFunc(_connector.deploy(info))),
 	)
 	deployment.NewDeploy(
-		// ux.NewTermui(t.global.cleanup, t.global.ctx),
-		ux.Logging(),
+		local.Peer,
+		agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(creds)),
 		options...,
 	).Deploy(cx)
 

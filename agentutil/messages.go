@@ -6,6 +6,16 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
+// PeersFoundEvent ...
+func PeersFoundEvent(p agent.Peer, n int64) agent.Message {
+	return integerEvent(p, agent.Message_PeersFoundEvent, n)
+}
+
+// PeersCompletedEvent ...
+func PeersCompletedEvent(p agent.Peer, n int64) agent.Message {
+	return integerEvent(p, agent.Message_PeersCompletedEvent, n)
+}
+
 // LogEvent create a log event message.
 func LogEvent(p agent.Peer, s string) agent.Message {
 	return agent.Message{
@@ -51,5 +61,16 @@ func deployEvent(t agent.Deploy_Stage, p agent.Peer, a agent.Archive) agent.Mess
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
 		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Archive: &a}},
+	}
+}
+
+func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
+	return agent.Message{
+		Type: t,
+		Peer: &p,
+		Ts:   time.Now().Unix(),
+		Event: &agent.Message_Int{
+			Int: n,
+		},
 	}
 }

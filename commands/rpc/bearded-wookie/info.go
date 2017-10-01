@@ -10,6 +10,8 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"bitbucket.org/jatone/bearded-wookie/ux"
+	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -51,7 +53,7 @@ func (t *agentInfo) _info() (err error) {
 	local := cluster.NewLocal(
 		agent.Peer{
 			Name: t.node,
-			Ip:   t.global.systemIP.String(),
+			Ip:   systemx.HostnameOrLocalhost(),
 		},
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
 	)
@@ -91,34 +93,7 @@ func (t *agentInfo) _info() (err error) {
 	}))(cx, grpc.WithTransportCredentials(creds))
 
 	events := make(chan agent.Message, 100)
-	go func() {
-		for m := range events {
-			switch m.Type {
-			case agent.Message_PeerEvent:
-				p := m.GetPeer()
-				log.Printf(
-					"%s (%s:%s) - %s: %s\n",
-					time.Unix(m.GetTs(), 0).Format(time.Stamp),
-					p.Name,
-					p.Ip,
-					m.Type,
-					p.Status,
-				)
-			case agent.Message_DeployEvent:
-				d := m.GetDeploy()
-				log.Printf(
-					"%s %s:%s - Deploy %s %s\n",
-					time.Unix(m.GetTs(), 0).Format(time.Stamp),
-					m.Peer.Name,
-					m.Peer.Ip,
-					bw.RandomID(d.Archive.DeploymentID),
-					d.Stage,
-				)
-			default:
-				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
-			}
-		}
-	}()
+	go ux.Logging(events)
 
 	log.Println("awaiting events")
 	return client.Watch(events)

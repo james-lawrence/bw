@@ -3,7 +3,7 @@ package agent;
 
 // Deployment Event.
 message Message {
-  enum Type { PeerEvent = 0; LogEvent = 1; DeployEvent = 2;}
+  enum Type { PeerEvent = 0; LogEvent = 1; DeployEvent = 2; PeersFoundEvent = 3; PeersCompletedEvent = 4;}
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -13,8 +13,9 @@ message Message {
   oneof Event {
     // One of the following will be filled in.
     bool none = 4;
-    Log log = 5;
-    Deploy deploy = 6;
+    int64 int = 5;
+    Log log = 6;
+    Deploy deploy = 7;
   }
 }
 
