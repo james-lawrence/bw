@@ -83,23 +83,23 @@ func (t Directive) deploy() {
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
 	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {
-		goto done
+		t.dctx.Done(err)
+		return
 	}
 
 	t.dctx.Log.Println("completed download", dst)
 
 	if _directives, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
-		err = errors.Wrapf(err, "failed to load directives")
-		goto done
+		t.dctx.Done(errors.Wrapf(err, "failed to load directives"))
+		return
 	}
 
 	t.dctx.Log.Println("loaded", len(_directives), "directive(s)")
+
 	for _, l := range _directives {
 		if err = l.Run(); err != nil {
-			goto done
+			t.dctx.Done(err)
+			return
 		}
 	}
-
-done:
-	t.dctx.Done(err)
 }
