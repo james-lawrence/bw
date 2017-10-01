@@ -4,6 +4,8 @@ import (
 	"log"
 	"sync"
 	"sync/atomic"
+
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 )
 
 // NewEventBus event bus.
@@ -43,21 +45,21 @@ func (t EventBus) background() {
 		t.m.RLock()
 		obs := t.observers
 		t.m.RUnlock()
-		log.Printf("receiving messages(%d), observers(%d)\n", len(m), len(obs))
+		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(obs))
 		for id, o := range obs {
 			if err := o.Receive(m...); err != nil {
 				log.Println("failed to receive messages", id, err)
 				continue
 			}
 
-			log.Println("delivered messages", id)
+			debugx.Println("delivered messages", id)
 		}
 	}
 }
 
 // Dispatch ...
 func (t EventBus) Dispatch(messages ...Message) {
-	log.Println("dispatching messages", len(messages))
+	debugx.Println("dispatching messages", len(messages))
 	t.buffer <- messages
 }
 
@@ -69,7 +71,7 @@ func (t EventBus) Register(o Observer) EventBusObserver {
 		id: atomic.AddInt64(t.serial, 1),
 	}
 
-	log.Println("registering", obs.id)
+	debugx.Println("registering", obs.id)
 	t.observers[obs.id] = o
 
 	return obs
@@ -79,6 +81,6 @@ func (t EventBus) Register(o Observer) EventBusObserver {
 func (t EventBus) Remove(e EventBusObserver) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	log.Println("removing observer", e.id)
+	debugx.Println("removing observer", e.id)
 	delete(t.observers, e.id)
 }

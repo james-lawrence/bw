@@ -213,7 +213,7 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
 			d.Dispatch(agentutil.LogEvent(peer, fmt.Sprintf("state update - %s", err)))
 			// e.Status <- NodeUpdate{Status: err, Peer: peer}
 
-			if IsReady(err) {
+			if IsReady(err) || IsUnknown(err) {
 				continue
 			}
 

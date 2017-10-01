@@ -3,6 +3,8 @@ package agentutil
 import (
 	"log"
 
+	"github.com/pkg/errors"
+
 	"bitbucket.org/jatone/bearded-wookie/agent"
 
 	"google.golang.org/grpc"
@@ -26,11 +28,11 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 		)
 
 		if a, err = LatestDeployment(c); err != nil {
-			switch err {
+			switch cause := errors.Cause(err); cause {
 			case ErrNoDeployments:
 				return nil
 			default:
-				return err
+				return errors.Wrap(cause, "failed while retrieving latest deployment")
 			}
 		}
 
@@ -72,11 +74,11 @@ func LatestDeployment(c agent.Client) (a *agent.Archive, err error) {
 	)
 
 	if info, err = c.Info(); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "latest deployment failed")
 	}
 
 	if len(info.Deployments) == 0 {
-		return nil, ErrNoDeployments
+		return nil, errors.WithStack(ErrNoDeployments)
 	}
 
 	return info.Deployments[0], nil

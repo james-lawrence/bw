@@ -23,8 +23,10 @@ func init() {
 type StatusEnum int
 
 const (
+	// StatusUnknown the system doesn't current know its state.
+	StatusUnknown StatusEnum = iota
 	// StatusReady the system is willing to accept a deployment.
-	StatusReady StatusEnum = iota
+	StatusReady
 	// StatusDeploying the system is currently deploying.
 	StatusDeploying
 	// StatusCanary the system is currently locked this will
@@ -37,6 +39,8 @@ const (
 // NewStatus ...
 func NewStatus(s StatusEnum) Status {
 	switch s {
+	case StatusUnknown:
+		return unknown{}
 	case StatusReady:
 		return ready{}
 	case StatusDeploying:
@@ -52,6 +56,16 @@ func NewStatus(s StatusEnum) Status {
 type Status interface {
 	error
 	Status() StatusEnum
+}
+
+type unknown struct{}
+
+func (t unknown) Error() string {
+	return "unknown"
+}
+
+func (t unknown) Status() StatusEnum {
+	return StatusUnknown
 }
 
 type ready struct{}
@@ -103,14 +117,18 @@ func AgentStateFromStatus(status Status) agent.Peer_State {
 		return agent.Peer_Canary
 	case StatusDeploying:
 		return agent.Peer_Deploying
-	default:
+	case StatusFailed:
 		return agent.Peer_Failed
+	default:
+		return agent.Peer_Unknown
 	}
 }
 
 // AgentStateToStatus ...
 func AgentStateToStatus(info agent.Peer_State) Status {
 	switch info {
+	case agent.Peer_Unknown:
+		return unknown{}
 	case agent.Peer_Ready:
 		return ready{}
 	case agent.Peer_Canary:
@@ -125,6 +143,11 @@ func AgentStateToStatus(info agent.Peer_State) Status {
 // IsReady returns true if the node is in a ready state.
 func IsReady(err error) bool {
 	return isStatus(err, StatusReady)
+}
+
+// IsUnknown returns true if the node is in a ready state.
+func IsUnknown(err error) bool {
+	return isStatus(err, StatusUnknown)
 }
 
 // IsCanary returns true if the node is in a canary state.

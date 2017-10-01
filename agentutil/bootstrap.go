@@ -72,7 +72,7 @@ func (t Bootstrapper) background() {
 		log.Println("--------------- bootstrap observed -------------", o)
 
 		if latest, err = DetermineLatestArchive(t.c, t.creds); err != nil {
-			log.Println("failed to determine latest archive prior to bootstrapping", err)
+			log.Printf("failed to determine latest archive prior to bootstrapping: %+v\n", err)
 			continue
 		}
 

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"log"
 	"net"
 
 	"google.golang.org/grpc/credentials"
@@ -12,12 +13,17 @@ import (
 type deployer interface {
 	// Deploy trigger a deploy
 	Deploy(*Archive) error
+	Deployments() (Peer_State, []*Archive, error)
 }
 
 type noopDeployer struct{}
 
 func (t noopDeployer) Deploy(*Archive) error {
 	return nil
+}
+
+func (t noopDeployer) Deployments() (Peer_State, []*Archive, error) {
+	return Peer_Unknown, []*Archive(nil), nil
 }
 
 // ServerOption ...
@@ -79,9 +85,20 @@ func (t Server) Deploy(ctx context.Context, archive *Archive) (*ArchiveResult, e
 
 // Info ...
 func (t Server) Info(ctx context.Context, _ *StatusRequest) (*Status, error) {
+	var (
+		err error
+		d   []*Archive
+	)
 	tmp := t.cluster.Local()
+
+	if _, d, err = t.Deployer.Deployments(); err != nil {
+		d = []*Archive{}
+		log.Println("failed to read deployments, defaulting to no deployments", err)
+	}
+
 	return &Status{
-		Peer: &tmp,
+		Peer:        &tmp,
+		Deployments: d,
 	}, nil
 }
 

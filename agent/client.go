@@ -131,7 +131,7 @@ func (t Conn) Info() (_zeroInfo Status, err error) {
 	)
 	rpc := NewAgentClient(t.conn)
 	if info, err = rpc.Info(context.Background(), &_zero); err != nil {
-		return _zeroInfo, errors.Wrap(err, "failed to initiated deploy")
+		return _zeroInfo, errors.Wrap(err, "failed to retrieve info")
 	}
 
 	return *info, nil
