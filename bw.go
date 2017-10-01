@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate protoc -I=.protocol --go_out=plugins=grpc:deployment/agent .protocol/agent.proto
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=cluster .protocol/cluster.proto
 
 // RandomID a random identifier.

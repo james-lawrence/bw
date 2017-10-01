@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"

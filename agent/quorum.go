@@ -13,8 +13,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	bw "bitbucket.org/jatone/bearded-wookie"
-	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"github.com/hashicorp/raft"
@@ -39,11 +37,11 @@ func (e errorFuture) Index() uint64 {
 }
 
 type pbObserver struct {
-	dst  agent.Quorum_WatchServer
+	dst  Quorum_WatchServer
 	done context.CancelFunc
 }
 
-func (t pbObserver) Receive(messages ...agent.Message) (err error) {
+func (t pbObserver) Receive(messages ...Message) (err error) {
 	for _, m := range messages {
 		if err = t.dst.Send(&m); err != nil {
 			t.done()
@@ -77,14 +75,14 @@ func (t proxyRaft) Apply(cmd []byte, d time.Duration) raft.ApplyFuture {
 
 type proxyQuorum struct {
 	dialOptions []grpc.DialOption
-	peader      agent.Peer
+	peader      Peer
 	client      Conn
 	o           *sync.Once
 }
 
-func (t *proxyQuorum) Dispatch(m agent.Message) (err error) {
+func (t *proxyQuorum) Dispatch(m Message) (err error) {
 	t.o.Do(func() {
-		if t.client, err = Dial(clusterx.RPCAddress(t.peader), t.dialOptions...); err != nil {
+		if t.client, err = Dial(RPCAddress(t.peader), t.dialOptions...); err != nil {
 			t.o = &sync.Once{}
 		}
 	})
@@ -97,7 +95,7 @@ func (t *proxyQuorum) Dispatch(m agent.Message) (err error) {
 }
 
 // NewQuorum ...
-func NewQuorum(q *agent.Quorum, c cluster, creds credentials.TransportCredentials) *Quorum {
+func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials) *Quorum {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Quorum{
 		Events: make(chan raft.Observation, 200),
@@ -129,7 +127,7 @@ type Quorum struct {
 	c              cluster
 	creds          credentials.TransportCredentials
 	proxy          raftproxy
-	lq             *agent.Quorum
+	lq             *QuorumFSM
 	pq             proxyQuorum
 	ctx            context.Context
 	cancel         context.CancelFunc
@@ -163,13 +161,13 @@ func (t *Quorum) observe() {
 }
 
 // Upload ...
-func (t Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
+func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 	var (
 		deploymentID []byte
 		checksum     hash.Hash
 		location     string
 		dst          Uploader
-		chunk        *agent.ArchiveChunk
+		chunk        *ArchiveChunk
 	)
 	t.m.Lock()
 	p := t.proxy
@@ -204,7 +202,7 @@ func (t Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 			}
 
 			tmp := t.c.Local()
-			return stream.SendAndClose(&agent.Archive{
+			return stream.SendAndClose(&Archive{
 				Peer:         &tmp,
 				Location:     location,
 				Checksum:     checksum.Sum(nil),
@@ -226,7 +224,7 @@ func (t Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 }
 
 // Watch watch for events.
-func (t *Quorum) Watch(_ *agent.WatchRequest, out agent.Quorum_WatchServer) (err error) {
+func (t *Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
 	t.m.Lock()
 	p := t.proxy
 	t.m.Unlock()
@@ -250,10 +248,10 @@ func (t *Quorum) Watch(_ *agent.WatchRequest, out agent.Quorum_WatchServer) (err
 }
 
 // Dispatch record deployment events.
-func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
+func (t *Quorum) Dispatch(in Quorum_DispatchServer) error {
 	var (
 		err error
-		m   *agent.Message
+		m   *Message
 	)
 
 	t.m.Lock()
@@ -268,8 +266,8 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 
 	dispatch := t.pq.Dispatch
 	if p.State() == raft.Leader {
-		dispatch = func(m agent.Message) error {
-			return maybeApply(p, 5*time.Second)(agent.MessageToCommand(m)).Error()
+		dispatch = func(m Message) error {
+			return maybeApply(p, 5*time.Second)(MessageToCommand(m)).Error()
 		}
 	}
 
@@ -282,13 +280,13 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 	return nil
 }
 
-func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
+func (t Quorum) findLeader(leader string) (_zero Peer) {
 	var (
-		peader agent.Peer
+		peader Peer
 	)
 
 	for _, peader = range t.c.Quorum() {
-		if clusterx.RaftAddress(peader) == leader {
+		if RaftAddress(peader) == leader {
 			return peader
 		}
 	}

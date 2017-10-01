@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 func init() {

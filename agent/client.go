@@ -9,8 +9,6 @@ import (
 
 	"google.golang.org/grpc"
 
-	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"github.com/pkg/errors"
 )
@@ -18,7 +16,7 @@ import (
 // DialQuorum ...
 func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
 	for _, q := range c.Quorum() {
-		if conn, err = Dial(clusterx.RPCAddress(q), options...); err != nil {
+		if conn, err = Dial(RPCAddress(q), options...); err != nil {
 			continue
 		}
 
@@ -52,22 +50,22 @@ func (t Conn) Close() error {
 }
 
 // Upload ...
-func (t Conn) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err error) {
+func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 	var (
-		stream agent.Quorum_UploadClient
-		_info  *agent.Archive
+		stream Quorum_UploadClient
+		_info  *Archive
 	)
 
-	rpc := agent.NewQuorumClient(t.conn)
+	rpc := NewQuorumClient(t.conn)
 	if stream, err = rpc.Upload(context.Background()); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
 
-	initialChunk := &agent.ArchiveChunk{
+	initialChunk := &ArchiveChunk{
 		Checksum: []byte{},
 		Data:     []byte{},
-		InitialChunkMetadata: &agent.ArchiveChunk_Metadata{
-			Metadata: &agent.UploadMetadata{Bytes: srcbytes},
+		InitialChunkMetadata: &ArchiveChunk_Metadata{
+			Metadata: &UploadMetadata{Bytes: srcbytes},
 		},
 	}
 
@@ -95,12 +93,12 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info agent.Archive, err er
 }
 
 // Deploy ...
-func (t Conn) Deploy(info agent.Archive) error {
+func (t Conn) Deploy(info Archive) error {
 	var (
 		err error
 	)
 
-	rpc := agent.NewAgentClient(t.conn)
+	rpc := NewAgentClient(t.conn)
 	if _, err = rpc.Deploy(context.Background(), &info); err != nil {
 		return errors.Wrap(err, "failed to initiated deploy")
 	}
@@ -109,29 +107,29 @@ func (t Conn) Deploy(info agent.Archive) error {
 }
 
 // Connect ...
-func (t Conn) Connect() (d agent.ConnectInfo, err error) {
+func (t Conn) Connect() (d ConnectInfo, err error) {
 	var (
-		response *agent.ConnectInfo
+		response *ConnectInfo
 	)
 
-	rpc := agent.NewAgentClient(t.conn)
-	if response, err = rpc.Connect(context.Background(), &agent.ConnectRequest{}); err != nil {
+	rpc := NewAgentClient(t.conn)
+	if response, err = rpc.Connect(context.Background(), &ConnectRequest{}); err != nil {
 		return d, errors.WithStack(err)
 	}
 
-	return agent.ConnectInfo{
+	return ConnectInfo{
 		Secret: response.Secret,
 		Quorum: response.Quorum,
 	}, nil
 }
 
 // Info ...
-func (t Conn) Info() (_zeroInfo agent.Status, err error) {
+func (t Conn) Info() (_zeroInfo Status, err error) {
 	var (
-		_zero agent.StatusRequest
-		info  *agent.Status
+		_zero StatusRequest
+		info  *Status
 	)
-	rpc := agent.NewAgentClient(t.conn)
+	rpc := NewAgentClient(t.conn)
 	if info, err = rpc.Info(context.Background(), &_zero); err != nil {
 		return _zeroInfo, errors.Wrap(err, "failed to initiated deploy")
 	}
@@ -140,16 +138,16 @@ func (t Conn) Info() (_zeroInfo agent.Status, err error) {
 }
 
 // Watch watch for messages sent to the leader. blocks.
-func (t Conn) Watch(out chan<- agent.Message) (err error) {
+func (t Conn) Watch(out chan<- Message) (err error) {
 	var (
-		src agent.Quorum_WatchClient
-		msg *agent.Message
+		src Quorum_WatchClient
+		msg *Message
 	)
 	debugx.Println("watch started")
 	defer debugx.Println("watch finished")
 
-	c := agent.NewQuorumClient(t.conn)
-	if src, err = c.Watch(context.Background(), &agent.WatchRequest{}); err != nil {
+	c := NewQuorumClient(t.conn)
+	if src, err = c.Watch(context.Background(), &WatchRequest{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -161,12 +159,12 @@ func (t Conn) Watch(out chan<- agent.Message) (err error) {
 }
 
 // Dispatch messages to the leader.
-func (t Conn) Dispatch(messages ...agent.Message) (err error) {
+func (t Conn) Dispatch(messages ...Message) (err error) {
 	var (
-		dst agent.Quorum_DispatchClient
+		dst Quorum_DispatchClient
 	)
 
-	c := agent.NewQuorumClient(t.conn)
+	c := NewQuorumClient(t.conn)
 
 	if dst, err = c.Dispatch(context.Background()); err != nil {
 		return errors.WithStack(err)
@@ -181,13 +179,13 @@ func (t Conn) Dispatch(messages ...agent.Message) (err error) {
 	return nil
 }
 
-func (t Conn) streamArchive(src io.Reader, stream agent.Quorum_UploadClient) (err error) {
+func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
-		return errors.Wrap(stream.Send(&agent.ArchiveChunk{
+		return errors.Wrap(stream.Send(&ArchiveChunk{
 			Checksum:             checksum,
 			Data:                 chunk,
-			InitialChunkMetadata: &agent.ArchiveChunk_None{},
+			InitialChunkMetadata: &ArchiveChunk_None{},
 		}), "failed to write chunk")
 	}
 

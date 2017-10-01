@@ -3,7 +3,7 @@ package agentutil
 import (
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 // LogEvent create a log event message.

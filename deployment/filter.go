@@ -4,7 +4,7 @@ import (
 	"net"
 	"regexp"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 // And(Role("app"), Named("host1"))

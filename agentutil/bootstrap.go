@@ -3,8 +3,8 @@ package agentutil
 import (
 	"log"
 
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )

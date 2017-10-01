@@ -7,7 +7,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 // Stage ...

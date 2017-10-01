@@ -6,40 +6,30 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
-// idealized interfaces, for reference while building so end goal isn't lost.
-// type leader interface {
-// 	Record(...agent.Message) error
-// 	Watch(chan<- agent.Message) error
-// }
-//
-// type agent interface {
-// 	// Leader - used to retrieve the status of the leader.
-// 	Leader() (agent.Status, error)
-// 	// Latest - returns the latest deployment.
-// 	Latest() (agent.Archive, error)
-// 	// Info about the peer.
-// 	// idle, canary, deploying, locked, and the list of recent deployments.
-// 	Info() (agent.Status, error)
-// 	// Deploy trigger a deploy
-// 	Deploy(a agent.Archive) error
-// 	// Upload
-// 	Upload() (agent.Archive, error)
-// }
+// Client - client facade interface.
+type Client interface {
+	Upload(srcbytes uint64, src io.Reader) (Archive, error)
+	Deploy(info Archive) error
+	Connect() (ConnectInfo, error)
+	Info() (Status, error)
+	Watch(out chan<- Message) error
+	Dispatch(messages ...Message) error
+	Close() error
+}
 
 // RegisterServer ...
-func RegisterServer(s *grpc.Server, srv agent.AgentServer) {
-	agent.RegisterAgentServer(s, srv)
+func RegisterServer(s *grpc.Server, srv AgentServer) {
+	RegisterAgentServer(s, srv)
 }
 
 // RegisterQuorum ...
-func RegisterQuorum(s *grpc.Server, srv agent.QuorumServer) {
-	agent.RegisterQuorumServer(s, srv)
+func RegisterQuorum(s *grpc.Server, srv QuorumServer) {
+	RegisterQuorumServer(s, srv)
 }
 
 // ConnectOption - options for connecting to the cluster.
@@ -116,10 +106,10 @@ func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds creden
 }
 
 type cluster interface {
-	Local() agent.Peer
-	Peers() []agent.Peer
-	Quorum() []agent.Peer
-	Connect() agent.ConnectInfo
+	Local() Peer
+	Peers() []Peer
+	Quorum() []Peer
+	Connect() ConnectInfo
 }
 
 // downloader ...
@@ -135,5 +125,5 @@ type Uploader interface {
 
 // Eventer ...
 type Eventer interface {
-	Send(...agent.Message)
+	Send(...Message)
 }

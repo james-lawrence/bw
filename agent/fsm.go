@@ -12,11 +12,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type cluster interface{}
-
-// NewQuorum ...
-func NewQuorum() *Quorum {
-	return &Quorum{
+// NewQuorumFSM ...
+func NewQuorumFSM() *QuorumFSM {
+	return &QuorumFSM{
 		m:        &sync.RWMutex{},
 		EventBus: NewEventBus(),
 	}
@@ -32,8 +30,8 @@ func CommandToMessage(cmd []byte) (m Message, err error) {
 	return m, errors.WithStack(proto.Unmarshal(cmd, &m))
 }
 
-// Quorum ...
-type Quorum struct {
+// QuorumFSM ...
+type QuorumFSM struct {
 	EventBus
 	m       *sync.RWMutex
 	details Details
@@ -43,7 +41,7 @@ type Quorum struct {
 // It returns a value which will be made available in the
 // ApplyFuture returned by Raft.Apply method if that
 // method was called on the same Raft node as the FSM.
-func (t *Quorum) Apply(l *raft.Log) interface{} {
+func (t *QuorumFSM) Apply(l *raft.Log) interface{} {
 	switch l.Type {
 	case raft.LogAddPeer:
 		log.Println("insert peer invoked", l.Index, l.Term)
@@ -61,7 +59,7 @@ func (t *Quorum) Apply(l *raft.Log) interface{} {
 	return nil
 }
 
-func (t *Quorum) decode(buf []byte) {
+func (t *QuorumFSM) decode(buf []byte) {
 	var (
 		err error
 		m   Message
@@ -81,31 +79,31 @@ func (t *Quorum) decode(buf []byte) {
 // threads, but Apply will be called concurrently with Persist. This means
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
-func (t *Quorum) Snapshot() (raft.FSMSnapshot, error) {
-	return quorumSnapshot{details: t.details}, nil
+func (t *QuorumFSM) Snapshot() (raft.FSMSnapshot, error) {
+	return quorumFSMSnapshot{details: t.details}, nil
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
-func (t *Quorum) Restore(r io.ReadCloser) error {
+func (t *QuorumFSM) Restore(r io.ReadCloser) error {
 	t.details = Details{}
 	return nil
 }
 
 // Details includes information about the details of the quorum.
 // who its members are, the latest deploys.
-func (t Quorum) Details() (d Details, err error) {
+func (t QuorumFSM) Details() (d Details, err error) {
 	return t.details, nil
 }
 
-type quorumSnapshot struct {
+type quorumFSMSnapshot struct {
 	details Details
 }
 
 // Persist should dump all necessary state to the WriteCloser 'sink',
 // and call sink.Close() when finished or call sink.Cancel() on error.
-func (t quorumSnapshot) Persist(sink raft.SnapshotSink) (err error) {
+func (t quorumFSMSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 	var (
 		state []byte
 	)
@@ -124,6 +122,6 @@ func (t quorumSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 }
 
 // Release is invoked when we are finished with the snapshot.
-func (t quorumSnapshot) Release() {
+func (t quorumFSMSnapshot) Release() {
 
 }

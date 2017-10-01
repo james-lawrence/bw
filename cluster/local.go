@@ -3,9 +3,9 @@ package cluster
 import (
 	"log"
 
-	"github.com/golang/protobuf/proto"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"github.com/golang/protobuf/proto"
 )
 
 type localOption func(*Local)

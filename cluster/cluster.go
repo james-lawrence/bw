@@ -1,14 +1,11 @@
 package cluster
 
 import (
-	"fmt"
 	"log"
-	"net"
 
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -107,35 +104,4 @@ func NodeToPeer(n *memberlist.Node) (_zerop agent.Peer, err error) {
 		SWIMPort: m.SWIMPort,
 		RaftPort: m.RaftPort,
 	}, nil
-}
-
-// RPCAddress for peer.
-func RPCAddress(p agent.Peer) string {
-	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
-}
-
-// SWIMAddress for peer.
-func SWIMAddress(p agent.Peer) string {
-	return net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort))
-}
-
-// RaftAddress for peer.
-func RaftAddress(p agent.Peer) string {
-	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort))
-}
-
-// NodeRPCAddress returns the node's rpc address.
-// if an error occurs it returns a blank string.
-func NodeRPCAddress(n *memberlist.Node) string {
-	var (
-		err error
-		p   agent.Peer
-	)
-
-	if p, err = NodeToPeer(n); err != nil {
-		debugx.Println("failed to convert node to peer", err)
-		return ""
-	}
-
-	return RPCAddress(p)
 }

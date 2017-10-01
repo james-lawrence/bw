@@ -14,20 +14,18 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	agentx "bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/ux"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 )
 
 type deployCmd struct {
-	config        agentx.ConfigClient
+	config        agent.ConfigClient
 	global        *global
 	environment   string
 	deployspace   string
@@ -95,17 +93,18 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	)
 
 	log.Println("deploying", t.deployspace)
-	coptions := []agentx.ConnectOption{
-		agentx.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
-		agentx.ConnectOptionClustering(
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
+		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(eventHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		),
 	}
 
-	if creds, client, c, err = agentx.ConnectClient(&t.config, coptions...); err != nil {
+	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
 		return err
 	}
 
@@ -169,7 +168,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 }
 
 func connect(address string, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
-	return agentx.Dial(address, doptions...)
+	return agent.Dial(address, doptions...)
 }
 
 func newConnector(options ...grpc.DialOption) connector {
@@ -188,7 +187,7 @@ func (t connector) Check(n agent.Peer) (err error) {
 		info agent.Status
 	)
 
-	if c, err = connect(agentutil.RPCAddress(n), t.options...); err != nil {
+	if c, err = connect(agent.RPCAddress(n), t.options...); err != nil {
 		return err
 	}
 
@@ -207,7 +206,7 @@ func (t connector) deploy(info agent.Archive) func(n agent.Peer) error {
 			c agent.Client
 		)
 
-		if c, err = connect(agentutil.RPCAddress(n), t.options...); err != nil {
+		if c, err = connect(agent.RPCAddress(n), t.options...); err != nil {
 			return err
 		}
 		defer c.Close()

@@ -4,7 +4,7 @@ import (
 	"log"
 	"sync"
 
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/logx"
 	"google.golang.org/grpc"
 )

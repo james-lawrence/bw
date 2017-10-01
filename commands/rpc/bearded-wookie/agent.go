@@ -14,7 +14,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
-	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -49,7 +48,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.Config) agent.ServerOption) error {
+func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, agent.Peer, agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
@@ -81,7 +80,7 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.C
 		return err
 	}
 
-	local := cluster.NewLocal(gagent.Peer{
+	local := cluster.NewLocal(agent.Peer{
 		Ip:       t.global.systemIP.String(),
 		Name:     stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String()),
 		RPCPort:  uint32(t.config.RPCBind.Port),
@@ -97,6 +96,7 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.C
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 		clustering.OptionEventDelegate(&p),
+		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 	}
 
 	fssnapshot := peering.File{
@@ -114,7 +114,7 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, gagent.Peer, agent.C
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
-	lq := gagent.NewQuorum()
+	lq := agent.NewQuorumFSM()
 	cx := cluster.New(local, c)
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
 	quorum := agent.NewQuorum(lq, cx, tlscreds)

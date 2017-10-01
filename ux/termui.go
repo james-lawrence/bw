@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/gizak/termui"
 )
 

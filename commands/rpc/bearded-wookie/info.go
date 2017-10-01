@@ -6,11 +6,10 @@ import (
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	agentx "bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -18,7 +17,7 @@ import (
 )
 
 type agentInfo struct {
-	config      agentx.ConfigClient
+	config      agent.ConfigClient
 	global      *global
 	node        string
 	environment string
@@ -57,17 +56,18 @@ func (t *agentInfo) _info() (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
 	)
 
-	coptions := []agentx.ConnectOption{
-		agentx.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
-		agentx.ConnectOptionClustering(
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
+		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(eventHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		),
 	}
 
-	if creds, client, c, err = agentx.ConnectLeader(&t.config, coptions...); err != nil {
+	if creds, client, c, err = agent.ConnectLeader(&t.config, coptions...); err != nil {
 		return err
 	}
 

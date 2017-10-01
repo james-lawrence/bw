@@ -14,10 +14,8 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
-	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 )
@@ -39,7 +37,7 @@ type ConfigClient struct {
 // Connect to the address in the config client.
 func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
-		details agent.ConnectInfo
+		details ConnectInfo
 	)
 
 	conn := newConnect(options...)
@@ -58,7 +56,7 @@ func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.Trans
 // ConnectLeader ...
 func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
-		details agent.ConnectInfo
+		details ConnectInfo
 		success bool
 		tmp     Conn
 	)
@@ -70,7 +68,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	defer tmp.Close()
 
 	for _, p := range details.Quorum {
-		if client, err = Dial(clusterx.RPCAddress(*p), grpc.WithTransportCredentials(creds)); err != nil {
+		if client, err = Dial(RPCAddress(*p), grpc.WithTransportCredentials(creds)); err != nil {
 			log.Println("failed to connect to peer", p.Name, p.Ip, err)
 			continue
 		}
@@ -88,7 +86,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	return creds, client, c, nil
 }
 
-func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details agent.ConnectInfo, err error) {
+func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details ConnectInfo, err error) {
 	if creds, err = t.creds(); err != nil {
 		return creds, client, details, err
 	}
@@ -104,17 +102,16 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 	return creds, client, details, nil
 }
 
-func (t ConfigClient) cluster(details agent.ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+func (t ConfigClient) cluster(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
-		clustering.OptionAliveDelegate(clusterx.AliveDefault{}),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(details.Secret),
 	}, copts...)
 
 	peers := make([]string, 0, len(details.Quorum))
 	for _, p := range details.Quorum {
-		peers = append(peers, clusterx.SWIMAddress(*p))
+		peers = append(peers, SWIMAddress(*p))
 	}
 
 	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
@@ -226,7 +223,7 @@ func ConfigOptionRaft(p *net.TCPAddr) ConfigOption {
 	}
 }
 
-// Config - configuration for the agent.
+// Config - configuration for the
 type Config struct {
 	Name      string
 	Root      string // root directory to store long term data.
@@ -239,12 +236,12 @@ type Config struct {
 	Cluster   clusteringConfig
 }
 
-// Peer - builds the agent.Peer information from the configuration. by default
+// Peer - builds the Peer information from the configuration. by default
 // a peer starts in the unknown state.
-func (t Config) Peer() agent.Peer {
+func (t Config) Peer() Peer {
 	// TODO: have a separate advertise address for the IP field.
-	return agent.Peer{
-		Status:   agent.Peer_Ready,
+	return Peer{
+		Status:   Peer_Ready,
 		Name:     t.Name,
 		Ip:       t.RPCBind.IP.String(),
 		RPCPort:  uint32(t.RPCBind.Port),

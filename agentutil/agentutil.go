@@ -10,9 +10,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	agentx "bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent"
 	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -27,7 +26,7 @@ type cluster interface {
 
 // DialQuorum connect to a quorum node.
 func DialQuorum(c cluster, options ...grpc.DialOption) (zeroc agent.Client, err error) {
-	return agentx.DialQuorum(c, options...)
+	return agent.DialQuorum(c, options...)
 }
 
 // DialPeer dial the peer
@@ -36,11 +35,11 @@ func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err
 		addr string
 	)
 
-	if addr = RPCAddress(p); addr == "" {
+	if addr = agent.RPCAddress(p); addr == "" {
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
 
-	return agentx.Dial(addr, options...)
+	return agent.Dial(addr, options...)
 }
 
 // Cleaner interface for cleaning workspace directories.
@@ -134,15 +133,4 @@ func KeepNewestN(n int) Cleaner {
 // NodeToPeer ...
 func NodeToPeer(n *memberlist.Node) (agent.Peer, error) {
 	return clusterx.NodeToPeer(n)
-}
-
-// RPCAddress for peer.
-func RPCAddress(p agent.Peer) string {
-	return clusterx.RPCAddress(p)
-}
-
-// NodeRPCAddress returns the node's rpc address.
-// if an error occurs it returns a blank string.
-func NodeRPCAddress(n *memberlist.Node) string {
-	return clusterx.NodeRPCAddress(n)
 }
