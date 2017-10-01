@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/x/logx"
 	"google.golang.org/grpc"
 )
 
@@ -31,13 +32,13 @@ func (t Dispatcher) Dispatch(m ...agent.Message) error {
 		err error
 		c   client
 	)
-	log.Println("-------------- dispatching ---------------")
+
 	if c, err = t.getClient(); err != nil {
 		log.Println("-------------- dispatching failed---------------")
 		return err
 	}
 
-	return c.Dispatch(m...)
+	return logx.MaybeLog(c.Dispatch(m...))
 }
 
 func (t Dispatcher) getClient() (c client, err error) {

@@ -1,10 +1,8 @@
 package deployment
 
 import (
-	"log"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/directives"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
@@ -49,9 +47,6 @@ type Directive struct {
 
 // Deploy ...
 func (t Directive) Deploy(dctx DeployContext) error {
-	log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
-	defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
-
 	options := append(
 		t.options,
 		DirectiveOptionDeployContext(dctx),
@@ -75,8 +70,8 @@ func (t Directive) deploy() {
 		_directives []directives.Directive
 	)
 
-	log.Println("deploying")
-	defer log.Println("deploy complete")
+	t.dctx.Log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
+	defer t.dctx.Log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
 
 	dshell = directives.ShellLoader{
 		Context: shell.NewContext(t.sctx, shell.OptionLogger(t.dctx.Log)),
@@ -85,7 +80,6 @@ func (t Directive) deploy() {
 	dpkg = directives.PackageLoader{}
 	dst = filepath.Join(t.dctx.Root, "archive")
 
-	t.dctx.Dispatch(agentutil.DeployEvent(t.dctx.Local, t.dctx.Archive))
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
 	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {

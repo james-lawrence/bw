@@ -72,7 +72,7 @@ func (t *Quorum) decode(buf []byte) {
 		return
 	}
 
-	log.Printf("------------------------ received: %#v\n", m)
+	t.EventBus.Dispatch(m)
 }
 
 // Snapshot is used to support log compaction. This call should

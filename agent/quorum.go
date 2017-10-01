@@ -6,7 +6,6 @@ import (
 	"hash"
 	"io"
 	"log"
-	"net"
 	"sync"
 	"time"
 
@@ -17,6 +16,7 @@ import (
 	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
@@ -90,10 +90,10 @@ func (t *proxyQuorum) Dispatch(m agent.Message) (err error) {
 	})
 
 	if err != nil {
-		return err
+		return errors.Wrap(err, "proxy dispatch dial failure")
 	}
 
-	return t.client.Dispatch(m)
+	return errors.Wrapf(t.client.Dispatch(m), "proxy dispatch: %s - %s", t.peader.Name, t.peader.Ip)
 }
 
 // NewQuorum ...
@@ -106,13 +106,9 @@ func NewQuorum(q *agent.Quorum, c cluster, creds credentials.TransportCredential
 		ctx:    ctx,
 		cancel: cancel,
 		proxy:  proxyRaft{},
+		creds:  creds,
 		c:      c,
-		pq: proxyQuorum{
-			dialOptions: []grpc.DialOption{
-				grpc.WithTransportCredentials(creds),
-			},
-			o: &sync.Once{},
-		},
+		pq:     proxyQuorum{},
 		UploadProtocol: uploads.ProtocolFunc(
 			func(uid []byte, _ uint64) (uploads.Uploader, error) {
 				return uploads.NewTempFileUploader()
@@ -131,6 +127,7 @@ type Quorum struct {
 	Events         chan raft.Observation
 	m              *sync.Mutex
 	c              cluster
+	creds          credentials.TransportCredentials
 	proxy          raftproxy
 	lq             *agent.Quorum
 	pq             proxyQuorum
@@ -143,23 +140,24 @@ func (t *Quorum) observe() {
 	for o := range t.Events {
 		switch m := o.Data.(type) {
 		case raft.LeaderObservation:
-			log.Println("------------ Begin Leader observation --------")
 			if m.Leader == "" {
-				log.Println("leader lost disabling quorum locally")
+				debugx.Println("leader lost disabling quorum locally")
 				t.proxy = proxyRaft{}
 				t.pq = proxyQuorum{}
 				t.cancel()
 				t.ctx, t.cancel = context.WithCancel(context.Background())
 				continue
 			}
-
-			log.Println("leader identified, enabling quorum locally")
+			peader := t.findLeader(m.Leader)
+			debugx.Println("leader identified, enabling quorum locally", peader.Name, peader.Ip)
 			t.proxy = o.Raft
 			t.pq = proxyQuorum{
-				peader: t.findLeader(m.Leader),
+				peader: peader,
 				o:      &sync.Once{},
+				dialOptions: []grpc.DialOption{
+					grpc.WithTransportCredentials(t.creds),
+				},
 			}
-			log.Println("------------ End Leader observation --------")
 		}
 	}
 }
@@ -177,7 +175,7 @@ func (t Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 	p := t.proxy
 	t.m.Unlock()
 
-	log.Println("upload invoked")
+	debugx.Println("upload invoked")
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
@@ -233,7 +231,7 @@ func (t *Quorum) Watch(_ *agent.WatchRequest, out agent.Quorum_WatchServer) (err
 	p := t.proxy
 	t.m.Unlock()
 
-	log.Println("watch invoked")
+	debugx.Println("watch invoked")
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
@@ -271,7 +269,6 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 	dispatch := t.pq.Dispatch
 	if p.State() == raft.Leader {
 		dispatch = func(m agent.Message) error {
-			log.Println("------------------------ applying fsm ------------------------")
 			return maybeApply(p, 5*time.Second)(agent.MessageToCommand(m)).Error()
 		}
 	}
@@ -287,13 +284,8 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 
 func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
 	var (
-		err    error
 		peader agent.Peer
 	)
-	if leader, _, err = net.SplitHostPort(leader); err != nil {
-		log.Println("failed to split hostport", err)
-		return _zero
-	}
 
 	for _, peader = range t.c.Quorum() {
 		if clusterx.RaftAddress(peader) == leader {
@@ -301,6 +293,7 @@ func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
 		}
 	}
 
+	log.Println("-------------------- failed to locate leader --------------------")
 	return _zero
 }
 

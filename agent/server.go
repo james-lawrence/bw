@@ -70,12 +70,12 @@ type Server struct {
 }
 
 // Deploy ...
-func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.DeployResult, error) {
+func (t Server) Deploy(ctx context.Context, archive *agent.Archive) (*agent.ArchiveResult, error) {
 	if err := t.Deployer.Deploy(archive); err != nil {
 		return nil, err
 	}
 
-	return &agent.DeployResult{}, nil
+	return &agent.ArchiveResult{}, nil
 }
 
 // Info ...

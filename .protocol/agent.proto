@@ -14,8 +14,14 @@ message Message {
     // One of the following will be filled in.
     bool none = 4;
     Log log = 5;
-    Archive archive = 6;
+    Deploy deploy = 6;
   }
+}
+
+message Deploy {
+  enum Stage { Initiated = 0; Failed = 1; Completed = 2;}
+  Stage stage = 1;
+  Archive archive = 2;
 }
 
 message Log {
@@ -35,6 +41,7 @@ message ArchiveChunk {
   }
 }
 
+message ArchiveResult {}
 message Archive {
   bytes deploymentID = 1;
   Peer peer = 2;
@@ -42,8 +49,6 @@ message Archive {
   bytes checksum = 4;
   int64 ts = 5; // unix timestamp.
 }
-
-message DeployResult {}
 
 message StatusRequest {}
 message Status {
@@ -85,6 +90,6 @@ service Quorum {
 
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectInfo) {}
-  rpc Deploy(Archive) returns (DeployResult) {}
+  rpc Deploy(Archive) returns (ArchiveResult) {}
   rpc Info(StatusRequest) returns (Status) {}
 }

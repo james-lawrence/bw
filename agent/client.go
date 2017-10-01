@@ -6,12 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"log"
 
 	"google.golang.org/grpc"
 
 	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"github.com/pkg/errors"
 )
 
@@ -145,18 +145,15 @@ func (t Client) Watch(out chan<- agent.Message) (err error) {
 		src agent.Quorum_WatchClient
 		msg *agent.Message
 	)
-	log.Println("watch started")
-	defer log.Println("watch finished")
+	debugx.Println("watch started")
+	defer debugx.Println("watch finished")
 
 	c := agent.NewQuorumClient(t.conn)
 	if src, err = c.Watch(context.Background(), &agent.WatchRequest{}); err != nil {
-		log.Println("failed to connect to server", err)
 		return errors.WithStack(err)
 	}
 
-	log.Println("receiving messages")
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
-		log.Println("message received")
 		out <- *msg
 	}
 
@@ -168,22 +165,18 @@ func (t Client) Dispatch(messages ...agent.Message) (err error) {
 	var (
 		dst agent.Quorum_DispatchClient
 	)
+
 	c := agent.NewQuorumClient(t.conn)
 
 	if dst, err = c.Dispatch(context.Background()); err != nil {
-		log.Println("------------------------ failed to dispatch ----------------")
 		return errors.WithStack(err)
 	}
 
 	for _, m := range messages {
 		if err = dst.Send(&m); err != nil {
-			log.Println("------------------------ failed to dispatch ----------------")
 			return errors.WithStack(err)
 		}
-		log.Printf("------------------------ %#v ------------------------\n", m)
 	}
-
-	log.Println("------------------------ dispatched ------------------------")
 
 	return nil
 }
@@ -191,7 +184,6 @@ func (t Client) Dispatch(messages ...agent.Message) (err error) {
 func (t Client) streamArchive(src io.Reader, stream agent.Quorum_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
-		log.Println("writing chunk", len(chunk))
 		return errors.Wrap(stream.Send(&agent.ArchiveChunk{
 			Checksum:             checksum,
 			Data:                 chunk,

@@ -7,7 +7,6 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	gagent "bitbucket.org/jatone/bearded-wookie/deployment/agent"
@@ -88,23 +87,33 @@ func (t *agentInfo) _info() (err error) {
 
 	events := make(chan gagent.Message, 100)
 	go func() {
-		log.Println("awaiting event")
 		for m := range events {
 			switch m.Type {
 			case gagent.Message_PeerEvent:
 				p := m.GetPeer()
-				log.Printf("%s - %s: %s, %s, %s\n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type, p.Name, p.Ip, p.Status)
+				log.Printf(
+					"%s (%s:%s) - %s: %s\n",
+					time.Unix(m.GetTs(), 0).Format(time.Stamp),
+					p.Name,
+					p.Ip,
+					m.Type,
+					p.Status,
+				)
+			case gagent.Message_DeployEvent:
+				d := m.GetDeploy()
+				log.Printf(
+					"%s %s:%s - Deploy %s %s\n",
+					time.Unix(m.GetTs(), 0).Format(time.Stamp),
+					m.Peer.Name,
+					m.Peer.Ip,
+					bw.RandomID(d.Archive.DeploymentID),
+					d.Stage,
+				)
 			default:
 				log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
 			}
-			log.Println("awaiting event")
 		}
 	}()
 
-	go func() {
-		for _ = range time.Tick(200 * time.Millisecond) {
-			client.Dispatch(agentutil.PeerEvent(local.Peer))
-		}
-	}()
 	return client.Watch(events)
 }

@@ -9,6 +9,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment/agent"
+	"bitbucket.org/jatone/bearded-wookie/x/logx"
 )
 
 // New Builds a deployment Coordinator.
@@ -90,10 +91,12 @@ func (t *deployment) background() {
 		if done.Error != nil {
 			log.Printf("deployment failed: %+v\n", done.Error)
 			t.update(failed{}, agentutil.KeepOldestN(t.keepN))
+			logx.MaybeLog(done.Dispatch(agentutil.DeployFailedEvent(done.Local, done.Archive)))
 			continue
 		}
 
 		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
+		logx.MaybeLog(done.Dispatch(agentutil.DeployCompletedEvent(done.Local, done.Archive)))
 	}
 }
 
@@ -130,6 +133,8 @@ func (t *deployment) Deploy(archive *agent.Archive) (err error) {
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
 		return err
 	}
+
+	logx.MaybeLog(dctx.Dispatch(agentutil.DeployInitiatedEvent(dctx.Local, dctx.Archive)))
 
 	if err = writeArchiveMetadata(dctx); err != nil {
 		return err

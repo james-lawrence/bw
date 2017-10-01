@@ -47,7 +47,10 @@ func (t EventBus) background() {
 		for id, o := range obs {
 			if err := o.Receive(m...); err != nil {
 				log.Println("failed to receive messages", id, err)
+				continue
 			}
+
+			log.Println("delivered messages", id)
 		}
 	}
 }
@@ -76,6 +79,6 @@ func (t EventBus) Register(o Observer) EventBusObserver {
 func (t EventBus) Remove(e EventBusObserver) {
 	t.m.Lock()
 	defer t.m.Unlock()
-
+	log.Println("removing observer", e.id)
 	delete(t.observers, e.id)
 }
