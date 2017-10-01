@@ -2,9 +2,9 @@ package shell
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os/exec"
 	"time"
 
@@ -34,12 +34,12 @@ func (t Exec) execute(ctx Context) error {
 	cmd.Stderr = ctx.output
 	cmd.Stdout = ctx.output
 
-	return t.lenient(cmd.Run())
+	return t.lenient(ctx, cmd.Run())
 }
 
-func (t Exec) lenient(err error) error {
+func (t Exec) lenient(ctx Context, err error) error {
 	if t.Lenient {
-		log.Println("command failed, ignoring", t.Command, err)
+		fmt.Fprintln(ctx.output, "command failed, ignoring", t.Command, err)
 		return nil
 	}
 
@@ -49,7 +49,7 @@ func (t Exec) lenient(err error) error {
 // Execute ...
 func Execute(ctx Context, commands ...Exec) error {
 	for _, c := range commands {
-		log.Println("executing", ctx.Shell, "-c", c.Command)
+		fmt.Fprintln(ctx.output, "executing", ctx.Shell, "-c", c.Command)
 		if err := c.execute(ctx); err != nil {
 			return errors.Wrapf(err, "failed to execute: '%s'", c.Command)
 		}

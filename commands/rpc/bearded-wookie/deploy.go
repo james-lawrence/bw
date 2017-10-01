@@ -93,7 +93,6 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
 	)
 
-	log.Println("deploying", t.deployspace)
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
 		agent.ConnectOptionClustering(
@@ -113,8 +112,8 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 
 	events := make(chan agent.Message, 100)
 	go client.Watch(events)
-	go ux.Logging(events)
-	// go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
+	// go ux.Logging(events)
+	go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("uploading archive")
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {

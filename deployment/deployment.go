@@ -10,6 +10,8 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	"bitbucket.org/jatone/bearded-wookie/x/logx"
 )
 
 func init() {
@@ -272,8 +274,22 @@ type DeployContext struct {
 }
 
 // Dispatch an event to the cluster
-func (t DeployContext) Dispatch(m agent.Message) error {
-	return t.dispatcher.Dispatch(m)
+func (t DeployContext) Dispatch(m ...agent.Message) error {
+	return t.dispatcher.Dispatch(m...)
+}
+
+func (t DeployContext) deployComplete() {
+	t.Log.Println("------------------- deploy completed -------------------")
+	logx.MaybeLog(t.Dispatch(agentutil.DeployCompletedEvent(t.Local, t.Archive)))
+}
+
+func (t DeployContext) deployFailed(err error) {
+	t.Log.Println(err)
+	t.Log.Println("------------------- deploy failed -------------------")
+	logx.MaybeLog(t.Dispatch(
+		agentutil.LogEvent(t.Local, err.Error()),
+		agentutil.DeployFailedEvent(t.Local, t.Archive),
+	))
 }
 
 // Done is responsible for closing out the deployment context.

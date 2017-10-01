@@ -2,16 +2,21 @@ package directives
 
 import (
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 )
 
+type logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
+}
+
 // Context global context for the agent.
 type Context struct {
-	Log           *log.Logger
+	Log           logger
 	RootDirectory string
 }
 
@@ -20,13 +25,13 @@ type Directive interface {
 	Run() error
 }
 
-// Load ...
-func Load(dir string, loaders ...loader) ([]Directive, error) {
+// Load the directives from the provided directory.
+func Load(l logger, dir string, loaders ...loader) ([]Directive, error) {
 	var (
 		err error
 	)
 
-	extmap := loaderToExts(loaders...)
+	extmap := loaderToExts(l, loaders...)
 	results := make([]Directive, 0, 1024)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -44,7 +49,7 @@ func Load(dir string, loaders ...loader) ([]Directive, error) {
 		// ignore subdirectories.
 		if info.IsDir() {
 			if path != dir {
-				log.Println("skipping directory", path)
+				l.Println("skipping directory", path)
 				return filepath.SkipDir
 			}
 
@@ -53,7 +58,7 @@ func Load(dir string, loaders ...loader) ([]Directive, error) {
 
 		ext := filepath.Ext(path)
 		if _loader, found = extmap[ext]; !found {
-			log.Println("no directive exists for", ext, ":", path, "skipping")
+			l.Println("no directive exists for", ext, ":", path, "skipping")
 			return nil
 		}
 
@@ -73,12 +78,12 @@ func Load(dir string, loaders ...loader) ([]Directive, error) {
 	return results, err
 }
 
-func loaderToExts(loaders ...loader) map[string]loader {
+func loaderToExts(logger logger, loaders ...loader) map[string]loader {
 	m := make(map[string]loader, len(loaders))
 	for _, l := range loaders {
 		for _, ext := range l.Ext() {
 			if _, found := m[ext]; found {
-				log.Println("extension is already mapped ignoring")
+				logger.Println("extension is already mapped ignoring")
 			} else {
 				m[ext] = l
 			}

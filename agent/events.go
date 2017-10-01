@@ -5,6 +5,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 )
 
@@ -48,7 +50,7 @@ func (t EventBus) background() {
 		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(obs))
 		for id, o := range obs {
 			if err := o.Receive(m...); err != nil {
-				log.Println("failed to receive messages", id, err)
+				log.Printf("failed to receive messages %d - %T %+v\n", id, errors.Cause(err), err)
 				continue
 			}
 

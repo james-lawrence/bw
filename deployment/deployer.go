@@ -88,7 +88,7 @@ func (t Directive) deploy() {
 
 	t.dctx.Log.Println("completed download", dst)
 
-	if _directives, err = directives.Load(filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
+	if _directives, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
 		err = errors.Wrapf(err, "failed to load directives")
 		goto done
 	}

@@ -15,6 +15,7 @@ import (
 	bw "bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"bitbucket.org/jatone/bearded-wookie/x/grpcx"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
@@ -42,10 +43,23 @@ type pbObserver struct {
 }
 
 func (t pbObserver) Receive(messages ...Message) (err error) {
+	var (
+		cause error
+	)
+
 	for _, m := range messages {
 		if err = t.dst.Send(&m); err != nil {
+			if cause = errors.Cause(err); cause == context.Canceled {
+				return nil
+			}
+
 			t.done()
-			return errors.WithStack(err)
+
+			if grpcx.IgnoreShutdownErrors(cause) == nil {
+				return nil
+			}
+
+			return errors.Wrapf(err, "error type %T", cause)
 		}
 	}
 

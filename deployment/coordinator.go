@@ -7,6 +7,8 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/x/logx"
@@ -85,18 +87,19 @@ func (t *deployment) background() {
 		// cleanup workspace directory prior to execution. this leaves the last deployment
 		// available until the next run.
 		if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-			log.Println("failed to clean workspace directory", soft)
+			soft = errors.Wrap(soft, "failed to clean workspace directory")
+			done.Dispatch(agentutil.LogEvent(done.Local, soft.Error()))
+			log.Println(soft)
 		}
 
 		if done.Error != nil {
-			log.Printf("deployment failed: %+v\n", done.Error)
 			t.update(failed{}, agentutil.KeepOldestN(t.keepN))
-			logx.MaybeLog(done.Dispatch(agentutil.DeployFailedEvent(done.Local, done.Archive)))
+			done.deployFailed(done.Error)
 			continue
 		}
 
 		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
-		logx.MaybeLog(done.Dispatch(agentutil.DeployCompletedEvent(done.Local, done.Archive)))
+		done.deployComplete()
 	}
 }
 

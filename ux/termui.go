@@ -25,13 +25,14 @@ func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Messag
 		}
 	)
 
+	defer termui.Close()
+	defer termui.Clear()
+
+	log.Println("termui started")
 	if err := termui.Init(); err != nil {
 		log.Println("failed to initialized ui", err)
 		return
 	}
-
-	defer termui.Close()
-	defer termui.Clear()
 
 	for {
 		select {
@@ -47,7 +48,7 @@ func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Messag
 
 func mergeEvent(s state, m agent.Message) state {
 	switch m.Type {
-	case agent.Message_PeerEvent:
+	// case agent.Message_PeerEvent:
 
 	case agent.Message_DeployEvent:
 	case agent.Message_PeersCompletedEvent:
