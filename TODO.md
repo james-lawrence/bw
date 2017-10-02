@@ -1,10 +1,8 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
-#### cleanup
-- [ ] ux improvements
-
-#### implement initial deploy on agent startup.
-when an agent joins a cluster it should automatically be deployed to with the latest version (if there is one).
+#### cleanup/bugfixes
+- [ ] figure out why the leader elections not eventually becoming consistent in some cases.
+- [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
 
 #### initial setup work
 - [ ] generate skeleton directories. ie) `.bw .bwconfig`
