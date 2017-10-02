@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	yaml "gopkg.in/yaml.v1"
+
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
@@ -20,17 +22,45 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 )
 
+// DeploymentConfig configuration for the deploy process.
+type DeploymentConfig struct {
+	Strategy string
+	Options  map[string]interface{}
+}
+
+// Partitioner ...
+func (t DeploymentConfig) Partitioner() (_ bw.Partitioner) {
+	var (
+		err error
+		raw []byte
+	)
+
+	if raw, err = yaml.Marshal(t.Options); err != nil {
+		log.Println("failed to remarshal options, falling back to default", err)
+		return bw.ConstantPartitioner{BatchMax: 1}
+	}
+
+	return bw.PartitionerFromConfig(t.Strategy, raw)
+}
+
 // NewConfigClient ...
 func NewConfigClient() ConfigClient {
 	return ConfigClient{
 		Address:   systemx.HostnameOrLocalhost(),
 		TLSConfig: NewTLSClient(DefaultTLSCredentialsRoot),
+		DeploymentConfig: DeploymentConfig{
+			Strategy: bw.PartitionStrategyBatch,
+			Options: map[string]interface{}{
+				"BatchMax": 1,
+			},
+		},
 	}
 }
 
 // ConfigClient ...
 type ConfigClient struct {
 	Address string
+	DeploymentConfig
 	TLSConfig
 }
 

@@ -142,6 +142,15 @@ func AgentStateToStatus(info agent.Peer_State) Status {
 	}
 }
 
+func mergePeerWithStatus(p agent.Peer, err error) agent.Peer {
+	if s, ok := err.(Status); ok {
+		p.Status = AgentStateFromStatus(s)
+		return p
+	}
+
+	return p
+}
+
 // IsReady returns true if the node is in a ready state.
 func IsReady(err error) bool {
 	return isStatus(err, StatusReady)

@@ -91,7 +91,7 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*Status, error) {
 	)
 	tmp := t.cluster.Local()
 
-	if _, d, err = t.Deployer.Deployments(); err != nil {
+	if tmp.Status, d, err = t.Deployer.Deployments(); err != nil {
 		d = []*Archive{}
 		log.Println("failed to read deployments, defaulting to no deployments", err)
 	}

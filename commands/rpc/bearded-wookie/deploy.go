@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -25,9 +27,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	uxmodeTerm = "term"
+	uxmodeLog  = "log"
+)
+
 type deployCmd struct {
 	config        agent.ConfigClient
 	global        *global
+	uxmode        string
 	environment   string
 	deployspace   string
 	filteredIP    []net.IP
@@ -37,6 +45,7 @@ type deployCmd struct {
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeTerm).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
 		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
@@ -44,6 +53,15 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 
 	t.deployCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
 	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
+}
+
+func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
+	switch mode {
+	case uxmodeTerm:
+		go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
+	default:
+		go ux.Logging(events)
+	}
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -109,11 +127,11 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	log.Println("connected to cluster cluster")
+	log.Printf("configuration:\n%#v\n", t.config)
 
 	events := make(chan agent.Message, 100)
 	go client.Watch(events)
-	// go ux.Logging(events)
-	go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
+	t.initializeUX(t.uxmode, events)
 
 	log.Println("uploading archive")
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
@@ -139,13 +157,17 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	}
 
 	cx := cluster.New(local, c)
-	log.Printf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location)
+
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location))
+
 	_connector := newConnector(grpc.WithTransportCredentials(creds))
 	options = append(
 		options,
 		deployment.DeployOptionChecker(deployment.OperationFunc(_connector.Check)),
 		deployment.DeployOptionDeployer(deployment.OperationFunc(_connector.deploy(info))),
+		deployment.DeployOptionPartitioner(t.config.Partitioner()),
 	)
+
 	deployment.NewDeploy(
 		local.Peer,
 		agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(creds)),
@@ -155,6 +177,7 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	log.Println("deployment complete")
 
 	// complete.
+	time.Sleep(3 * time.Second)
 	t.global.shutdown()
 
 	return err

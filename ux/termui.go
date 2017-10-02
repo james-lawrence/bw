@@ -7,10 +7,10 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"github.com/gizak/termui"
 )
 
@@ -21,14 +21,14 @@ func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Messag
 
 	var (
 		storage = state{
-			Peers: map[agent.Peer]deployment.Status{},
+			Peers: map[string]agent.Peer{},
+			Logs:  newLBuffer(300),
 		}
 	)
 
 	defer termui.Close()
 	defer termui.Clear()
 
-	log.Println("termui started")
 	if err := termui.Init(); err != nil {
 		log.Println("failed to initialized ui", err)
 		return
@@ -48,15 +48,19 @@ func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Messag
 
 func mergeEvent(s state, m agent.Message) state {
 	switch m.Type {
-	// case agent.Message_PeerEvent:
-
+	case agent.Message_LogEvent:
+		s.Logs = s.Logs.Add(m)
+	case agent.Message_PeerEvent:
+		s.Peers[m.Peer.Name] = *m.Peer
 	case agent.Message_DeployEvent:
+		d := m.GetDeploy()
+		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - %s - %s %s", messagePrefix(m), m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
 	case agent.Message_PeersCompletedEvent:
 		s.NodesCompleted = m.GetInt()
 	case agent.Message_PeersFoundEvent:
 		s.NodesFound = m.GetInt()
 	default:
-		log.Printf("%s - %s: \n", time.Unix(m.GetTs(), 0).Format(time.Stamp), m.Type)
+		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - Unknown Event - %s", messagePrefix(m), m.Type)))
 	}
 
 	return s
@@ -66,47 +70,72 @@ func render(s state) {
 	termWidth := termui.TermWidth()
 	termHeight := termui.TermHeight()
 	completed := termui.NewGauge()
+	completed.Border = true
+	completed.BorderLabel = fmt.Sprintf("progress - %d / %d", s.NodesCompleted, s.NodesFound)
 	completed.Height = 5
 	completed.Width = termWidth
 	completed.Percent = int((float64(s.NodesCompleted) / float64(s.NodesFound)) * 100)
+
 	peers := termui.NewList()
+	peers.Border = true
+	peers.BorderLabel = "peers"
 	peers.Items = peersToList(s)
 	peers.Width = termWidth
-	peers.Height = termHeight - 10
+	peers.Height = termHeight - completed.Height
+
+	logs := termui.NewList()
+	logs.Border = true
+	logs.BorderLabel = "logs"
+	logs.Overflow = "wrap"
+	logs.Items = logsToList(s)
+	logs.Width = termWidth
+	logs.Height = termHeight - completed.Height
 
 	g := termui.NewGrid(
 		termui.NewRow(
-			termui.NewCol(6, 0, completed),
+			termui.NewCol(12, 0, completed),
 		),
 		termui.NewRow(
-			termui.NewCol(6, 0, peers),
+			termui.NewCol(3, 0, peers),
+			termui.NewCol(9, 0, logs),
 		),
 	)
 	g.Width = termWidth
-
 	g.Align()
+
 	termui.Clear()
 	termui.Render(g)
 }
 
+func logsToList(s state) []string {
+	out := make([]string, 0, s.Logs.ring.Len())
+	s.Logs.Do(func(m agent.Message) {
+		l := m.GetLog()
+		out = append(out, fmt.Sprintf("%s - %s", messagePrefix(m), l.Log))
+	})
+	return out
+}
+
 func peersToList(s state) []string {
 	peers := make([]agent.Peer, 0, len(s.Peers))
-	for peer := range s.Peers {
+	for _, peer := range s.Peers {
 		peers = append(peers, peer)
 	}
 	sort.Sort(sortablePeers(peers))
 
 	result := make([]string, 0, len(s.Peers))
 	for _, peer := range peers {
-		result = append(result, fmt.Sprintf("%s: %s", peer.Name, s.Peers[peer]))
+		result = append(result, fmt.Sprintf("%s: %s", peer.Name, peer.Status))
 	}
+
 	return result
 }
 
 type state struct {
 	NodesFound     int64
 	NodesCompleted int64
-	Peers          map[agent.Peer]deployment.Status
+	Peers          map[string]agent.Peer
+	Logs           lbuffer
 }
 
 type sortablePeers []agent.Peer
@@ -123,5 +152,5 @@ func (t sortablePeers) Swap(i, j int) {
 
 // Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
 func (t sortablePeers) Less(i, j int) bool {
-	return strings.Compare(t[i].Ip, t[j].Ip) == -1
+	return strings.Compare(t[i].Name, t[j].Name) == -1
 }

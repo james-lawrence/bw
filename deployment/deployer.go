@@ -63,11 +63,11 @@ func (t Directive) Deploy(dctx DeployContext) error {
 
 func (t Directive) deploy() {
 	var (
-		err         error
-		dshell      directives.ShellLoader
-		dpkg        directives.PackageLoader
-		dst         string
-		_directives []directives.Directive
+		err    error
+		dshell directives.ShellLoader
+		dpkg   directives.PackageLoader
+		dst    string
+		d      []directives.Directive
 	)
 
 	t.dctx.Log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
@@ -89,17 +89,19 @@ func (t Directive) deploy() {
 
 	t.dctx.Log.Println("completed download", dst)
 
-	if _directives, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
+	if d, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
 		t.dctx.Done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}
 
-	t.dctx.Log.Println("loaded", len(_directives), "directive(s)")
+	t.dctx.Log.Println("loaded", len(d), "directive(s)")
 
-	for _, l := range _directives {
+	for _, l := range d {
 		if err = l.Run(); err != nil {
 			t.dctx.Done(err)
 			return
 		}
 	}
+
+	t.dctx.Done(err)
 }

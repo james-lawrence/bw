@@ -1,35 +1,16 @@
 package deployment
 
 import (
-	"fmt"
 	"log"
-	"math"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/x/logx"
 )
-
-// PercentagePartitioner size is based on the percentage. has an upper bound of 1.0.
-type PercentagePartitioner float64
-
-// Partition ...
-func (t PercentagePartitioner) Partition(length int) int {
-	ratio := math.Min(float64(t), 1.0)
-	computed := int(math.Max(math.Floor(float64(length)*ratio), 1.0))
-	return computed
-}
-
-// ConstantPartitioner partition will return the specified min(length, size).
-type ConstantPartitioner int
-
-// Partition implements partitioner
-func (t ConstantPartitioner) Partition(length int) int {
-	return max(1, min(length, int(t)))
-}
 
 // partitioner determines the number of nodes to simultaneously deploy to
 // based on the total number of nodes.
@@ -106,7 +87,7 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 			local:      p,
 			completed:  new(int64),
 		},
-		partitioner: ConstantPartitioner(1),
+		partitioner: bw.ConstantPartitioner{BatchMax: 1},
 	}
 
 	for _, opt := range options {
@@ -177,7 +158,7 @@ func (t Deploy) Deploy(c cluster) {
 
 	awaitCompletion(t, t.worker.check, nodes...)
 
-	t.Dispatch(agentutil.LogEvent(t.worker.local, "deploying, nodes are ready"))
+	t.Dispatch(agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)
@@ -210,8 +191,7 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
 		remaining = remaining[:0]
 		for _, peer := range peers {
 			err := check.Visit(peer)
-			d.Dispatch(agentutil.LogEvent(peer, fmt.Sprintf("state update - %s", err)))
-			// e.Status <- NodeUpdate{Status: err, Peer: peer}
+			d.Dispatch(agentutil.PeerEvent(mergePeerWithStatus(peer, err)))
 
 			if IsReady(err) || IsUnknown(err) {
 				continue
@@ -227,18 +207,4 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
 
 		peers = remaining
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a < b {
-		return b
-	}
-	return a
 }

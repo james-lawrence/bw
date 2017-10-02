@@ -87,7 +87,7 @@ func (t *deployment) background() {
 		// cleanup workspace directory prior to execution. this leaves the last deployment
 		// available until the next run.
 		if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-			soft = errors.Wrap(soft, "failed to clean workspace directory")
+			soft = errors.Wrap(soft, "failed to clear workspace directory")
 			done.Dispatch(agentutil.LogEvent(done.Local, soft.Error()))
 			log.Println(soft)
 		}
@@ -98,8 +98,8 @@ func (t *deployment) background() {
 			continue
 		}
 
-		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
 		done.deployComplete()
+		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
 	}
 }
 
@@ -162,6 +162,7 @@ func (t *deployment) start() Status {
 func (t *deployment) update(s Status, c agentutil.Cleaner) {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
+
 	t.status = s
 	t.cleanup = c
 }
