@@ -76,7 +76,7 @@ func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.Trans
 		return creds, client, c, err
 	}
 
-	if c, err = t.cluster(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
+	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
 		return creds, client, c, err
 	}
 
@@ -109,7 +109,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 		return creds, client, c, errors.New("failed to connect to a member of the quorum")
 	}
 
-	if c, err = t.cluster(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
+	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
 		return creds, client, c, err
 	}
 
@@ -132,17 +132,12 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 	return creds, client, details, nil
 }
 
-func (t ConfigClient) cluster(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+func clusterConnect(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(details.Secret),
 	}, copts...)
-
-	peers := make([]string, 0, len(details.Quorum))
-	for _, p := range details.Quorum {
-		peers = append(peers, SWIMAddress(*p))
-	}
 
 	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
 		return c, errors.Wrap(err, "failed to join cluster")
@@ -152,9 +147,7 @@ func (t ConfigClient) cluster(details ConnectInfo, copts []clustering.Option, bo
 		clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1)),
 		clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts),
 		clustering.BootstrapOptionPeeringStrategies(
-			peering.Closure(func() ([]string, error) {
-				return peers, nil
-			}),
+			peering.Closure(BootstrapPeers(details.Quorum...)),
 		),
 	}, bopts...)
 
@@ -176,6 +169,18 @@ func (t ConfigClient) creds() (credentials.TransportCredentials, error) {
 	}
 
 	return credentials.NewTLS(conf), nil
+}
+
+// BootstrapPeers converts a list of Peers into a list of addresses to bootstrap from.
+func BootstrapPeers(peers ...*Peer) func() ([]string, error) {
+	speers := make([]string, 0, len(peers))
+	for _, p := range peers {
+		speers = append(speers, SWIMAddress(*p))
+	}
+
+	return func() ([]string, error) {
+		return speers, nil
+	}
 }
 
 // NewConfig creates a default configuration.

@@ -64,7 +64,7 @@ func (t *agentInfo) _info() (err error) {
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(eventHandler{}),
+			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
 			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		),
 	}

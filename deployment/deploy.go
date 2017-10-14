@@ -146,7 +146,7 @@ type Deploy struct {
 
 // Deploy ...
 func (t Deploy) Deploy(c cluster) {
-	nodes := _filter(t.filter, c.Peers()...)
+	nodes := ApplyFilter(t.filter, c.Peers()...)
 	t.Dispatch(agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
@@ -174,7 +174,7 @@ func (t Deploy) Dispatch(m ...agent.Message) error {
 	return logx.MaybeLog(t.worker.dispatcher.Dispatch(m...))
 }
 
-func _filter(s Filter, set ...agent.Peer) []agent.Peer {
+func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	subset := make([]agent.Peer, 0, len(set))
 	for _, peer := range set {
 		if s.Match(peer) {

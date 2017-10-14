@@ -14,6 +14,7 @@ import (
 // Client - client facade interface.
 type Client interface {
 	Upload(srcbytes uint64, src io.Reader) (Archive, error)
+	RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) error
 	Deploy(info Archive) error
 	Connect() (ConnectInfo, error)
 	Info() (Status, error)

@@ -33,3 +33,25 @@ func LocalPeer(id string) Peer {
 		Status:   Peer_Ready,
 	}
 }
+
+// PeersToPtr util function to convert between pointers and values.
+func PeersToPtr(peers ...Peer) []*Peer {
+	r := make([]*Peer, 0, len(peers))
+
+	for _, p := range peers {
+		r = append(r, &p)
+	}
+
+	return r
+}
+
+// PtrToPeers util function to convert between pointers and values.
+func PtrToPeers(peers ...*Peer) []Peer {
+	r := make([]Peer, 0, len(peers))
+
+	for _, p := range peers {
+		r = append(r, *p)
+	}
+
+	return r
+}

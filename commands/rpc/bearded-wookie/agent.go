@@ -9,6 +9,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/agent/proxy"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
@@ -116,8 +117,9 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, agent.Peer, agent.Co
 
 	lq := agent.NewQuorumFSM()
 	cx := cluster.New(local, c)
+
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
-	quorum := agent.NewQuorum(lq, cx, tlscreds)
+	quorum := agent.NewQuorum(lq, cx, tlscreds, proxy.NewProxy(cx))
 	server := agent.NewServer(
 		cx,
 		t.listener.Addr(),

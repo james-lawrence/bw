@@ -11,9 +11,6 @@ import (
 	"regexp"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
@@ -40,7 +37,6 @@ type deployCmd struct {
 	deployspace   string
 	filteredIP    []net.IP
 	filteredRegex []*regexp.Regexp
-	doptions      []deployment.Option
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
@@ -84,22 +80,20 @@ func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {
 		filters = append(filters, deployment.IP(n))
 	}
 
-	options := append(t.doptions, deployment.DeployOptionFilter(deployment.Or(filters...)))
-	return t._deploy(options...)
+	return t._deploy(deployment.Or(filters...))
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
-	return t._deploy(t.doptions...)
+	return t._deploy(deployment.NeverMatch)
 }
 
-func (t *deployCmd) _deploy(options ...deployment.Option) error {
+func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	var (
 		err     error
 		dst     *os.File
 		dstinfo os.FileInfo
-		c       clustering.Cluster
-		creds   credentials.TransportCredentials
 		client  agent.Client
+		c       clustering.Cluster
 		info    agent.Archive
 	)
 
@@ -117,12 +111,12 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(eventHandler{}),
+			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
 			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
+	if _, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
 		return err
 	}
 
@@ -156,23 +150,14 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 		return err
 	}
 
-	cx := cluster.New(local, c)
-
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location))
 
-	_connector := newConnector(grpc.WithTransportCredentials(creds))
-	options = append(
-		options,
-		deployment.DeployOptionChecker(deployment.OperationFunc(_connector.Check)),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(_connector.deploy(info))),
-		deployment.DeployOptionPartitioner(t.config.Partitioner()),
-	)
+	cx := cluster.New(local, c)
+	max := int64(t.config.Partitioner().Partition(len(cx.Members())))
 
-	deployment.NewDeploy(
-		local.Peer,
-		agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(creds)),
-		options...,
-	).Deploy(cx)
+	if err = client.RemoteDeploy(max, info, deployment.ApplyFilter(filter, cx.Peers()...)...); err != nil {
+		return err
+	}
 
 	log.Println("deployment complete")
 
@@ -181,56 +166,4 @@ func (t *deployCmd) _deploy(options ...deployment.Option) error {
 	t.global.shutdown()
 
 	return err
-}
-
-func connect(address string, doptions ...grpc.DialOption) (_czero agent.Client, err error) {
-	return agent.Dial(address, doptions...)
-}
-
-func newConnector(options ...grpc.DialOption) connector {
-	return connector{
-		options: options,
-	}
-}
-
-type connector struct {
-	options []grpc.DialOption
-}
-
-func (t connector) Check(n agent.Peer) (err error) {
-	var (
-		c    agent.Client
-		info agent.Status
-	)
-
-	if c, err = connect(agent.RPCAddress(n), t.options...); err != nil {
-		return err
-	}
-
-	defer c.Close()
-
-	if info, err = c.Info(); err != nil {
-		return err
-	}
-
-	return deployment.AgentStateToStatus(info.Peer.Status)
-}
-
-func (t connector) deploy(info agent.Archive) func(n agent.Peer) error {
-	return func(n agent.Peer) (err error) {
-		var (
-			c agent.Client
-		)
-
-		if c, err = connect(agent.RPCAddress(n), t.options...); err != nil {
-			return err
-		}
-		defer c.Close()
-
-		if err = c.Deploy(info); err != nil {
-			return err
-		}
-
-		return nil
-	}
 }

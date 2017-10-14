@@ -87,6 +87,7 @@ service Quorum {
   rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Dispatch(stream Message) returns (RecordResponse) {}
+  rpc Deploy(ProxyDeployRequest) returns (ProxyDeployResult) {}
 }
 
 service Agent {
@@ -94,3 +95,15 @@ service Agent {
   rpc Deploy(Archive) returns (ArchiveResult) {}
   rpc Info(StatusRequest) returns (Status) {}
 }
+
+message ProxyDeployRequest {
+  Archive archive = 1;
+  int64 concurrency = 2;
+  repeated Peer peers = 3;
+}
+message ProxyDeployResult {}
+
+// message ProxyCancelRequest {
+//   Archive archive = 1;
+// }
+// message ProxyCancelResult {}

@@ -20,6 +20,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+type proxyDeploy interface {
+	Deploy(int64, credentials.TransportCredentials, Archive, ...Peer)
+}
+
 // errorFuture is used to return a static error.
 type errorFuture struct {
 	err error
@@ -109,18 +113,19 @@ func (t *proxyQuorum) Dispatch(m Message) (err error) {
 }
 
 // NewQuorum ...
-func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials) *Quorum {
+func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, deploy proxyDeploy) *Quorum {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Quorum{
-		Events: make(chan raft.Observation, 200),
-		m:      &sync.Mutex{},
-		lq:     q,
-		ctx:    ctx,
-		cancel: cancel,
-		proxy:  proxyRaft{},
-		creds:  creds,
-		c:      c,
-		pq:     proxyQuorum{},
+		Events:  make(chan raft.Observation, 200),
+		m:       &sync.Mutex{},
+		lq:      q,
+		ctx:     ctx,
+		cancel:  cancel,
+		proxy:   proxyRaft{},
+		pdeploy: deploy,
+		creds:   creds,
+		c:       c,
+		pq:      proxyQuorum{},
 		UploadProtocol: uploads.ProtocolFunc(
 			func(uid []byte, _ uint64) (uploads.Uploader, error) {
 				return uploads.NewTempFileUploader()
@@ -143,6 +148,7 @@ type Quorum struct {
 	proxy          raftproxy
 	lq             *QuorumFSM
 	pq             proxyQuorum
+	pdeploy        proxyDeploy
 	ctx            context.Context
 	cancel         context.CancelFunc
 }
@@ -172,6 +178,35 @@ func (t *Quorum) observe() {
 			}
 		}
 	}
+}
+
+// Deploy ...
+func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDeployResult, err error) {
+	var (
+		_zero ProxyDeployResult
+	)
+	t.m.Lock()
+	p := t.proxy
+	t.m.Unlock()
+
+	debugx.Println("deploy invoked")
+	switch s := p.State(); s {
+	case raft.Leader:
+	default:
+		var (
+			c Client
+		)
+
+		if c, err = Dial(RPCAddress(t.findLeader(p.Leader())), grpc.WithTransportCredentials(t.creds)); err != nil {
+			return &_zero, err
+		}
+
+		return &_zero, c.RemoteDeploy(req.Concurrency, *req.Archive, PtrToPeers(req.Peers...)...)
+	}
+
+	t.pdeploy.Deploy(req.Concurrency, t.creds, *req.Archive, PtrToPeers(req.Peers...)...)
+
+	return &_zero, err
 }
 
 // Upload ...

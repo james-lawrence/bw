@@ -7,20 +7,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
-// And(Role("app"), Named("host1"))
-// OR(Role("app"), Named("host1"))
-// XOR(Role("app"), Named("host1"))
-// And(And(Role("app"), Named("host1")), NOT(Role("app"), Named("host1"))
-
-// Filter - Matches against Instances, returns true if the agent.Peer matches the filter,
-// false otherwise
-// matches := Role("app").Match(agent.Peer)
-// matches := Named("host1").Match(agent.Peer)
-// type Filter interface {
-// 	// Returns true if the agent.Peer matches the criteria, false otherwise
-// 	Match(agent.Peer) bool
-// }
-
 // Filter determines if a node should be deployed to based on some conditions.
 type Filter interface {
 	Match(agent.Peer) bool
@@ -37,6 +23,19 @@ func Named(r *regexp.Regexp) Filter {
 func IP(ip net.IP) Filter {
 	return FilterFunc(func(i agent.Peer) bool {
 		return ip.Equal(net.ParseIP(i.Ip))
+	})
+}
+
+// Peers matches against a set of peers.
+func Peers(peers ...agent.Peer) Filter {
+	m := make(map[string]bool, len(peers))
+	for _, p := range peers {
+		m[p.Ip] = true
+	}
+
+	return FilterFunc(func(i agent.Peer) bool {
+		_, ok := m[i.Ip]
+		return ok
 	})
 }
 

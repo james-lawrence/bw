@@ -92,6 +92,22 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 	return *_info, err
 }
 
+// RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
+// of servers to deploy to.
+func (t Conn) RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) (err error) {
+	rpc := NewQuorumClient(t.conn)
+	req := ProxyDeployRequest{
+		Archive: &archive,
+		Peers:   PeersToPtr(peers...),
+	}
+
+	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 // Deploy ...
 func (t Conn) Deploy(info Archive) error {
 	var (

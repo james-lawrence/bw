@@ -10,13 +10,12 @@ import (
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	xcluster "bitbucket.org/jatone/bearded-wookie/cluster"
+	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
@@ -89,8 +88,8 @@ func (t *clusterCmd) Join(snap peering.File, options ...clustering.Option) (clus
 	defaults := []clustering.Option{
 		clustering.OptionBindAddress(t.swimNetwork.IP.String()),
 		clustering.OptionBindPort(t.swimNetwork.Port),
-		clustering.OptionEventDelegate(eventHandler{}),
-		clustering.OptionAliveDelegate(xcluster.AliveDefault{}),
+		clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
+		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 	}
 
 	options = append(defaults, options...)
@@ -158,18 +157,4 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raf
 		uint16(t.raftNetwork.Port),
 		append(defaultOptions, options...)...,
 	)
-}
-
-type eventHandler struct{}
-
-func (t eventHandler) NotifyJoin(peer *memberlist.Node) {
-	log.Println("NotifyJoin", peer.Name)
-}
-
-func (t eventHandler) NotifyLeave(peer *memberlist.Node) {
-	log.Println("NotifyLeave", peer.Name)
-}
-
-func (t eventHandler) NotifyUpdate(peer *memberlist.Node) {
-	log.Println("NotifyUpdate", peer.Name)
 }
