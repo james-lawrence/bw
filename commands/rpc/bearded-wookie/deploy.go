@@ -19,6 +19,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/ux"
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
@@ -54,7 +55,8 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
 	switch mode {
 	case uxmodeTerm:
-		go ux.NewTermui(t.global.ctx, t.global.cleanup, events)
+		t.global.cleanup.Add(1)
+		go ux.NewTermui(t.global.ctx, t.global.shutdown, t.global.cleanup, events)
 	default:
 		go ux.Logging(events)
 	}
@@ -120,14 +122,22 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		return err
 	}
 
-	log.Println("connected to cluster cluster")
-	log.Printf("configuration:\n%#v\n", t.config)
+	go func() {
+		<-t.global.ctx.Done()
+		if err = client.Close(); err != nil {
+			log.Println("failed to close client")
+		}
+	}()
+
+	log.Println("connected to cluster")
+	debugx.Printf("configuration:\n%#v\n", t.config)
 
 	events := make(chan agent.Message, 100)
 	go client.Watch(events)
 	t.initializeUX(t.uxmode, events)
 
-	log.Println("uploading archive")
+	events <- agentutil.LogEvent(local.Peer, "uploading archive")
+
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
 		return err
 	}
@@ -155,15 +165,16 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	cx := cluster.New(local, c)
 	max := int64(t.config.Partitioner().Partition(len(cx.Members())))
 
-	if err = client.RemoteDeploy(max, info, deployment.ApplyFilter(filter, cx.Peers()...)...); err != nil {
-		return err
-	}
+	go func() {
+		defer t.global.shutdown()
+		defer time.Sleep(3 * time.Second)
 
-	log.Println("deployment complete")
+		if cause := client.RemoteDeploy(max, info, deployment.ApplyFilter(filter, cx.Peers()...)...); cause != nil {
+			log.Println("deployment failed", cause)
+		}
 
-	// complete.
-	time.Sleep(3 * time.Second)
-	t.global.shutdown()
+		log.Println("deployment complete")
+	}()
 
 	return err
 }

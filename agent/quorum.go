@@ -112,6 +112,10 @@ func (t *proxyQuorum) Dispatch(m Message) (err error) {
 	return errors.Wrapf(t.client.Dispatch(m), "proxy dispatch: %s - %s", t.peader.Name, t.peader.Ip)
 }
 
+func (t *proxyQuorum) close() {
+	t.client.Close()
+}
+
 // NewQuorum ...
 func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, deploy proxyDeploy) *Quorum {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -158,6 +162,8 @@ func (t *Quorum) observe() {
 	for o := range t.Events {
 		switch m := o.Data.(type) {
 		case raft.LeaderObservation:
+			t.pq.close()
+
 			if m.Leader == "" {
 				debugx.Println("leader lost disabling quorum locally")
 				t.proxy = proxyRaft{}
@@ -166,6 +172,7 @@ func (t *Quorum) observe() {
 				t.ctx, t.cancel = context.WithCancel(context.Background())
 				continue
 			}
+
 			peader := t.findLeader(m.Leader)
 			debugx.Println("leader identified, enabling quorum locally", peader.Name, peader.Ip)
 			t.proxy = o.Raft
@@ -190,6 +197,7 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 	t.m.Unlock()
 
 	debugx.Println("deploy invoked")
+
 	switch s := p.State(); s {
 	case raft.Leader:
 	default:
@@ -201,6 +209,7 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 			return &_zero, err
 		}
 
+		defer c.Close()
 		return &_zero, c.RemoteDeploy(req.Concurrency, *req.Archive, PtrToPeers(req.Peers...)...)
 	}
 

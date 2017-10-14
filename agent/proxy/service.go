@@ -6,7 +6,6 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 )
 
@@ -18,15 +17,17 @@ type clusterx interface {
 }
 
 // NewProxy ...
-func NewProxy(c clusterx) Proxy {
+func NewProxy(c clusterx, d dispatcher) Proxy {
 	return Proxy{
 		c: c,
+		d: d,
 	}
 }
 
 // Proxy - implements the deployer.
 type Proxy struct {
 	c clusterx
+	d dispatcher
 }
 
 // Deploy ...
@@ -53,7 +54,7 @@ func (t Proxy) Deploy(max int64, creds credentials.TransportCredentials, info ag
 
 	deployment.NewDeploy(
 		t.c.Local(),
-		agentutil.NewDispatcher(t.c, grpc.WithTransportCredentials(creds)),
+		t.d,
 		options...,
 	).Deploy(t.c)
 }

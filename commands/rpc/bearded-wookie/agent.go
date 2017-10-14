@@ -49,7 +49,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, agent.Peer, agent.Config) agent.ServerOption) error {
+func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
@@ -119,7 +119,7 @@ func (t *agentCmd) bind(aoptions func(agentutil.Dispatcher, agent.Peer, agent.Co
 	cx := cluster.New(local, c)
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
-	quorum := agent.NewQuorum(lq, cx, tlscreds, proxy.NewProxy(cx))
+	quorum := agent.NewQuorum(lq, cx, tlscreds, proxy.NewProxy(cx, dispatcher))
 	server := agent.NewServer(
 		cx,
 		t.listener.Addr(),

@@ -31,8 +31,8 @@ func (t BusDispatcher) Dispatch(msgs ...agent.Message) error {
 }
 
 // NewDispatcher create a message dispatcher from the cluster and credentials.
-func NewDispatcher(c cluster, creds grpc.DialOption) Dispatcher {
-	return Dispatcher{
+func NewDispatcher(c cluster, creds grpc.DialOption) *Dispatcher {
+	return &Dispatcher{
 		cluster: c,
 		creds:   creds,
 		m:       &sync.Mutex{},
@@ -48,7 +48,7 @@ type Dispatcher struct {
 }
 
 // Dispatch dispatches messages
-func (t Dispatcher) Dispatch(m ...agent.Message) error {
+func (t *Dispatcher) Dispatch(m ...agent.Message) error {
 	var (
 		err error
 		c   agent.Client
@@ -62,7 +62,7 @@ func (t Dispatcher) Dispatch(m ...agent.Message) error {
 	return logx.MaybeLog(c.Dispatch(m...))
 }
 
-func (t Dispatcher) getClient() (c agent.Client, err error) {
+func (t *Dispatcher) getClient() (c agent.Client, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if t.c != nil {

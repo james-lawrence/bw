@@ -71,7 +71,9 @@ func main() {
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
 	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
-
+	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
+		log.Println("waiting for systems to shutdown")
+	})
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
@@ -82,7 +84,5 @@ func main() {
 		log.Fatalf("failed to parse initialization arguments: %+v\n", err)
 	}
 
-	systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
-		log.Println("waiting for systems to shutdown")
-	})
+	global.cleanup.Wait()
 }

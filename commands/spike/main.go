@@ -20,7 +20,7 @@ func main() {
 	background := &sync.WaitGroup{}
 	ctx, done := context.WithCancel(context.Background())
 	app := kingpin.New("spike", "spike command line for testing functionality")
-	app.Command("example1", "example 1").Action(example1(ctx, background))
+	app.Command("example1", "example 1").Action(example1(ctx, done, background))
 	if _, err := app.Parse(os.Args[1:]); err != nil {
 		log.Fatalln(err)
 	}
@@ -30,11 +30,11 @@ func main() {
 	})
 }
 
-func example1(ctx context.Context, background *sync.WaitGroup) func(*kingpin.ParseContext) error {
+func example1(ctx context.Context, done context.CancelFunc, background *sync.WaitGroup) func(*kingpin.ParseContext) error {
 	return func(*kingpin.ParseContext) (err error) {
 		local := agent.LocalPeer(bw.MustGenerateID().String())
 		events := make(chan agent.Message, 100)
-		ux.NewTermui(ctx, background, events)
+		ux.NewTermui(ctx, done, background, events)
 		d := agentutil.NewBusDispatcher(events)
 
 		logx.MaybeLog(d.Dispatch(agentutil.PeersFoundEvent(local, 1)))

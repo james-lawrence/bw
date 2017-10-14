@@ -46,6 +46,10 @@ type Conn struct {
 
 // Close ...
 func (t Conn) Close() error {
+	if t.conn == nil {
+		return nil
+	}
+
 	return t.conn.Close()
 }
 
@@ -161,6 +165,7 @@ func (t Conn) Watch(out chan<- Message) (err error) {
 	)
 	debugx.Println("watch started")
 	defer debugx.Println("watch finished")
+	defer close(out)
 
 	c := NewQuorumClient(t.conn)
 	if src, err = c.Watch(context.Background(), &WatchRequest{}); err != nil {

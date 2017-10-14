@@ -15,9 +15,9 @@ import (
 )
 
 // NewTermui - terminal based ux.
-func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message) {
-	wg.Add(1)
+func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup, events chan agent.Message) {
 	defer wg.Done()
+	defer log.Println("termui shutting down")
 
 	var (
 		storage = state{
@@ -34,11 +34,22 @@ func NewTermui(ctx context.Context, wg *sync.WaitGroup, events chan agent.Messag
 		return
 	}
 
+	termui.Handle("/sys/kdb", func(e termui.Event) {
+		events <- agentutil.LogEvent(agent.LocalPeer("internal"), fmt.Sprintf("%s %s %s", e.Path, e.Type, e.To))
+		// panic(e.Path)
+		// done()
+		// termui.StopLoop()
+	})
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case m := <-events:
+		case m, ok := <-events:
+			if !ok {
+				return
+			}
+
 			storage = mergeEvent(storage, m)
 		}
 
@@ -85,7 +96,7 @@ func render(s state) {
 
 	logs := termui.NewList()
 	logs.Border = true
-	logs.BorderLabel = "logs"
+	logs.BorderLabel = "info"
 	logs.Overflow = "wrap"
 	logs.Items = logsToList(s)
 	logs.Width = termWidth
