@@ -52,19 +52,8 @@ func (t Cluster) Connect() agent.ConnectInfo {
 
 	return agent.ConnectInfo{
 		Secret: secret,
-		Quorum: PeersToPointers(t.Quorum()...),
+		Quorum: agent.PeersToPtr(t.Quorum()...),
 	}
-}
-
-// PeersToPointers converts a set of peers to a slice of pointers.
-func PeersToPointers(peers ...agent.Peer) []*agent.Peer {
-	pts := make([]*agent.Peer, 0, len(peers))
-	for _, n := range peers {
-		tmp := n
-		pts = append(pts, &tmp)
-	}
-
-	return pts
 }
 
 // NodesToPeers ...
