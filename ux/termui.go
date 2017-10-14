@@ -34,12 +34,16 @@ func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup,
 		return
 	}
 
-	termui.Handle("/sys/kdb", func(e termui.Event) {
-		events <- agentutil.LogEvent(agent.LocalPeer("internal"), fmt.Sprintf("%s %s %s", e.Path, e.Type, e.To))
-		// panic(e.Path)
-		// done()
-		// termui.StopLoop()
+	events <- agentutil.LogEvent(agent.LocalPeer("internal"), "test event")
+
+	termui.Handle("/sys/kbd/C-c", func(e termui.Event) {
+		done()
+		termui.StopLoop()
 	})
+
+	go func() {
+		termui.Loop()
+	}()
 
 	for {
 		select {
