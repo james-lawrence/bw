@@ -4,6 +4,15 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 - [ ] figure out why the leader elections not eventually becoming consistent in some cases.
 - [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
 
+#### custom plugins
+- allow for custom plugins to be executed.
+- plugins must be registered with 2 pieces of information: /executable/path and the extension to register.
+```
+1) look at file extension, see that it is a registered plugin.
+2) look at registry for executable to run.
+3) read the file contents and make them available via stdin to the plugin.
+```
+
 #### initial setup work
 - [ ] generate skeleton directories. ie) `.bw .bwconfig`
 - [ ] populate skeleton directories with pre-populated configurations.
@@ -16,15 +25,6 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 - will use folders to represent a module. all the directives within the folder (including any child modules)
 are executed in order. once all directives are executed it will return
 up the stack and continue running siblings.
-
-#### custom plugins
-- allow for custom plugins to be executed.
-- plugins must be registered with 2 pieces of information: /executable/path and the extension to register.
-```
-1) look at file extension, see that it is a registered plugin.
-2) look at registry for executable to run.
-3) read the file contents and make them available via stdin to the plugin.
-```
 
 #### improve event stream to have a historical record.
 - have the quorum nodes store the last n events and be able to scan/seek them.
