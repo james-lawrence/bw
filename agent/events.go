@@ -63,6 +63,7 @@ func (t EventBus) background() {
 func (t EventBus) Dispatch(messages ...Message) {
 	debugx.Println("dispatching messages", len(messages))
 	t.buffer <- messages
+	debugx.Println("dispatched messages", len(messages))
 }
 
 // Register ...
@@ -73,7 +74,7 @@ func (t EventBus) Register(o Observer) EventBusObserver {
 		id: atomic.AddInt64(t.serial, 1),
 	}
 
-	debugx.Println("registering", obs.id)
+	debugx.Println("registering", obs.id, len(t.observers))
 	t.observers[obs.id] = o
 
 	return obs
@@ -83,6 +84,6 @@ func (t EventBus) Register(o Observer) EventBusObserver {
 func (t EventBus) Remove(e EventBusObserver) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	debugx.Println("removing observer", e.id)
+	debugx.Println("removing observer", e.id, len(t.observers))
 	delete(t.observers, e.id)
 }

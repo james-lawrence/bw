@@ -70,7 +70,9 @@ func (t *QuorumFSM) decode(buf []byte) {
 		return
 	}
 
+	debugx.Println("dispatching into event bus")
 	t.EventBus.Dispatch(m)
+	debugx.Println("dispatched into event bus")
 }
 
 // Snapshot is used to support log compaction. This call should

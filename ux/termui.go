@@ -34,8 +34,6 @@ func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup,
 		return
 	}
 
-	events <- agentutil.LogEvent(agent.LocalPeer("internal"), "test event")
-
 	termui.Handle("/sys/kbd/C-c", func(e termui.Event) {
 		done()
 		termui.StopLoop()
@@ -89,7 +87,11 @@ func render(s state) {
 	completed.BorderLabel = fmt.Sprintf("progress - %d / %d", s.NodesCompleted, s.NodesFound)
 	completed.Height = 5
 	completed.Width = termWidth
-	completed.Percent = int((float64(s.NodesCompleted) / float64(s.NodesFound)) * 100)
+	if s.NodesFound > 0 {
+		completed.Percent = int((float64(s.NodesCompleted) / float64(s.NodesFound)) * 100)
+	} else {
+		completed.Percent = 0
+	}
 
 	peers := termui.NewList()
 	peers.Border = true

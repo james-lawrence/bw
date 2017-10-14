@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
@@ -18,6 +19,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/raft"
@@ -90,7 +92,11 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	})
 
 	tlscreds := credentials.NewTLS(creds)
-	t.server = grpc.NewServer(grpc.Creds(tlscreds))
+	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
+		Time:    10 * time.Second,
+		Timeout: 3 * time.Second,
+	})
+	t.server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
 	options := []clustering.Option{
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),

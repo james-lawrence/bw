@@ -197,14 +197,20 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 	t.m.Unlock()
 
 	debugx.Println("deploy invoked")
+	defer debugx.Println("deploy completed")
 
 	switch s := p.State(); s {
 	case raft.Leader:
+		debugx.Println("proxy deploy initiated")
+		t.pdeploy.Deploy(req.Concurrency, t.creds, *req.Archive, PtrToPeers(req.Peers...)...)
+		debugx.Println("proxy deploy completed")
+		return &_zero, err
 	default:
 		var (
 			c Client
 		)
 
+		debugx.Println("forwarding deploy request to leader")
 		if c, err = Dial(RPCAddress(t.findLeader(p.Leader())), grpc.WithTransportCredentials(t.creds)); err != nil {
 			return &_zero, err
 		}
@@ -212,10 +218,6 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 		defer c.Close()
 		return &_zero, c.RemoteDeploy(req.Concurrency, *req.Archive, PtrToPeers(req.Peers...)...)
 	}
-
-	t.pdeploy.Deploy(req.Concurrency, t.creds, *req.Archive, PtrToPeers(req.Peers...)...)
-
-	return &_zero, err
 }
 
 // Upload ...
@@ -232,12 +234,15 @@ func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 	t.m.Unlock()
 
 	debugx.Println("upload invoked")
+	defer debugx.Println("upload completed")
+
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
 		return errors.Errorf("upload must be run on a member of quorum: %s", s)
 	}
 
+	debugx.Println("upload: generating deployment ID")
 	if deploymentID, err = bw.GenerateID(); err != nil {
 		return err
 	}
@@ -274,6 +279,7 @@ func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 			return err
 		}
 
+		debugx.Println("upload: chunk received")
 		if checksum, err = dst.Upload(bytes.NewBuffer(chunk.Data)); err != nil {
 			log.Println("error uploading chunk", err)
 			return err
@@ -295,9 +301,9 @@ func (t *Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
 	}
 
 	ctx, done := context.WithCancel(t.ctx)
-	log.Println("event observer: registering")
+	debugx.Println("event observer: registering")
 	o := t.lq.Register(pbObserver{dst: out, done: done})
-	log.Println("event observer: registered")
+	debugx.Println("event observer: registered")
 	defer t.lq.Remove(o)
 
 	<-ctx.Done()
@@ -311,9 +317,11 @@ func (t *Quorum) Dispatch(in Quorum_DispatchServer) error {
 		err error
 		m   *Message
 	)
-
+	debugx.Println("dispatch initiated")
+	defer debugx.Println("dispatch completed")
 	t.m.Lock()
 	p := t.proxy
+	dispatch := t.pq.Dispatch
 	t.m.Unlock()
 
 	leader := p.Leader()
@@ -322,7 +330,6 @@ func (t *Quorum) Dispatch(in Quorum_DispatchServer) error {
 		return errors.New("unable to dispatch message, no leader currently elected")
 	}
 
-	dispatch := t.pq.Dispatch
 	if p.State() == raft.Leader {
 		dispatch = func(m Message) error {
 			return maybeApply(p, 5*time.Second)(MessageToCommand(m)).Error()

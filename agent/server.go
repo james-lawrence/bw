@@ -4,6 +4,8 @@ import (
 	"log"
 	"net"
 
+	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+
 	"google.golang.org/grpc/credentials"
 
 	"golang.org/x/net/context"
@@ -76,6 +78,7 @@ type Server struct {
 
 // Deploy ...
 func (t Server) Deploy(ctx context.Context, archive *Archive) (*ArchiveResult, error) {
+	debugx.Println("deploy initiated", archive.Location)
 	if err := t.Deployer.Deploy(archive); err != nil {
 		return nil, err
 	}

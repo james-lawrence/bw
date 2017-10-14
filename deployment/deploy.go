@@ -147,9 +147,11 @@ type Deploy struct {
 // Deploy ...
 func (t Deploy) Deploy(c cluster) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
+
 	t.Dispatch(agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
-	for i := 0; i < t.partitioner.Partition(len(nodes)); i++ {
+	concurrency := t.partitioner.Partition(len(nodes))
+	for i := 0; i < concurrency; i++ {
 		t.worker.wait.Add(1)
 		go t.worker.work()
 	}
@@ -171,9 +173,11 @@ func (t Deploy) Deploy(c cluster) {
 
 // Dispatch - implements dispatcher interface.
 func (t Deploy) Dispatch(m ...agent.Message) error {
+	// logDispatcher{}.Dispatch(m...)
 	return logx.MaybeLog(t.worker.dispatcher.Dispatch(m...))
 }
 
+// ApplyFilter applies the filter to the set of peers.
 func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	subset := make([]agent.Peer, 0, len(set))
 	for _, peer := range set {

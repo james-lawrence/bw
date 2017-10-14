@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"log"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -52,6 +54,7 @@ func (t Proxy) Deploy(max int64, creds credentials.TransportCredentials, info ag
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner{BatchMax: int(max)}),
 	}
 
+	log.Printf("new deploy starting %p\n", t.d)
 	deployment.NewDeploy(
 		t.c.Local(),
 		t.d,

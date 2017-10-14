@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -187,7 +188,10 @@ func (t Conn) Dispatch(messages ...Message) (err error) {
 
 	c := NewQuorumClient(t.conn)
 
-	if dst, err = c.Dispatch(context.Background()); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if dst, err = c.Dispatch(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 
