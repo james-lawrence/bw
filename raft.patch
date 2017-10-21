@@ -1,0 +1,64 @@
+diff --git a/vendor/github.com/hashicorp/raft/observer.go b/vendor/github.com/hashicorp/raft/observer.go
+index dbd0cc6..103d775 100644
+--- a/vendor/github.com/hashicorp/raft/observer.go
++++ b/vendor/github.com/hashicorp/raft/observer.go
+@@ -2,6 +2,7 @@ package raft
+ 
+ import (
+ 	"sync/atomic"
++	"time"
+ )
+ 
+ // Observation is sent along the given channel to observers when an event occurs.
+@@ -18,6 +19,18 @@ type LeaderObservation struct {
+ 	Leader string
+ }
+ 
++// PeerObservation is used in Observation.Data when a peer is changed.
++type PeerObservation struct {
++	Alive bool
++	Peer  string
++}
++
++// FailedHeartbeatObversation is used in Observation.Data when heartbeat fails.
++type FailedHeartbeatObversation struct {
++	Peer    string
++	Elapsed time.Duration
++}
++
+ // nextObserverId is used to provide a unique ID for each observer to aid in
+ // deregistration.
+ var nextObserverID uint64
+diff --git a/vendor/github.com/hashicorp/raft/raft.go b/vendor/github.com/hashicorp/raft/raft.go
+index c5dac73..93ceaaf 100644
+--- a/vendor/github.com/hashicorp/raft/raft.go
++++ b/vendor/github.com/hashicorp/raft/raft.go
+@@ -1074,6 +1074,7 @@ func (r *Raft) checkLeaderLease() time.Duration {
+ 				r.logger.Printf("[WARN] raft: Failed to contact %v in %v", peer, diff)
+ 			} else {
+ 				r.logger.Printf("[DEBUG] raft: Failed to contact %v in %v", peer, diff)
++				r.observe(FailedHeartbeatObversation{Peer: peer, Elapsed: diff})
+ 			}
+ 		}
+ 		metrics.AddSample([]string{"raft", "leader", "lastContact"}, float32(diff/time.Millisecond))
+@@ -1250,6 +1251,7 @@ func (r *Raft) processLog(l *Log, future *logFuture, precommit bool) (stepDown b
+ 				if _, ok := r.leaderState.replState[p]; !ok {
+ 					r.logger.Printf("[INFO] raft: Added peer %v, starting replication", p)
+ 					r.startReplication(p)
++					r.observe(PeerObservation{Peer: p, Alive: true})
+ 				}
+ 			}
+ 		}
+@@ -1260,11 +1262,11 @@ func (r *Raft) processLog(l *Log, future *logFuture, precommit bool) (stepDown b
+ 			for _, repl := range r.leaderState.replState {
+ 				if !PeerContained(r.peers, repl.peer) {
+ 					r.logger.Printf("[INFO] raft: Removed peer %v, stopping replication (Index: %d)", repl.peer, l.Index)
+-
+ 					// Replicate up to this index and stop
+ 					repl.stopCh <- l.Index
+ 					close(repl.stopCh)
+ 					toDelete = append(toDelete, repl.peer)
++					r.observe(PeerObservation{Peer: repl.peer, Alive: false})
+ 				}
+ 			}
+ 			for _, name := range toDelete {
