@@ -5,6 +5,7 @@ import (
 
 	"bitbucket.org/jatone/bearded-wookie/archive"
 	"bitbucket.org/jatone/bearded-wookie/directives"
+	"bitbucket.org/jatone/bearded-wookie/directives/dynplugin"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 	"bitbucket.org/jatone/bearded-wookie/downloads"
 	"github.com/pkg/errors"
@@ -27,6 +28,13 @@ func DirectiveOptionDeployContext(dctx DeployContext) DirectiveOption {
 	}
 }
 
+// DirectiveOptionPlugins ...
+func DirectiveOptionPlugins(p ...dynplugin.Directive) DirectiveOption {
+	return func(d *Directive) {
+		d.plugins = p
+	}
+}
+
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
@@ -41,6 +49,7 @@ func NewDirective(options ...DirectiveOption) Directive {
 type Directive struct {
 	dctx    DeployContext
 	sctx    shell.Context
+	plugins []dynplugin.Directive
 	dlreg   downloads.Registry
 	options []DirectiveOption
 }
@@ -88,14 +97,21 @@ func (t Directive) deploy() {
 	}
 
 	t.dctx.Log.Println("completed download", dst)
+	loaders := []directives.Loader{
+		dshell,
+		dpkg,
+	}
 
-	if d, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), dshell, dpkg); err != nil {
+	for _, p := range t.plugins {
+		loaders = append(loaders, p)
+	}
+
+	if d, err = directives.Load(t.dctx.Log, filepath.Join(dst, ".remote"), loaders...); err != nil {
 		t.dctx.Done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}
 
 	t.dctx.Log.Println("loaded", len(d), "directive(s)")
-
 	for _, l := range d {
 		if err = l.Run(); err != nil {
 			t.dctx.Done(err)

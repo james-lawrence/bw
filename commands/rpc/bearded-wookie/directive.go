@@ -1,9 +1,12 @@
 package main
 
 import (
+	"os"
+
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"bitbucket.org/jatone/bearded-wookie/directives/dynplugin"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
 
 	"github.com/alecthomas/kingpin"
@@ -20,10 +23,15 @@ func (t *directive) configure(cmd *kingpin.CmdClause) error {
 
 func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	var (
-		sctx shell.Context
+		sctx    shell.Context
+		plugins []dynplugin.Directive
 	)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
+		return err
+	}
+
+	if plugins, err = dynplugin.Load("./plugins"); !os.IsNotExist(err) && err != nil {
 		return err
 	}
 
@@ -33,6 +41,7 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 				p,
 				deployment.NewDirective(
 					deployment.DirectiveOptionShellContext(sctx),
+					deployment.DirectiveOptionPlugins(plugins...),
 				),
 				deployment.CoordinatorOptionDispatcher(d),
 				deployment.CoordinatorOptionRoot(config.Root),

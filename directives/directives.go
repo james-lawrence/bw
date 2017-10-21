@@ -26,18 +26,18 @@ type Directive interface {
 }
 
 // Load the directives from the provided directory.
-func Load(l logger, dir string, loaders ...loader) ([]Directive, error) {
+func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 	var (
 		err error
 	)
 
 	extmap := loaderToExts(l, loaders...)
-	results := make([]Directive, 0, 1024)
+	results := make([]Directive, 0, 64)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		var (
 			found     bool
-			_loader   loader
+			loader    Loader
 			directive Directive
 			reader    *os.File
 		)
@@ -46,18 +46,14 @@ func Load(l logger, dir string, loaders ...loader) ([]Directive, error) {
 			return err
 		}
 
-		// ignore subdirectories.
+		// don't try to process a directory as a directive, instead
+		// recurse into the directory.
 		if info.IsDir() {
-			if path != dir {
-				l.Println("skipping directory", path)
-				return filepath.SkipDir
-			}
-
 			return nil
 		}
 
 		ext := filepath.Ext(path)
-		if _loader, found = extmap[ext]; !found {
+		if loader, found = extmap[ext]; !found {
 			l.Println("no directive exists for", ext, ":", path, "skipping")
 			return nil
 		}
@@ -67,7 +63,7 @@ func Load(l logger, dir string, loaders ...loader) ([]Directive, error) {
 		}
 		defer reader.Close()
 
-		if directive, err = _loader.Build(reader); err != nil {
+		if directive, err = loader.Build(reader); err != nil {
 			return errors.Wrapf(err, "failed to build directive for: %s", path)
 		}
 
@@ -78,8 +74,8 @@ func Load(l logger, dir string, loaders ...loader) ([]Directive, error) {
 	return results, err
 }
 
-func loaderToExts(logger logger, loaders ...loader) map[string]loader {
-	m := make(map[string]loader, len(loaders))
+func loaderToExts(logger logger, loaders ...Loader) map[string]Loader {
+	m := make(map[string]Loader, len(loaders))
 	for _, l := range loaders {
 		for _, ext := range l.Ext() {
 			if _, found := m[ext]; found {
@@ -93,7 +89,8 @@ func loaderToExts(logger logger, loaders ...loader) map[string]loader {
 	return m
 }
 
-type loader interface {
+// Loader represents a directive to be used for the specified extensions.
+type Loader interface {
 	// extensions to match against.
 	Ext() []string
 	Build(io.Reader) (Directive, error)
