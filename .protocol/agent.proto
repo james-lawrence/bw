@@ -102,8 +102,3 @@ message ProxyDeployRequest {
   repeated Peer peers = 3;
 }
 message ProxyDeployResult {}
-
-// message ProxyCancelRequest {
-//   Archive archive = 1;
-// }
-// message ProxyCancelResult {}
