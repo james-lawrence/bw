@@ -16,6 +16,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
+	"bitbucket.org/jatone/bearded-wookie/uploads"
 	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -58,6 +59,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		creds  *tls.Config
 		secret []byte
 		p      raftutil.Protocol
+		upload uploads.Protocol
 	)
 	log.SetPrefix("[AGENT] ")
 
@@ -66,6 +68,9 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	}
 
 	log.Printf("configuration: %#v\n", t.config)
+	if upload, err = t.config.Storage.Protocol(); err != nil {
+		return err
+	}
 
 	if t.listener, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
@@ -125,7 +130,13 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	cx := cluster.New(local, c)
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
-	quorum := agent.NewQuorum(lq, cx, tlscreds, proxy.NewProxy(cx, dispatcher))
+	quorum := agent.NewQuorum(
+		lq,
+		cx,
+		tlscreds,
+		proxy.NewProxy(cx, dispatcher),
+		agent.QuorumOptionUpload(upload),
+	)
 	server := agent.NewServer(
 		cx,
 		t.listener.Addr(),

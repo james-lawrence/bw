@@ -116,8 +116,18 @@ func (t *proxyQuorum) close() {
 	t.client.Close()
 }
 
+// QuorumOption option for the quorum rpc.
+type QuorumOption func(*Quorum)
+
+// QuorumOptionUpload set the upload storage protocol.
+func QuorumOptionUpload(proto uploads.Protocol) QuorumOption {
+	return func(q *Quorum) {
+		q.UploadProtocol = proto
+	}
+}
+
 // NewQuorum ...
-func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, deploy proxyDeploy) *Quorum {
+func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, deploy proxyDeploy, options ...QuorumOption) *Quorum {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Quorum{
 		Events:  make(chan raft.Observation, 200),
@@ -135,6 +145,10 @@ func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, 
 				return uploads.NewTempFileUploader()
 			},
 		),
+	}
+
+	for _, opt := range options {
+		opt(r)
 	}
 
 	go r.observe()
@@ -247,10 +261,12 @@ func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 		return err
 	}
 
+	debugx.Println("upload: receiving metadata")
 	if chunk, err = stream.Recv(); err != nil {
 		return errors.WithStack(err)
 	}
 
+	debugx.Printf("upload: initializing protocol: %T\n", t.UploadProtocol)
 	if dst, err = t.UploadProtocol.NewUpload(deploymentID, chunk.GetMetadata().Bytes); err != nil {
 		return err
 	}

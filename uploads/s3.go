@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"net/http"
 	"path/filepath"
+	"sync"
+	"time"
 
 	yaml "gopkg.in/yaml.v1"
 
@@ -29,9 +32,11 @@ func newS3PFromConfig(serialized []byte) (_ Protocol, err error) {
 		return nil, errors.WithStack(err)
 	}
 
+	s.Config.HTTPClient = &http.Client{Timeout: 5 * time.Second}
+
 	return s3P{
 		s3config: cfg,
-		Uploader: s3manager.NewUploader(s),
+		Session:  s,
 	}, nil
 }
 
@@ -42,50 +47,75 @@ type s3config struct {
 
 type s3P struct {
 	s3config
-	*s3manager.Uploader
+	*session.Session
 }
 
 func (t s3P) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 	out, in := io.Pipe()
 	bucket := t.s3config.Bucket
 	key := filepath.Join(t.s3config.KeyPrefix, bw.RandomID(uid).String())
-	upload, err := t.Uploader.Upload(&s3manager.UploadInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Body:   out,
-	}, func(u *s3manager.Uploader) {
-		// TODO: verify this calculation its probably rounding wrong.
-		u.PartSize = int64(bytes / s3manager.MaxUploadParts)
-	})
-
-	if err != nil {
-		out.Close()
-		in.Close()
-		return nil, errors.WithStack(err)
-	}
 
 	return s3u{
-		upload: upload,
-		dst:    in,
-		sha:    sha256.New(),
+		dst: in,
+		sha: sha256.New(),
+		o:   &sync.Once{},
+		s3u: s3manager.NewUploader(t.Session),
+		s3ui: s3manager.UploadInput{
+			Bucket: &bucket,
+			Key:    &key,
+			Body:   out,
+		},
+		bytes:   bytes,
+		failure: make(chan error),
+		upload:  make(chan *s3manager.UploadOutput),
 	}, nil
 }
 
 type s3u struct {
-	sha    hash.Hash
-	dst    io.WriteCloser
-	upload *s3manager.UploadOutput
+	bytes   uint64
+	sha     hash.Hash
+	dst     io.WriteCloser
+	o       *sync.Once
+	s3ui    s3manager.UploadInput
+	s3u     *s3manager.Uploader
+	failure chan error
+	upload  chan *s3manager.UploadOutput
 }
 
 func (t s3u) Upload(r io.Reader) (hash.Hash, error) {
+	t.o.Do(func() {
+		go t.background()
+	})
 	return upload(r, t.sha, t.dst)
 }
 
 // Info ...
 func (t s3u) Info() (hash.Hash, string, error) {
-	if err := t.dst.Close(); err != nil {
-		return nil, "", errors.Wrap(err, "failed to close upload")
+	defer close(t.failure)
+	defer close(t.upload)
+	t.dst.Close()
+
+	select {
+	case err := <-t.failure:
+		return nil, "", errors.Wrap(err, "failed upload archive")
+	case upload := <-t.upload:
+		return t.sha, fmt.Sprintf("s3://%s", upload.Location), nil
+	}
+}
+
+func (t s3u) background() {
+	var (
+		err    error
+		upload *s3manager.UploadOutput
+	)
+	opt := func(u *s3manager.Uploader) {
+		// TODO: verify this calculation its probably rounding wrong.
+		u.PartSize = int64(t.bytes / s3manager.MaxUploadParts)
 	}
 
-	return t.sha, fmt.Sprintf("s3://%s", t.upload.Location), nil
+	if upload, err = t.s3u.Upload(&t.s3ui, opt); err != nil {
+		t.failure <- errors.WithStack(err)
+	}
+
+	t.upload <- upload
 }
