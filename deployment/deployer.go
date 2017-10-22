@@ -73,6 +73,7 @@ func (t Directive) Deploy(dctx DeployContext) error {
 func (t Directive) deploy() {
 	var (
 		err    error
+		dfs    directives.ArchiveLoader
 		dshell directives.ShellLoader
 		dpkg   directives.PackageLoader
 		dst    string
@@ -85,7 +86,7 @@ func (t Directive) deploy() {
 	dshell = directives.ShellLoader{
 		Context: shell.NewContext(t.sctx, shell.OptionLogger(t.dctx.Log)),
 	}
-
+	dfs = directives.ArchiveLoader{}
 	dpkg = directives.PackageLoader{}
 	dst = filepath.Join(t.dctx.Root, "archive")
 
@@ -100,6 +101,7 @@ func (t Directive) deploy() {
 	loaders := []directives.Loader{
 		dshell,
 		dpkg,
+		dfs,
 	}
 
 	for _, p := range t.plugins {

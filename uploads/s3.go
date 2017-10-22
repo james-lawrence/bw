@@ -91,8 +91,10 @@ func (t s3u) Upload(r io.Reader) (hash.Hash, error) {
 
 // Info ...
 func (t s3u) Info() (hash.Hash, string, error) {
-	defer close(t.failure)
-	defer close(t.upload)
+	defer func() {
+		close(t.failure)
+		close(t.upload)
+	}()
 	t.dst.Close()
 
 	select {
@@ -115,6 +117,7 @@ func (t s3u) background() {
 
 	if upload, err = t.s3u.Upload(&t.s3ui, opt); err != nil {
 		t.failure <- errors.WithStack(err)
+		return
 	}
 
 	t.upload <- upload

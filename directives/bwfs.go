@@ -7,9 +7,7 @@ import (
 )
 
 // ArchiveLoader directive.
-type ArchiveLoader struct {
-	Context Context
-}
+type ArchiveLoader struct{}
 
 // Ext extensions to succeed against.
 func (ArchiveLoader) Ext() []string {

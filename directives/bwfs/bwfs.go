@@ -51,24 +51,31 @@ type Executer struct {
 // Execute downloads and processes each archive.
 func (t Executer) Execute(archives ...Archive) (err error) {
 	for _, archive := range archives {
-		local := t.downloader.New(archive.URI).Download()
-		defer local.Close()
-
-		if err = t.inflater.New(archive.URI, archive.Path, os.FileMode(archive.Mode)).Inflate(local); err != nil {
+		if err = t.archive(archive); err != nil {
 			return err
 		}
-
-		if err = t.chownr(archive); err != nil {
-			return err
-		}
-
-		defer log.Println(archive)
 	}
 
 	return nil
 }
 
-func (t Executer) chownr(a Archive) (err error) {
+func (t Executer) archive(a Archive) (err error) {
+	local := t.downloader.New(a.URI).Download()
+	defer local.Close()
+	log.Println(a)
+
+	if err = t.inflater.New(a.URI, a.Path, os.FileMode(a.Mode)).Inflate(local); err != nil {
+		return err
+	}
+
+	if err = t.chown(a); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Executer) chown(a Archive) (err error) {
 	var (
 		owner *user.User
 		group *user.Group

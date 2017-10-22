@@ -18,6 +18,7 @@ type Local struct {
 	Directory string
 }
 
+// NewUpload upload to a local directory.
 func (t Local) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 	var (
 		err error
