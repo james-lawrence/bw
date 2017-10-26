@@ -133,9 +133,9 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	quorum := agent.NewQuorum(
 		lq,
 		cx,
-		tlscreds,
 		proxy.NewProxy(cx, dispatcher),
 		agent.QuorumOptionUpload(upload),
+		agent.QuorumOptionCredentials(tlscreds),
 	)
 	server := agent.NewServer(
 		cx,

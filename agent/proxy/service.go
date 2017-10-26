@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
@@ -33,13 +32,13 @@ type Proxy struct {
 }
 
 // Deploy ...
-func (t Proxy) Deploy(max int64, creds credentials.TransportCredentials, info agent.Archive, peers ...agent.Peer) {
+func (t Proxy) Deploy(max int64, creds grpc.DialOption, info agent.Archive, peers ...agent.Peer) {
 	var (
 		filter deployment.Filter
 	)
 
 	doptions := []grpc.DialOption{
-		grpc.WithTransportCredentials(creds),
+		creds,
 	}
 
 	filter = deployment.AlwaysMatch

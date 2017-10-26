@@ -21,7 +21,7 @@ import (
 )
 
 type proxyDeploy interface {
-	Deploy(int64, credentials.TransportCredentials, Archive, ...Peer)
+	Deploy(int64, grpc.DialOption, Archive, ...Peer)
 }
 
 // errorFuture is used to return a static error.
@@ -126,8 +126,20 @@ func QuorumOptionUpload(proto uploads.Protocol) QuorumOption {
 	}
 }
 
+// QuorumOptionCredentials set the dial credentials options for the agent.
+// when the credentials are nil then insecure connections are used.
+func QuorumOptionCredentials(c credentials.TransportCredentials) QuorumOption {
+	return func(q *Quorum) {
+		if c == nil {
+			q.creds = grpc.WithInsecure()
+		} else {
+			q.creds = grpc.WithTransportCredentials(c)
+		}
+	}
+}
+
 // NewQuorum ...
-func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, deploy proxyDeploy, options ...QuorumOption) *Quorum {
+func NewQuorum(q *QuorumFSM, c cluster, deploy proxyDeploy, options ...QuorumOption) *Quorum {
 	ctx, cancel := context.WithCancel(context.Background())
 	r := &Quorum{
 		Events:  make(chan raft.Observation, 200),
@@ -137,7 +149,7 @@ func NewQuorum(q *QuorumFSM, c cluster, creds credentials.TransportCredentials, 
 		cancel:  cancel,
 		proxy:   proxyRaft{},
 		pdeploy: deploy,
-		creds:   creds,
+		creds:   grpc.WithInsecure(),
 		c:       c,
 		pq:      proxyQuorum{},
 		UploadProtocol: uploads.ProtocolFunc(
@@ -162,7 +174,7 @@ type Quorum struct {
 	Events         chan raft.Observation
 	m              *sync.Mutex
 	c              cluster
-	creds          credentials.TransportCredentials
+	creds          grpc.DialOption
 	proxy          raftproxy
 	lq             *QuorumFSM
 	pq             proxyQuorum
@@ -194,7 +206,7 @@ func (t *Quorum) observe() {
 				peader: peader,
 				o:      &sync.Once{},
 				dialOptions: []grpc.DialOption{
-					grpc.WithTransportCredentials(t.creds),
+					t.creds,
 				},
 			}
 		}
@@ -225,7 +237,7 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 		)
 
 		debugx.Println("forwarding deploy request to leader")
-		if c, err = Dial(RPCAddress(t.findLeader(p.Leader())), grpc.WithTransportCredentials(t.creds)); err != nil {
+		if c, err = Dial(RPCAddress(t.findLeader(p.Leader())), t.creds); err != nil {
 			return &_zero, err
 		}
 
