@@ -45,10 +45,8 @@ type EventBus struct {
 func (t EventBus) background() {
 	for m := range t.buffer {
 		t.m.RLock()
-		obs := t.observers
-		t.m.RUnlock()
-		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(obs))
-		for id, o := range obs {
+		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(t.observers))
+		for id, o := range t.observers {
 			if err := o.Receive(m...); err != nil {
 				log.Printf("failed to receive messages %d - %T %+v\n", id, errors.Cause(err), err)
 				continue
@@ -56,6 +54,7 @@ func (t EventBus) background() {
 
 			debugx.Println("delivered messages", id)
 		}
+		t.m.RUnlock()
 	}
 }
 
