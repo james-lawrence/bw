@@ -11,8 +11,9 @@ import (
 // NewMock a fake cluster made up of a set of peers and a local node.
 func NewMock(local *memberlist.Node, peers ...*memberlist.Node) Mock {
 	return Mock{
-		local: local,
-		peers: append(peers, local),
+		local:  local,
+		peers:  append(peers, local),
+		config: memberlist.DefaultLocalConfig(),
 	}
 }
 
@@ -27,8 +28,14 @@ func NewSingleNode(name string, addr net.IP) Mock {
 
 // Mock a fake cluster made up of a set of peers and a local node.
 type Mock struct {
-	local *memberlist.Node
-	peers []*memberlist.Node
+	local  *memberlist.Node
+	peers  []*memberlist.Node
+	config *memberlist.Config
+}
+
+// Config - see Cluster.
+func (t Mock) Config() *memberlist.Config {
+	return t.config
 }
 
 // Members - see Cluster.

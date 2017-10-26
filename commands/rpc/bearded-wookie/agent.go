@@ -139,8 +139,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	)
 	server := agent.NewServer(
 		cx,
-		t.listener.Addr(),
-		tlscreds,
 		aoptions(dispatcher, local.Peer, t.config),
 	)
 

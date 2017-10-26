@@ -4,24 +4,31 @@ import (
 	"log"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
 
+type cluster interface {
+	Members() []*memberlist.Node
+	Get([]byte) *memberlist.Node
+	GetN(n int, key []byte) []*memberlist.Node
+	LocalNode() *memberlist.Node
+	Config() *memberlist.Config
+}
+
 // New ...
-func New(l Local, c clustering.Cluster) Cluster {
+func New(l Local, c cluster) Cluster {
 	return Cluster{
 		local:   l,
-		Cluster: c,
+		cluster: c,
 	}
 }
 
 // Cluster - represents a cluster.
 type Cluster struct {
-	clustering.Cluster
+	cluster
 	local Local
 }
 
@@ -32,12 +39,12 @@ func (t Cluster) Local() agent.Peer {
 
 // Peers ...
 func (t Cluster) Peers() []agent.Peer {
-	return NodesToPeers(t.Cluster.Members()...)
+	return NodesToPeers(t.cluster.Members()...)
 }
 
 // Quorum ...
 func (t Cluster) Quorum() []agent.Peer {
-	return NodesToPeers(raftutil.Quorum(t.Cluster)...)
+	return NodesToPeers(raftutil.Quorum(t.cluster)...)
 }
 
 // Connect connection information for the cluster.
@@ -46,7 +53,7 @@ func (t Cluster) Connect() agent.ConnectInfo {
 		secret []byte
 	)
 
-	if c := t.Cluster.Config(); c != nil {
+	if c := t.cluster.Config(); c != nil {
 		secret = c.SecretKey
 	}
 

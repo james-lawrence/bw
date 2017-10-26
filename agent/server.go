@@ -2,11 +2,8 @@ package agent
 
 import (
 	"log"
-	"net"
 
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
-
-	"google.golang.org/grpc/credentials"
 
 	"golang.org/x/net/context"
 )
@@ -55,9 +52,8 @@ func ServerOptionCluster(c cluster) ServerOption {
 }
 
 // NewServer ...
-func NewServer(c cluster, address net.Addr, creds credentials.TransportCredentials, options ...ServerOption) Server {
+func NewServer(c cluster, options ...ServerOption) Server {
 	s := Server{
-		creds:    creds,
 		cluster:  c,
 		Deployer: noopDeployer{},
 	}
@@ -71,7 +67,6 @@ func NewServer(c cluster, address net.Addr, creds credentials.TransportCredentia
 
 // Server ...
 type Server struct {
-	creds    credentials.TransportCredentials
 	Deployer deployer
 	cluster  cluster
 }

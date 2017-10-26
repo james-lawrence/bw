@@ -39,7 +39,8 @@ func PeersToPtr(peers ...Peer) []*Peer {
 	r := make([]*Peer, 0, len(peers))
 
 	for _, p := range peers {
-		r = append(r, &p)
+		tmp := p
+		r = append(r, &tmp)
 	}
 
 	return r
