@@ -201,7 +201,7 @@ func (t Protocol) unstable(d time.Duration) {
 }
 
 // connect - connect to the raft protocol overlay within the given cluster.
-func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
+func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	var (
 		err      error
 		protocol *raft.Raft
@@ -209,22 +209,19 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 	)
 
 	if network, err = t.getTransport(); err != nil {
-		return nil, nil, errors.WithStack(err)
+		return nil, errors.WithStack(err)
 	}
 
 	conf := raft.DefaultConfig()
+	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 	conf.HeartbeatTimeout = 5 * time.Second
 	conf.ElectionTimeout = 10 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
-	// ShutdownOnRemove important setting, otherwise peers cannot rejoin the cluster....
-	conf.ShutdownOnRemove = false
-	conf.EnableSingleNode = t.enableSingleNode
 
 	store := raft.NewInmemStore()
-	speers := &raft.StaticPeers{StaticPeers: t.getPeers(c)}
-	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, speers, network); err != nil {
-		return nil, nil, err
+	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
+		return nil, err
 	}
 
 	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
@@ -245,7 +242,7 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, raft.PeerStore, error) {
 
 	t.cluster = protocol
 
-	return protocol, speers, nil
+	return protocol, nil
 }
 
 func (t Protocol) waitShutdown() {
@@ -319,13 +316,22 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 		return
 	}
 
+	config := e.Raft.GetConfiguration()
+	if err := config.Error(); err != nil {
+		log.Println("failed to retrieve configuration", err)
+		return
+	}
+
 	switch e.Type {
 	case EventJoined:
-		if err := e.Raft.AddPeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+		p := peerToString(e.Peer.Port, e.Peer)
+		future := e.Raft.AddVoter(raft.ServerID(e.Peer.Name), raft.ServerAddress(p), config.Index(), time.Second)
+		if err := future.Error(); err != nil {
 			log.Println("failed to add peer", err)
 		}
 	case EventLeft:
-		if err := e.Raft.RemovePeer(peerToString(e.Peer.Port, e.Peer)).Error(); err != nil {
+		future := e.Raft.RemoveServer(raft.ServerID(e.Peer.Name), config.Index(), time.Second)
+		if err := future.Error(); err != nil {
 			log.Println("failed to remove peer", err)
 		}
 	}
@@ -360,6 +366,19 @@ func maybeLeave(protocol *raft.Raft, c cluster) bool {
 	return true
 }
 
+func maybeBootstrap(port uint16, protocol *raft.Raft, c cluster) {
+	if protocol.Leader() != "" {
+		return
+	}
+
+	log.Println("attempting a bootstrap refreshing peers")
+
+	if err := protocol.BootstrapCluster(configuration(port, c)).Error(); err != nil {
+		log.Println("bootstrap failed", err)
+		return
+	}
+}
+
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
 func isMember(c cluster) bool {
@@ -369,6 +388,15 @@ func isMember(c cluster) bool {
 // possiblePeers utility function for locating N possible peers for the raft protocol.
 func possiblePeers(c cluster) []*memberlist.Node {
 	return c.GetN(3, leaderKey)
+}
+
+func configuration(port uint16, c cluster) (conf raft.Configuration) {
+	for _, peer := range possiblePeers(c) {
+		p := raft.ServerAddress(peerToString(port, peer))
+		conf.Servers = append(conf.Servers, raft.Server{ID: raft.ServerID(peer.Name), Suffrage: raft.Voter, Address: p})
+	}
+
+	return conf
 }
 
 // isPossiblePeer utility function for determining if the given local node is in

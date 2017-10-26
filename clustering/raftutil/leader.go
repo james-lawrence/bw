@@ -13,7 +13,6 @@ import (
 type leader struct {
 	raftp    *Protocol
 	protocol *raft.Raft
-	peers    raft.PeerStore
 }
 
 func (t leader) Update(c cluster) state {
@@ -45,43 +44,29 @@ func (t leader) Update(c cluster) state {
 		return peer{
 			raftp:    t.raftp,
 			protocol: t.protocol,
-			peers:    t.peers,
 		}.Update(c)
 	}
 }
 
 // cleanupPeers returns true if the peer set was unstable.
 func (t leader) cleanupPeers(candidates ...*memberlist.Node) (unstable bool) {
-	peers, err := t.peers.Peers()
-	if err != nil {
+	config := t.protocol.GetConfiguration()
+	if err := config.Error(); err != nil {
 		log.Println("failed to retrieve peers", err)
 		return true
 	}
-
+	peers := config.Configuration().Servers
 	debugx.Println("candidates", peersToString(t.raftp.Port, candidates...))
 	debugx.Println("peers", peers)
 
 	for _, peer := range candidates {
-		p := peerToString(t.raftp.Port, peer)
-		if raft.PeerContained(peers, p) {
-			peers = raft.ExcludePeer(peers, p)
-			continue
-		}
+		id := raft.ServerID(peer.Name)
+		p := raft.ServerAddress(peerToString(t.raftp.Port, peer))
 
-		if err = t.protocol.AddPeer(p).Error(); err != nil {
+		if err := t.protocol.AddVoter(id, p, t.protocol.GetConfiguration().Index(), time.Second).Error(); err != nil {
 			log.Println("failed to add peer", err)
+			unstable = true
 		}
-
-		unstable = true
-	}
-
-	debugx.Println("dead nodes", peers)
-	for _, peer := range peers {
-		if err = t.protocol.RemovePeer(peer).Error(); err != nil {
-			log.Println("failed to remove peer", err)
-		}
-
-		unstable = true
 	}
 
 	return unstable

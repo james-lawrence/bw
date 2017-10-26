@@ -1,6 +1,7 @@
 package raftutil
 
 import (
+	"log"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
@@ -11,7 +12,6 @@ import (
 type peer struct {
 	raftp    *Protocol
 	protocol *raft.Raft
-	peers    raft.PeerStore
 }
 
 func (t peer) Update(c cluster) state {
@@ -23,27 +23,27 @@ func (t peer) Update(c cluster) state {
 	)
 
 	debugx.Println("peer update invoked")
-	debugx.Println("current leader", t.protocol.Leader(), t.protocol.LastContact().Format(time.Stamp))
+	log.Println("current leader", t.protocol.Leader(), t.protocol.LastContact().Format(time.Stamp))
 
 	switch s := t.protocol.State(); s {
 	case raft.Leader:
-		nextState = leader{
+		return leader{
 			raftp:    t.raftp,
 			protocol: t.protocol,
-			peers:    t.peers,
 		}.Update(c)
 	default:
 		debugx.Println("current state", s)
-	}
-
-	if maybeLeave(t.protocol, c) {
-		nextState = conditionTransition{
-			next: passive{
-				raftp: t.raftp,
-			},
-			cond: t.raftp.ClusterChange,
+		if maybeLeave(t.protocol, c) {
+			return conditionTransition{
+				next: passive{
+					raftp: t.raftp,
+				},
+				cond: t.raftp.ClusterChange,
+			}
 		}
 	}
+
+	maybeBootstrap(t.raftp.Port, t.protocol, c)
 
 	return nextState
 }

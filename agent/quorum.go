@@ -72,7 +72,7 @@ func (t pbObserver) Receive(messages ...Message) (err error) {
 
 type raftproxy interface {
 	State() raft.RaftState
-	Leader() string
+	Leader() raft.ServerAddress
 	Apply([]byte, time.Duration) raft.ApplyFuture
 }
 
@@ -83,7 +83,7 @@ func (t proxyRaft) State() raft.RaftState {
 	return raft.Shutdown
 }
 
-func (t proxyRaft) Leader() string {
+func (t proxyRaft) Leader() raft.ServerAddress {
 	return ""
 }
 
@@ -187,10 +187,10 @@ type Quorum struct {
 func (t *Quorum) observe() {
 	for o := range t.Events {
 		switch m := o.Data.(type) {
-		case raft.LeaderObservation:
+		case raft.RaftState:
 			t.pq.close()
 
-			if m.Leader == "" {
+			if m == raft.Leader {
 				debugx.Println("leader lost disabling quorum locally")
 				t.proxy = proxyRaft{}
 				t.pq = proxyQuorum{}
@@ -199,7 +199,7 @@ func (t *Quorum) observe() {
 				continue
 			}
 
-			peader := t.findLeader(m.Leader)
+			peader := t.findLeader(string(o.Raft.Leader()))
 			debugx.Println("leader identified, enabling quorum locally", peader.Name, peader.Ip)
 			t.proxy = o.Raft
 			t.pq = proxyQuorum{
@@ -237,7 +237,7 @@ func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDe
 		)
 
 		debugx.Println("forwarding deploy request to leader")
-		if c, err = Dial(RPCAddress(t.findLeader(p.Leader())), t.creds); err != nil {
+		if c, err = Dial(RPCAddress(t.findLeader(string(p.Leader()))), t.creds); err != nil {
 			return &_zero, err
 		}
 

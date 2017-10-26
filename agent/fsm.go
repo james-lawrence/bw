@@ -43,10 +43,6 @@ type QuorumFSM struct {
 // method was called on the same Raft node as the FSM.
 func (t *QuorumFSM) Apply(l *raft.Log) interface{} {
 	switch l.Type {
-	case raft.LogAddPeer:
-		log.Println("insert peer invoked", l.Index, l.Term)
-	case raft.LogRemovePeer:
-		log.Println("remove peer invoked", l.Index, l.Term)
 	case raft.LogBarrier:
 		log.Println("barrier invoked", l.Index, l.Term)
 	case raft.LogCommand:

@@ -16,7 +16,6 @@ type passive struct {
 func (t passive) Update(c cluster) state {
 	var (
 		err      error
-		store    raft.PeerStore
 		protocol *raft.Raft
 	)
 
@@ -35,14 +34,13 @@ func (t passive) Update(c cluster) state {
 
 	log.Println("promoting self into raft protocol")
 
-	if protocol, store, err = t.raftp.connect(c); err != nil {
+	if protocol, err = t.raftp.connect(c); err != nil {
 		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state"))
 		return maintainState
 	}
 
 	return peer{
 		raftp:    t.raftp,
-		peers:    store,
 		protocol: protocol,
 	}.Update(c)
 }

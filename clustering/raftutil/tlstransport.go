@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
@@ -24,13 +25,13 @@ type StreamLayer struct {
 }
 
 // Dial is used to create a new outgoing connection
-func (t StreamLayer) Dial(address string, timeout time.Duration) (conn net.Conn, err error) {
+func (t StreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (conn net.Conn, err error) {
 	d := &net.Dialer{
 		Timeout:   timeout,
 		KeepAlive: 5 * time.Second,
 	}
 
-	if conn, err = tls.DialWithDialer(d, t.Listener.Addr().Network(), address, t.c); err != nil {
+	if conn, err = tls.DialWithDialer(d, t.Listener.Addr().Network(), string(address), t.c); err != nil {
 		return conn, errors.WithStack(err)
 	}
 
