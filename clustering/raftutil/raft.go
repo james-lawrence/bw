@@ -218,6 +218,7 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	conf.ElectionTimeout = 10 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
+	conf.ShutdownOnRemove = false
 
 	store := raft.NewInmemStore()
 	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {

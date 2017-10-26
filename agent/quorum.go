@@ -186,11 +186,10 @@ type Quorum struct {
 // Observer - implements raftprotocol observer.
 func (t *Quorum) observe() {
 	for o := range t.Events {
-		switch m := o.Data.(type) {
+		switch o.Data.(type) {
 		case raft.RaftState:
 			t.pq.close()
-
-			if m == raft.Leader {
+			if o.Raft.Leader() == "" {
 				debugx.Println("leader lost disabling quorum locally")
 				t.proxy = proxyRaft{}
 				t.pq = proxyQuorum{}
@@ -265,6 +264,7 @@ func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
+		log.Println("failed upload not a member of quorum", s.String(), p.Leader())
 		return errors.Errorf("upload must be run on a member of quorum: %s", s)
 	}
 
