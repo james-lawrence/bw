@@ -44,6 +44,10 @@ type dummyClient struct {
 	PackageList []Package
 }
 
+func (t dummyClient) Shutdown() error {
+	return nil
+}
+
 // CreateTransaction - Returns a new dummy Transaction for testing purposes.
 func (t dummyClient) CreateTransaction() (Transaction, error) {
 	return NewDummyTransaction(t.PackageList...), nil

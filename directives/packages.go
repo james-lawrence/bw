@@ -3,6 +3,7 @@ package directives
 import (
 	"fmt"
 	"io"
+	"log"
 
 	"bitbucket.org/jatone/bearded-wookie/directives/packages"
 	"bitbucket.org/jatone/bearded-wookie/packagekit"
@@ -27,14 +28,21 @@ func (t PackageLoader) Build(r io.Reader) (Directive, error) {
 		return nil, err
 	}
 
+	if len(pkgs) == 0 {
+		return closure(func() error { return nil }), nil
+	}
+
 	return closure(func() error {
 		var (
 			err error
+			c   packagekit.Client
 			tx  packagekit.Transaction
 		)
-		if tx, err = packagekit.NewTransaction(); err != nil {
+		log.Println("--------------------- PackageKit Transaction")
+		if c, tx, err = packagekit.NewTransaction(); err != nil {
 			return err
 		}
+		defer c.Shutdown()
 
 		return packages.Install(packagekitAdapter{tx}, pkgs...)
 	}), nil

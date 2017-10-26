@@ -15,14 +15,15 @@ func NewClient() (Client, error) {
 }
 
 // NewTransaction convience method for getting a transaction directly.
-func NewTransaction() (tx Transaction, err error) {
-	var (
-		c Client
-	)
-
+func NewTransaction() (c Client, tx Transaction, err error) {
 	if c, err = NewClient(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return c.CreateTransaction()
+	if tx, err = c.CreateTransaction(); err != nil {
+		c.Shutdown()
+		return nil, nil, err
+	}
+
+	return c, tx, nil
 }

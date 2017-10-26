@@ -18,6 +18,10 @@ type dbusClient struct {
 	pkgKit    dbus.BusObject // packagekit dbus object
 }
 
+func (t dbusClient) Shutdown() error {
+	return t.systemBus.Close()
+}
+
 // CreateTransaction - Creates a PackageKit transaction on a private systemBus
 // connection.
 func (t dbusClient) CreateTransaction() (Transaction, error) {

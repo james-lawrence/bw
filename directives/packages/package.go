@@ -67,18 +67,16 @@ func Install(tx transaction, pacs ...Package) error {
 	)
 
 	if len(pacs) == 0 {
+		return tx.Cancel()
+	}
+
+	log.Println("------------------- refreshing cache")
+	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
 		goto done
 	}
 
-	log.Println("refreshing cache")
-	if err = tx.RefreshCache(); err != nil {
-		err = errors.Wrap(err, "tx.RefreshCache failed")
-		goto done
-	}
-
-	log.Println("installing packages")
-	if err = tx.InstallPackages(pacs...); err != nil {
-		err = errors.Wrap(err, "tx.IntallPackages failed")
+	log.Println("------------------- installing packages")
+	if err = errors.Wrap(tx.InstallPackages(pacs...), "tx.IntallPackages failed"); err != nil {
 		goto done
 	}
 
@@ -88,6 +86,7 @@ done:
 
 func maybeCancel(tx transaction, err error) error {
 	if err != nil {
+		log.Println("package installation failed", err)
 		tx.Cancel()
 		return err
 	}

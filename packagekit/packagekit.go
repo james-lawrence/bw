@@ -49,6 +49,8 @@ type Client interface {
 	//
 	// org.freedesktop.PackageKit.SuggestDaemonQuit
 	SuggestDaemonQuit() error
+
+	Shutdown() error
 }
 
 // Transaction - Describing the PackageKit Transaction API.
