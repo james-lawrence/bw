@@ -7,9 +7,11 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie/agent"
+	"bitbucket.org/jatone/bearded-wookie/awsx"
 	"bitbucket.org/jatone/bearded-wookie/cluster"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
@@ -59,6 +61,7 @@ type clusterCmd struct {
 	bootstrap            []*net.TCPAddr
 	minimumRequiredNodes int
 	maximumAttempts      int
+	awsBootstrap         bool
 }
 
 func (t *clusterCmd) fromOptions(options ...clusterCmdOption) {
@@ -74,9 +77,13 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, options ...clusterCmdO
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
 	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredNodes)
 	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
+	parent.Flag("cluster-asg", "enable the aws autoscale group bootstrapping strategy").Default("false").BoolVar(&t.awsBootstrap)
 }
 
 func (t *clusterCmd) Join(snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
+	type peers interface {
+		Peers() ([]string, error)
+	}
 	var (
 		err error
 		c   clustering.Cluster
@@ -97,17 +104,26 @@ func (t *clusterCmd) Join(snap peering.File, options ...clustering.Option) (clus
 		return c, errors.Wrap(err, "failed to join cluster")
 	}
 
+	clipeers := peering.Closure(func() ([]string, error) {
+		addresses := make([]string, 0, len(t.bootstrap))
+		for _, addr := range t.bootstrap {
+			addresses = append(addresses, addr.String())
+		}
+
+		return addresses, nil
+	})
+
+	builtinpeers := peering.Closure(func() ([]string, error) { return []string{}, nil })
+
+	if t.awsBootstrap {
+		builtinpeers = t.awsASGPeering()
+	}
+
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(t.minimumRequiredNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(t.maximumAttempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(
-		peering.Closure(func() ([]string, error) {
-			addresses := make([]string, 0, len(t.bootstrap))
-			for _, addr := range t.bootstrap {
-				addresses = append(addresses, addr.String())
-			}
-
-			return addresses, nil
-		}),
+		clipeers,
+		builtinpeers,
 		snap,
 	)
 
@@ -157,4 +173,24 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raf
 		uint16(t.raftNetwork.Port),
 		append(defaultOptions, options...)...,
 	)
+}
+
+func (t clusterCmd) awsASGPeering() peering.Closure {
+	return peering.Closure(func() ([]string, error) {
+		instances, err := awsx.AutoscalingPeers()
+		if err != nil {
+			return []string(nil), err
+		}
+
+		result := make([]string, 0, len(instances))
+		for _, i := range instances {
+			if i.PrivateIpAddress == nil {
+				continue
+			}
+
+			result = append(result, net.JoinHostPort(*i.PrivateIpAddress, strconv.Itoa(t.swimNetwork.Port)))
+		}
+
+		return result, nil
+	})
 }
