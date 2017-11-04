@@ -109,8 +109,8 @@ func (t s3u) Info() (hash.Hash, string, error) {
 	select {
 	case err := <-t.failure:
 		return nil, "", errors.Wrap(err, "failed upload archive")
-	case upload := <-t.upload:
-		return t.sha, fmt.Sprintf("s3://%s", upload.Location), nil
+	case _ = <-t.upload:
+		return t.sha, fmt.Sprintf("s3://%s", filepath.Join(*t.s3ui.Bucket, *t.s3ui.Key)), nil
 	}
 }
 
