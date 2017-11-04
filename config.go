@@ -133,24 +133,18 @@ func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) st
 
 // InitializeDeploymentDirectory initializes the directory for the deployments.
 func InitializeDeploymentDirectory(root string) (err error) {
-	const (
-		deploys = "deploys"
-		plugins = "plugins"
-		raft    = "raft"
-	)
-
-	log.Println("creating deploys directory", filepath.Join(root, deploys))
-	if err = os.MkdirAll(filepath.Join(root, deploys), 0755); err != nil {
+	log.Println("creating deploys directory", filepath.Join(root, DirDeploys))
+	if err = os.MkdirAll(filepath.Join(root, DirDeploys), 0755); err != nil {
 		return errors.WithStack(err)
 	}
 
-	log.Println("creating raft directory", filepath.Join(root, raft))
-	if err = os.MkdirAll(filepath.Join(root, raft), 0755); err != nil {
+	log.Println("creating raft directory", filepath.Join(root, DirRaft))
+	if err = os.MkdirAll(filepath.Join(root, DirRaft), 0755); err != nil {
 		return errors.WithStack(err)
 	}
 
-	log.Println("creating plugins directory", filepath.Join(root, plugins))
-	if err = os.MkdirAll(filepath.Join(root, plugins), 0755); err != nil {
+	log.Println("creating plugins directory", filepath.Join(root, DirPlugins))
+	if err = os.MkdirAll(filepath.Join(root, DirPlugins), 0755); err != nil {
 		return errors.WithStack(err)
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	"bitbucket.org/jatone/bearded-wookie/agentutil"
 	"bitbucket.org/jatone/bearded-wookie/x/logx"
@@ -49,7 +50,7 @@ type CoordinatorOption func(*deployment)
 func CoordinatorOptionRoot(root string) CoordinatorOption {
 	return func(d *deployment) {
 		d.root = root
-		d.deploysRoot = filepath.Join(root, "deploys")
+		d.deploysRoot = filepath.Join(root, bw.DirDeploys)
 	}
 }
 
