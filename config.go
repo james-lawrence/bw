@@ -139,14 +139,17 @@ func InitializeDeploymentDirectory(root string) (err error) {
 		raft    = "raft"
 	)
 
+	log.Println("creating deploys directory", filepath.Join(root, deploys))
 	if err = os.MkdirAll(filepath.Join(root, deploys), 0755); err != nil {
 		return errors.WithStack(err)
 	}
 
+	log.Println("creating raft directory", filepath.Join(root, raft))
 	if err = os.MkdirAll(filepath.Join(root, raft), 0755); err != nil {
 		return errors.WithStack(err)
 	}
 
+	log.Println("creating plugins directory", filepath.Join(root, plugins))
 	if err = os.MkdirAll(filepath.Join(root, plugins), 0755); err != nil {
 		return errors.WithStack(err)
 	}

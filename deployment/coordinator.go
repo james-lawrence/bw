@@ -49,7 +49,7 @@ type CoordinatorOption func(*deployment)
 func CoordinatorOptionRoot(root string) CoordinatorOption {
 	return func(d *deployment) {
 		d.root = root
-		d.deploysRoot = filepath.Join(root, "deployments")
+		d.deploysRoot = filepath.Join(root, "deploys")
 	}
 }
 
