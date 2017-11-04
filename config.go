@@ -130,3 +130,26 @@ func ExpandAndDecode(raw []byte, dst interface{}) (err error) {
 func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) string) (err error) {
 	return yaml.Unmarshal([]byte(os.Expand(string(raw), mapping)), dst)
 }
+
+// InitializeDeploymentDirectory initializes the directory for the deployments.
+func InitializeDeploymentDirectory(root string) (err error) {
+	const (
+		deploys = "deploys"
+		plugins = "plugins"
+		raft    = "raft"
+	)
+
+	if err = os.MkdirAll(filepath.Join(root, deploys), 0755); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err = os.MkdirAll(filepath.Join(root, raft), 0755); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err = os.MkdirAll(filepath.Join(root, plugins), 0755); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}

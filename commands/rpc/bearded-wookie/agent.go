@@ -70,6 +70,10 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	log.Println("configuration:", spew.Sdump(t.config))
 
+	if err = bw.InitializeDeploymentDirectory(t.config.Root); err != nil {
+		return err
+	}
+
 	if upload, err = t.config.Storage.Protocol(); err != nil {
 		return err
 	}
