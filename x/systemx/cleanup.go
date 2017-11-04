@@ -16,7 +16,6 @@ func Cleanup(ctx context.Context, cancel func(), wg *sync.WaitGroup, sigs ...os.
 	signal.Notify(signals, sigs...)
 
 	return func(cleanup func()) {
-		log.Println("-------------------------- awaiting signals ---------------------")
 		select {
 		case <-ctx.Done():
 		case s := <-signals:

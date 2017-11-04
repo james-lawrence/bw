@@ -293,7 +293,7 @@ func (t DeployContext) deployComplete() {
 }
 
 func (t DeployContext) deployFailed(err error) {
-	t.Log.Println(err)
+	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
 	logx.MaybeLog(t.Dispatch(
 		agentutil.LogEvent(t.Local, err.Error()),
