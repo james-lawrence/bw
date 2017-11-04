@@ -102,6 +102,8 @@ func (t Directive) deploy() {
 		dshell,
 		dpkg,
 		dfs,
+		directives.NewAWSELB2Attach(),
+		directives.NewAWSELB2Detach(),
 	}
 
 	for _, p := range t.plugins {
