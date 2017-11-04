@@ -62,7 +62,7 @@ func (t s3d) Download() io.ReadCloser {
 		idx    int
 		result *s3.GetObjectOutput
 	)
-	normalized := strings.TrimPrefix(t.location, s3Protocol)
+	normalized := strings.TrimPrefix(t.location, s3Protocol+protocolSuffix)
 
 	if idx = strings.IndexRune(normalized, filepath.Separator); idx == -1 {
 		return newErrReader(errors.Errorf("failed to determine bucket name from: %s", t.location))
