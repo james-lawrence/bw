@@ -1,3 +1,54 @@
+Release v1.12.22 (2017-11-03)
+===
+
+### Service Client Updates
+* `service/ecs`: Updates service API and documentation
+  * Amazon ECS users can now add devices to their containers and enable init process in containers through the use of docker's 'devices' and 'init' features. These fields can be specified under linuxParameters in ContainerDefinition in the Task Definition Template.
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+
+Release v1.12.21 (2017-11-02)
+===
+
+### Service Client Updates
+* `service/apigateway`: Updates service API and documentation
+  * This release supports creating and managing Regional and Edge-Optimized API endpoints.
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+
+### SDK Bugs
+* `aws/request`: Fix bug in request presign creating invalide URL ([#1624](https://github.com/aws/aws-sdk-go/pull/1624))
+  * Fixes a bug the Request Presign and PresignRequest methods that would allow a invalid expire duration as input. A expire time of 0 would be interpreted by the SDK to generate a normal request signature, not a presigned URL. This caused the returned URL unusable.
+  * Fixes [#1617](https://github.com/aws/aws-sdk-go/issues/1617)
+Release v1.12.20 (2017-11-01)
+===
+
+### Service Client Updates
+* `service/acm`: Updates service documentation
+  * Documentation updates for ACM
+* `service/cloudhsmv2`: Updates service documentation
+  * Minor documentation update for AWS CloudHSM (cloudhsmv2).
+* `service/directconnect`: Updates service API and documentation
+  * AWS DirectConnect now provides support for Global Access for Virtual Private Cloud (VPC) via a new feature called Direct Connect Gateway. A Direct Connect Gateway will allow you to group multiple Direct Connect Private Virtual Interfaces (DX-VIF) and Private Virtual Gateways (VGW) from different AWS regions (but belonging to the same AWS Account) and pass traffic from any DX-VIF to any VPC in the grouping.
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+
+### SDK Enhancements
+* `aws/client`: Adding status code 429 to throttlable status codes in default retryer (#1621)
+
+Release v1.12.19 (2017-10-26)
+===
+
+### Service Client Updates
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+
+Release v1.12.18 (2017-10-26)
+===
+
+### Service Client Updates
+* `service/cloudfront`: Updates service API and documentation
+  * You can now specify additional options for MinimumProtocolVersion, which controls the SSL/TLS protocol that CloudFront uses to communicate with viewers. The minimum protocol version that you choose also determines the ciphers that CloudFront uses to encrypt the content that it returns to viewers.
+* `service/ec2`: Updates service API
+  * You are now able to create and launch EC2 P3 instance, next generation GPU instances, optimized for machine learning and high performance computing applications. With up to eight NVIDIA Tesla V100 GPUs, P3 instances provide up to one petaflop of mixed-precision, 125 teraflops of single-precision, and 62 teraflops of double-precision floating point performance, as well as a 300 GB/s second-generation NVLink interconnect that enables high-speed, low-latency GPU-to-GPU communication. P3 instances also feature up to 64 vCPUs based on custom Intel Xeon E5 (Broadwell) processors, 488 GB of DRAM, and 25 Gbps of dedicated aggregate network bandwidth using the Elastic Network Adapter (ENA).
+* `aws/endpoints`: Updated Regions and Endpoints metadata.
+
 Release v1.12.17 (2017-10-24)
 ===
 

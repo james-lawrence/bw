@@ -31,6 +31,10 @@ import:
 - package: github.com/gutengo/fil
 - package: github.com/kr/pretty
 - package: github.com/kr/text
+- package: github.com/davecgh/go-spew
+  version: ~1.1.0
+  subpackages:
+  - spew
 testImport:
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega

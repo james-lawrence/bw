@@ -1,5 +1,5 @@
-hash: 2b240cb7adb0e5e9512a83d86d69b700da9668f3c4680a60247d2c593c23ee3e
-updated: 2017-10-25T23:01:36.592434931-04:00
+hash: f1d1c35f614231d16f6f7249f02e03f1c6ee8b954f48a2d149e786ba026d7282
+updated: 2017-11-04T17:22:15.444763285-04:00
 imports:
 - name: github.com/alecthomas/kingpin
   version: fde80b58ec35ea587c031c202880b1655a51ee53
@@ -12,7 +12,7 @@ imports:
 - name: github.com/armon/go-metrics
   version: 9a4b6e10bed6220a1665955aa2b75afc91eb10b3
 - name: github.com/aws/aws-sdk-go
-  version: beb51a579d63b68673bc28ded670c0f97fb48c5a
+  version: 3e9e64d88a3aba2c745efa24d45620400c527f04
   subpackages:
   - aws
   - aws/awserr
@@ -32,12 +32,15 @@ imports:
   - aws/signer/v4
   - internal/shareddefaults
   - private/protocol
+  - private/protocol/ec2query
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
   - private/protocol/restxml
   - private/protocol/xml/xmlutil
+  - service/autoscaling
   - service/ec2
+  - service/elbv2
   - service/s3
   - service/s3/s3iface
   - service/s3/s3manager
@@ -46,10 +49,14 @@ imports:
   version: b25d14eeef390159289ad3e8521eff3162c59685
 - name: github.com/corpix/uarand
   version: 2b8494104d86337cdd41d0a49cbed8e4583c0ab4
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
 - name: github.com/gizak/termui
   version: bfde399a8caee62789593f2cbbda70feee4d5553
 - name: github.com/go-ini/ini
-  version: f384f410798cbe7cdce40eec40b79ed32bb4f1ad
+  version: f280b3ba517bf5fc98922624f21fb0e7a92adaec
 - name: github.com/godbus/dbus
   version: a389bdde4dd695d414e47b755e95e72b7826432c
 - name: github.com/golang/protobuf
@@ -70,7 +77,7 @@ imports:
 - name: github.com/hashicorp/go-multierror
   version: 83588e72410abfbe4df460eeb6f30841ae47d4c4
 - name: github.com/hashicorp/go-sockaddr
-  version: 41949a141473f6340abc6ba0fcd0f89da6f6f837
+  version: 9b4c5fa5b10a683339a270d664474b9f4aee62fc
 - name: github.com/hashicorp/golang-lru
   version: 0a025b7e63adc15a622f29b0b2c4c3848243bbf6
   subpackages:
@@ -102,7 +109,7 @@ imports:
 - name: github.com/kr/text
   version: 7cafcd837844e784b526369c9bce262804aebc60
 - name: github.com/manveru/faker
-  version: f5baee6d308c0991462da8a03d93a8c61e6cd047
+  version: 9fbc68a78c4dbc7914e1a23f88f126bea4383b97
 - name: github.com/maruel/panicparse
   version: f6ee1e454807f72b84277a84fc06437081340a1b
   subpackages:
@@ -110,19 +117,19 @@ imports:
 - name: github.com/mattn/go-runewidth
   version: 97311d9f7767e3d6f422ea06661bc2c7a19e8a5d
 - name: github.com/miekg/dns
-  version: 822ae18e7187e1bbde923a37081f6c1b8e9ba68a
+  version: b38dc3dcb734f6ca3a830a1f92edf188330956c5
   subpackages:
   - internal/socket
 - name: github.com/mitchellh/go-wordwrap
   version: ad45545899c7b13c020ea92b2072220eefad42b8
 - name: github.com/nsf/termbox-go
-  version: 10cefba34bc5e7a6e5df0836a42513c28a10e074
+  version: aa4a75b1c20a2b03751b1a9f7e41d58bd6f71c43
 - name: github.com/pkg/errors
   version: f15c970de5b76fac0b59abb32d62c17cc7bed265
 - name: github.com/sean-/seed
   version: e2103e2c35297fb7e17febb81e49b312087a2372
 - name: golang.org/x/net
-  version: 4b14673ba32bee7f5ac0f990a48f033919fd418b
+  version: 01c190206fbdffa42f334f4b2bf2220f50e64920
   subpackages:
   - context
   - html
@@ -135,7 +142,7 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/text
-  version: 6eab0e8f74e86c598ec3b6fad4888e0c11482d48
+  version: 88f656faf3f37f690df1a32515b479415e1a6769
   subpackages:
   - encoding
   - encoding/charmap
@@ -156,7 +163,7 @@ imports:
   - unicode/bidi
   - unicode/norm
 - name: google.golang.org/genproto
-  version: f676e0f3ac6395ff1a529ae59a6670878a8371a6
+  version: 11c7f9e547da6db876260ce49ea7536985904c9b
   subpackages:
   - googleapis/rpc/status
 - name: google.golang.org/grpc
@@ -182,7 +189,7 @@ imports:
   version: eb3733d160e74a9c7e442f435eb3bea458e1d19f
 testImports:
 - name: github.com/onsi/ginkgo
-  version: 11459a886d9cd66b319dac7ef1e917ee221372c9
+  version: 652e15c9a27e1cec563e065568014f29eecf6bd9
   subpackages:
   - config
   - extensions/table
@@ -203,7 +210,7 @@ testImports:
   - reporters/stenographer/support/go-isatty
   - types
 - name: github.com/onsi/gomega
-  version: 283ed655c6b8238afecd5bea6434bc9b03129f2f
+  version: 21750746aca98982020121b8360342d4e0e964a4
   subpackages:
   - format
   - internal/assertion
@@ -217,6 +224,6 @@ testImports:
   - matchers/support/goraph/util
   - types
 - name: golang.org/x/sys
-  version: 176de7413414c01569163271c745672ff04a7267
+  version: 8eb05f94d449fdf134ec24630ce69ada5b469c1c
   subpackages:
   - unix
