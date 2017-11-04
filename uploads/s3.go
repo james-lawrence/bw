@@ -20,15 +20,16 @@ import (
 
 func newS3PFromConfig(serialized []byte) (_ Protocol, err error) {
 	var (
-		cfg s3config
-		s   *session.Session
+		cfg  s3config
+		s    *session.Session
+		sopt = session.Options{SharedConfigState: session.SharedConfigEnable}
 	)
 
 	if err = errors.WithStack(yaml.Unmarshal(serialized, &cfg)); err != nil {
 		return nil, err
 	}
 
-	if s, err = session.NewSession(); err != nil {
+	if s, err = session.NewSessionWithOptions(sopt); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

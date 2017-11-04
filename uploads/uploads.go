@@ -1,3 +1,5 @@
+// Package uploads provides implementations for uploading archives.
+// current implementations: fs (filesystem), aws s3.
 package uploads
 
 import (
