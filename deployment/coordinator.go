@@ -100,6 +100,7 @@ func (t *deployment) background() {
 		}
 
 		done.deployComplete()
+		log.Println("keeping newest deploys", t.keepN)
 		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
 	}
 }
