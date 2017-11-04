@@ -1,3 +1,5 @@
+// Package awselb2 requires the following permissions in aws:
+// autoscaling:DescribeAutoScalingInstances
 package awselb2
 
 import (
@@ -79,7 +81,6 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 		return lbs, errors.WithStack(err)
 	}
 
-	// ident.Region
 	asgs = autoscaling.New(sess, aws.NewConfig().WithRegion(ident.Region))
 
 	if iao, err = asgs.DescribeAutoScalingInstances(&autoscaling.DescribeAutoScalingInstancesInput{InstanceIds: []*string{&ident.InstanceID}}); err != nil {

@@ -17,6 +17,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/gizak/termui"
 )
 
 type global struct {
@@ -71,6 +72,8 @@ func main() {
 	log.SetFlags(log.Flags() | log.Lshortfile)
 	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
+		termui.Close()
+		termui.Clear()
 		log.Println("waiting for systems to shutdown")
 	})
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
