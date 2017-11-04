@@ -13,6 +13,7 @@ import (
 	yaml "gopkg.in/yaml.v1"
 
 	"bitbucket.org/jatone/bearded-wookie"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pkg/errors"
@@ -22,18 +23,24 @@ func newS3PFromConfig(serialized []byte) (_ Protocol, err error) {
 	var (
 		cfg  s3config
 		s    *session.Session
-		sopt = session.Options{SharedConfigState: session.SharedConfigEnable}
+		sopt session.Options
 	)
 
 	if err = errors.WithStack(yaml.Unmarshal(serialized, &cfg)); err != nil {
 		return nil, err
 	}
 
+	sopt = session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+		Config: aws.Config{
+			Region:     aws.String(cfg.Region),
+			HTTPClient: &http.Client{Timeout: 5 * time.Second},
+		},
+	}
+
 	if s, err = session.NewSessionWithOptions(sopt); err != nil {
 		return nil, errors.WithStack(err)
 	}
-
-	s.Config.HTTPClient = &http.Client{Timeout: 5 * time.Second}
 
 	return s3P{
 		s3config: cfg,
@@ -44,6 +51,7 @@ func newS3PFromConfig(serialized []byte) (_ Protocol, err error) {
 type s3config struct {
 	Bucket    string
 	KeyPrefix string `yaml:"key_prefix"`
+	Region    string
 }
 
 type s3P struct {
