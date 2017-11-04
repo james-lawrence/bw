@@ -35,6 +35,13 @@ func DirectiveOptionPlugins(p ...dynplugin.Directive) DirectiveOption {
 	}
 }
 
+// DirectiveOptionDownloadRegistry ...
+func DirectiveOptionDownloadRegistry(reg downloads.Registry) DirectiveOption {
+	return func(d *Directive) {
+		d.dlreg = reg
+	}
+}
+
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{

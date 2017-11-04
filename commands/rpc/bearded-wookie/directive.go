@@ -8,6 +8,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/deployment"
 	"bitbucket.org/jatone/bearded-wookie/directives/dynplugin"
 	"bitbucket.org/jatone/bearded-wookie/directives/shell"
+	"bitbucket.org/jatone/bearded-wookie/downloads"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -37,11 +38,18 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 
 	return t.agentCmd.bind(
 		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config) agent.ServerOption {
+			dlreg := downloads.New(
+				downloads.OptionProtocols(
+					downloads.NewS3Protocol(),
+				),
+			)
+
 			deployments := deployment.New(
 				p,
 				deployment.NewDirective(
 					deployment.DirectiveOptionShellContext(sctx),
 					deployment.DirectiveOptionPlugins(plugins...),
+					deployment.DirectiveOptionDownloadRegistry(dlreg),
 				),
 				deployment.CoordinatorOptionDispatcher(d),
 				deployment.CoordinatorOptionRoot(config.Root),
