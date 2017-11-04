@@ -23,6 +23,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
@@ -67,7 +68,8 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return err
 	}
 
-	log.Printf("configuration: %#v\n", t.config)
+	log.Println("configuration:", spew.Sdump(t.config))
+
 	if upload, err = t.config.Storage.Protocol(); err != nil {
 		return err
 	}
