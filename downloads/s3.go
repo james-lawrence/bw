@@ -71,5 +71,5 @@ func (t s3d) Download() io.ReadCloser {
 	bucket, key := normalized[:idx], normalized[idx:]
 
 	result, err = t.S3.GetObject(&s3.GetObjectInput{Bucket: aws.String(bucket), Key: aws.String(key)})
-	return maybeIO(result.Body, errors.Wrapf(err, "failed to lookup object in s3: %s", t.location))
+	return maybeIO(result.Body, errors.Wrapf(err, "failed to lookup object in s3: %s, %s", bucket, key))
 }
