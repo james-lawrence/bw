@@ -13,6 +13,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/agent"
 	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
@@ -106,6 +107,7 @@ func _cleanerFunc(n int, sorter func(i, j FileInfo) bool) Cleaner {
 			return sorter(infos[i], infos[j])
 		})
 
+		log.Println("deploys", spew.Sdump(infos))
 		for _, info := range infos[n:] {
 			if err = os.RemoveAll(info.Path); err != nil {
 				return errors.WithStack(err)
