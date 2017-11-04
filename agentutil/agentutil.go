@@ -126,7 +126,7 @@ func KeepOldestN(n int) Cleaner {
 // KeepNewestN keeps newest n directories.
 func KeepNewestN(n int) Cleaner {
 	return _cleanerFunc(n, func(i, j FileInfo) bool {
-		return i.Info.ModTime().After(j.Info.ModTime())
+		return !i.Info.ModTime().Before(j.Info.ModTime())
 	})
 }
 
