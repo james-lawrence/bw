@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"path/filepath"
 	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
@@ -19,7 +18,6 @@ import (
 )
 
 type agentInfo struct {
-	config      agent.ConfigClient
 	global      *global
 	node        string
 	environment string
@@ -47,8 +45,13 @@ func (t *agentInfo) _info() (err error) {
 		c      clustering.Cluster
 		creds  credentials.TransportCredentials
 		client agent.Client
+		config agent.ConfigClient
 	)
 	defer t.global.shutdown()
+
+	if config, err = loadConfiguration(t.environment); err != nil {
+		return err
+	}
 
 	local := cluster.NewLocal(
 		agent.Peer{
@@ -59,7 +62,6 @@ func (t *agentInfo) _info() (err error) {
 	)
 
 	coptions := []agent.ConnectOption{
-		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
 		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
@@ -69,7 +71,7 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectLeader(&t.config, coptions...); err != nil {
+	if creds, client, c, err = agent.ConnectLeader(config, coptions...); err != nil {
 		return err
 	}
 

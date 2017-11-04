@@ -43,9 +43,28 @@ func (t DeploymentConfig) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionerFromConfig(t.Strategy, raw)
 }
 
+// ConfigClientOption options for the client configuration.
+type ConfigClientOption func(*ConfigClient)
+
+// CCOptionTLSConfig tls set to load for the client configuration.
+func CCOptionTLSConfig(name string) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.TLSConfig = NewTLSClient(name)
+	}
+}
+
 // NewConfigClient ...
-func NewConfigClient() ConfigClient {
-	return ConfigClient{
+func NewConfigClient(template ConfigClient, options ...ConfigClientOption) ConfigClient {
+	for _, opt := range options {
+		opt(&template)
+	}
+
+	return template
+}
+
+// DefaultConfigClient creates a default client configuration.
+func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
+	config := ConfigClient{
 		Address:   systemx.HostnameOrLocalhost(),
 		TLSConfig: NewTLSClient(DefaultTLSCredentialsRoot),
 		DeploymentConfig: DeploymentConfig{
@@ -55,6 +74,8 @@ func NewConfigClient() ConfigClient {
 			},
 		},
 	}
+
+	return NewConfigClient(config, options...)
 }
 
 // ConfigClient ...
@@ -121,6 +142,7 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 		return creds, client, details, err
 	}
 
+	log.Println("Dialing", t.Address)
 	if client, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
 		return creds, client, details, err
 	}
@@ -130,6 +152,16 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 	}
 
 	return creds, client, details, nil
+}
+
+// LoadConfig create a new configuration from the specified path using the current
+// configuration as the default values for the new configuration.
+func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
+	if err := bw.ExpandAndDecodeFile(path, &t); err != nil {
+		return t, err
+	}
+
+	return t, nil
 }
 
 func clusterConnect(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {

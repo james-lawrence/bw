@@ -4,7 +4,6 @@ import (
 	"hash"
 	"io"
 
-	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/clustering"
 
 	"google.golang.org/grpc"
@@ -36,13 +35,6 @@ func RegisterQuorum(s *grpc.Server, srv QuorumServer) {
 // ConnectOption - options for connecting to the cluster.
 type ConnectOption func(*connect)
 
-// ConnectOptionConfigPath path of the configuration file to load.
-func ConnectOptionConfigPath(path string) ConnectOption {
-	return func(c *connect) {
-		c.Path = path
-	}
-}
-
 // ConnectOptionClustering set clustering options for connect.
 func ConnectOptionClustering(options ...clustering.Option) ConnectOption {
 	return func(c *connect) {
@@ -70,7 +62,6 @@ func newConnect(options ...ConnectOption) connect {
 }
 
 type connect struct {
-	Path       string
 	clustering struct {
 		Options   []clustering.Option
 		Bootstrap []clustering.BootstrapOption
@@ -79,12 +70,8 @@ type connect struct {
 }
 
 // ConnectClient ...
-func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+func ConnectClient(config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
-
-	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
-		return creds, cl, c, err
-	}
 
 	return config.Connect(
 		ConnectOptionClustering(conn.clustering.Options...),
@@ -93,12 +80,8 @@ func ConnectClient(config *ConfigClient, options ...ConnectOption) (creds creden
 }
 
 // ConnectLeader ...
-func ConnectLeader(config *ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+func ConnectLeader(config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
-
-	if err = bw.ExpandAndDecodeFile(conn.Path, config); err != nil {
-		return creds, cl, c, err
-	}
 
 	return config.ConnectLeader(
 		ConnectOptionClustering(conn.clustering.Options...),

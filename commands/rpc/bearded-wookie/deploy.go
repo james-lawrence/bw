@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"regexp"
 	"time"
 
@@ -31,7 +30,6 @@ const (
 )
 
 type deployCmd struct {
-	config        agent.ConfigClient
 	global        *global
 	uxmode        string
 	environment   string
@@ -95,9 +93,14 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		dst     *os.File
 		dstinfo os.FileInfo
 		client  agent.Client
+		config  agent.ConfigClient
 		c       clustering.Cluster
 		info    agent.Archive
 	)
+
+	if config, err = loadConfiguration(t.environment); err != nil {
+		return err
+	}
 
 	local := cluster.NewLocal(
 		agent.Peer{
@@ -108,7 +111,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	)
 
 	coptions := []agent.ConnectOption{
-		agent.ConnectOptionConfigPath(filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), t.environment)),
 		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
@@ -118,7 +120,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		),
 	}
 
-	if _, client, c, err = agent.ConnectClient(&t.config, coptions...); err != nil {
+	if _, client, c, err = agent.ConnectClient(config, coptions...); err != nil {
 		return err
 	}
 
@@ -130,7 +132,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}()
 
 	log.Println("connected to cluster")
-	debugx.Printf("configuration:\n%#v\n", t.config)
+	debugx.Printf("configuration:\n%#v\n", config)
 
 	events := make(chan agent.Message, 100)
 	go client.Watch(events)
@@ -163,7 +165,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location))
 
 	cx := cluster.New(local, c)
-	max := int64(t.config.Partitioner().Partition(len(cx.Members())))
+	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	go func() {
 		defer t.global.shutdown()

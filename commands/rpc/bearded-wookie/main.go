@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -49,19 +50,17 @@ func main() {
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},
 		}
-		clientConfig = agent.NewConfigClient()
-		agentcmd     = &agentCmd{
+
+		agentcmd = &agentCmd{
 			config:   agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
 			global:   global,
 			listener: netx.NewNoopListener(),
 		}
 		client = &deployCmd{
-			config: clientConfig,
 			global: global,
 		}
 		info = &agentInfo{
 			node:   bw.MustGenerateID().String(),
-			config: clientConfig,
 			global: global,
 		}
 		envinit = &initCmd{
@@ -85,4 +84,10 @@ func main() {
 	}
 
 	global.cleanup.Wait()
+}
+
+func loadConfiguration(environment string) (agent.ConfigClient, error) {
+	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	log.Println("loading configuration", path)
+	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
