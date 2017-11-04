@@ -1,6 +1,7 @@
 package awselb2
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -74,11 +75,13 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 		group    *autoscaling.Group
 	)
 
-	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocument(); err != nil {
+	if ident, err = ec2metadata.New(sess, aws.NewConfig().WithRegion(ident.Region)).GetInstanceIdentityDocument(); err != nil {
 		return lbs, errors.WithStack(err)
 	}
 
-	asgs = autoscaling.New(sess)
+	// ident.Region
+	asgs = autoscaling.New(sess, aws.NewConfig().WithRegion(ident.Region))
+
 	if iao, err = asgs.DescribeAutoScalingInstances(&autoscaling.DescribeAutoScalingInstancesInput{InstanceIds: []*string{&ident.InstanceID}}); err != nil {
 		return lbs, errors.WithStack(err)
 	}
