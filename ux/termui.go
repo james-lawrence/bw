@@ -93,12 +93,12 @@ func render(s state) {
 		completed.Percent = 0
 	}
 
-	peers := termui.NewList()
-	peers.Border = true
-	peers.BorderLabel = "peers"
-	peers.Items = peersToList(s)
-	peers.Width = termWidth
-	peers.Height = termHeight - completed.Height
+	agents := termui.NewList()
+	agents.Border = true
+	agents.BorderLabel = "agents"
+	agents.Items = peersToList(s)
+	agents.Width = termWidth
+	agents.Height = termHeight - completed.Height
 
 	logs := termui.NewList()
 	logs.Border = true
@@ -113,8 +113,8 @@ func render(s state) {
 			termui.NewCol(12, 0, completed),
 		),
 		termui.NewRow(
-			termui.NewCol(3, 0, peers),
-			termui.NewCol(9, 0, logs),
+			termui.NewCol(2, 0, agents),
+			termui.NewCol(10, 0, logs),
 		),
 	)
 	g.Width = termWidth
