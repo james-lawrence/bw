@@ -1,3 +1,15 @@
+// Package shell provides the ability to execute shell commands by the agent.
+// it supports environment variable substitution, along with a few well known pieces
+// of information extracted from the OS.
+// Substitutions:
+// %H hostname
+// %m machine id.
+// %d domain name
+// %f FQDN
+// %u user name
+// %U user uid.
+// %h user home directory
+// %% percent symbol
 package shell
 
 import (

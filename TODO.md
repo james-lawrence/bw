@@ -1,7 +1,8 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- [ ] figure out why the leader elections not eventually becoming consistent in some cases.
+- [ ] collapse uploads/download packages into a single storage package and cleanup the api.
+- [ ] figure out why the leader elections not becoming consistent in some cases.
 - [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
 
 #### custom plugins
@@ -13,15 +14,5 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 3) read the file contents and make them available via stdin to the plugin.
 ```
 
-#### initial setup work
-- [ ] generate skeleton directories. ie) `.bw .bwconfig`
-- [ ] populate skeleton directories with pre-populated configurations.
-
-#### local directives
-- used to build artifacts to place within the deployspace and then deployed.
-
 #### improve event stream to have a historical record.
 - have the quorum nodes store the last n events and be able to scan/seek them.
-
-#### retrieve detailed logs of a deploy for a particular agent.
-allow the client to specify the deploy id it wants logs for and the agents to pull from, then print those logs to the client.

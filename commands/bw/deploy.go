@@ -169,7 +169,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	go func() {
 		defer t.global.shutdown()
-		defer time.Sleep(3 * time.Second)
+		defer time.Sleep(time.Second)
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s), total peers(%d)", max, bw.RandomID(info.DeploymentID), len(peers)))
 
 		if cause := client.RemoteDeploy(max, info, peers...); cause != nil {

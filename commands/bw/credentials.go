@@ -20,7 +20,7 @@ import (
 // bearded-wookie init talla.io wambli.talla.io
 // bearded-wookie init talla.io wambli.talla.io
 
-type initCmd struct {
+type initCredentials struct {
 	global      *global
 	credentials string
 	duration    time.Duration
@@ -29,7 +29,7 @@ type initCmd struct {
 	common      string
 }
 
-func (t *initCmd) configure(parent *kingpin.CmdClause) {
+func (t *initCredentials) configure(parent *kingpin.CmdClause) {
 	parent.Flag("duration", "how long the certificate should last").Default("8760h").DurationVar(&t.duration)
 	parent.Flag("rsa-bits", "size of RSA key to generate.").Default("4096").IntVar(&t.bits)
 	parent.Flag("credentials", "name of the credentials to generate").Default("default").StringVar(&t.credentials)
@@ -38,7 +38,7 @@ func (t *initCmd) configure(parent *kingpin.CmdClause) {
 	parent.Action(t.generate)
 }
 
-func (t *initCmd) generate(ctx *kingpin.ParseContext) (err error) {
+func (t *initCredentials) generate(ctx *kingpin.ParseContext) (err error) {
 	var (
 		capriv    *rsa.PrivateKey
 		authority x509.Certificate

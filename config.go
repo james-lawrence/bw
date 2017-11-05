@@ -19,9 +19,9 @@ const (
 	DefaultDir = "bearded-wookie"
 	// DefaultAgentConfig default filename of the agent configuration.
 	DefaultAgentConfig = "agent.config"
-	// DefaultDeployspaceDir default directory of the deployspace.
+	// DefaultDeployspaceDir default directory of the workspace.
 	DefaultDeployspaceDir = ".bw"
-	// DefaultDeployspaceConfigDir default configuration directory of the deployspace.
+	// DefaultDeployspaceConfigDir default configuration directory of the workspace.
 	DefaultDeployspaceConfigDir = ".bwconfig"
 	// DefaultEnvironmentName name of the environment to default to.
 	DefaultEnvironmentName = "default"

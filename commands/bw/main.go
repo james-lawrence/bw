@@ -63,9 +63,11 @@ func main() {
 			node:   bw.MustGenerateID().String(),
 			global: global,
 		}
-		envinit = &initCmd{
+		envinit = &initCredentials{
 			global: global,
 		}
+		workspace   = &workspaceCmd{global: global}
+		environment = &environmentCmd{global: global}
 	)
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
@@ -77,7 +79,9 @@ func main() {
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
 	info.configure(app.Command("info", "retrieve info about nodes within the cluster"))
-	envinit.configure(app.Command("init", "generate tls cert/key for an environment"))
+	envinit.configure(app.Command("credentials", "generate tls cert/key for an environment"))
+	workspace.configure(app.Command("workspace", "workspace related commands"))
+	environment.configure(app.Command("environment", "environment related commands"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
 		log.Printf("failed to parse initialization arguments: %+v\n", err)
