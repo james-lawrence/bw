@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -79,13 +80,15 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:          make(chan func()),
-			wait:       new(sync.WaitGroup),
-			check:      constantChecker{Status: ready{}},
-			deploy:     OperationFunc(loggingDeploy),
-			dispatcher: di,
-			local:      p,
-			completed:  new(int64),
+			c:               make(chan func()),
+			wait:            new(sync.WaitGroup),
+			check:           constantChecker{Status: ready{}},
+			deploy:          OperationFunc(loggingDeploy),
+			dispatcher:      di,
+			local:           p,
+			completed:       new(int64),
+			failed:          new(int64),
+			enforceFailures: true,
 		},
 		partitioner: bw.ConstantPartitioner{BatchMax: 1},
 	}
@@ -103,14 +106,16 @@ func loggingDeploy(peer agent.Peer) error {
 }
 
 type worker struct {
-	c          chan func()
-	wait       *sync.WaitGroup
-	local      agent.Peer
-	dispatcher dispatcher
-	check      operation
-	deploy     operation
-	filter     Filter
-	completed  *int64
+	c               chan func()
+	wait            *sync.WaitGroup
+	local           agent.Peer
+	dispatcher      dispatcher
+	check           operation
+	deploy          operation
+	filter          Filter
+	completed       *int64
+	failed          *int64
+	enforceFailures bool
 }
 
 func (t worker) work() {
@@ -126,13 +131,24 @@ func (t worker) Complete() {
 }
 
 func (t worker) DeployTo(peer agent.Peer) {
+	// No longer deploy when a single node fails.
+	// TODO: finish making this configurable.
+	if *t.failed > 0 && t.enforceFailures {
+		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+		return
+	}
+
 	t.c <- func() {
 		if err := t.deploy.Visit(peer); err != nil {
-			log.Printf("failed to deploy to: %s - %+v\n", peer.Name, err)
+			t.dispatcher.Dispatch(agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %+v\n", peer.Name, err)))
+			atomic.AddInt64(t.failed, 1)
 			return
 		}
 
-		awaitCompletion(t.dispatcher, t.check, peer)
+		if success := awaitCompletion(t.dispatcher, t.check, peer); !success {
+			atomic.AddInt64(t.failed, 1)
+		}
+
 		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 	}
 }
@@ -189,8 +205,9 @@ func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	return subset
 }
 
-func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
+func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
 	remaining := make([]agent.Peer, 0, len(peers))
+	success := true
 	for len(peers) > 0 {
 		remaining = remaining[:0]
 		for _, peer := range peers {
@@ -202,6 +219,7 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
 			}
 
 			if IsFailed(err) {
+				success = false
 				continue
 			}
 
@@ -211,4 +229,6 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) {
 
 		peers = remaining
 	}
+
+	return success
 }

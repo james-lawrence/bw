@@ -1,9 +1,11 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
+- [ ] fix concurrency to properly deploy to multiple machines simultaneously.
 - [ ] collapse uploads/download packages into a single storage package and cleanup the api.
-- [ ] figure out why the leader elections not becoming consistent in some cases.
+- [ ] figure out why the leader elections not becoming consistent in some cases and keeping around old peers.
 - [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
+- [ ] implement an agent shutdown command. useful for triggering forcing a agent to reset.
 
 #### custom plugins
 - allow for custom plugins to be executed.
