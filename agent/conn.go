@@ -188,22 +188,18 @@ func (t Conn) Dispatch(messages ...Message) (err error) {
 	c := NewQuorumClient(t.conn)
 
 	ctx := context.Background()
-	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	// defer cancel()
-
 	if dst, err = c.Dispatch(ctx); err != nil {
-		// log.Println("----------------------------- failed to dispatch", ctx)
 		return errors.WithStack(err)
 	}
 
 	for _, m := range messages {
-		if err = dst.Send(&m); err != nil {
-			// log.Println("----------------------------- failed to dispatch", ctx)
-			return errors.WithStack(err)
+		if err = errors.WithStack(dst.Send(&m)); err != nil {
+			goto done
 		}
 	}
 
-	return nil
+done:
+	return errors.WithStack(dst.CloseSend())
 }
 
 func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {
