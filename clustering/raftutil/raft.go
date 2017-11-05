@@ -95,6 +95,13 @@ func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
 	}
 }
 
+// ProtocolOptionConfig set raft configuration for the protocol.
+func ProtocolOptionConfig(c *raft.Config) ProtocolOption {
+	return func(p *Protocol) {
+		p.config = c
+	}
+}
+
 // NewProtocol ...
 func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
@@ -108,10 +115,12 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 			_, trans := raft.NewInmemTransport("")
 			return trans, nil
 		},
-		ClusterChange: sync.NewCond(&sync.Mutex{}),
-		init:          &sync.Once{},
-		sgroup:        &sync.WaitGroup{},
-		events:        make(chan Event, 100),
+		ClusterChange:    sync.NewCond(&sync.Mutex{}),
+		init:             &sync.Once{},
+		sgroup:           &sync.WaitGroup{},
+		events:           make(chan Event, 100),
+		enableSingleNode: false,
+		config:           defaultRaftConfig(),
 	}
 
 	for _, opt := range options {
@@ -139,6 +148,7 @@ type Protocol struct {
 	clusterObserver  clusterObserver
 	events           chan Event
 	enableSingleNode bool
+	config           *raft.Config
 }
 
 // Raft returns the underlying raft instance, can be nil.
@@ -184,7 +194,9 @@ func (t Protocol) background() {
 		case <-t.Context.Done():
 			return
 		case e := <-t.events:
-			handleClusterEvent(e, t.clusterObserver)
+			if t.clusterObserver != nil {
+				handleClusterEvent(e, t.clusterObserver)
+			}
 			t.ClusterChange.Broadcast()
 		}
 	}
@@ -200,28 +212,35 @@ func (t Protocol) unstable(d time.Duration) {
 	t.ClusterChange.Broadcast()
 }
 
+func defaultRaftConfig() *raft.Config {
+	conf := raft.DefaultConfig()
+
+	conf.HeartbeatTimeout = 5 * time.Second
+	conf.ElectionTimeout = 10 * time.Second
+	conf.MaxAppendEntries = 64
+	conf.TrailingLogs = 128
+
+	return conf
+}
+
 // connect - connect to the raft protocol overlay within the given cluster.
 func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	var (
 		err      error
 		protocol *raft.Raft
 		network  raft.Transport
+		conf     raft.Config
 	)
 
 	if network, err = t.getTransport(); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	conf := raft.DefaultConfig()
+	conf = *t.config
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
-	conf.HeartbeatTimeout = 5 * time.Second
-	conf.ElectionTimeout = 10 * time.Second
-	conf.MaxAppendEntries = 64
-	conf.TrailingLogs = 128
-	conf.ShutdownOnRemove = false
 
 	store := raft.NewInmemStore()
-	if protocol, err = raft.NewRaft(conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
+	if protocol, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
 		return nil, err
 	}
 
@@ -238,7 +257,7 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	t.init.Do(func() {
 		// add this to the parent context waitgroup
 		contextx.WaitGroupAdd(t.Context, 1)
-		go t.waitShutdown()
+		go t.waitShutdown(network)
 	})
 
 	t.cluster = protocol
@@ -246,7 +265,7 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	return protocol, nil
 }
 
-func (t Protocol) waitShutdown() {
+func (t *Protocol) waitShutdown(transport raft.Transport) {
 	defer log.Println("raft protocol clean shutdown")
 	defer contextx.WaitGroupDone(t.Context)
 	<-t.Context.Done()
@@ -259,10 +278,14 @@ func (t Protocol) waitShutdown() {
 	debugx.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
 	t.maybeShutdown()
+
+	if t, ok := transport.(raft.WithClose); ok {
+		log.Println("closed transport", t.Close())
+	}
 	debugx.Println("signaling wait group of completion")
 }
 
-func (t Protocol) maybeShutdown() {
+func (t *Protocol) maybeShutdown() {
 	if t.cluster == nil {
 		return
 	}

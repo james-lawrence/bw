@@ -118,33 +118,37 @@ func OptionSecret(s []byte) Option {
 	}
 }
 
-// NewOptions build default cluster options for the given address:port
-// combination.
-func NewOptions(opts ...Option) Options {
-	options := Options{
-		Config: memberlist.DefaultWANConfig(),
+// NewOptionsFromConfig ...
+func NewOptionsFromConfig(c *memberlist.Config, options ...Option) Options {
+	opt := Options{
+		Config: c,
 	}
 
-	options.Config.Events = PrintingEventDelegate{}
+	OptionEventDelegate(PrintingEventDelegate{})(&opt)
 
-	for _, opt := range opts {
-		opt(&options)
+	for _, option := range options {
+		option(&opt)
 	}
 
-	log.Println("Name:", options.Config.Name)
-	log.Println("IndirectChecks:", options.Config.IndirectChecks)
-	log.Println("RetransmitMult:", options.Config.RetransmitMult)
-	log.Println("SuspicionMult:", options.Config.SuspicionMult)
-	log.Println("GossipNodes:", options.Config.GossipNodes)
-	log.Println("GossipInterval:", options.Config.GossipInterval)
-	log.Println("disable tcp pings:", options.Config.DisableTcpPings)
-	log.Println("Advertise:", options.Config.AdvertiseAddr, options.Config.AdvertisePort)
-	log.Println("Bind:", options.Config.BindAddr, options.Config.BindPort)
-	log.Println("TCPTimeout:", options.Config.TCPTimeout)
-	log.Println("Compression:", options.Config.EnableCompression)
-	log.Printf("Alive Delegate: %T\n", options.Config.Alive)
+	log.Println("Name:", opt.Config.Name)
+	log.Println("IndirectChecks:", opt.Config.IndirectChecks)
+	log.Println("RetransmitMult:", opt.Config.RetransmitMult)
+	log.Println("SuspicionMult:", opt.Config.SuspicionMult)
+	log.Println("GossipNodes:", opt.Config.GossipNodes)
+	log.Println("GossipInterval:", opt.Config.GossipInterval)
+	log.Println("disable tcp pings:", opt.Config.DisableTcpPings)
+	log.Println("Advertise:", opt.Config.AdvertiseAddr, opt.Config.AdvertisePort)
+	log.Println("Bind:", opt.Config.BindAddr, opt.Config.BindPort)
+	log.Println("TCPTimeout:", opt.Config.TCPTimeout)
+	log.Println("Compression:", opt.Config.EnableCompression)
+	log.Printf("Alive Delegate: %T\n", opt.Config.Alive)
 
-	return options
+	return opt
+}
+
+// NewOptions build default cluster options.
+func NewOptions(options ...Option) Options {
+	return NewOptionsFromConfig(memberlist.DefaultWANConfig(), options...)
 }
 
 // Options holds the options for the cluster.

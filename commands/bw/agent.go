@@ -107,6 +107,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		Time:    10 * time.Second,
 		Timeout: 3 * time.Second,
 	})
+
 	t.server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
 	options := []clustering.Option{
 		clustering.OptionNodeID(local.Peer.Name),
@@ -174,12 +175,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 					return false
 				}
 			}),
-			// TODO: remove the ProtocolOptionClusterObserver and replace it with a cluster monitor.
-			// then wire bootstrap and other systems up to the cluster monitor.
-			// raft.NewObserver(clustermonitor.Events, true, func(o *raft.Observation) bool {
-			// 	_, ok := o.Data.(raft.LeaderObservation)
-			// 	return ok
-			// }),
 		),
 	)
 

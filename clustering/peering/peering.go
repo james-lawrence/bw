@@ -14,3 +14,18 @@ type Closure func() ([]string, error)
 func (t Closure) Peers() ([]string, error) {
 	return t()
 }
+
+// NewStatic converts a set of peers into a peering strategy
+func NewStatic(peers ...string) Static {
+	return Static{peers: peers}
+}
+
+// Static ...
+type Static struct {
+	peers []string
+}
+
+// Peers - returns the set of peers.
+func (t Static) Peers() ([]string, error) {
+	return t.peers, nil
+}
