@@ -67,7 +67,7 @@ func mergeEvent(s state, m agent.Message) state {
 		s.Peers[m.Peer.Name] = *m.Peer
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()
-		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - %s - %s %s", messagePrefix(m), m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
+		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - %s %s", m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
 	case agent.Message_PeersCompletedEvent:
 		s.NodesCompleted = m.GetInt()
 	case agent.Message_PeersFoundEvent:
