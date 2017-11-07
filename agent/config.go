@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	yaml "gopkg.in/yaml.v1"
-
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
@@ -24,23 +22,12 @@ import (
 
 // DeploymentConfig configuration for the deploy process.
 type DeploymentConfig struct {
-	Strategy string
-	Options  map[string]interface{}
+	Concurrency float64
 }
 
 // Partitioner ...
 func (t DeploymentConfig) Partitioner() (_ bw.Partitioner) {
-	var (
-		err error
-		raw []byte
-	)
-
-	if raw, err = yaml.Marshal(t.Options); err != nil {
-		log.Println("failed to remarshal options, falling back to default", err)
-		return bw.ConstantPartitioner{BatchMax: 1}
-	}
-
-	return bw.PartitionerFromConfig(t.Strategy, raw)
+	return bw.PartitionFromFloat64(t.Concurrency)
 }
 
 // ConfigClientOption options for the client configuration.
@@ -65,14 +52,9 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		Address:   systemx.HostnameOrLocalhost(),
-		TLSConfig: NewTLSClient(DefaultTLSCredentialsRoot),
-		DeploymentConfig: DeploymentConfig{
-			Strategy: bw.PartitionStrategyBatch,
-			Options: map[string]interface{}{
-				"BatchMax": 1,
-			},
-		},
+		Address:          systemx.HostnameOrLocalhost(),
+		TLSConfig:        NewTLSClient(DefaultTLSCredentialsRoot),
+		DeploymentConfig: DeploymentConfig{},
 	}
 
 	return NewConfigClient(config, options...)

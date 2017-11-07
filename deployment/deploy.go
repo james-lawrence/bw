@@ -90,7 +90,7 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 			failed:          new(int64),
 			enforceFailures: true,
 		},
-		partitioner: bw.ConstantPartitioner{BatchMax: 1},
+		partitioner: bw.ConstantPartitioner(1),
 	}
 
 	for _, opt := range options {

@@ -50,7 +50,7 @@ func (t Proxy) Deploy(max int64, creds grpc.DialOption, info agent.Archive, peer
 		deployment.DeployOptionChecker(deployment.OperationFunc(check(doptions...))),
 		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(info, doptions...))),
 		deployment.DeployOptionFilter(filter),
-		deployment.DeployOptionPartitioner(bw.ConstantPartitioner{BatchMax: int(max)}),
+		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(int(max))),
 	}
 
 	log.Printf("new deploy starting %p\n", t.d)

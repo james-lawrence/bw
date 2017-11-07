@@ -101,8 +101,9 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 func (t Conn) RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := ProxyDeployRequest{
-		Archive: &archive,
-		Peers:   PeersToPtr(peers...),
+		Concurrency: concurrency,
+		Archive:     &archive,
+		Peers:       PeersToPtr(peers...),
 	}
 
 	if _, err = rpc.Deploy(context.Background(), &req); err != nil {

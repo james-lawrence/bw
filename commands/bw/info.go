@@ -95,7 +95,9 @@ func (t *agentInfo) _info() (err error) {
 	}))(cx, grpc.WithTransportCredentials(creds))
 
 	events := make(chan agent.Message, 100)
-	go ux.Logging(events)
+
+	t.global.cleanup.Add(1)
+	go ux.Logging(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("awaiting events")
 	return client.Watch(events)

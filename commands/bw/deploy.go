@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"time"
 
 	"bitbucket.org/jatone/bearded-wookie"
 	"bitbucket.org/jatone/bearded-wookie/agent"
@@ -21,6 +20,7 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/x/debugx"
 	"bitbucket.org/jatone/bearded-wookie/x/systemx"
 	"github.com/alecthomas/kingpin"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -51,12 +51,12 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 }
 
 func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
+	t.global.cleanup.Add(1)
 	switch mode {
 	case uxmodeTerm:
-		t.global.cleanup.Add(1)
 		go ux.NewTermui(t.global.ctx, t.global.shutdown, t.global.cleanup, events)
 	default:
-		go ux.Logging(events)
+		go ux.Logging(t.global.ctx, t.global.cleanup, events)
 	}
 }
 
@@ -101,6 +101,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	if config, err = loadConfiguration(t.environment); err != nil {
 		return err
 	}
+
+	log.Println("configuration:", spew.Sdump(config))
 
 	local := cluster.NewLocal(
 		agent.Peer{
@@ -168,8 +170,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	go func() {
-		defer t.global.shutdown()
-		defer time.Sleep(time.Second)
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s), total peers(%d)", max, bw.RandomID(info.DeploymentID), len(peers)))
 
 		if cause := client.RemoteDeploy(max, info, peers...); cause != nil {
