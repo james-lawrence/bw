@@ -169,7 +169,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		raftutil.ProtocolOptionObservers(
 			raft.NewObserver(quorum.Events, true, func(o *raft.Observation) bool {
 				switch o.Data.(type) {
-				case raft.RaftState:
+				case raft.LeaderObservation, raft.RaftState:
 					return true
 				default:
 					return false

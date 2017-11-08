@@ -166,7 +166,6 @@ func (t Conn) Watch(out chan<- Message) (err error) {
 	)
 	debugx.Println("watch started")
 	defer debugx.Println("watch finished")
-	defer close(out)
 
 	c := NewQuorumClient(t.conn)
 	if src, err = c.Watch(context.Background(), &WatchRequest{}); err != nil {

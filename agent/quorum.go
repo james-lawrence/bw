@@ -140,13 +140,10 @@ func QuorumOptionCredentials(c credentials.TransportCredentials) QuorumOption {
 
 // NewQuorum ...
 func NewQuorum(q *QuorumFSM, c cluster, deploy proxyDeploy, options ...QuorumOption) *Quorum {
-	ctx, cancel := context.WithCancel(context.Background())
 	r := &Quorum{
 		Events:  make(chan raft.Observation, 200),
 		m:       &sync.Mutex{},
 		lq:      q,
-		ctx:     ctx,
-		cancel:  cancel,
 		proxy:   proxyRaft{},
 		pdeploy: deploy,
 		creds:   grpc.WithInsecure(),
@@ -179,22 +176,19 @@ type Quorum struct {
 	lq             *QuorumFSM
 	pq             proxyQuorum
 	pdeploy        proxyDeploy
-	ctx            context.Context
-	cancel         context.CancelFunc
 }
 
 // Observer - implements raftprotocol observer.
 func (t *Quorum) observe() {
 	for o := range t.Events {
 		switch o.Data.(type) {
-		case raft.RaftState:
+		case raft.LeaderObservation:
 			t.pq.close()
+
 			if o.Raft.Leader() == "" {
 				debugx.Println("leader lost disabling quorum locally")
 				t.proxy = proxyRaft{}
 				t.pq = proxyQuorum{}
-				t.cancel()
-				t.ctx, t.cancel = context.WithCancel(context.Background())
 				continue
 			}
 
@@ -322,13 +316,16 @@ func (t *Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
 	t.m.Unlock()
 
 	debugx.Println("watch invoked")
+	defer debugx.Println("watch completed")
+
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
 		return errors.Errorf("watch must be run on a member of quorum: %s", s)
 	}
 
-	ctx, done := context.WithCancel(t.ctx)
+	ctx, done := context.WithCancel(context.Background())
+
 	debugx.Println("event observer: registering")
 	o := t.lq.Register(pbObserver{dst: out, done: done})
 	debugx.Println("event observer: registered")
