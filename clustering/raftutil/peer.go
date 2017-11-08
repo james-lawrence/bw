@@ -32,7 +32,7 @@ func (t peer) Update(c cluster) state {
 			protocol: t.protocol,
 		}.Update(c)
 	default:
-		debugx.Println("current state", s)
+		log.Println("peer current state", s)
 		if maybeLeave(t.protocol, c) {
 			return conditionTransition{
 				next: passive{
@@ -42,8 +42,6 @@ func (t peer) Update(c cluster) state {
 			}
 		}
 	}
-
-	maybeBootstrap(t.raftp.Port, t.protocol, c)
 
 	return nextState
 }

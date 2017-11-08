@@ -29,15 +29,6 @@ func (t leader) Update(c cluster) state {
 		if t.cleanupPeers(possiblePeers(c)...) {
 			go t.raftp.unstable(time.Second)
 		}
-
-		if maybeLeave(t.protocol, c) {
-			return conditionTransition{
-				next: passive{
-					raftp: t.raftp,
-				},
-				cond: t.raftp.ClusterChange,
-			}
-		}
 		return maintainState
 	default:
 		log.Println("lost leadership: demoting to peer")
@@ -56,8 +47,8 @@ func (t leader) cleanupPeers(candidates ...*memberlist.Node) (unstable bool) {
 		return true
 	}
 	peers := config.Configuration().Servers
-	debugx.Println("candidates", peersToString(t.raftp.Port, candidates...))
-	debugx.Println("peers", peers)
+	log.Println("candidates", peersToString(t.raftp.Port, candidates...))
+	log.Println("peers", peers)
 
 	for _, peer := range candidates {
 		id := raft.ServerID(peer.Name)

@@ -39,6 +39,11 @@ func (t passive) Update(c cluster) state {
 		return maintainState
 	}
 
+	if err := protocol.BootstrapCluster(configuration(t.raftp.Port, c)).Error(); err != nil {
+		log.Println("bootstrap failed", err)
+		return maintainState
+	}
+
 	return peer{
 		raftp:    t.raftp,
 		protocol: protocol,

@@ -390,19 +390,6 @@ func maybeLeave(protocol *raft.Raft, c cluster) bool {
 	return true
 }
 
-func maybeBootstrap(port uint16, protocol *raft.Raft, c cluster) {
-	if protocol.Leader() != "" {
-		return
-	}
-
-	log.Println("attempting a bootstrap refreshing peers")
-
-	if err := protocol.BootstrapCluster(configuration(port, c)).Error(); err != nil {
-		log.Println("bootstrap failed", err)
-		return
-	}
-}
-
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
 func isMember(c cluster) bool {

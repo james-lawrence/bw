@@ -1,9 +1,9 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- [ ] collapse uploads/download packages into a single storage package and cleanup the api.
-- [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
 - [ ] implement an agent shutdown command. useful for triggering forcing a agent to reset.
+- [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
+- [ ] collapse uploads/download packages into a single storage package and cleanup the api.
 
 #### custom plugins
 - allow for custom plugins to be executed.
