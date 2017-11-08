@@ -279,8 +279,8 @@ func (t *Protocol) waitShutdown(transport raft.Transport) {
 	// attempt to cleanly shutdown the local peer.
 	t.maybeShutdown()
 
-	if t, ok := transport.(raft.WithClose); ok {
-		log.Println("closed transport", t.Close())
+	if trans, ok := transport.(raft.WithClose); ok {
+		log.Println("closed transport", trans.Close())
 	}
 	debugx.Println("signaling wait group of completion")
 }
