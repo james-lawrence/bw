@@ -18,9 +18,21 @@ func (t Operation) Visit(c agent.Client) error {
 	return t(c)
 }
 
+type peers interface {
+	Peers() []agent.Peer
+}
+
+// PeerSet a set of static peers.
+type PeerSet []agent.Peer
+
+// Peers the set of peers.
+func (t PeerSet) Peers() []agent.Peer {
+	return t
+}
+
 // NewClusterOperation applies an operation to every node in the cluster.
-func NewClusterOperation(o operation) func(cluster, ...grpc.DialOption) error {
-	return func(c cluster, options ...grpc.DialOption) (err error) {
+func NewClusterOperation(o operation) func(peers, ...grpc.DialOption) error {
+	return func(c peers, options ...grpc.DialOption) (err error) {
 		var (
 			cx agent.Client
 		)

@@ -17,6 +17,7 @@ var _ = Describe("Server", func() {
 	Context("Connect", func() {
 		It("should return cluster details", func() {
 			peers := clusteringtestutil.NewPeers(5)
+
 			c := cluster.New(
 				cluster.NewLocal(LocalPeer(fake.CharactersN(10))),
 				clustering.NewMock(peers[0], peers[1:]...),

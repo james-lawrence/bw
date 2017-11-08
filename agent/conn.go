@@ -53,6 +53,18 @@ func (t Conn) Close() error {
 	return t.conn.Close()
 }
 
+// Shutdown causes the agent to shut down. generally the agent process
+// should be configured to automatically restart.
+func (t Conn) Shutdown() (err error) {
+	rpc := NewAgentClient(t.conn)
+
+	if _, err = rpc.Shutdown(context.Background(), &ShutdownRequest{}); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 // Upload ...
 func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 	var (

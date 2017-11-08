@@ -147,6 +147,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	server := agent.NewServer(
 		cx,
 		aoptions(dispatcher, local.Peer, t.config),
+		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
 	agent.RegisterServer(

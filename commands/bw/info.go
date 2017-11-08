@@ -19,7 +19,6 @@ import (
 
 type agentInfo struct {
 	global      *global
-	node        string
 	environment string
 }
 
@@ -55,7 +54,7 @@ func (t *agentInfo) _info() (err error) {
 
 	local := cluster.NewLocal(
 		agent.Peer{
-			Name: t.node,
+			Name: bw.MustGenerateID().String(),
 			Ip:   systemx.HostnameOrLocalhost(),
 		},
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),

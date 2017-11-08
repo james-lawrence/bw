@@ -60,10 +60,12 @@ func main() {
 			global: global,
 		}
 		info = &agentInfo{
-			node:   bw.MustGenerateID().String(),
 			global: global,
 		}
 		envinit = &initCredentials{
+			global: global,
+		}
+		agentctl = &actlCmd{
 			global: global,
 		}
 		workspace   = &workspaceCmd{global: global}
@@ -82,6 +84,7 @@ func main() {
 	envinit.configure(app.Command("credentials", "generate tls cert/key for an environment"))
 	workspace.configure(app.Command("workspace", "workspace related commands"))
 	environment.configure(app.Command("environment", "environment related commands"))
+	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
 		log.Printf("failed to parse initialization arguments: %+v\n", err)

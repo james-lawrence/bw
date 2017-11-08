@@ -51,9 +51,19 @@ func ServerOptionCluster(c cluster) ServerOption {
 	}
 }
 
+// ServerOptionShutdown provide a cancellation function that will cause the agent to self terminate.
+func ServerOptionShutdown(cf context.CancelFunc) ServerOption {
+	return func(s *Server) {
+		s.shutdown = cf
+	}
+}
+
 // NewServer ...
 func NewServer(c cluster, options ...ServerOption) Server {
 	s := Server{
+		shutdown: context.CancelFunc(func() {
+			log.Println("shutdown isn't implemented")
+		}),
 		cluster:  c,
 		Deployer: noopDeployer{},
 	}
@@ -67,8 +77,15 @@ func NewServer(c cluster, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
+	shutdown context.CancelFunc
 	Deployer deployer
 	cluster  cluster
+}
+
+// Shutdown when invoked the agent will self shutdown.
+func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownResponse, error) {
+	t.shutdown()
+	return &ShutdownResponse{}, nil
 }
 
 // Deploy ...

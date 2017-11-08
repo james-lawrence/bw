@@ -90,10 +90,14 @@ service Quorum {
   rpc Deploy(ProxyDeployRequest) returns (ProxyDeployResult) {}
 }
 
+message ShutdownRequest{}
+message ShutdownResponse{}
+
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectInfo) {}
   rpc Deploy(Archive) returns (ArchiveResult) {}
   rpc Info(StatusRequest) returns (Status) {}
+  rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
 }
 
 message ProxyDeployRequest {
