@@ -137,7 +137,14 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	debugx.Printf("configuration:\n%#v\n", config)
 
 	events := make(chan agent.Message, 100)
-	go client.Watch(events)
+	go func() {
+		if watcherr := client.Watch(events); watcherr != nil {
+			events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("event watch failed: %v", watcherr))
+		}
+		<-t.global.ctx.Done()
+		close(events)
+	}()
+
 	t.initializeUX(t.uxmode, events)
 
 	events <- agentutil.LogEvent(local.Peer, "uploading archive")
