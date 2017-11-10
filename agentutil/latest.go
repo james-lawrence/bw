@@ -59,8 +59,8 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 
 	peers := c.Peers()
 	// check for quorum
-	log.Printf("members(%d) / 2.0: min(%f) >= quorum(%f)\n", len(peers)-1, float64((len(peers)-1))/2.0, float64(quorum))
-	if (float64((len(peers) - 1)) / 2.0) >= float64(quorum) {
+	log.Printf("quorum(%f) < members(%d) / 2.0: min(%f)\n", float64(quorum), len(peers)-1, float64((len(peers)-1))/2.0)
+	if float64(quorum) < float64((len(peers)-1))/2.0 {
 		return latest, ErrFailedDeploymentQuorum
 	}
 

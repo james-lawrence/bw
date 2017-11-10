@@ -17,7 +17,6 @@ import (
 	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
 	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
 	"bitbucket.org/jatone/bearded-wookie/uploads"
-	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -94,14 +93,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return err
 	}
 
-	local := cluster.NewLocal(agent.Peer{
-		Ip:       t.global.systemIP.String(),
-		Name:     stringsx.DefaultIfBlank(t.config.Name, t.listener.Addr().String()),
-		RPCPort:  uint32(t.config.RPCBind.Port),
-		SWIMPort: uint32(t.config.SWIMBind.Port),
-		RaftPort: uint32(t.config.RaftBind.Port),
-	})
-
+	local := cluster.NewLocal(t.config.Peer())
 	tlscreds := credentials.NewTLS(creds)
 	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
 		Time:    10 * time.Second,
@@ -159,14 +151,15 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	t.runServer(c)
 
+	if err = agentutil.Bootstrap(local.Peer, cx, tlscreds); err != nil {
+		return err
+	}
+
 	go p.Overlay(
 		c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
 			return lq
 		}),
-		raftutil.ProtocolOptionClusterObserver(
-			agentutil.NewBootstrapper(cx, tlscreds),
-		),
 		raftutil.ProtocolOptionObservers(
 			raft.NewObserver(quorum.Events, true, func(o *raft.Observation) bool {
 				switch o.Data.(type) {

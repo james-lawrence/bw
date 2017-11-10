@@ -1,12 +1,15 @@
 package agentutil
 
 import (
+	"bytes"
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
+	"github.com/pkg/errors"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"bitbucket.org/jatone/bearded-wookie/agent"
 )
 
 type errString string
@@ -22,68 +25,38 @@ const (
 	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
 )
 
-// NewBootstrapper generates a new bootstrapper for the given server.
-func NewBootstrapper(c cluster, creds credentials.TransportCredentials) Bootstrapper {
-	buffer := make(chan raftutil.Event, 100)
-
-	b := Bootstrapper{
-		In:    buffer,
-		c:     c,
-		creds: grpc.WithTransportCredentials(creds),
-	}
-
-	go b.background()
-
-	return b
-}
-
-// Bootstrapper monitors the raft cluster for new nodes and bootstraps them.
-type Bootstrapper struct {
-	c     cluster
-	creds grpc.DialOption
-	In    chan raftutil.Event
-}
-
-// Observer implements raftutil.clusterObserver
-func (t Bootstrapper) Observer(e raftutil.Event) {
-	t.In <- e
-}
-
-// Start ...
-func (t Bootstrapper) background() {
+// Bootstrap ...
+func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials) (err error) {
 	var (
-		err    error
-		peer   agent.Peer
+		status agent.Status
 		latest agent.Archive
-		c      agent.Client
+		client agent.Client
 	)
 
-	for o := range t.In {
-		if o.Type != raftutil.EventJoined {
-			log.Println("ignoring bootstrap event, peer did not join", o.Peer.Name, o.Peer.Address())
-			continue
-		}
+	tcreds := grpc.WithTransportCredentials(creds)
+	log.Println("--------------- bootstrap -------------")
+	defer log.Println("--------------- bootstrap -------------")
 
-		if peer, err = NodeToPeer(o.Peer); err != nil {
-			log.Println("failed to convert node to peer", err)
-			continue
-		}
-
-		log.Println("--------------- bootstrap observed -------------", o)
-
-		if latest, err = DetermineLatestArchive(t.c, t.creds); err != nil {
-			log.Printf("failed to determine latest archive prior to bootstrapping: %+v\n", err)
-			continue
-		}
-
-		if c, err = DialPeer(peer, t.creds); err != nil {
-			log.Println("failed to connect to new peer", o.Peer.String(), c)
-			continue
-		}
-
-		if err = c.Deploy(latest); err != nil {
-			log.Println("failed to deploy to new peer", o.Peer.String(), err)
-			continue
-		}
+	if latest, err = DetermineLatestArchive(c, tcreds); err != nil {
+		return errors.Wrap(err, "failed to determine latest archive prior to bootstrapping")
 	}
+
+	if client, err = DialPeer(local, tcreds); err != nil {
+		return errors.Wrap(err, "failed to connect to local server")
+	}
+
+	if status, err = client.Info(); err != nil {
+		return errors.Wrap(err, "failed to retrieve local")
+	}
+
+	if len(status.Deployments) > 0 && bytes.Compare(latest.DeploymentID, status.Deployments[0].DeploymentID) == 0 {
+		log.Println("latest already deployed")
+		return nil
+	}
+
+	if err = client.Deploy(latest); err != nil {
+		return errors.Wrap(err, "failed to deploy latest")
+	}
+
+	return nil
 }

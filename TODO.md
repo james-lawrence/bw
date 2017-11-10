@@ -1,7 +1,6 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- [ ] improve bootstrap process to not redeploy a configuration that was already deployed.
 - [ ] collapse uploads/download packages into a single storage package and cleanup the api.
 
 #### custom plugins
