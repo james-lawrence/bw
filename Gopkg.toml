@@ -1,0 +1,82 @@
+
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#  name = "github.com/x/y"
+#  version = "2.4.0"
+
+
+[[constraint]]
+  name = "github.com/alecthomas/kingpin"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+
+[[constraint]]
+  name = "github.com/davecgh/go-spew"
+  version = "~1.1.0"
+
+[[constraint]]
+  name = "github.com/gizak/termui"
+  version = "~2.1.1"
+
+[[constraint]]
+  name = "github.com/godbus/dbus"
+
+[[constraint]]
+  name = "github.com/golang/protobuf"
+
+[[constraint]]
+  name = "github.com/gutengo/fil"
+
+[[constraint]]
+  name = "github.com/hashicorp/memberlist"
+
+[[constraint]]
+  name = "github.com/hashicorp/raft"
+
+[[constraint]]
+  name = "github.com/huin/goupnp"
+
+[[constraint]]
+  name = "github.com/icrowley/fake"
+
+[[constraint]]
+  name = "github.com/manveru/faker"
+
+[[constraint]]
+  name = "github.com/onsi/ginkgo"
+
+[[constraint]]
+  name = "github.com/onsi/gomega"
+
+[[constraint]]
+  name = "github.com/pkg/errors"
+
+[[constraint]]
+  name = "golang.org/x/net"
+
+[[constraint]]
+  name = "google.golang.org/grpc"
+  version = "~1.5.1"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v1"
+
+[[constraint]]
+  name = "gopkg.in/yaml.v2"
