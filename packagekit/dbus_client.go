@@ -118,21 +118,24 @@ func (t dbusTransaction) Packages(filter PackageFilter) ([]Package, error) {
 		return nil, err
 	}
 
-	for event := range t.signalChan {
+	for {
+		var (
+			event *dbus.Signal
+		)
+
+		if event, err = awaitEvent(10*time.Second, t.signalChan); err != nil {
+			return packages, err
+		}
+
 		switch event.Name {
+		case signalTransactionFinished, signalTransactionDestroy:
+			return packages, nil
 		case signalTransactionPackage:
 			pkg := Package{}
 			dbus.Store(event.Body, &pkg.Info, &pkg.ID, &pkg.Summary)
 			packages = append(packages, pkg)
-		case signalTransactionFinished:
-			duration, err := handleFinished(event)
-			log.Println("Packages completed in", duration)
-			return packages, err
-		default:
-			log.Printf("event: %#v\n", event.Name)
 		}
 	}
-	panic("should never happen")
 }
 
 func (t dbusTransaction) RefreshCache() error {
@@ -157,24 +160,9 @@ func (t dbusTransaction) RefreshCache() error {
 	}
 
 	// Wait for the method to finish
-	for event := range t.signalChan {
-		switch event.Name {
-		case signalTransactionItemProgress:
-			id, status, progress := handleItemProgress(event)
-			log.Println("item progress", id, status, progress)
-		case signalTransactionError:
-			return handleError(event)
-		case signalTransactionFinished:
-			duration, err := handleFinished(event)
-			log.Println("RefreshCache completed in", duration)
-			return err
-		default:
-			log.Println("Default: ")
-			log.Printf("event: %#v\n", event.Name)
-		}
-	}
-
-	panic("should never happen")
+	duration, err := awaitCompletion(10*time.Second, t.signalChan)
+	log.Println("RefreshCache completed in", duration)
+	return err
 }
 
 // InstallPackages - Installs a list of Packages.
@@ -202,33 +190,22 @@ func (t dbusTransaction) InstallPackages(packageIDs ...string) error {
 	}
 
 	// Wait for the method to finish
-	for event := range t.signalChan {
-		switch event.Name {
-		case signalTransactionPackage:
-			info, pkg, summary := handlePackage(event)
-			log.Println("Package:", info, pkg, summary)
-		case signalTransactionItemProgress:
-			// id, status, progress := handleItemProgress(event)
-			// log.Println("item progress", id, status, progress)
-		case signalTransactionError:
-			return handleError(event)
-		case signalTransactionFinished:
-			duration, err := handleFinished(event)
-			log.Println("InstallPackages completed in", duration)
-			return err
-		case signalTransactionDestroy:
-			return nil
-		}
-	}
-
-	panic("should never happen")
+	_, err = awaitCompletion(10*time.Second, t.signalChan)
+	return err
 }
 
 // DownloadPackages - NotImplemented
-func (t dbusTransaction) DownloadPackages(storeInCache bool, packageIDs ...string) error {
-	var (
-		err error
+func (t dbusTransaction) DownloadPackages(storeInCache bool, packageIDs ...string) (err error) {
+	const (
+		timeout = 10 * time.Second
 	)
+	var (
+		duration time.Duration
+	)
+
+	if len(packageIDs) == 0 {
+		return nil
+	}
 
 	pathRule := "path=" + string(t.transaction.Path())
 	signals := []string{
@@ -248,14 +225,51 @@ func (t dbusTransaction) DownloadPackages(storeInCache bool, packageIDs ...strin
 	}
 
 	// Wait for the method to finish
-	for event := range t.signalChan {
-		switch event.Name {
-		default:
-			fmt.Println("Default: ")
-			fmt.Printf("event: %#v\n", event.Name)
+	duration, err = awaitCompletion(timeout, t.signalChan)
+	log.Println("downloadPackages completed in", duration)
+	return err
+}
+
+func awaitCompletion(timeout time.Duration, c chan *dbus.Signal) (time.Duration, error) {
+	start := time.Now()
+	d := time.NewTimer(timeout)
+	defer d.Stop()
+	for {
+		select {
+		case _ = <-d.C:
+			return time.Now().Sub(start), errors.Errorf("operation timed out: %d", timeout)
+		case event := <-c:
+			d.Reset(timeout)
+			switch event.Name {
+			case signalTransactionFinished:
+				err := handleFinished(event)
+				duration := exitDuration(err)
+				return duration, ignoreSuccess(err)
+			case signalTransactionError:
+				return time.Now().Sub(start), handleError(event)
+			case signalTransactionDestroy:
+				return time.Now().Sub(start), nil
+			}
 		}
 	}
-	return nil
+}
+
+func awaitEvent(timeout time.Duration, c chan *dbus.Signal) (*dbus.Signal, error) {
+	d := time.NewTimer(timeout)
+	defer d.Stop()
+	select {
+	case _ = <-d.C:
+		return nil, errors.Errorf("operation timed out: %d", timeout)
+	case event := <-c:
+		d.Reset(timeout)
+		switch event.Name {
+		case signalTransactionFinished:
+			return event, ignoreSuccess(handleFinished(event))
+		case signalTransactionError:
+			return event, handleError(event)
+		}
+		return event, nil
+	}
 }
 
 func propertiesSignal(rules ...string) string {
@@ -294,10 +308,10 @@ func handleError(signal *dbus.Signal) error {
 	)
 
 	if decodeErr := errors.Wrapf(dbus.Store(signal.Body, &code, &err), "failed to decode %s", signalTransactionError); decodeErr != nil {
-		log.Println(decodeErr)
+		return decodeErr
 	}
 
-	return fmt.Errorf("%s: %s", ErrorEnum(code), err)
+	return transactionError{code: ErrorEnum(code), msg: err}
 }
 
 func handleItemProgress(signal *dbus.Signal) (id string, status, percentage uint32) {
@@ -308,24 +322,31 @@ func handleItemProgress(signal *dbus.Signal) (id string, status, percentage uint
 	return
 }
 
-func handleFinished(signal *dbus.Signal) (time.Duration, error) {
+func exitDuration(err error) time.Duration {
+	if exit, ok := err.(exitError); ok {
+		return exit.duration
+	}
+
+	return 0
+}
+
+func ignoreSuccess(err error) error {
+	if exit, ok := err.(exitError); ok && exit.code == ExitSuccess {
+		return nil
+	}
+
+	return err
+}
+
+func handleFinished(signal *dbus.Signal) error {
 	var (
 		err                 error
-		duration            time.Duration
-		exit                ExitEnum
 		exitstatus, runtime uint32
 	)
 
-	if err = errors.Wrap(dbus.Store(signal.Body, &exitstatus, &runtime), "failed to decode Finished"); err != nil {
-		return 0, err
+	if err = errors.Wrap(dbus.Store(signal.Body, &exitstatus, &runtime), "decode failure"); err != nil {
+		return err
 	}
 
-	exit = ExitEnum(exitstatus)
-	duration = time.Duration(runtime) * time.Millisecond
-
-	if exit != ExitSuccess {
-		return duration, fmt.Errorf("received failure exit code: %s", exit)
-	}
-
-	return duration, nil
+	return exitError{code: ExitEnum(exitstatus), duration: time.Duration(runtime) * time.Millisecond}
 }
