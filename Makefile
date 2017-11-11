@@ -5,7 +5,7 @@ RELEASE = $(shell git describe --always --tags --long $(COMMIT) | sed 's/\(.*\)-
 LDFLAGS ?= "-X github.com/james-lawrence/bw/commands.Version=$(VERSION)"
 
 generate:
-	go list ./... | grep -v /vendor/ | xargs go generate
+	go generate ./...
 
 install: generate
 	go install -ldflags=$(LDFLAGS) $(PACKAGE)/...
@@ -15,5 +15,6 @@ ifeq ($(origin ALLOW_DIRTY), undefined)
 	git diff --exit-code --quiet || { echo repository has uncommitted files. set ALLOW_DIRTY to ignore this check; exit 1; }
 endif
 
-release: release-check
+release: generate install release-check
+
 	echo "released version: $(RELEASE) completed successfully"

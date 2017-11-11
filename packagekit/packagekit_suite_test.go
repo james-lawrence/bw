@@ -11,3 +11,7 @@ func TestPackagekit(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Packagekit Suite")
 }
+
+var _ = BeforeSuite(func() {
+	// log.SetOutput(ioutil.Discard)
+})
