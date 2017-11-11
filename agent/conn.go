@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 )
 

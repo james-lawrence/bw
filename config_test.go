@@ -1,7 +1,7 @@
 package bw_test
 
 import (
-	. "bitbucket.org/jatone/bearded-wookie"
+	. "github.com/james-lawrence/bw"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

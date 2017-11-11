@@ -7,7 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw/x/systemx"
 
 	yaml "gopkg.in/yaml.v1"
 

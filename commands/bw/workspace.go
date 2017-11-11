@@ -8,7 +8,7 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 
-	"bitbucket.org/jatone/bearded-wookie"
+	"github.com/james-lawrence/bw"
 )
 
 type workspaceCmd struct {

@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 type errString string

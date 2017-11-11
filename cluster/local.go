@@ -3,7 +3,7 @@ package cluster
 import (
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 
 	"github.com/golang/protobuf/proto"
 )

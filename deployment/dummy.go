@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.

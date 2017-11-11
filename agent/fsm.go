@@ -5,7 +5,7 @@ import (
 	"log"
 	"sync"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"

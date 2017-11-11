@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/awsx"
-	"bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/awsx"
+	"github.com/james-lawrence/bw/cluster"
+	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/clustering/peering"
+	"github.com/james-lawrence/bw/clustering/raftutil"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/raft"

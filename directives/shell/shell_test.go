@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	. "bitbucket.org/jatone/bearded-wookie/directives/shell"
+	. "github.com/james-lawrence/bw/directives/shell"
 
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

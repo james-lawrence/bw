@@ -3,7 +3,7 @@ package directives
 import (
 	"io"
 
-	"bitbucket.org/jatone/bearded-wookie/directives/bwfs"
+	"github.com/james-lawrence/bw/directives/bwfs"
 )
 
 // ArchiveLoader directive.

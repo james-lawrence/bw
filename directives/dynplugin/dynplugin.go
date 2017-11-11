@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bitbucket.org/jatone/bearded-wookie/directives"
+	"github.com/james-lawrence/bw/directives"
 )
 
 const (

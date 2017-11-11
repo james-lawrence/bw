@@ -4,7 +4,7 @@ import (
 	"log"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"

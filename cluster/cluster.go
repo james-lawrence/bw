@@ -3,8 +3,8 @@ package cluster
 import (
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/clustering/raftutil"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"

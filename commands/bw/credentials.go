@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/x/tlsx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/x/tlsx"
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 )

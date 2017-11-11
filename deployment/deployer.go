@@ -3,11 +3,11 @@ package deployment
 import (
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie/archive"
-	"bitbucket.org/jatone/bearded-wookie/directives"
-	"bitbucket.org/jatone/bearded-wookie/directives/dynplugin"
-	"bitbucket.org/jatone/bearded-wookie/directives/shell"
-	"bitbucket.org/jatone/bearded-wookie/downloads"
+	"github.com/james-lawrence/bw/archive"
+	"github.com/james-lawrence/bw/directives"
+	"github.com/james-lawrence/bw/directives/dynplugin"
+	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/downloads"
 	"github.com/pkg/errors"
 )
 

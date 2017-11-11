@@ -3,7 +3,7 @@ package packages_test
 import (
 	"strings"
 
-	. "bitbucket.org/jatone/bearded-wookie/directives/packages"
+	. "github.com/james-lawrence/bw/directives/packages"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

@@ -4,7 +4,7 @@ import (
 	"hash"
 	"io"
 
-	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"github.com/james-lawrence/bw/clustering"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"

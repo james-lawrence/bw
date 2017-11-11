@@ -7,10 +7,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	"bitbucket.org/jatone/bearded-wookie/x/logx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/x/logx"
 )
 
 // partitioner determines the number of nodes to simultaneously deploy to

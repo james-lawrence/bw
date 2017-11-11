@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/gizak/termui"
 )
 

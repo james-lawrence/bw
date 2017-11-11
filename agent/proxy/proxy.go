@@ -3,8 +3,8 @@
 package proxy
 
 import (
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/deployment"
 	"google.golang.org/grpc"
 )
 

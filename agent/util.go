@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw/x/systemx"
 )
 
 // RPCAddress for peer.

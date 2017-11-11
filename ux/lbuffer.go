@@ -4,7 +4,7 @@ import (
 	"container/ring"
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 func newLBuffer(n int) lbuffer {

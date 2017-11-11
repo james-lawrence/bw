@@ -3,7 +3,7 @@ package directives
 import (
 	"io"
 
-	"bitbucket.org/jatone/bearded-wookie/directives/shell"
+	"github.com/james-lawrence/bw/directives/shell"
 )
 
 // ShellLoader directive.

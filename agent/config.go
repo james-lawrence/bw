@@ -13,11 +13,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/peering"
-	"bitbucket.org/jatone/bearded-wookie/uploads"
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/clustering/peering"
+	"github.com/james-lawrence/bw/uploads"
+	"github.com/james-lawrence/bw/x/systemx"
 )
 
 // DeploymentConfig configuration for the deploy process.

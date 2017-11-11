@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/clusteringtestutil"
+	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 
-	. "bitbucket.org/jatone/bearded-wookie/clustering/peering"
+	. "github.com/james-lawrence/bw/clustering/peering"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

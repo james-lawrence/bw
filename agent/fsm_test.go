@@ -1,8 +1,8 @@
 package agent_test
 
 import (
-	. "bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
+	. "github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 
 	"github.com/hashicorp/raft"
 	. "github.com/onsi/ginkgo"

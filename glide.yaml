@@ -1,4 +1,4 @@
-package: bitbucket.org/jatone/bearded-wookie
+package: github.com/james-lawrence/bw
 import:
 - package: github.com/aws/aws-sdk-go
   subpackages:

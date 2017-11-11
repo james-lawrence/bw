@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 func messagePrefix(m agent.Message) string {

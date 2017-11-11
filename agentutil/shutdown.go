@@ -1,7 +1,7 @@
 package agentutil
 
 import (
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 	"google.golang.org/grpc"
 )
 

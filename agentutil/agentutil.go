@@ -10,8 +10,8 @@ import (
 
 	"google.golang.org/grpc"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	clusterx "bitbucket.org/jatone/bearded-wookie/cluster"
+	"github.com/james-lawrence/bw/agent"
+	clusterx "github.com/james-lawrence/bw/cluster"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"

@@ -12,10 +12,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	bw "bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/uploads"
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
-	"bitbucket.org/jatone/bearded-wookie/x/grpcx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/uploads"
+	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/grpcx"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )

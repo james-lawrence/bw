@@ -3,7 +3,7 @@ package agent
 import (
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 
 	"golang.org/x/net/context"
 )

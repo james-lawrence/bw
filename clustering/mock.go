@@ -3,7 +3,7 @@ package clustering
 import (
 	"net"
 
-	"bitbucket.org/jatone/bearded-wookie/clustering/rendezvous"
+	"github.com/james-lawrence/bw/clustering/rendezvous"
 
 	"github.com/hashicorp/memberlist"
 )

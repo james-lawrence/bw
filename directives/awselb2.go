@@ -3,7 +3,7 @@ package directives
 import (
 	"io"
 
-	"bitbucket.org/jatone/bearded-wookie/directives/awselb2"
+	"github.com/james-lawrence/bw/directives/awselb2"
 )
 
 // NewAWSELB2Attach ...

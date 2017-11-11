@@ -1,6 +1,6 @@
 package cluster
 
-import "bitbucket.org/jatone/bearded-wookie/x/debugx"
+import "github.com/james-lawrence/bw/x/debugx"
 
 const (
 	// Deploy represents a node that communicates with the cluster but isn't an actual

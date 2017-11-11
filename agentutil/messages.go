@@ -3,7 +3,7 @@ package agentutil
 import (
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 // PeersFoundEvent ...

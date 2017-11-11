@@ -5,9 +5,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/deployment"
 )
 
 type clusterx interface {

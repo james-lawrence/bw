@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie"
+	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
 

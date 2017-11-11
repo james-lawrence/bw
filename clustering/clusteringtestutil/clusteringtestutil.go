@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"bitbucket.org/jatone/bearded-wookie/clustering"
+	"github.com/james-lawrence/bw/clustering"
 
 	"github.com/hashicorp/memberlist"
 )

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/x/stringsx"
+	"github.com/james-lawrence/bw/x/stringsx"
 )
 
 // DumpRoutines writes current goroutine stack traces to a temp file.

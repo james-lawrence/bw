@@ -3,10 +3,10 @@ package agent_test
 import (
 	"context"
 
-	. "bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/cluster"
-	"bitbucket.org/jatone/bearded-wookie/clustering"
-	"bitbucket.org/jatone/bearded-wookie/clustering/clusteringtestutil"
+	. "github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/cluster"
+	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 
 	"github.com/icrowley/fake"
 	. "github.com/onsi/ginkgo"

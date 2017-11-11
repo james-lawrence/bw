@@ -9,12 +9,12 @@ import (
 	"sync"
 	"syscall"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/commands"
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
-	"bitbucket.org/jatone/bearded-wookie/x/netx"
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/commands"
+	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/netx"
+	"github.com/james-lawrence/bw/x/systemx"
 
 	"github.com/alecthomas/kingpin"
 )

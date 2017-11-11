@@ -6,8 +6,8 @@ import (
 	"sync"
 	"time"
 
-	bw "bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 )
 
 // Logging based ux

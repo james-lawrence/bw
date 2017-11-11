@@ -1,8 +1,8 @@
 COMMIT ?= HEAD
-PACKAGE ?= bitbucket.org/jatone/bearded-wookie/commands
+PACKAGE ?= github.com/james-lawrence/bw/commands
 VERSION = $(shell git describe --always --tags --long $(COMMIT))
 RELEASE = $(shell git describe --always --tags --long $(COMMIT) | sed 's/\(.*\)-.*/\1/')
-LDFLAGS ?= "-X bitbucket.org/jatone/bearded-wookie/commands.Version=$(VERSION)"
+LDFLAGS ?= "-X github.com/james-lawrence/bw/commands.Version=$(VERSION)"
 
 generate:
 	go list ./... | grep -v /vendor/ | xargs go generate

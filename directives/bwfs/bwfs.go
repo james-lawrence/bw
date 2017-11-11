@@ -9,8 +9,8 @@ import (
 	"github.com/gutengo/fil"
 	"github.com/pkg/errors"
 
-	"bitbucket.org/jatone/bearded-wookie/downloads"
-	"bitbucket.org/jatone/bearded-wookie/inflaters"
+	"github.com/james-lawrence/bw/downloads"
+	"github.com/james-lawrence/bw/inflaters"
 )
 
 type downloader interface {

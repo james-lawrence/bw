@@ -3,7 +3,7 @@
 package packagekit_test
 
 import (
-	. "bitbucket.org/jatone/bearded-wookie/packagekit"
+	. "github.com/james-lawrence/bw/packagekit"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"bitbucket.org/jatone/bearded-wookie/x/contextx"
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/contextx"
+	"github.com/james-lawrence/bw/x/debugx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"

@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/deployment"
 	"github.com/alecthomas/kingpin"
 )
 

@@ -3,12 +3,12 @@ package main
 import (
 	"os"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	"bitbucket.org/jatone/bearded-wookie/deployment"
-	"bitbucket.org/jatone/bearded-wookie/directives/dynplugin"
-	"bitbucket.org/jatone/bearded-wookie/directives/shell"
-	"bitbucket.org/jatone/bearded-wookie/downloads"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/directives/dynplugin"
+	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/downloads"
 
 	"github.com/alecthomas/kingpin"
 )

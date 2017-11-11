@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 )
 
 // NewEventBus event bus.

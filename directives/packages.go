@@ -5,8 +5,8 @@ import (
 	"io"
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/directives/packages"
-	"bitbucket.org/jatone/bearded-wookie/packagekit"
+	"github.com/james-lawrence/bw/directives/packages"
+	"github.com/james-lawrence/bw/packagekit"
 )
 
 // PackageLoader reads a set of packages to install from an io.Reader

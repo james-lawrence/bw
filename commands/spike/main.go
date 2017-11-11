@@ -6,12 +6,12 @@ import (
 	"os"
 	"sync"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/agent"
-	"bitbucket.org/jatone/bearded-wookie/agentutil"
-	"bitbucket.org/jatone/bearded-wookie/ux"
-	"bitbucket.org/jatone/bearded-wookie/x/logx"
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/x/systemx"
 
 	"github.com/alecthomas/kingpin"
 )

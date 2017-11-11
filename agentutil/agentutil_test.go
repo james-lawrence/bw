@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	. "bitbucket.org/jatone/bearded-wookie/agentutil"
+	. "github.com/james-lawrence/bw/agentutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

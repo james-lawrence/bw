@@ -4,7 +4,7 @@ import (
 	"net"
 	"regexp"
 
-	"bitbucket.org/jatone/bearded-wookie/agent"
+	"github.com/james-lawrence/bw/agent"
 )
 
 // Filter determines if a node should be deployed to based on some conditions.

@@ -8,8 +8,8 @@ import (
 	"log"
 	"path/filepath"
 
-	"bitbucket.org/jatone/bearded-wookie"
-	"bitbucket.org/jatone/bearded-wookie/x/systemx"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/x/systemx"
 
 	"github.com/pkg/errors"
 )

@@ -3,7 +3,7 @@ package raftutil
 import (
 	"log"
 
-	"bitbucket.org/jatone/bearded-wookie/x/debugx"
+	"github.com/james-lawrence/bw/x/debugx"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
