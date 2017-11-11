@@ -50,6 +50,10 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 		return latest, err
 	}
 
+	if len(counts) == 0 {
+		return latest, ErrNoDeployments
+	}
+
 	for _, v := range counts {
 		if v.count > quorum {
 			latest = *v.a

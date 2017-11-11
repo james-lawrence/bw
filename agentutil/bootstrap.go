@@ -38,7 +38,13 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 	defer log.Println("--------------- bootstrap -------------")
 
 	if latest, err = DetermineLatestArchive(c, tcreds); err != nil {
-		return errors.Wrap(err, "failed to determine latest archive prior to bootstrapping")
+		switch cause := errors.Cause(err); cause {
+		case ErrNoDeployments:
+			log.Println("no deployments found")
+			return nil
+		default:
+			return errors.Wrap(cause, "failed to determine latest archive to bootstrapping")
+		}
 	}
 
 	if client, err = DialPeer(local, tcreds); err != nil {
