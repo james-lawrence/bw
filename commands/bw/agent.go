@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/proxy"
+	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
@@ -125,52 +126,31 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
-	lq := agent.NewQuorumFSM()
 	cx := cluster.New(local, c)
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
-	quorum := agent.NewQuorum(
-		lq,
+	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx, dispatcher),
-		agent.QuorumOptionUpload(upload),
-		agent.QuorumOptionCredentials(tlscreds),
+		quorum.OptionUpload(upload),
+		quorum.OptionCredentials(tlscreds),
 	)
+	go (&q).Observe(p, make(chan raft.Observation, 200))
+
 	server := agent.NewServer(
 		cx,
 		aoptions(dispatcher, local.Peer, t.config),
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
-	agent.RegisterServer(
-		t.server,
-		server,
-	)
-
-	agent.RegisterQuorum(t.server, quorum)
+	agent.RegisterAgentServer(t.server, server)
+	agent.RegisterQuorumServer(t.server, agent.NewQuorum(&q))
 
 	t.runServer(c)
 
 	if err = agentutil.Bootstrap(local.Peer, cx, tlscreds); err != nil {
 		return err
 	}
-
-	go p.Overlay(
-		c,
-		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
-			return lq
-		}),
-		raftutil.ProtocolOptionObservers(
-			raft.NewObserver(quorum.Events, true, func(o *raft.Observation) bool {
-				switch o.Data.(type) {
-				case raft.LeaderObservation, raft.RaftState:
-					return true
-				default:
-					return false
-				}
-			}),
-		),
-	)
 
 	return nil
 }

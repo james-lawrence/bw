@@ -1,4 +1,4 @@
-package agent_test
+package quorum_test
 
 import (
 	"github.com/james-lawrence/bw/agent"
@@ -8,9 +8,16 @@ import (
 	"testing"
 )
 
-func TestAgent(t *testing.T) {
+func TestQuorum(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Agent Suite")
+	RunSpecs(t, "Quorum Suite")
+}
+
+func mustCommand(b []byte, err error) []byte {
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 type countingEventObserver struct {

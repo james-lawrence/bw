@@ -6,7 +6,6 @@ import (
 
 	"github.com/james-lawrence/bw/clustering"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -21,16 +20,6 @@ type Client interface {
 	Watch(out chan<- Message) error
 	Dispatch(messages ...Message) error
 	Close() error
-}
-
-// RegisterServer ...
-func RegisterServer(s *grpc.Server, srv AgentServer) {
-	RegisterAgentServer(s, srv)
-}
-
-// RegisterQuorum ...
-func RegisterQuorum(s *grpc.Server, srv QuorumServer) {
-	RegisterQuorumServer(s, srv)
 }
 
 // ConnectOption - options for connecting to the cluster.

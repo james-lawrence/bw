@@ -1,11 +1,10 @@
 package agent
 
 import (
+	"context"
 	"log"
 
 	"github.com/james-lawrence/bw/x/debugx"
-
-	"golang.org/x/net/context"
 )
 
 // Coordinator is in charge of coordinating deployments.

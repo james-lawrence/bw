@@ -1,10 +1,11 @@
-package agent
+package quorum
 
 import (
 	"io"
 	"log"
 	"sync"
 
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/debugx"
 
 	"github.com/golang/protobuf/proto"
@@ -12,36 +13,36 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewQuorumFSM ...
-func NewQuorumFSM() *QuorumFSM {
-	return &QuorumFSM{
+// NewStateMachine ...
+func NewStateMachine() *StateMachine {
+	return &StateMachine{
 		m:        &sync.RWMutex{},
-		EventBus: NewEventBus(),
+		EventBus: agent.NewEventBus(),
 	}
 }
 
 // MessageToCommand ...
-func MessageToCommand(m Message) ([]byte, error) {
+func MessageToCommand(m agent.Message) ([]byte, error) {
 	return proto.Marshal(&m)
 }
 
 // CommandToMessage ...
-func CommandToMessage(cmd []byte) (m Message, err error) {
+func CommandToMessage(cmd []byte) (m agent.Message, err error) {
 	return m, errors.WithStack(proto.Unmarshal(cmd, &m))
 }
 
-// QuorumFSM ...
-type QuorumFSM struct {
-	EventBus
+// StateMachine ...
+type StateMachine struct {
+	agent.EventBus
 	m       *sync.RWMutex
-	details Details
+	details agent.Details
 }
 
 // Apply log is invoked once a log entry is committed.
 // It returns a value which will be made available in the
 // ApplyFuture returned by Raft.Apply method if that
 // method was called on the same Raft node as the FSM.
-func (t *QuorumFSM) Apply(l *raft.Log) interface{} {
+func (t *StateMachine) Apply(l *raft.Log) interface{} {
 	switch l.Type {
 	case raft.LogBarrier:
 		log.Println("barrier invoked", l.Index, l.Term)
@@ -55,10 +56,10 @@ func (t *QuorumFSM) Apply(l *raft.Log) interface{} {
 	return nil
 }
 
-func (t *QuorumFSM) decode(buf []byte) {
+func (t *StateMachine) decode(buf []byte) {
 	var (
 		err error
-		m   Message
+		m   agent.Message
 	)
 
 	if m, err = CommandToMessage(buf); err != nil {
@@ -77,26 +78,26 @@ func (t *QuorumFSM) decode(buf []byte) {
 // threads, but Apply will be called concurrently with Persist. This means
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
-func (t *QuorumFSM) Snapshot() (raft.FSMSnapshot, error) {
+func (t *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
 	return quorumFSMSnapshot{details: t.details}, nil
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
-func (t *QuorumFSM) Restore(r io.ReadCloser) error {
-	t.details = Details{}
+func (t *StateMachine) Restore(r io.ReadCloser) error {
+	t.details = agent.Details{}
 	return nil
 }
 
 // Details includes information about the details of the quorum.
 // who its members are, the latest deploys.
-func (t QuorumFSM) Details() (d Details, err error) {
+func (t StateMachine) Details() (d agent.Details, err error) {
 	return t.details, nil
 }
 
 type quorumFSMSnapshot struct {
-	details Details
+	details agent.Details
 }
 
 // Persist should dump all necessary state to the WriteCloser 'sink',
