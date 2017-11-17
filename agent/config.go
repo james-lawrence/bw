@@ -197,7 +197,7 @@ func NewConfig(options ...ConfigOption) Config {
 		Root:      filepath.Join("/", "var", "cache", bw.DefaultDir),
 		KeepN:     3,
 		TLSConfig: NewTLSAgent(DefaultTLSCredentialsRoot, ""),
-		Storage:   uploads.Config{Backend: "local"},
+		Storage:   uploads.Config{},
 		Cluster: clusteringConfig{
 			SnapshotFrequency: time.Hour,
 		},
