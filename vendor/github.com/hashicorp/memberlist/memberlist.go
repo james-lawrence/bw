@@ -22,10 +22,9 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/miekg/dns"
 )
@@ -36,13 +35,10 @@ type Memberlist struct {
 	numNodes    uint32 // Number of known nodes (estimate)
 
 	config         *Config
-	shutdown       int32 // Used as an atomic boolean value
+	shutdown       bool
 	shutdownCh     chan struct{}
-	leave          int32 // Used as an atomic boolean value
+	leave          bool
 	leaveBroadcast chan struct{}
-
-	shutdownLock sync.Mutex // Serializes calls to Shutdown
-	leaveLock    sync.Mutex // Serializes calls to Leave
 
 	transport Transport
 	handoff   chan msgHandoff
@@ -117,44 +113,15 @@ func newMemberlist(conf *Config) (*Memberlist, error) {
 			BindPort:  conf.BindPort,
 			Logger:    logger,
 		}
-
-		// See comment below for details about the retry in here.
-		makeNetRetry := func(limit int) (*NetTransport, error) {
-			var err error
-			for try := 0; try < limit; try++ {
-				var nt *NetTransport
-				if nt, err = NewNetTransport(nc); err == nil {
-					return nt, nil
-				}
-				if strings.Contains(err.Error(), "address already in use") {
-					logger.Printf("[DEBUG] memberlist: Got bind error: %v", err)
-					continue
-				}
-			}
-
-			return nil, fmt.Errorf("failed to obtain an address: %v", err)
-		}
-
-		// The dynamic bind port operation is inherently racy because
-		// even though we are using the kernel to find a port for us, we
-		// are attempting to bind multiple protocols (and potentially
-		// multiple addresses) with the same port number. We build in a
-		// few retries here since this often gets transient errors in
-		// busy unit tests.
-		limit := 1
-		if conf.BindPort == 0 {
-			limit = 10
-		}
-
-		nt, err := makeNetRetry(limit)
+		nt, err := NewNetTransport(nc)
 		if err != nil {
 			return nil, fmt.Errorf("Could not set up network transport: %v", err)
 		}
+
 		if conf.BindPort == 0 {
 			port := nt.GetAutoBindPort()
 			conf.BindPort = port
-			conf.AdvertisePort = port
-			logger.Printf("[DEBUG] memberlist: Using dynamic bind port %d", port)
+			logger.Printf("[DEBUG] Using dynamic bind port %d", port)
 		}
 		transport = nt
 	}
@@ -558,17 +525,18 @@ func (m *Memberlist) NumMembers() (alive int) {
 // This method is safe to call multiple times, but must not be called
 // after the cluster is already shut down.
 func (m *Memberlist) Leave(timeout time.Duration) error {
-	m.leaveLock.Lock()
-	defer m.leaveLock.Unlock()
+	m.nodeLock.Lock()
+	// We can't defer m.nodeLock.Unlock() because m.deadNode will also try to
+	// acquire a lock so we need to Unlock before that.
 
-	if m.hasShutdown() {
+	if m.shutdown {
+		m.nodeLock.Unlock()
 		panic("leave after shutdown")
 	}
 
-	if !m.hasLeft() {
-		atomic.StoreInt32(&m.leave, 1)
+	if !m.leave {
+		m.leave = true
 
-		m.nodeLock.Lock()
 		state, ok := m.nodeMap[m.config.Name]
 		m.nodeLock.Unlock()
 		if !ok {
@@ -594,6 +562,8 @@ func (m *Memberlist) Leave(timeout time.Duration) error {
 				return fmt.Errorf("timeout waiting for leave broadcast")
 			}
 		}
+	} else {
+		m.nodeLock.Unlock()
 	}
 
 	return nil
@@ -635,10 +605,10 @@ func (m *Memberlist) ProtocolVersion() uint8 {
 //
 // This method is safe to call multiple times.
 func (m *Memberlist) Shutdown() error {
-	m.shutdownLock.Lock()
-	defer m.shutdownLock.Unlock()
+	m.nodeLock.Lock()
+	defer m.nodeLock.Unlock()
 
-	if m.hasShutdown() {
+	if m.shutdown {
 		return nil
 	}
 
@@ -648,16 +618,8 @@ func (m *Memberlist) Shutdown() error {
 	m.transport.Shutdown()
 
 	// Now tear down everything else.
-	atomic.StoreInt32(&m.shutdown, 1)
+	m.shutdown = true
 	close(m.shutdownCh)
 	m.deschedule()
 	return nil
-}
-
-func (m *Memberlist) hasShutdown() bool {
-	return atomic.LoadInt32(&m.shutdown) == 1
-}
-
-func (m *Memberlist) hasLeft() bool {
-	return atomic.LoadInt32(&m.leave) == 1
 }

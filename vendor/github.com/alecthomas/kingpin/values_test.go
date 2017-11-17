@@ -3,7 +3,7 @@ package kingpin
 import (
 	"net"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/alecthomas/assert"
 
 	"testing"
 )

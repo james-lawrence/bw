@@ -20,16 +20,6 @@ import (
 	"github.com/james-lawrence/bw/x/systemx"
 )
 
-// DeploymentConfig configuration for the deploy process.
-type DeploymentConfig struct {
-	Concurrency float64
-}
-
-// Partitioner ...
-func (t DeploymentConfig) Partitioner() (_ bw.Partitioner) {
-	return bw.PartitionFromFloat64(t.Concurrency)
-}
-
 // ConfigClientOption options for the client configuration.
 type ConfigClientOption func(*ConfigClient)
 
@@ -52,9 +42,8 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		Address:          systemx.HostnameOrLocalhost(),
-		TLSConfig:        NewTLSClient(DefaultTLSCredentialsRoot),
-		DeploymentConfig: DeploymentConfig{},
+		Address:   systemx.HostnameOrLocalhost(),
+		TLSConfig: NewTLSClient(DefaultTLSCredentialsRoot),
 	}
 
 	return NewConfigClient(config, options...)
@@ -62,8 +51,8 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	Address string
-	DeploymentConfig
+	Address     string
+	Concurrency float64
 	TLSConfig
 }
 
@@ -124,7 +113,6 @@ func (t ConfigClient) connect() (creds credentials.TransportCredentials, client 
 		return creds, client, details, err
 	}
 
-	log.Println("Dialing", t.Address)
 	if client, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
 		return creds, client, details, err
 	}
@@ -144,6 +132,11 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 	}
 
 	return t, nil
+}
+
+// Partitioner ...
+func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
+	return bw.PartitionFromFloat64(t.Concurrency)
 }
 
 func clusterConnect(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {

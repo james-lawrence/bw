@@ -414,7 +414,7 @@ func configuration(port uint16, c cluster) (conf raft.Configuration) {
 // the set of peers.
 func isPossiblePeer(local *memberlist.Node, peers ...*memberlist.Node) bool {
 	for _, peer := range peers {
-		if local.String() == peer.String() {
+		if local.Address() == peer.Address() {
 			return true
 		}
 	}

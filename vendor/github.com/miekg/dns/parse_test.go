@@ -98,23 +98,14 @@ func TestDomainNameAndTXTEscapes(t *testing.T) {
 		s := rr1.String()
 		rr2, err := NewRR(s)
 		if err != nil {
-			t.Errorf("Error parsing unpacked RR's string: %v", err)
-			t.Errorf(" Bytes: %v", rrbytes)
-			t.Errorf("String: %v", s)
+			t.Errorf("error parsing unpacked RR's string: %v", err)
 		}
 		repacked := make([]byte, len(rrbytes))
 		if _, err := PackRR(rr2, repacked, 0, nil, false); err != nil {
 			t.Errorf("error packing parsed RR: %v", err)
-			t.Errorf(" original Bytes: %v", rrbytes)
-			t.Errorf("unpacked Struct: %v", rr1)
-			t.Errorf("  parsed Struct: %v", rr2)
 		}
 		if !bytes.Equal(repacked, rrbytes) {
 			t.Error("packed bytes don't match original bytes")
-			t.Errorf(" original bytes: %v", rrbytes)
-			t.Errorf("   packed bytes: %v", repacked)
-			t.Errorf("unpacked struct: %v", rr1)
-			t.Errorf("  parsed struct: %v", rr2)
 		}
 	}
 }
@@ -1415,6 +1406,18 @@ func TestParseAVC(t *testing.T) {
 	}
 }
 
+func TestParseBadNAPTR(t *testing.T) {
+	// Should look like: mplus.ims.vodafone.com.	3600	IN	NAPTR	10 100 "S" "SIP+D2U" "" _sip._udp.mplus.ims.vodafone.com.
+	naptr := `mplus.ims.vodafone.com.	3600	IN	NAPTR	10 100 S SIP+D2U  _sip._udp.mplus.ims.vodafone.com.`
+	_, err := NewRR(naptr) // parse fails, we should not have leaked a goroutine.
+	if err == nil {
+		t.Fatalf("parsing NAPTR should have failed: %s", naptr)
+	}
+	if err := goroutineLeaked(); err != nil {
+		t.Errorf("leaked goroutines: %s", err)
+	}
+}
+
 func TestUnbalancedParens(t *testing.T) {
 	sig := `example.com. 3600 IN RRSIG MX 15 2 3600 (
               1440021600 1438207200 3613 example.com. (
@@ -1422,6 +1425,6 @@ func TestUnbalancedParens(t *testing.T) {
               x8A4M3e23mRZ9VrbpMngwcrqNAg== )`
 	_, err := NewRR(sig)
 	if err == nil {
-		t.Fatalf("Failed to detect extra opening brace")
+		t.Fatalf("failed to detect extra opening brace")
 	}
 }

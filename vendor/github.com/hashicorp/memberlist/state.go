@@ -40,11 +40,6 @@ func (n *Node) Address() string {
 	return joinHostPort(n.Addr.String(), n.Port)
 }
 
-// String returns the node name
-func (n *Node) String() string {
-	return n.Name
-}
-
 // NodeState is used to manage our state view of another node
 type nodeState struct {
 	Node
@@ -835,7 +830,7 @@ func (m *Memberlist) aliveNode(a *alive, notify chan struct{}, bootstrap bool) {
 	// in-queue to be processed but blocked by the locks above. If we let
 	// that aliveMsg process, it'll cause us to re-join the cluster. This
 	// ensures that we don't.
-	if m.hasLeft() && a.Node == m.config.Name {
+	if m.leave && a.Node == m.config.Name {
 		return
 	}
 
@@ -1111,7 +1106,7 @@ func (m *Memberlist) deadNode(d *dead) {
 	// Check if this is us
 	if state.Name == m.config.Name {
 		// If we are not leaving we need to refute
-		if !m.hasLeft() {
+		if !m.leave {
 			m.refute(state, d.Incarnation)
 			m.logger.Printf("[WARN] memberlist: Refuting a dead message (from: %s)", d.From)
 			return // Do not mark ourself dead
