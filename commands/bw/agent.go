@@ -17,7 +17,8 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/uploads"
+	"github.com/james-lawrence/bw/storage"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
@@ -60,7 +61,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		creds  *tls.Config
 		secret []byte
 		p      raftutil.Protocol
-		upload uploads.Protocol
+		upload storage.Protocol
 	)
 	log.SetPrefix("[AGENT] ")
 

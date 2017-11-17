@@ -7,7 +7,7 @@ import (
 	"github.com/james-lawrence/bw/directives"
 	"github.com/james-lawrence/bw/directives/dynplugin"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/downloads"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +36,7 @@ func DirectiveOptionPlugins(p ...dynplugin.Directive) DirectiveOption {
 }
 
 // DirectiveOptionDownloadRegistry ...
-func DirectiveOptionDownloadRegistry(reg downloads.Registry) DirectiveOption {
+func DirectiveOptionDownloadRegistry(reg storage.Registry) DirectiveOption {
 	return func(d *Directive) {
 		d.dlreg = reg
 	}
@@ -46,7 +46,7 @@ func DirectiveOptionDownloadRegistry(reg downloads.Registry) DirectiveOption {
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
 		options: options,
-		dlreg:   downloads.New(),
+		dlreg:   storage.New(),
 	}
 
 	return d
@@ -57,7 +57,7 @@ type Directive struct {
 	dctx    DeployContext
 	sctx    shell.Context
 	plugins []dynplugin.Directive
-	dlreg   downloads.Registry
+	dlreg   storage.Registry
 	options []DirectiveOption
 }
 

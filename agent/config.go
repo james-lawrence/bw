@@ -16,7 +16,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
-	"github.com/james-lawrence/bw/uploads"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/systemx"
 )
 
@@ -197,7 +197,6 @@ func NewConfig(options ...ConfigOption) Config {
 		Root:      filepath.Join("/", "var", "cache", bw.DefaultDir),
 		KeepN:     3,
 		TLSConfig: NewTLSAgent(DefaultTLSCredentialsRoot, ""),
-		Storage:   uploads.Config{},
 		Cluster: clusteringConfig{
 			SnapshotFrequency: time.Hour,
 		},
@@ -273,7 +272,7 @@ type Config struct {
 	RPCBind   *net.TCPAddr
 	RaftBind  *net.TCPAddr
 	SWIMBind  *net.TCPAddr
-	Storage   uploads.Config
+	Storage   storage.Config
 	TLSConfig TLSConfig
 	Cluster   clusteringConfig
 }

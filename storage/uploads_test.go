@@ -1,4 +1,4 @@
-package uploads
+package storage
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -22,7 +22,7 @@ var _ = Describe("Uploads", func() {
 				Expect(r).To(BeAssignableToTypeOf(o))
 			},
 			Entry("s3 protocol", "s3", s3protocolconfig, s3P{}),
-			Entry("local protocol", "local", localProtocolConfig, &Local{}),
+			Entry("file protocol", "file", localProtocolConfig, &Local{}),
 		)
 
 		It("should error our when provided an unknown protocol", func() {

@@ -1,4 +1,4 @@
-package downloads
+package storage
 
 import (
 	"io"

@@ -1,4 +1,4 @@
-package downloads
+package storage
 
 import (
 	"io"
@@ -6,12 +6,6 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
-)
-
-const (
-	fileProtocol = "file"
-	s3Protocol   = "s3"
-	// gitProtocol  = "git"
 )
 
 // Downloader ...

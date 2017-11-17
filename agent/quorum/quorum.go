@@ -17,7 +17,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/uploads"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/grpcx"
 	"github.com/pkg/errors"
@@ -131,7 +131,7 @@ func (t *proxyDispatch) close() {
 type Option func(*Quorum)
 
 // OptionUpload set the upload storage protocol.
-func OptionUpload(proto uploads.Protocol) Option {
+func OptionUpload(proto storage.Protocol) Option {
 	return func(q *Quorum) {
 		q.uploads = proto
 	}
@@ -153,9 +153,9 @@ func OptionCredentials(c credentials.TransportCredentials) Option {
 func New(c cluster, d deploy, options ...Option) Quorum {
 	r := Quorum{
 		stateMachine: NewStateMachine(),
-		uploads: uploads.ProtocolFunc(
-			func(uid []byte, _ uint64) (uploads.Uploader, error) {
-				return uploads.NewTempFileUploader()
+		uploads: storage.ProtocolFunc(
+			func(uid []byte, _ uint64) (storage.Uploader, error) {
+				return storage.NewTempFileUploader()
 			},
 		),
 		creds:  grpc.WithInsecure(),
@@ -176,7 +176,7 @@ func New(c cluster, d deploy, options ...Option) Quorum {
 // Quorum implements quorum functionality.
 type Quorum struct {
 	stateMachine *StateMachine
-	uploads      uploads.Protocol
+	uploads      storage.Protocol
 	m            *sync.Mutex
 	c            cluster
 	creds        grpc.DialOption

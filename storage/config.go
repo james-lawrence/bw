@@ -1,4 +1,4 @@
-package uploads
+package storage
 
 import (
 	"github.com/pkg/errors"

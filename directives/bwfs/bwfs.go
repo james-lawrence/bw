@@ -7,19 +7,18 @@ import (
 	"strconv"
 
 	"github.com/gutengo/fil"
-	"github.com/pkg/errors"
-
-	"github.com/james-lawrence/bw/downloads"
 	"github.com/james-lawrence/bw/inflaters"
+	"github.com/james-lawrence/bw/storage"
+	"github.com/pkg/errors"
 )
 
 type downloader interface {
-	New(string) downloads.Downloader
+	New(string) storage.Downloader
 }
 
-type downloaderClosure func(string) downloads.Downloader
+type downloaderClosure func(string) storage.Downloader
 
-func (t downloaderClosure) New(s string) downloads.Downloader {
+func (t downloaderClosure) New(s string) storage.Downloader {
 	return t(s)
 }
 
@@ -36,7 +35,7 @@ func (t inflaterClosure) New(location, destination string, perm os.FileMode) inf
 // New ...
 func New() Executer {
 	return Executer{
-		downloader: downloads.New(),
+		downloader: storage.New(),
 		inflater:   inflaterClosure(inflaters.New),
 	}
 }

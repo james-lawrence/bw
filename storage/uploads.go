@@ -1,6 +1,6 @@
-// Package uploads provides implementations for uploading archives.
+// Package storage provides implementations for downloading and uploading archives.
 // current implementations: fs (filesystem), aws s3.
-package uploads
+package storage
 
 import (
 	"crypto/sha256"
@@ -10,11 +10,6 @@ import (
 	yaml "gopkg.in/yaml.v1"
 
 	"github.com/pkg/errors"
-)
-
-const (
-	fileProtocol = "local"
-	s3Protocol   = "s3"
 )
 
 // Protocol builds io.WriteCloser given the expected size of the upload.
@@ -49,12 +44,14 @@ func ProtocolFromConfig(protocol string, serialized []byte) (_ Protocol, err err
 		return newProtocolFromConfig(serialized, &p)
 	case s3Protocol:
 		return newS3PFromConfig(serialized)
-	default:
+	case tmpProtocol:
 		return ProtocolFunc(
 			func(uid []byte, _ uint64) (Uploader, error) {
 				return NewTempFileUploader()
 			},
 		), nil
+	default:
+		return nil, errors.Errorf("no protocol defined for: %s", protocol)
 	}
 }
 

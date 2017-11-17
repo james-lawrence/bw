@@ -8,7 +8,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/dynplugin"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/downloads"
+	"github.com/james-lawrence/bw/storage"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -38,9 +38,9 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 
 	return t.agentCmd.bind(
 		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config) agent.ServerOption {
-			dlreg := downloads.New(
-				downloads.OptionProtocols(
-					downloads.NewS3Protocol(),
+			dlreg := storage.New(
+				storage.OptionProtocols(
+					storage.NewS3Protocol(),
 				),
 			)
 
