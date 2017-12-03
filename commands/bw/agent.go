@@ -102,7 +102,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		Timeout: 3 * time.Second,
 	})
 
-	t.server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
 	options := []clustering.Option{
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
@@ -144,6 +143,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
+	t.server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
 	agent.RegisterAgentServer(t.server, server)
 	agent.RegisterQuorumServer(t.server, agent.NewQuorum(&q))
 

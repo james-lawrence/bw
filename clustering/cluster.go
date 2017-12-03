@@ -13,6 +13,8 @@ import (
 
 // cluster is used to extract the peers within a cluster from the underlying implementations.
 type cluster interface {
+	Leave(time.Duration) error
+	Join(...string) (int, error)
 	Members() []*memberlist.Node
 }
 
@@ -31,6 +33,24 @@ type peering interface {
 type Cluster struct {
 	config *memberlist.Config
 	list   *memberlist.Memberlist
+}
+
+// Leave ...
+func (t Cluster) Leave(d time.Duration) (err error) {
+	if cause := t.list.Leave(d); cause != nil {
+		err = cause
+	}
+
+	if cause := t.list.Shutdown(); err == nil && cause != nil {
+		err = cause
+	}
+
+	return err
+}
+
+// Join ...
+func (t Cluster) Join(existing ...string) (int, error) {
+	return t.list.Join(existing)
 }
 
 // Config returns the configuration for the cluster.

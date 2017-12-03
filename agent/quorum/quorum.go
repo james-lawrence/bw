@@ -81,25 +81,82 @@ func (t pbObserver) Receive(messages ...agent.Message) (err error) {
 	return nil
 }
 
-type raftproxy interface {
+// RaftProxy - proxy implementation of the raft protocol
+type RaftProxy interface {
 	State() raft.RaftState
 	Leader() raft.ServerAddress
 	Apply([]byte, time.Duration) raft.ApplyFuture
 }
 
+// NewRaftProxy utility function for tests.
+func NewRaftProxy(leader string, s raft.RaftState, apply func([]byte, time.Duration) raft.ApplyFuture) RaftProxy {
+	return proxyRaft{
+		leader: leader,
+		state:  s,
+		apply:  apply,
+	}
+}
+
 type proxyRaft struct {
+	leader string
+	state  raft.RaftState
+	apply  func(cmd []byte, d time.Duration) raft.ApplyFuture
 }
 
 func (t proxyRaft) State() raft.RaftState {
-	return raft.Shutdown
+	return t.state
 }
 
 func (t proxyRaft) Leader() raft.ServerAddress {
-	return ""
+	return raft.ServerAddress(t.leader)
 }
 
 func (t proxyRaft) Apply(cmd []byte, d time.Duration) raft.ApplyFuture {
-	return errorFuture{err: errors.New("apply cannot be executed on a proxy node")}
+	if t.apply == nil {
+		return errorFuture{err: errors.New("apply cannot be executed on a proxy node")}
+	}
+
+	return t.apply(cmd, d)
+}
+
+type dispatcher interface {
+	Dispatch(...agent.Message) error
+}
+
+type stateMachineDispatch struct {
+	sm *StateMachine
+}
+
+func (t stateMachineDispatch) Dispatch(m ...agent.Message) error {
+	t.sm.Dispatch(m...)
+	return nil
+}
+
+type disabledDispatch struct{}
+
+func (disabledDispatch) Dispatch(m ...agent.Message) error {
+	return errors.New("dispatch disabled not currently enable for this server")
+}
+
+type raftDispatch struct {
+	p RaftProxy
+}
+
+func (t raftDispatch) Dispatch(messages ...agent.Message) (err error) {
+	for _, m := range messages {
+		var (
+			b []byte
+		)
+
+		if b, err = MessageToCommand(m); err != nil {
+			return err
+		}
+
+		if err = t.p.Apply(b, 5*time.Second).Error(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type proxyDispatch struct {
@@ -109,7 +166,7 @@ type proxyDispatch struct {
 	o           *sync.Once
 }
 
-func (t *proxyDispatch) Dispatch(m agent.Message) (err error) {
+func (t *proxyDispatch) Dispatch(messages ...agent.Message) (err error) {
 	t.o.Do(func() {
 		if t.client, err = agent.Dial(agent.RPCAddress(t.peader), t.dialOptions...); err != nil {
 			t.o = &sync.Once{}
@@ -120,7 +177,13 @@ func (t *proxyDispatch) Dispatch(m agent.Message) (err error) {
 		return errors.Wrap(err, "proxy dispatch dial failure")
 	}
 
-	return errors.Wrapf(t.client.Dispatch(m), "proxy dispatch: %s - %s", t.peader.Name, t.peader.Ip)
+	for _, m := range messages {
+		if err = errors.Wrapf(t.client.Dispatch(m), "proxy dispatch: %s - %s", t.peader.Name, t.peader.Ip); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (t *proxyDispatch) close() {
@@ -149,21 +212,48 @@ func OptionCredentials(c credentials.TransportCredentials) Option {
 	}
 }
 
+// OptionRaftProxy ...
+func OptionRaftProxy(proxy RaftProxy) Option {
+	return func(q *Quorum) {
+		q.proxy = proxy
+	}
+}
+
+// OptionLeaderDispatch ...
+func OptionLeaderDispatch(d dispatcher) Option {
+	return func(q *Quorum) {
+		q.ldispatch = d
+	}
+}
+
+// OptionStateMachineDispatch ...
+func OptionStateMachineDispatch(d *StateMachine) Option {
+	return func(q *Quorum) {
+		q.stateMachine = d
+	}
+}
+
+func disabledRaftProxy() RaftProxy {
+	return NewRaftProxy("", raft.Shutdown, nil)
+}
+
 // New new quorum instance based on the options.
 func New(c cluster, d deploy, options ...Option) Quorum {
+	sm := NewStateMachine()
 	r := Quorum{
-		stateMachine: NewStateMachine(),
+		stateMachine: sm,
 		uploads: storage.ProtocolFunc(
 			func(uid []byte, _ uint64) (storage.Uploader, error) {
 				return storage.NewTempFileUploader()
 			},
 		),
-		creds:  grpc.WithInsecure(),
-		m:      &sync.Mutex{},
-		proxy:  proxyRaft{},
-		pq:     proxyDispatch{},
-		deploy: d,
-		c:      c,
+		creds:     grpc.WithInsecure(),
+		m:         &sync.Mutex{},
+		proxy:     disabledRaftProxy(),
+		pdispatch: &proxyDispatch{o: &sync.Once{}},
+		ldispatch: stateMachineDispatch{sm: sm},
+		deploy:    d,
+		c:         c,
 	}
 
 	for _, opt := range options {
@@ -180,8 +270,9 @@ type Quorum struct {
 	m            *sync.Mutex
 	c            cluster
 	creds        grpc.DialOption
-	proxy        raftproxy
-	pq           proxyDispatch
+	proxy        RaftProxy
+	pdispatch    *proxyDispatch
+	ldispatch    dispatcher
 	deploy       deploy
 }
 
@@ -207,19 +298,21 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	for o := range events {
 		switch o.Data.(type) {
 		case raft.LeaderObservation:
-			t.pq.close()
+			t.pdispatch.close()
 
 			if o.Raft.Leader() == "" {
 				debugx.Println("leader lost disabling quorum locally")
-				t.proxy = proxyRaft{}
-				t.pq = proxyDispatch{}
+				t.proxy = disabledRaftProxy()
+				t.pdispatch = &proxyDispatch{o: &sync.Once{}}
+				t.ldispatch = disabledDispatch{}
 				continue
 			}
 
 			peader := t.findLeader(string(o.Raft.Leader()))
 			debugx.Println("leader identified, enabling quorum locally", peader.Name, peader.Ip)
 			t.proxy = o.Raft
-			t.pq = proxyDispatch{
+			t.ldispatch = raftDispatch{p: o.Raft}
+			t.pdispatch = &proxyDispatch{
 				peader: peader,
 				o:      &sync.Once{},
 				dialOptions: []grpc.DialOption{
@@ -232,10 +325,6 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 
 // Deploy ...
 func (t *Quorum) Deploy(concurrency int64, archive agent.Archive, peers ...agent.Peer) (err error) {
-	var (
-		c agent.Client
-	)
-
 	t.m.Lock()
 	p := t.proxy
 	t.m.Unlock()
@@ -250,6 +339,10 @@ func (t *Quorum) Deploy(concurrency int64, archive agent.Archive, peers ...agent
 		debugx.Println("proxy deploy completed")
 		return err
 	default:
+		var (
+			c agent.Client
+		)
+
 		debugx.Println("forwarding deploy request to leader")
 		if c, err = agent.Dial(agent.RPCAddress(t.findLeader(string(p.Leader()))), t.creds); err != nil {
 			return err
@@ -360,24 +453,25 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 // Dispatch record deployment events.
 func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 	var (
-		err error
-		m   *agent.Message
+		err      error
+		m        *agent.Message
+		dispatch dispatcher
 	)
 	debugx.Println("dispatch initiated")
 	defer debugx.Println("dispatch completed")
 	t.m.Lock()
 	p := t.proxy
-	dispatch := t.pq.Dispatch
 	t.m.Unlock()
 
+	dispatch = t.pdispatch
 	if p.State() == raft.Leader {
-		dispatch = func(m agent.Message) error {
-			return maybeApply(p, 5*time.Second)(MessageToCommand(m)).Error()
-		}
+		dispatch = t.ldispatch
 	}
 
 	for m, err = in.Recv(); err == nil; m, err = in.Recv() {
-		if err = dispatch(*m); err != nil {
+		log.Printf("dispatching: %T\n", dispatch)
+		if err = dispatch.Dispatch(*m); err != nil {
+			log.Println("failed", err)
 			return err
 		}
 	}
@@ -398,10 +492,4 @@ func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
 
 	log.Println("-------------------- failed to locate leader --------------------")
 	return _zero
-}
-
-func maybeApply(p raftproxy, d time.Duration) func(cmd []byte, err error) raft.ApplyFuture {
-	return func(cmd []byte, err error) raft.ApplyFuture {
-		return p.Apply(cmd, d)
-	}
 }

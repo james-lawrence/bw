@@ -2,15 +2,18 @@ package cluster
 
 import (
 	"log"
+	"time"
 
-	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/pkg/errors"
 )
 
 type cluster interface {
+	Leave(time.Duration) error
+	Join(...string) (int, error)
 	Members() []*memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(n int, key []byte) []*memberlist.Node
@@ -30,6 +33,16 @@ func New(l Local, c cluster) Cluster {
 type Cluster struct {
 	cluster
 	local Local
+}
+
+// Leave ...
+func (t Cluster) Leave() error {
+	return t.cluster.Leave(5 * time.Second)
+}
+
+// Join ...
+func (t Cluster) Join(peers ...string) (int, error) {
+	return t.cluster.Join(peers...)
 }
 
 // Local ...

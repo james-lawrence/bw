@@ -107,7 +107,7 @@ func newBootstrap(options ...BootstrapOption) bootstrap {
 }
 
 // Bootstrap - bootstraps the provided cluster using the options provided.
-func Bootstrap(c Cluster, options ...BootstrapOption) error {
+func Bootstrap(c cluster, options ...BootstrapOption) error {
 	var (
 		err      error
 		joined   int
@@ -133,7 +133,7 @@ retry:
 		}
 
 		log.Printf("%T: located %d peers\n", s, len(peers))
-		if joined, err = c.list.Join(peers); err != nil {
+		if joined, err = c.Join(peers...); err != nil {
 			log.Printf("failed to join peers: %T: %s\n", s, err)
 			continue
 		}

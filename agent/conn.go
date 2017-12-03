@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"log"
 
 	"google.golang.org/grpc"
 
@@ -17,9 +18,9 @@ import (
 func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
 	for _, q := range c.Quorum() {
 		if conn, err = Dial(RPCAddress(q), options...); err != nil {
+			log.Println("failed to dial", RPCAddress(q), err)
 			continue
 		}
-
 		return conn, nil
 	}
 

@@ -32,7 +32,7 @@ func main() {
 
 func example1(ctx context.Context, done context.CancelFunc, background *sync.WaitGroup) func(*kingpin.ParseContext) error {
 	return func(*kingpin.ParseContext) (err error) {
-		local := agent.LocalPeer(bw.MustGenerateID().String())
+		local := agent.NewPeer(bw.MustGenerateID().String())
 		events := make(chan agent.Message, 100)
 		ux.NewTermui(ctx, done, background, events)
 		d := agentutil.NewBusDispatcher(events)

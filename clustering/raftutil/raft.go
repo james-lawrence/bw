@@ -4,8 +4,10 @@ package raftutil
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -72,6 +74,25 @@ func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 	return func(p *Protocol) {
 		p.getTransport = t
 	}
+}
+
+// ProtocolOptionTCPTransport set the state machine for the protocol
+func ProtocolOptionTCPTransport(tcp *net.TCPAddr, ts *tls.Config) ProtocolOption {
+	return ProtocolOptionTransport(func() (raft.Transport, error) {
+		var (
+			err error
+			l   net.Listener
+		)
+
+		if ts == nil {
+			return raft.NewTCPTransport(tcp.String(), tcp, 3, 2*time.Second, os.Stderr)
+		}
+
+		if l, err = net.ListenTCP(tcp.Network(), tcp); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return raft.NewNetworkTransport(NewTLSStreamLayer(l, ts), 3, 2*time.Second, os.Stderr), nil
+	})
 }
 
 // ProtocolOptionObservers set the observers for the protocol

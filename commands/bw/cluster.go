@@ -5,10 +5,8 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
-	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/awsx"
@@ -145,7 +143,6 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs    *tls.Config
-		l     net.Listener
 		snaps raft.SnapshotStore
 	)
 
@@ -159,12 +156,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raf
 
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(t.minimumRequiredNodes == 0),
-		raftutil.ProtocolOptionTransport(func() (raft.Transport, error) {
-			if l, err = net.ListenTCP(t.raftNetwork.Network(), t.raftNetwork); err != nil {
-				return nil, errors.WithStack(err)
-			}
-			return raft.NewNetworkTransport(raftutil.NewTLSStreamLayer(l, cs), 3, 2*time.Second, os.Stderr), nil
-		}),
+		raftutil.ProtocolOptionTCPTransport(t.raftNetwork, cs),
 		raftutil.ProtocolOptionSnapshotStorage(snaps),
 	}
 

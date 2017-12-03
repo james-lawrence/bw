@@ -69,7 +69,7 @@ func (t *Dispatcher) getClient() (c agent.Client, err error) {
 		return t.c, nil
 	}
 
-	if t.c, err = DialQuorum(t.cluster, t.creds); err != nil {
+	if t.c, err = agent.DialQuorum(t.cluster, t.creds); err != nil {
 		return t.c, err
 	}
 

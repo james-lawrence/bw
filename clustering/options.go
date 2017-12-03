@@ -159,18 +159,27 @@ type Options struct {
 // NewCluster initializes a cluster based on the options and optionally bootstraps
 // the node from the provided addresses.
 func (t Options) NewCluster() (Cluster, error) {
+	return newCluster(t.Config)
+}
+
+// NewCluster ...
+func NewCluster(options ...Option) (Cluster, error) {
+	return newCluster(NewOptions(options...).Config)
+}
+
+func newCluster(config *memberlist.Config) (Cluster, error) {
 	var (
 		err     error
 		members *memberlist.Memberlist
 		c       Cluster
 	)
 
-	if members, err = memberlist.Create(t.Config); err != nil {
-		return c, errors.Wrap(err, "failed to create cluster")
+	if members, err = memberlist.Create(config); err != nil {
+		return c, errors.WithStack(err)
 	}
 
 	c = Cluster{
-		config: t.Config,
+		config: config,
 		list:   members,
 	}
 

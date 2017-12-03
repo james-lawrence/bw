@@ -3,17 +3,17 @@ package quorum_test
 import (
 	. "github.com/james-lawrence/bw/agent/quorum"
 
+	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/hashicorp/raft"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Fsm", func() {
+var _ = Describe("StateMachine", func() {
 	Context("Messages", func() {
 		It("should properly apply a command", func() {
-			cmd := mustCommand(MessageToCommand(agentutil.LogEvent(agent.LocalPeer("foo"), "hello world")))
+			cmd := mustCommand(MessageToCommand(agentutil.LogEvent(agent.NewPeer("foo"), "hello world")))
 			obs := &countingEventObserver{}
 			fsm := NewStateMachine()
 			obsr := fsm.Register(obs)

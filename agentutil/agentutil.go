@@ -24,11 +24,6 @@ type cluster interface {
 	Connect() agent.ConnectInfo
 }
 
-// DialQuorum connect to a quorum node.
-func DialQuorum(c cluster, options ...grpc.DialOption) (zeroc agent.Client, err error) {
-	return agent.DialQuorum(c, options...)
-}
-
 // DialPeer dial the peer
 func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err error) {
 	var (

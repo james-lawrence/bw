@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/james-lawrence/bw/x/systemx"
 )
@@ -22,9 +23,50 @@ func RaftAddress(p Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort))
 }
 
-// LocalPeer build local peer.
-func LocalPeer(id string) Peer {
-	return Peer{
+// StaticPeeringStrategy ...
+func StaticPeeringStrategy(peers ...Peer) []string {
+	results := make([]string, 0, len(peers))
+	for _, p := range peers {
+		results = append(results, SWIMAddress(p))
+	}
+
+	return results
+}
+
+// PeerOption ...
+type PeerOption func(*Peer)
+
+// PeerOptionIP set IP for peer.
+func PeerOptionIP(ip net.IP) PeerOption {
+	return func(p *Peer) {
+		p.Ip = ip.String()
+	}
+}
+
+// PeerOptionRPCPort ...
+func PeerOptionRPCPort(port uint32) PeerOption {
+	return func(p *Peer) {
+		p.RPCPort = port
+	}
+}
+
+// PeerOptionSWIMPort ...
+func PeerOptionSWIMPort(port uint32) PeerOption {
+	return func(p *Peer) {
+		p.SWIMPort = port
+	}
+}
+
+// PeerOptionRaftPort ...
+func PeerOptionRaftPort(port uint32) PeerOption {
+	return func(p *Peer) {
+		p.RaftPort = port
+	}
+}
+
+// NewPeer ...
+func NewPeer(id string, opts ...PeerOption) Peer {
+	p := Peer{
 		Name:     id,
 		Ip:       systemx.HostIP(systemx.HostnameOrLocalhost()).String(),
 		RPCPort:  2000,
@@ -32,6 +74,17 @@ func LocalPeer(id string) Peer {
 		RaftPort: 2002,
 		Status:   Peer_Ready,
 	}
+
+	for _, opt := range opts {
+		opt(&p)
+	}
+
+	return p
+}
+
+// RPCTCPListener ...
+func RPCTCPListener(t Peer) (net.Listener, error) {
+	return net.Listen("tcp", net.JoinHostPort(t.Ip, strconv.Itoa(int(t.RPCPort))))
 }
 
 // PeersToPtr util function to convert between pointers and values.

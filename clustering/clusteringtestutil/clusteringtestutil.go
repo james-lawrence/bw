@@ -9,6 +9,41 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+// NewCluster ...
+func NewCluster(n int, opts ...clustering.Option) (out []clustering.Cluster, err error) {
+	for i := 0; i < n; i++ {
+		var (
+			c clustering.Cluster
+		)
+		ip := net.ParseIP(fmt.Sprintf("127.0.0.%d", i+1))
+		opts = append(
+			opts,
+			clustering.OptionNodeID(ip.String()),
+			clustering.OptionBindAddress(ip.String()),
+		)
+
+		if c, err = clustering.NewCluster(opts...); err != nil {
+			ShutdownCluster(out...)
+			return out, err
+		}
+
+		out = append(out, c)
+	}
+
+	return out, nil
+}
+
+// ShutdownCluster ...
+func ShutdownCluster(nodes ...clustering.Cluster) (err error) {
+	for _, n := range nodes {
+		if cause := n.Shutdown(); cause != nil && err == nil {
+			err = cause
+		}
+	}
+
+	return err
+}
+
 // NewPeers generates up to 254 peers with IPs
 // between 127.0.0.1 and 127.0.0.n
 func NewPeers(n int) []*memberlist.Node {

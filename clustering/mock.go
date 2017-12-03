@@ -2,6 +2,7 @@ package clustering
 
 import (
 	"net"
+	"time"
 
 	"github.com/james-lawrence/bw/clustering/rendezvous"
 
@@ -31,6 +32,16 @@ type Mock struct {
 	local  *memberlist.Node
 	peers  []*memberlist.Node
 	config *memberlist.Config
+}
+
+// Leave ...
+func (t Mock) Leave(time.Duration) error {
+	return nil
+}
+
+// Join ...
+func (t Mock) Join(...string) (int, error) {
+	return len(t.peers), nil
 }
 
 // Config - see Cluster.
