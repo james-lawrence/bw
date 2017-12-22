@@ -1,0 +1,5 @@
+address: "localhost:2000"
+tlsconfig:
+  servername: "wambli.talla.io"
+deploymentconfig:
+  concurrency: 3
