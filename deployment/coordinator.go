@@ -21,11 +21,11 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 		defaultKeepN = 3
 	)
 
-	coord := &deployment{
+	coord := &coordinator{
 		local:     local,
 		deployer:  d,
 		Mutex:     &sync.Mutex{},
-		status:    ready{},
+		status:    agent.Peer_Ready,
 		completed: make(chan DeployResult),
 	}
 
@@ -44,11 +44,11 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 }
 
 // CoordinatorOption options for the deployment coordinator.
-type CoordinatorOption func(*deployment)
+type CoordinatorOption func(*coordinator)
 
 // CoordinatorOptionRoot - root directory for performing deployments.
 func CoordinatorOptionRoot(root string) CoordinatorOption {
-	return func(d *deployment) {
+	return func(d *coordinator) {
 		d.root = root
 		d.deploysRoot = filepath.Join(root, bw.DirDeploys)
 	}
@@ -56,7 +56,7 @@ func CoordinatorOptionRoot(root string) CoordinatorOption {
 
 // CoordinatorOptionKeepN the number of previous deploys to keep.
 func CoordinatorOptionKeepN(n int) CoordinatorOption {
-	return func(d *deployment) {
+	return func(d *coordinator) {
 		d.keepN = n
 		d.cleanup = agentutil.KeepOldestN(n)
 	}
@@ -64,12 +64,12 @@ func CoordinatorOptionKeepN(n int) CoordinatorOption {
 
 // CoordinatorOptionDispatcher sets the dispatcher for the coordinator.
 func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
-	return func(d *deployment) {
+	return func(d *coordinator) {
 		d.dispatcher = di
 	}
 }
 
-type deployment struct {
+type coordinator struct {
 	keepN       int // never set manually. always set by CoordinatorOptionKeepN
 	root        string
 	deploysRoot string // never set manually. always set by CoordinatorOptionRoot
@@ -77,12 +77,12 @@ type deployment struct {
 	deployer    deployer
 	dispatcher  dispatcher
 	cleanup     agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	completed   chan DeployResult
+	status      agent.Peer_State
 	*sync.Mutex
-	status    Status
-	completed chan DeployResult
 }
 
-func (t *deployment) background() {
+func (t *coordinator) background() {
 	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
 	for done := range t.completed {
 		// cleanup workspace directory prior to execution. this leaves the last deployment
@@ -94,18 +94,18 @@ func (t *deployment) background() {
 		}
 
 		if done.Error != nil {
-			t.update(failed{}, agentutil.KeepOldestN(t.keepN))
+			t.update(agent.Peer_Failed, agentutil.KeepOldestN(t.keepN))
 			done.deployFailed(done.Error)
 			continue
 		}
 
 		done.deployComplete()
-		t.update(ready{}, agentutil.KeepNewestN(t.keepN))
+		t.update(agent.Peer_Ready, agentutil.KeepNewestN(t.keepN))
 	}
 }
 
 // Info about the state of the agent.
-func (t *deployment) Deployments() (_psIgnored agent.Peer_State, _ignored []*agent.Archive, err error) {
+func (t *coordinator) Deployments() (_psIgnored agent.Peer_State, _ignored []*agent.Archive, err error) {
 	var (
 		archives []agent.Archive
 	)
@@ -122,16 +122,16 @@ func (t *deployment) Deployments() (_psIgnored agent.Peer_State, _ignored []*age
 		return a.Ts > b.Ts
 	})
 
-	return AgentStateFromStatus(t.status), archivePointers(archives...), nil
+	return t.status, archivePointers(archives...), nil
 }
 
-func (t *deployment) Deploy(archive *agent.Archive) (err error) {
+func (t *coordinator) Deploy(archive *agent.Archive) (err error) {
 	var (
 		dctx DeployContext
 	)
 
-	if err := t.start(); err != nil {
-		return err
+	if s := t.start(); !IsDeploying(s) {
+		return s
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
@@ -147,20 +147,20 @@ func (t *deployment) Deploy(archive *agent.Archive) (err error) {
 	return t.deployer.Deploy(dctx)
 }
 
-func (t *deployment) start() Status {
+func (t *coordinator) start() error {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
-
-	if !(IsReady(t.status) || IsFailed(t.status)) {
-		return t.status
+	s := status(t.status)
+	if !(IsReady(s) || IsFailed(s)) {
+		return s
 	}
 
-	t.status = deploying{}
+	t.status = agent.Peer_Deploying
 
-	return nil
+	return status(t.status)
 }
 
-func (t *deployment) update(s Status, c agentutil.Cleaner) {
+func (t *coordinator) update(s agent.Peer_State, c agentutil.Cleaner) {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 

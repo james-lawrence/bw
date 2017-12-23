@@ -33,11 +33,11 @@ func (t OperationFunc) Visit(c agent.Peer) error {
 }
 
 type constantChecker struct {
-	Status
+	Status agent.Peer_State
 }
 
 func (t constantChecker) Visit(agent.Peer) error {
-	return t.Status
+	return status(t.Status)
 }
 
 type cluster interface {
@@ -82,7 +82,7 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 		worker: worker{
 			c:               make(chan func()),
 			wait:            new(sync.WaitGroup),
-			check:           constantChecker{Status: ready{}},
+			check:           constantChecker{Status: agent.Peer_Ready},
 			deploy:          OperationFunc(loggingDeploy),
 			dispatcher:      di,
 			local:           p,
@@ -131,7 +131,7 @@ func (t worker) Complete() {
 }
 
 func (t worker) DeployTo(peer agent.Peer) {
-	// No longer deploy when a single node fails.
+	// Stop deployment when a single node fails.
 	// TODO: finish making this configurable.
 	if *t.failed > 0 && t.enforceFailures {
 		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
@@ -212,7 +212,11 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
 		remaining = remaining[:0]
 		for _, peer := range peers {
 			err := check.Visit(peer)
-			d.Dispatch(agentutil.PeerEvent(mergePeerWithStatus(peer, err)))
+			d.Dispatch(
+				agentutil.PeerEvent(
+					agent.NewPeerFromTemplate(peer, agent.PeerOptionStatus(unwrapStatus(err))),
+				),
+			)
 
 			if IsReady(err) || IsUnknown(err) {
 				continue

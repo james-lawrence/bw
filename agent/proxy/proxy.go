@@ -29,7 +29,7 @@ func check(options ...grpc.DialOption) func(n agent.Peer) error {
 			return err
 		}
 
-		return deployment.AgentStateToStatus(info.Peer.Status)
+		return deployment.NewStatus(info.Peer.Status)
 	}
 }
 

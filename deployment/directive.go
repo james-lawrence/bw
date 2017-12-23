@@ -62,7 +62,7 @@ type Directive struct {
 }
 
 // Deploy ...
-func (t Directive) Deploy(dctx DeployContext) error {
+func (t Directive) Deploy(dctx DeployContext) {
 	options := append(
 		t.options,
 		DirectiveOptionDeployContext(dctx),
@@ -73,8 +73,6 @@ func (t Directive) Deploy(dctx DeployContext) error {
 	}
 
 	go t.deploy()
-
-	return nil
 }
 
 func (t Directive) deploy() {

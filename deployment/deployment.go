@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"encoding/gob"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,177 +13,63 @@ import (
 	"github.com/james-lawrence/bw/x/logx"
 )
 
-func init() {
-	gob.Register(ready{})
-	gob.Register(canary{})
-	gob.Register(deploying{})
-	gob.Register(failed{})
-}
-
-// StatusEnum represents the state of the deployment coordinator on the local server.
-type StatusEnum int
-
-const (
-	// StatusUnknown the system doesn't current know its state.
-	StatusUnknown StatusEnum = iota
-	// StatusReady the system is willing to accept a deployment.
-	StatusReady
-	// StatusDeploying the system is currently deploying.
-	StatusDeploying
-	// StatusCanary the system is currently locked this will
-	// cause it to ignore any deployment requests.
-	StatusCanary
-	// StatusFailed the system failed to deploy.
-	StatusFailed
-)
-
 // NewStatus ...
-func NewStatus(s StatusEnum) Status {
-	switch s {
-	case StatusUnknown:
-		return unknown{}
-	case StatusReady:
-		return ready{}
-	case StatusDeploying:
-		return deploying{}
-	case StatusCanary:
-		return canary{}
+func NewStatus(ps agent.Peer_State) error {
+	return status(ps)
+}
+
+type status agent.Peer_State
+
+func (t status) Error() string {
+	switch t {
 	default:
-		return failed{}
+		return agent.Peer_State(t).String()
 	}
 }
 
-// Status represents the current status of the coorindator.
-type Status interface {
-	error
-	Status() StatusEnum
-}
-
-type unknown struct{}
-
-func (t unknown) Error() string {
-	return "unknown"
-}
-
-func (t unknown) Status() StatusEnum {
-	return StatusUnknown
-}
-
-type ready struct{}
-
-func (t ready) Error() string {
-	return "ready"
-}
-
-func (t ready) Status() StatusEnum {
-	return StatusReady
-}
-
-type deploying struct{}
-
-func (t deploying) Error() string {
-	return "deploying"
-}
-
-func (t deploying) Status() StatusEnum {
-	return StatusDeploying
-}
-
-type canary struct{}
-
-func (t canary) Error() string {
-	return "locked and refusing deployments"
-}
-
-func (t canary) Status() StatusEnum {
-	return StatusCanary
-}
-
-type failed struct{}
-
-func (t failed) Error() string {
-	return "failed"
-}
-
-func (t failed) Status() StatusEnum {
-	return StatusFailed
-}
-
-// AgentStateFromStatus ...
-func AgentStateFromStatus(status Status) agent.Peer_State {
-	switch status.Status() {
-	case StatusReady:
-		return agent.Peer_Ready
-	case StatusCanary:
-		return agent.Peer_Canary
-	case StatusDeploying:
-		return agent.Peer_Deploying
-	case StatusFailed:
-		return agent.Peer_Failed
-	default:
-		return agent.Peer_Unknown
-	}
-}
-
-// AgentStateToStatus ...
-func AgentStateToStatus(info agent.Peer_State) Status {
-	switch info {
-	case agent.Peer_Unknown:
-		return unknown{}
-	case agent.Peer_Ready:
-		return ready{}
-	case agent.Peer_Canary:
-		return canary{}
-	case agent.Peer_Deploying:
-		return deploying{}
-	default:
-		return failed{}
-	}
-}
-
-func mergePeerWithStatus(p agent.Peer, err error) agent.Peer {
-	if s, ok := err.(Status); ok {
-		p.Status = AgentStateFromStatus(s)
-		return p
-	}
-
-	return p
+func (t status) state() agent.Peer_State {
+	return agent.Peer_State(t)
 }
 
 // IsReady returns true if the node is in a ready state.
-func IsReady(err error) bool {
-	return isStatus(err, StatusReady)
+func IsReady(c error) bool {
+	return isStatus(c, agent.Peer_Ready)
 }
 
 // IsUnknown returns true if the node is in a ready state.
-func IsUnknown(err error) bool {
-	return isStatus(err, StatusUnknown)
+func IsUnknown(c error) bool {
+	return isStatus(c, agent.Peer_Unknown)
 }
 
 // IsCanary returns true if the node is in a canary state.
-func IsCanary(err error) bool {
-	return isStatus(err, StatusCanary)
+func IsCanary(c error) bool {
+	return isStatus(c, agent.Peer_Canary)
 }
 
 // IsDeploying returns true if the node is in a deploying state.
-func IsDeploying(err error) bool {
-	return isStatus(err, StatusDeploying)
+func IsDeploying(c error) bool {
+	return isStatus(c, agent.Peer_Deploying)
 }
 
 // IsFailed returns true if the node is in a failed state.
-func IsFailed(err error) bool {
-	return isStatus(err, StatusFailed)
+func IsFailed(c error) bool {
+	return isStatus(c, agent.Peer_Failed)
 }
 
-func isStatus(err error, expected StatusEnum) bool {
-	switch err := err.(type) {
-	case Status:
-		if err.Status() == expected {
-			return true
-		}
+func isStatus(current error, expected agent.Peer_State) bool {
+	if s, ok := current.(status); ok {
+		return s.state() == expected
 	}
 
 	return false
+}
+
+func unwrapStatus(err error) agent.Peer_State {
+	if s, ok := err.(status); ok {
+		return s.state()
+	}
+
+	return agent.Peer_Unknown
 }
 
 type deployer interface {

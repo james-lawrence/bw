@@ -64,6 +64,13 @@ func PeerOptionRaftPort(port uint32) PeerOption {
 	}
 }
 
+// PeerOptionStatus ...
+func PeerOptionStatus(c Peer_State) PeerOption {
+	return func(p *Peer) {
+		p.Status = c
+	}
+}
+
 // NewPeer ...
 func NewPeer(id string, opts ...PeerOption) Peer {
 	p := Peer{
@@ -75,6 +82,11 @@ func NewPeer(id string, opts ...PeerOption) Peer {
 		Status:   Peer_Ready,
 	}
 
+	return NewPeerFromTemplate(p, opts...)
+}
+
+// NewPeerFromTemplate ...
+func NewPeerFromTemplate(p Peer, opts ...PeerOption) Peer {
 	for _, opt := range opts {
 		opt(&p)
 	}
