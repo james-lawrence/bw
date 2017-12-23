@@ -1,0 +1,1 @@
+00_templates.conf 0755  rsyslog  rsyslog  "/etc/telegraf.conf"

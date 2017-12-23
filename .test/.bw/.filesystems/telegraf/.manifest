@@ -1,0 +1,3 @@
+telegraf.conf 0755  telegraf  telegraf  "/etc/telegraf.conf"          -
+telegraf.d    0755  telegraf  telegraf  "/etc/telegraf.d"             -
+proj.archive  0755  telegraf  telegraf  "/opt/proj"                   targz
