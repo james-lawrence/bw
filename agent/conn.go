@@ -127,17 +127,22 @@ func (t Conn) RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) (e
 }
 
 // Deploy ...
-func (t Conn) Deploy(info Archive) error {
+func (t Conn) Deploy(info Archive) (d Deploy, err error) {
 	var (
-		err error
+		ar *ArchiveResult
 	)
 
 	rpc := NewAgentClient(t.conn)
-	if _, err = rpc.Deploy(context.Background(), &info); err != nil {
-		return errors.Wrap(err, "failed to initiated deploy")
+
+	if ar, err = rpc.Deploy(context.Background(), &info); err != nil {
+		return d, errors.Wrap(err, "failed to initiated deploy")
 	}
 
-	return nil
+	if ar.Deploy == nil {
+		return d, errors.New("deploy result is nil")
+	}
+
+	return *ar.Deploy, nil
 }
 
 // Connect ...

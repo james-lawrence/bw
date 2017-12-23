@@ -20,9 +20,10 @@ message Message {
 }
 
 message Deploy {
-  enum Stage { Initiated = 0; Completed = 1; Failed = 2;}
+  enum Stage { Failed = 0; Deploying = 1; Completed = 2;}
   Stage stage = 1;
   Archive archive = 2;
+  string error = 3;
 }
 
 message Log {
@@ -42,7 +43,10 @@ message ArchiveChunk {
   }
 }
 
-message ArchiveResult {}
+message ArchiveResult {
+  Deploy deploy = 1;
+}
+
 message Archive {
   bytes deploymentID = 1;
   Peer peer = 2;
@@ -54,7 +58,8 @@ message Archive {
 message StatusRequest {}
 message Status {
   Peer Peer = 1;
-  repeated Archive Deployments = 2;
+  Deploy Latest = 2;
+  repeated Archive Deployments = 3;
 }
 
 message DetailsRequest{}

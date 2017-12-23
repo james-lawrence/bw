@@ -11,7 +11,7 @@ import (
 type deployer interface {
 	// Deploy trigger a deploy
 	Deploy(*Archive) error
-	Deployments() (Peer_State, []*Archive, error)
+	Deployments() (Deploy, []*Archive, error)
 }
 
 type noopDeployer struct{}
@@ -20,8 +20,8 @@ func (t noopDeployer) Deploy(*Archive) error {
 	return nil
 }
 
-func (t noopDeployer) Deployments() (Peer_State, []*Archive, error) {
-	return Peer_Unknown, []*Archive(nil), nil
+func (t noopDeployer) Deployments() (Deploy, []*Archive, error) {
+	return Deploy{Stage: Deploy_Completed}, []*Archive(nil), nil
 }
 
 // ServerOption ...
@@ -101,18 +101,22 @@ func (t Server) Deploy(ctx context.Context, archive *Archive) (*ArchiveResult, e
 func (t Server) Info(ctx context.Context, _ *StatusRequest) (*Status, error) {
 	var (
 		err error
-		d   []*Archive
+		d   Deploy
+		a   []*Archive
 	)
+
 	tmp := t.cluster.Local()
 
-	if tmp.Status, d, err = t.Deployer.Deployments(); err != nil {
-		d = []*Archive{}
+	if d, a, err = t.Deployer.Deployments(); err != nil {
+		a = []*Archive{}
+		d = Deploy{}
 		log.Println("failed to read deployments, defaulting to no deployments", err)
 	}
 
 	return &Status{
+		Latest:      &d,
 		Peer:        &tmp,
-		Deployments: d,
+		Deployments: a,
 	}, nil
 }
 

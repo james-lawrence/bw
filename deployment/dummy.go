@@ -23,7 +23,7 @@ type dummy struct {
 	sleepy int
 }
 
-func (t dummy) Deploy(dctx DeployContext) error {
+func (t dummy) Deploy(dctx DeployContext) {
 	go func() {
 		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
@@ -38,8 +38,6 @@ func (t dummy) Deploy(dctx DeployContext) error {
 			dctx.Done(timeout{Duration: failedDuration})
 		}
 	}()
-
-	return nil
 }
 
 type timeout struct {

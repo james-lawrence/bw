@@ -22,11 +22,11 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 	)
 
 	coord := &coordinator{
-		local:     local,
-		deployer:  d,
-		Mutex:     &sync.Mutex{},
-		status:    agent.Peer_Ready,
-		completed: make(chan DeployResult),
+		local:        local,
+		deployer:     d,
+		Mutex:        &sync.Mutex{},
+		latestDeploy: agent.Deploy{Stage: agent.Deploy_Completed},
+		completed:    make(chan DeployResult),
 	}
 
 	// default options.
@@ -70,15 +70,15 @@ func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
 }
 
 type coordinator struct {
-	keepN       int // never set manually. always set by CoordinatorOptionKeepN
-	root        string
-	deploysRoot string // never set manually. always set by CoordinatorOptionRoot
-	local       agent.Peer
-	deployer    deployer
-	dispatcher  dispatcher
-	cleanup     agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
-	completed   chan DeployResult
-	status      agent.Peer_State
+	keepN        int // never set manually. always set by CoordinatorOptionKeepN
+	root         string
+	deploysRoot  string // never set manually. always set by CoordinatorOptionRoot
+	local        agent.Peer
+	deployer     deployer
+	dispatcher   dispatcher
+	cleanup      agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	completed    chan DeployResult
+	latestDeploy agent.Deploy
 	*sync.Mutex
 }
 
@@ -93,19 +93,18 @@ func (t *coordinator) background() {
 			log.Println(soft)
 		}
 
-		if done.Error != nil {
-			t.update(agent.Peer_Failed, agentutil.KeepOldestN(t.keepN))
-			done.deployFailed(done.Error)
-			continue
+		d := done.complete()
+		switch d.Stage {
+		case agent.Deploy_Completed:
+			t.update(d, agentutil.KeepNewestN(t.keepN))
+		default:
+			t.update(d, agentutil.KeepOldestN(t.keepN))
 		}
-
-		done.deployComplete()
-		t.update(agent.Peer_Ready, agentutil.KeepNewestN(t.keepN))
 	}
 }
 
 // Info about the state of the agent.
-func (t *coordinator) Deployments() (_psIgnored agent.Peer_State, _ignored []*agent.Archive, err error) {
+func (t *coordinator) Deployments() (_psIgnored agent.Deploy, _ignored []*agent.Archive, err error) {
 	var (
 		archives []agent.Archive
 	)
@@ -114,7 +113,7 @@ func (t *coordinator) Deployments() (_psIgnored agent.Peer_State, _ignored []*ag
 	defer t.Mutex.Unlock()
 
 	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
-		return agent.Peer_Unknown, _ignored, err
+		return agent.Deploy{}, _ignored, err
 	}
 
 	sort.Slice(archives, func(i int, j int) bool {
@@ -122,48 +121,53 @@ func (t *coordinator) Deployments() (_psIgnored agent.Peer_State, _ignored []*ag
 		return a.Ts > b.Ts
 	})
 
-	return t.status, archivePointers(archives...), nil
+	return t.latestDeploy, archivePointers(archives...), nil
 }
 
 func (t *coordinator) Deploy(archive *agent.Archive) (err error) {
 	var (
+		d    agent.Deploy
 		dctx DeployContext
 	)
 
-	if s := t.start(); !IsDeploying(s) {
-		return s
+	if d = t.start(*archive); d.Stage != agent.Deploy_Deploying {
+		return status(d.Stage)
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
 		return err
 	}
 
-	logx.MaybeLog(dctx.Dispatch(agentutil.DeployInitiatedEvent(dctx.Local, dctx.Archive)))
+	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
 
 	if err = writeArchiveMetadata(dctx); err != nil {
 		return err
 	}
 
-	return t.deployer.Deploy(dctx)
+	t.deployer.Deploy(dctx)
+
+	return nil
 }
 
-func (t *coordinator) start() error {
+func (t *coordinator) start(a agent.Archive) agent.Deploy {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
-	s := status(t.status)
-	if !(IsReady(s) || IsFailed(s)) {
-		return s
+
+	switch t.latestDeploy.Stage {
+	case agent.Deploy_Completed, agent.Deploy_Failed:
+	default:
+		return agent.Deploy{Archive: &a, Stage: agent.Deploy_Failed}
 	}
 
-	t.status = agent.Peer_Deploying
+	t.latestDeploy = agent.Deploy{Archive: &a, Stage: agent.Deploy_Deploying}
 
-	return status(t.status)
+	return t.latestDeploy
 }
 
-func (t *coordinator) update(s agent.Peer_State, c agentutil.Cleaner) {
+func (t *coordinator) update(d agent.Deploy, c agentutil.Cleaner) {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 
-	t.status = s
+	t.latestDeploy = d
 	t.cleanup = c
 }

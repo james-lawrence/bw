@@ -64,23 +64,28 @@ func isStatus(current error, expected agent.Peer_State) bool {
 	return false
 }
 
-func unwrapStatus(err error) agent.Peer_State {
-	if s, ok := err.(status); ok {
-		return s.state()
+func deployStageToPeerState(d agent.Deploy) agent.Peer_State {
+	switch d.Stage {
+	case agent.Deploy_Completed:
+		return agent.Peer_Ready
+	case agent.Deploy_Failed:
+		return agent.Peer_Failed
+	case agent.Deploy_Deploying:
+		return agent.Peer_Deploying
+	default:
+		return agent.Peer_Unknown
 	}
-
-	return agent.Peer_Unknown
 }
 
 type deployer interface {
-	Deploy(dctx DeployContext) error
+	Deploy(dctx DeployContext)
 }
 
 // Coordinator is in charge of coordinating deployments.
 type Coordinator interface {
 	// Deployments info about the deployment coordinator
 	// idle, canary, deploying, locked, and the list of recent deployments.
-	Deployments() (agent.Peer_State, []*agent.Archive, error)
+	Deployments() (agent.Deploy, []*agent.Archive, error)
 	// Deploy trigger a deploy
 	Deploy(a *agent.Archive) error
 }
@@ -142,6 +147,34 @@ type DeployResult struct {
 	Error error
 }
 
+func (t DeployResult) deployComplete() agent.Deploy {
+	tmp := t.Archive
+	t.Log.Println("------------------- deploy completed -------------------")
+	d := agent.Deploy{Archive: &tmp, Stage: agent.Deploy_Completed}
+	logx.MaybeLog(t.Dispatch(agentutil.DeployEvent(t.Local, d)))
+	return d
+}
+
+func (t DeployResult) deployFailed(err error) agent.Deploy {
+	tmp := t.Archive
+	t.Log.Printf("cause:\n%+v\n", err)
+	t.Log.Println("------------------- deploy failed -------------------")
+	d := agent.Deploy{Archive: &tmp, Stage: agent.Deploy_Failed}
+	logx.MaybeLog(t.Dispatch(
+		agentutil.LogEvent(t.Local, err.Error()),
+		agentutil.DeployEvent(t.Local, d),
+	))
+	return d
+}
+
+func (t DeployResult) complete() agent.Deploy {
+	if t.Error != nil {
+		return t.deployFailed(t.Error)
+	}
+
+	return t.deployComplete()
+}
+
 type dispatcher interface {
 	Dispatch(...agent.Message) error
 }
@@ -170,20 +203,6 @@ type DeployContext struct {
 // Dispatch an event to the cluster
 func (t DeployContext) Dispatch(m ...agent.Message) error {
 	return t.dispatcher.Dispatch(m...)
-}
-
-func (t DeployContext) deployComplete() {
-	t.Log.Println("------------------- deploy completed -------------------")
-	logx.MaybeLog(t.Dispatch(agentutil.DeployCompletedEvent(t.Local, t.Archive)))
-}
-
-func (t DeployContext) deployFailed(err error) {
-	t.Log.Printf("cause:\n%+v\n", err)
-	t.Log.Println("------------------- deploy failed -------------------")
-	logx.MaybeLog(t.Dispatch(
-		agentutil.LogEvent(t.Local, err.Error()),
-		agentutil.DeployFailedEvent(t.Local, t.Archive),
-	))
 }
 
 // Done is responsible for closing out the deployment context.

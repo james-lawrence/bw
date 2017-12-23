@@ -21,23 +21,23 @@ type partitioner interface {
 
 // applies an operation to the node.
 type operation interface {
-	Visit(agent.Peer) error
+	Visit(agent.Peer) (agent.Deploy, error)
 }
 
 // OperationFunc pure function operation.
-type OperationFunc func(agent.Peer) error
+type OperationFunc func(agent.Peer) (agent.Deploy, error)
 
 // Visit implements operation.
-func (t OperationFunc) Visit(c agent.Peer) error {
+func (t OperationFunc) Visit(c agent.Peer) (agent.Deploy, error) {
 	return t(c)
 }
 
 type constantChecker struct {
-	Status agent.Peer_State
+	Deploy agent.Deploy
 }
 
-func (t constantChecker) Visit(agent.Peer) error {
-	return status(t.Status)
+func (t constantChecker) Visit(agent.Peer) (agent.Deploy, error) {
+	return t.Deploy, nil
 }
 
 type cluster interface {
@@ -82,7 +82,7 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 		worker: worker{
 			c:               make(chan func()),
 			wait:            new(sync.WaitGroup),
-			check:           constantChecker{Status: agent.Peer_Ready},
+			check:           constantChecker{Deploy: agent.Deploy{Stage: agent.Deploy_Completed}},
 			deploy:          OperationFunc(loggingDeploy),
 			dispatcher:      di,
 			local:           p,
@@ -100,9 +100,9 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	return d
 }
 
-func loggingDeploy(peer agent.Peer) error {
+func loggingDeploy(peer agent.Peer) (agent.Deploy, error) {
 	log.Println("deploy triggered for peer", peer.String())
-	return nil
+	return agent.Deploy{Stage: agent.Deploy_Deploying}, nil
 }
 
 type worker struct {
@@ -139,8 +139,8 @@ func (t worker) DeployTo(peer agent.Peer) {
 	}
 
 	t.c <- func() {
-		if err := t.deploy.Visit(peer); err != nil {
-			t.dispatcher.Dispatch(agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %+v\n", peer.Name, err)))
+		if _, err := t.deploy.Visit(peer); err != nil {
+			t.dispatcher.Dispatch(agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error())))
 			atomic.AddInt64(t.failed, 1)
 			return
 		}
@@ -211,20 +211,17 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
 	for len(peers) > 0 {
 		remaining = remaining[:0]
 		for _, peer := range peers {
-			err := check.Visit(peer)
-			d.Dispatch(
-				agentutil.PeerEvent(
-					agent.NewPeerFromTemplate(peer, agent.PeerOptionStatus(unwrapStatus(err))),
-				),
-			)
-
-			if IsReady(err) || IsUnknown(err) {
-				continue
-			}
-
-			if IsFailed(err) {
-				success = false
-				continue
+			deploy, err := check.Visit(peer)
+			if err != nil {
+				log.Println("failed to check", peer.Name, err)
+			} else {
+				switch deploy.Stage {
+				case agent.Deploy_Completed:
+					continue
+				case agent.Deploy_Failed:
+					success = false
+					continue
+				}
 			}
 
 			remaining = append(remaining, peer)

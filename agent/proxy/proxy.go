@@ -4,7 +4,6 @@ package proxy
 
 import (
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/deployment"
 	"google.golang.org/grpc"
 )
 
@@ -12,42 +11,42 @@ type dispatcher interface {
 	Dispatch(...agent.Message) error
 }
 
-func check(options ...grpc.DialOption) func(n agent.Peer) error {
-	return func(n agent.Peer) (err error) {
+func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
+	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c    agent.Client
 			info agent.Status
 		)
 
 		if c, err = agent.Dial(agent.RPCAddress(n), options...); err != nil {
-			return err
+			return _d, err
 		}
 
 		defer c.Close()
 
 		if info, err = c.Info(); err != nil {
-			return err
+			return _d, err
 		}
 
-		return deployment.NewStatus(info.Peer.Status)
+		if info.Latest != nil {
+			return *info.Latest, nil
+		}
+
+		return _d, nil
 	}
 }
 
-func deploy(info agent.Archive, options ...grpc.DialOption) func(n agent.Peer) error {
-	return func(n agent.Peer) (err error) {
+func deploy(info agent.Archive, options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
+	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c agent.Client
 		)
 
 		if c, err = agent.Dial(agent.RPCAddress(n), options...); err != nil {
-			return err
+			return _d, err
 		}
 		defer c.Close()
 
-		if err = c.Deploy(info); err != nil {
-			return err
-		}
-
-		return nil
+		return c.Deploy(info)
 	}
 }

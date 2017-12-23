@@ -14,7 +14,7 @@ type Client interface {
 	Shutdown() error
 	Upload(srcbytes uint64, src io.Reader) (Archive, error)
 	RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) error
-	Deploy(info Archive) error
+	Deploy(info Archive) (Deploy, error)
 	Connect() (ConnectInfo, error)
 	Info() (Status, error)
 	Watch(out chan<- Message) error
