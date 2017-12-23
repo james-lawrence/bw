@@ -87,7 +87,7 @@ type Coordinator interface {
 	// idle, canary, deploying, locked, and the list of recent deployments.
 	Deployments() (agent.Deploy, []*agent.Archive, error)
 	// Deploy trigger a deploy
-	Deploy(a *agent.Archive) error
+	Deploy(a *agent.Archive) (agent.Deploy, error)
 }
 
 // DeployContextOption options for a DeployContext

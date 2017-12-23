@@ -60,7 +60,7 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		return nil
 	}
 
-	if err = client.Deploy(latest); err != nil {
+	if _, err = client.Deploy(latest); err != nil {
 		return errors.Wrap(err, "failed to deploy latest")
 	}
 

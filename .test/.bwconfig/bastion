@@ -1,7 +1,4 @@
 address: "bastion-dev-internal.talla.io:2000"
+concurrency: 0.5
 tlsconfig:
   servername: "bastion-dev-internal.talla.io"
-deploymentconfig:
-  strategy: percent
-  options:
-    percentage: 0.5

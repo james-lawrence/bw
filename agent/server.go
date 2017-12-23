@@ -10,14 +10,14 @@ import (
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
 	// Deploy trigger a deploy
-	Deploy(*Archive) error
+	Deploy(*Archive) (Deploy, error)
 	Deployments() (Deploy, []*Archive, error)
 }
 
 type noopDeployer struct{}
 
-func (t noopDeployer) Deploy(*Archive) error {
-	return nil
+func (t noopDeployer) Deploy(*Archive) (d Deploy, err error) {
+	return d, err
 }
 
 func (t noopDeployer) Deployments() (Deploy, []*Archive, error) {
@@ -89,12 +89,16 @@ func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownRe
 
 // Deploy ...
 func (t Server) Deploy(ctx context.Context, archive *Archive) (*ArchiveResult, error) {
+	var (
+		err error
+		d Deploy
+	)
 	debugx.Println("deploy initiated", archive.Location)
-	if err := t.Deployer.Deploy(archive); err != nil {
+	if d, err = t.Deployer.Deploy(archive); err != nil {
 		return nil, err
 	}
 
-	return &ArchiveResult{}, nil
+	return &ArchiveResult{Deploy: &d}, nil
 }
 
 // Info ...

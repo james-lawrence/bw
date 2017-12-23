@@ -45,13 +45,13 @@ func ProtocolFromConfig(protocol string, serialized []byte) (_ Protocol, err err
 	case s3Protocol:
 		return newS3PFromConfig(serialized)
 	case tmpProtocol:
+		fallthrough
+	default:
 		return ProtocolFunc(
 			func(uid []byte, _ uint64) (Uploader, error) {
 				return NewTempFileUploader()
 			},
 		), nil
-	default:
-		return nil, errors.Errorf("no protocol defined for: %s", protocol)
 	}
 }
 

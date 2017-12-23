@@ -124,29 +124,28 @@ func (t *coordinator) Deployments() (_psIgnored agent.Deploy, _ignored []*agent.
 	return t.latestDeploy, archivePointers(archives...), nil
 }
 
-func (t *coordinator) Deploy(archive *agent.Archive) (err error) {
+func (t *coordinator) Deploy(archive *agent.Archive) (d agent.Deploy, err error) {
 	var (
-		d    agent.Deploy
 		dctx DeployContext
 	)
 
 	if d = t.start(*archive); d.Stage != agent.Deploy_Deploying {
-		return status(d.Stage)
+		return d, status(d.Stage)
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
-		return err
+		return d, err
 	}
 
 	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
 
 	if err = writeArchiveMetadata(dctx); err != nil {
-		return err
+		return d, err
 	}
 
 	t.deployer.Deploy(dctx)
 
-	return nil
+	return d, nil
 }
 
 func (t *coordinator) start(a agent.Archive) agent.Deploy {

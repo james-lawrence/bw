@@ -1,5 +1,4 @@
 address: "localhost:2000"
+concurrency: 2
 tlsconfig:
   servername: "wambli.talla.io"
-deploymentconfig:
-  concurrency: 3

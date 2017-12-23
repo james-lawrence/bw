@@ -40,19 +40,17 @@ func PeerEvent(p agent.Peer) agent.Message {
 	}
 }
 
-// DeployInitiatedEvent represents a deploy being triggered.
-func DeployInitiatedEvent(p agent.Peer, a agent.Archive) agent.Message {
-	return deployEvent(agent.Deploy_Initiated, p, a)
+func deployToArchive(d agent.Deploy) (a agent.Archive) {
+	if d.Archive != nil {
+		return *d.Archive
+	}
+
+	return a
 }
 
-// DeployCompletedEvent represents a deploy being triggered.
-func DeployCompletedEvent(p agent.Peer, a agent.Archive) agent.Message {
-	return deployEvent(agent.Deploy_Completed, p, a)
-}
-
-// DeployFailedEvent represents a deploy being triggered.
-func DeployFailedEvent(p agent.Peer, a agent.Archive) agent.Message {
-	return deployEvent(agent.Deploy_Failed, p, a)
+// DeployEvent represents a deploy being triggered.
+func DeployEvent(p agent.Peer, d agent.Deploy) agent.Message {
+	return deployEvent(d.Stage, p, deployToArchive(d))
 }
 
 func deployEvent(t agent.Deploy_Stage, p agent.Peer, a agent.Archive) agent.Message {
