@@ -1,7 +1,9 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- [ ] collapse uploads/download packages into a single storage package and cleanup the api.
+- collapse TLS configuration into top level, its a first class citizen.
+- move cluster configuration into configuration file. (minimum peers, peering strategies)
+- allow supplimental auto scaling groups to be provided for bootstrapping sources.
 
 #### custom plugins
 - allow for custom plugins to be executed.

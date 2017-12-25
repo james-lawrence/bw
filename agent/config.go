@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"crypto/sha256"
 	"crypto/tls"
 	"log"
 	"net"
@@ -273,6 +274,7 @@ type Config struct {
 	RaftBind  *net.TCPAddr
 	SWIMBind  *net.TCPAddr
 	Storage   storage.Config
+	Secret    string
 	TLSConfig TLSConfig
 	Cluster   clusteringConfig
 }
@@ -289,4 +291,15 @@ func (t Config) Peer() Peer {
 		RaftPort: uint32(t.RaftBind.Port),
 		SWIMPort: uint32(t.SWIMBind.Port),
 	}
+}
+
+// Hash - returns the hash of the Secret.
+func (t Config) Hash() (raw []byte, err error) {
+	compute := sha256.New()
+
+	if _, err = compute.Write([]byte(t.Secret)); err != nil {
+		return raw, errors.WithStack(err)
+	}
+
+	return compute.Sum(nil), nil
 }

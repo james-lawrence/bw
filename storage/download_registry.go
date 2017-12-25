@@ -56,7 +56,6 @@ func (t Registry) New(location string) Downloader {
 
 	for prefix, p := range t.protocols {
 		if strings.HasPrefix(location, prefix) {
-			log.Println("downloading from", prefix)
 			return p.New(location)
 		}
 	}

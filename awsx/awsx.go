@@ -1,6 +1,7 @@
 package awsx
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
@@ -30,6 +31,11 @@ func AutoscalingPeers() (peers []ec2.Instance, err error) {
 	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocument(); err != nil {
 		return peers, errors.WithStack(err)
 	}
+
+	sess = sess.Copy(&aws.Config{
+		Region: aws.String(ident.Region),
+	})
+
 	asgs = autoscaling.New(sess)
 
 	if iao, err = asgs.DescribeAutoScalingInstances(&autoscaling.DescribeAutoScalingInstancesInput{InstanceIds: []*string{&ident.InstanceID}}); err != nil {

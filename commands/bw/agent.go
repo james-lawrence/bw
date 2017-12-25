@@ -83,7 +83,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
 	}
 
-	if secret, err = t.config.TLSConfig.Hash(); err != nil {
+	if secret, err = t.config.Hash(); err != nil {
 		return err
 	}
 

@@ -9,6 +9,8 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/alecthomas/kingpin"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -19,8 +21,6 @@ import (
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/systemx"
-	"github.com/alecthomas/kingpin"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -180,7 +180,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s), total peers(%d)", max, bw.RandomID(info.DeploymentID), len(peers)))
 
 		if cause := client.RemoteDeploy(max, info, peers...); cause != nil {
-			log.Println("deployment failed", cause)
+			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 		}
 
 		log.Println("deployment complete")

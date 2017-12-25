@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
@@ -57,21 +56,6 @@ type TLSConfig struct {
 	Cert       string
 	CA         string
 	ServerName string
-}
-
-// Hash - returns the hash of the TLS key.
-func (t TLSConfig) Hash() (raw []byte, err error) {
-	compute := sha256.New()
-
-	if raw, err = ioutil.ReadFile(t.Key); err != nil {
-		return raw, errors.WithStack(err)
-	}
-
-	if _, err = compute.Write(raw); err != nil {
-		return raw, errors.WithStack(err)
-	}
-
-	return compute.Sum(nil), nil
 }
 
 // BuildServer ...

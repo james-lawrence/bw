@@ -4,8 +4,8 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"math"
 	"net"
-	"path/filepath"
 	"strconv"
 
 	"github.com/james-lawrence/bw/agent"
@@ -74,7 +74,7 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, options ...clusterCmdO
 	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.swimNetwork.String()).TCPVar(&t.swimNetwork)
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.raftNetwork.String()).TCPVar(&t.raftNetwork)
 	parent.Flag("cluster-minimum-required-peers", "minimum number of peers required to join the cluster").Default("1").IntVar(&t.minimumRequiredNodes)
-	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default("1").IntVar(&t.maximumAttempts)
+	parent.Flag("cluster-maximum-join-attempts", "maximum number of times to attempt to join the cluster").Default(strconv.Itoa(math.MaxInt32)).IntVar(&t.maximumAttempts)
 	parent.Flag("cluster-asg", "enable the aws autoscale group bootstrapping strategy").Default("false").BoolVar(&t.awsBootstrap)
 }
 
@@ -143,16 +143,16 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs    *tls.Config
-		snaps raft.SnapshotStore
+		snaps raft.SnapshotStore = raft.NewInmemSnapshotStore()
 	)
 
 	if cs, err = conf.TLSConfig.BuildServer(); err != nil {
 		return p, errors.WithStack(err)
 	}
 
-	if snaps, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft"), 2, nil); err != nil {
-		return p, errors.WithStack(err)
-	}
+	// if snaps, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft"), 2, nil); err != nil {
+	// 	return p, errors.WithStack(err)
+	// }
 
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(t.minimumRequiredNodes == 0),

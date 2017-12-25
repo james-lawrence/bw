@@ -469,7 +469,6 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 	}
 
 	for m, err = in.Recv(); err == nil; m, err = in.Recv() {
-		log.Printf("dispatching: %T\n", dispatch)
 		if err = dispatch.Dispatch(*m); err != nil {
 			log.Println("failed", err)
 			return err
