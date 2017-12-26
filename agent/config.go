@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"log"
+	"math"
 	"net"
 	"os"
 	"path/filepath"
@@ -194,13 +195,13 @@ func BootstrapPeers(peers ...*Peer) func() ([]string, error) {
 // NewConfig creates a default configuration.
 func NewConfig(options ...ConfigOption) Config {
 	c := Config{
-		Name:      systemx.HostnameOrLocalhost(),
-		Root:      filepath.Join("/", "var", "cache", bw.DefaultDir),
-		KeepN:     3,
-		TLSConfig: NewTLSAgent(DefaultTLSCredentialsRoot, ""),
-		Cluster: clusteringConfig{
-			SnapshotFrequency: time.Hour,
-		},
+		Name:              systemx.HostnameOrLocalhost(),
+		Root:              filepath.Join("/", "var", "cache", bw.DefaultDir),
+		KeepN:             3,
+		SnapshotFrequency: time.Hour,
+		MinimumPeers:      3,
+		BootstrapAttempts: math.MaxInt32,
+		TLSConfig:         NewTLSAgent(DefaultTLSCredentialsRoot, ""),
 	}
 
 	for _, opt := range options {
@@ -208,10 +209,6 @@ func NewConfig(options ...ConfigOption) Config {
 	}
 
 	return c
-}
-
-type clusteringConfig struct {
-	SnapshotFrequency time.Duration
 }
 
 // ConfigOption - for overriding configurations.
@@ -267,16 +264,18 @@ func ConfigOptionRaft(p *net.TCPAddr) ConfigOption {
 
 // Config - configuration for the
 type Config struct {
-	Name      string
-	Root      string // root directory to store long term data.
-	KeepN     int    `yaml:"keepN"`
-	RPCBind   *net.TCPAddr
-	RaftBind  *net.TCPAddr
-	SWIMBind  *net.TCPAddr
-	Storage   storage.Config
-	Secret    string
-	TLSConfig TLSConfig
-	Cluster   clusteringConfig
+	Name              string
+	Root              string        // root directory to store long term data.
+	KeepN             int           `yaml:"keepN"`
+	MinimumPeers      int           `yaml:"minimumPeers"`
+	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
+	RPCBind           *net.TCPAddr
+	RaftBind          *net.TCPAddr
+	SWIMBind          *net.TCPAddr
+	Storage           storage.Config
+	Secret            string
+	TLSConfig         TLSConfig
 }
 
 // Peer - builds the Peer information from the configuration. by default

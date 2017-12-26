@@ -38,12 +38,7 @@ type agentCmd struct {
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
-	t.cluster.configure(
-		parent,
-		clusterCmdOptionName(t.config.Name),
-		clusterCmdOptionBind(t.config.SWIMBind),
-		clusterCmdOptionRaftBind(t.config.RaftBind),
-	)
+	t.global.cluster.configure(parent, &t.config)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
@@ -63,6 +58,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		p      raftutil.Protocol
 		upload storage.Protocol
 	)
+
 	log.SetPrefix("[AGENT] ")
 
 	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
@@ -115,14 +111,14 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
 	}
 
-	if c, err = t.global.cluster.Join(fssnapshot, options...); err != nil {
+	if c, err = t.global.cluster.Join(t.config, fssnapshot, options...); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 
 	t.global.cluster.Snapshot(
 		c,
 		fssnapshot,
-		clustering.SnapshotOptionFrequency(t.config.Cluster.SnapshotFrequency),
+		clustering.SnapshotOptionFrequency(t.config.SnapshotFrequency),
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 

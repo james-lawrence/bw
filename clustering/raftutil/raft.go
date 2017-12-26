@@ -128,7 +128,7 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 	p := Protocol{
 		Context:   ctx,
 		Port:      port,
-		Snapshots: raft.NewDiscardSnapshotStore(),
+		Snapshots: raft.NewInmemSnapshotStore(),
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
 		},

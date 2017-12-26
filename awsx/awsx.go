@@ -11,17 +11,14 @@ import (
 
 // AutoscalingPeers return a list of peers for this instance based on the autoscaling group.
 // errors out if no autoscaling group is associated with the instance.
-func AutoscalingPeers() (peers []ec2.Instance, err error) {
+func AutoscalingPeers(supplimental ...string) (peers []ec2.Instance, err error) {
 	var (
-		sess     *session.Session
-		ident    ec2metadata.EC2InstanceIdentityDocument
-		asgs     *autoscaling.AutoScaling
-		iao      *autoscaling.DescribeAutoScalingInstancesOutput
-		instance *autoscaling.InstanceDetails
-		asg      *autoscaling.DescribeAutoScalingGroupsOutput
-		group    *autoscaling.Group
-		ec2io    *ec2.DescribeInstancesOutput
-		peersID  []*string
+		sess  *session.Session
+		ident ec2metadata.EC2InstanceIdentityDocument
+		asgs  *autoscaling.AutoScaling
+		iao   *autoscaling.DescribeAutoScalingInstancesOutput
+		asg   *autoscaling.DescribeAutoScalingGroupsOutput
+		ec2io *ec2.DescribeInstancesOutput
 	)
 
 	if sess, err = session.NewSession(); err != nil {
@@ -45,29 +42,36 @@ func AutoscalingPeers() (peers []ec2.Instance, err error) {
 	if len(iao.AutoScalingInstances) == 0 {
 		return peers, errors.Errorf("no autoscaling instance found for: %s", ident.InstanceID)
 	}
-	instance = iao.AutoScalingInstances[0]
 
-	if asg, err = asgs.DescribeAutoScalingGroups(&autoscaling.DescribeAutoScalingGroupsInput{AutoScalingGroupNames: []*string{instance.AutoScalingGroupName}}); err != nil {
+	agn := make([]string, 0, len(supplimental))
+	copy(agn, supplimental)
+
+	for _, instance := range iao.AutoScalingInstances {
+		agn = append(agn, aws.StringValue(instance.AutoScalingGroupName))
+	}
+
+	dasgi := &autoscaling.DescribeAutoScalingGroupsInput{
+		AutoScalingGroupNames: aws.StringSlice(agn),
+	}
+
+	if asg, err = asgs.DescribeAutoScalingGroups(dasgi); err != nil {
 		return peers, errors.WithStack(err)
 	}
 
-	if len(asg.AutoScalingGroups) == 0 {
-		return peers, errors.Errorf("no autoscaling group found for: %s", *instance.AutoScalingGroupName)
-	}
-	group = asg.AutoScalingGroups[0]
+	for _, group := range asg.AutoScalingGroups {
+		peersID := make([]*string, 0, len(group.Instances))
+		for _, i := range group.Instances {
+			peersID = append(peersID, i.InstanceId)
+		}
 
-	peersID = make([]*string, 0, len(group.Instances))
-	for _, i := range group.Instances {
-		peersID = append(peersID, i.InstanceId)
-	}
+		if ec2io, err = ec2.New(sess).DescribeInstances(&ec2.DescribeInstancesInput{InstanceIds: peersID}); err != nil {
+			return peers, errors.WithStack(err)
+		}
 
-	if ec2io, err = ec2.New(sess).DescribeInstances(&ec2.DescribeInstancesInput{InstanceIds: peersID}); err != nil {
-		return peers, errors.WithStack(err)
-	}
-
-	for _, r := range ec2io.Reservations {
-		for _, i := range r.Instances {
-			peers = append(peers, *i)
+		for _, r := range ec2io.Reservations {
+			for _, i := range r.Instances {
+				peers = append(peers, *i)
+			}
 		}
 	}
 
