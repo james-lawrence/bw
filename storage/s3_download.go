@@ -2,36 +2,13 @@ package storage
 
 import (
 	"io"
-	"net/http"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/pkg/errors"
 )
-
-// NewS3Protocol ...
-func NewS3Protocol() ProtocolS3 {
-	var (
-		s    *session.Session
-		sopt session.Options
-	)
-
-	sopt = session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config: aws.Config{
-			Region:     aws.String("us-east-1"),
-			HTTPClient: &http.Client{Timeout: 5 * time.Second},
-		},
-	}
-
-	s = session.Must(session.NewSessionWithOptions(sopt))
-
-	return ProtocolS3{S3: s3.New(s)}
-}
 
 // ProtocolS3 implements the registry protocol interface for s3 downloads.
 type ProtocolS3 struct {

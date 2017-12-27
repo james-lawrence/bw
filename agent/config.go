@@ -18,7 +18,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
-	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/systemx"
 )
 
@@ -27,9 +26,7 @@ type ConfigClientOption func(*ConfigClient)
 
 // CCOptionTLSConfig tls set to load for the client configuration.
 func CCOptionTLSConfig(name string) ConfigClientOption {
-	return func(c *ConfigClient) {
-		c.TLSConfig = NewTLSClient(name)
-	}
+	return ConfigClientTLS(name)
 }
 
 // NewConfigClient ...
@@ -44,9 +41,10 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		Address:   systemx.HostnameOrLocalhost(),
-		TLSConfig: NewTLSClient(DefaultTLSCredentialsRoot),
+		Address: systemx.HostnameOrLocalhost(),
 	}
+
+	ConfigClientTLS(DefaultTLSCredentialsRoot)(&config)
 
 	return NewConfigClient(config, options...)
 }
@@ -55,7 +53,10 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 type ConfigClient struct {
 	Address     string
 	Concurrency float64
-	TLSConfig
+	Key         string
+	Cert        string
+	CA          string
+	ServerName  string
 }
 
 // Connect to the address in the config client.
@@ -173,7 +174,7 @@ func (t ConfigClient) creds() (credentials.TransportCredentials, error) {
 		conf *tls.Config
 	)
 
-	if conf, err = t.TLSConfig.BuildClient(); err != nil {
+	if conf, err = t.BuildClient(); err != nil {
 		return nil, err
 	}
 
@@ -199,10 +200,11 @@ func NewConfig(options ...ConfigOption) Config {
 		Root:              filepath.Join("/", "var", "cache", bw.DefaultDir),
 		KeepN:             3,
 		SnapshotFrequency: time.Hour,
-		MinimumPeers:      3,
+		MinimumNodes:      3,
 		BootstrapAttempts: math.MaxInt32,
-		TLSConfig:         NewTLSAgent(DefaultTLSCredentialsRoot, ""),
 	}
+
+	newTLSAgent(DefaultTLSCredentialsRoot, "")(&c)
 
 	for _, opt := range options {
 		opt(&c)
@@ -238,6 +240,10 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 			IP:   ip,
 			Port: 2002,
 		}),
+		ConfigOptionTorrent(&net.TCPAddr{
+			IP:   ip,
+			Port: 2003,
+		}),
 	)
 }
 
@@ -262,20 +268,31 @@ func ConfigOptionRaft(p *net.TCPAddr) ConfigOption {
 	}
 }
 
+// ConfigOptionTorrent sets the Torrent address to bind.
+func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
+	return func(c *Config) {
+		c.TorrentBind = p
+	}
+}
+
 // Config - configuration for the
 type Config struct {
-	Name              string
-	Root              string        // root directory to store long term data.
-	KeepN             int           `yaml:"keepN"`
-	MinimumPeers      int           `yaml:"minimumPeers"`
-	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
-	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
-	RPCBind           *net.TCPAddr
-	RaftBind          *net.TCPAddr
-	SWIMBind          *net.TCPAddr
-	Storage           storage.Config
-	Secret            string
-	TLSConfig         TLSConfig
+	Name                  string
+	Root                  string        // root directory to store long term data.
+	KeepN                 int           `yaml:"keepN"`
+	MinimumNodes          int           `yaml:"minimumNodes"`
+	BootstrapAttempts     int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency     time.Duration `yaml:"snapshotFrequency"`
+	RPCBind               *net.TCPAddr
+	RaftBind              *net.TCPAddr
+	SWIMBind              *net.TCPAddr
+	Secret                string
+	Key                   string
+	Cert                  string
+	CA                    string
+	ServerName            string
+	TorrentStorageEnabled bool `yaml:"torrentStorageEnabled"`
+	TorrentBind           *net.TCPAddr
 }
 
 // Peer - builds the Peer information from the configuration. by default
@@ -283,12 +300,13 @@ type Config struct {
 func (t Config) Peer() Peer {
 	// TODO: have a separate advertise address for the IP field.
 	return Peer{
-		Status:   Peer_Ready,
-		Name:     t.Name,
-		Ip:       t.RPCBind.IP.String(),
-		RPCPort:  uint32(t.RPCBind.Port),
-		RaftPort: uint32(t.RaftBind.Port),
-		SWIMPort: uint32(t.SWIMBind.Port),
+		Status:      Peer_Ready,
+		Name:        t.Name,
+		Ip:          t.RPCBind.IP.String(),
+		RPCPort:     uint32(t.RPCBind.Port),
+		RaftPort:    uint32(t.RaftBind.Port),
+		SWIMPort:    uint32(t.SWIMBind.Port),
+		TorrentPort: uint32(t.TorrentBind.Port),
 	}
 }
 

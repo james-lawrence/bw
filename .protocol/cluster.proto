@@ -6,4 +6,5 @@ message metadata {
   uint32 RPCPort = 2;
   uint32 RaftPort = 3;
   uint32 SWIMPort = 4;
+  uint32 TorrentPort = 5;
 }

@@ -30,36 +30,28 @@ const (
 	DefaultTLSCertServer = "tlsserver.cert"
 )
 
-// NewTLSClient ...
-func NewTLSClient(credentials string) TLSConfig {
-	return TLSConfig{
-		Key:        bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyClient), ""),
-		Cert:       bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertClient), ""),
-		CA:         bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), ""),
-		ServerName: systemx.HostnameOrLocalhost(),
+// ConfigClientTLS ...
+func ConfigClientTLS(credentials string) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.Key = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyClient), "")
+		c.Cert = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertClient), "")
+		c.CA = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), "")
+		c.ServerName = systemx.HostnameOrLocalhost()
 	}
 }
 
 // NewTLSAgent ...
-func NewTLSAgent(credentials, override string) TLSConfig {
-	return TLSConfig{
-		Key:        bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyServer), override),
-		Cert:       bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertServer), override),
-		CA:         bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), override),
-		ServerName: systemx.HostnameOrLocalhost(),
+func newTLSAgent(credentials, override string) ConfigOption {
+	return func(c *Config) {
+		c.Key = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyServer), override)
+		c.Cert = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertServer), override)
+		c.CA = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), override)
+		c.ServerName = systemx.HostnameOrLocalhost()
 	}
 }
 
-// TLSConfig ...
-type TLSConfig struct {
-	Key        string
-	Cert       string
-	CA         string
-	ServerName string
-}
-
 // BuildServer ...
-func (t TLSConfig) BuildServer() (creds *tls.Config, err error) {
+func (t Config) BuildServer() (creds *tls.Config, err error) {
 	var (
 		cert tls.Certificate
 		ca   []byte
@@ -95,7 +87,7 @@ func (t TLSConfig) BuildServer() (creds *tls.Config, err error) {
 }
 
 // BuildClient ...
-func (t TLSConfig) BuildClient() (creds *tls.Config, err error) {
+func (t ConfigClient) BuildClient() (creds *tls.Config, err error) {
 	var (
 		cert tls.Certificate
 		ca   []byte

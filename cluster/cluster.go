@@ -106,11 +106,12 @@ func NodeToPeer(n *memberlist.Node) (_zerop agent.Peer, err error) {
 	}
 
 	return agent.Peer{
-		Status:   agent.Peer_Unknown,
-		Name:     n.Name,
-		Ip:       n.Addr.String(),
-		RPCPort:  m.RPCPort,
-		SWIMPort: m.SWIMPort,
-		RaftPort: m.RaftPort,
+		Status:      agent.Peer_Unknown,
+		Name:        n.Name,
+		Ip:          n.Addr.String(),
+		RPCPort:     m.RPCPort,
+		SWIMPort:    m.SWIMPort,
+		RaftPort:    m.RaftPort,
+		TorrentPort: m.TorrentPort,
 	}, nil
 }

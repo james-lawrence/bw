@@ -6,6 +6,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/alecthomas/kingpin"
 )
 
@@ -23,7 +24,7 @@ func (t *dummy) attach(ctx *kingpin.ParseContext) error {
 	defer log.Println("registered dummy deployer")
 
 	return t.agentCmd.bind(
-		func(d *agentutil.Dispatcher, p agent.Peer, _ agent.Config) agent.ServerOption {
+		func(d *agentutil.Dispatcher, p agent.Peer, _ agent.Config, _ storage.DownloadProtocol) agent.ServerOption {
 			return agent.ServerOptionDeployer(deployment.NewDummyCoordinator(p))
 		},
 	)

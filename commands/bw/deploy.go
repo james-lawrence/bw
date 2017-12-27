@@ -150,6 +150,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	events <- agentutil.LogEvent(local.Peer, "uploading archive")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
+		log.Println("failed to build archive file", err)
 		return err
 	}
 	defer os.Remove(dst.Name())

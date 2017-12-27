@@ -37,6 +37,7 @@ func NewLocal(p agent.Peer, options ...localOption) Local {
 		RPCPort:    l.Peer.RPCPort,
 		RaftPort:   l.Peer.RaftPort,
 		SWIMPort:   l.Peer.SWIMPort,
+		TorrentPort: l.Peer.TorrentPort,
 	}
 
 	if l.metadata, err = proto.Marshal(&m); err != nil {

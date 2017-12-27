@@ -148,7 +148,7 @@ retry:
 
 	// if members > 1, then another node discovered us while we were
 	// attempting to join the cluster.
-	joined = max(joined, len(c.Members())-1)
+	joined = max(joined, len(c.Members()))
 
 	if b.JoinStrategy(joined) {
 		return nil

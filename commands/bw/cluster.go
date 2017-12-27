@@ -64,15 +64,15 @@ func (t *clusterCmd) Join(conf agent.Config, snap peering.File, options ...clust
 		return addresses, nil
 	})
 
-	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumPeers))
+	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.BootstrapAttempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(
-		snap,
 		clipeers,
 		peering.AWSAutoscaling{
 			Port:               conf.SWIMBind.Port,
 			SupplimentalGroups: t.AWSAutoscalingGroups,
 		},
+		snap,
 	)
 
 	if err = clustering.Bootstrap(c, peerings, joins, attempts); err != nil {
@@ -95,12 +95,12 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raf
 		cs *tls.Config
 	)
 
-	if cs, err = conf.TLSConfig.BuildServer(); err != nil {
+	if cs, err = conf.BuildServer(); err != nil {
 		return p, errors.WithStack(err)
 	}
 
 	defaultOptions := []raftutil.ProtocolOption{
-		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumPeers == 0),
+		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
 		raftutil.ProtocolOptionTCPTransport(conf.RaftBind, cs),
 	}
 

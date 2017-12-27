@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/RoaringBitmap/roaring"
+  packages = ["."]
+  revision = "5930de397dc5823f13e026b6094668c2dd526530"
+  version = "v0.3.16"
+
+[[projects]]
   name = "github.com/alecthomas/kingpin"
   packages = ["."]
   revision = "1087e65c9441605df944fb12c33f0fe7072d18ca"
@@ -21,6 +27,42 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/anacrolix/dht"
+  packages = [".","krpc"]
+  revision = "d16ede1d837fae13f52778d556af12470249cfac"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/anacrolix/go-libutp"
+  packages = ["."]
+  revision = "ab1d4f3b9abbf1bc88c1c2cce6defa7926b652cb"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/anacrolix/missinggo"
+  packages = [".","assert","bitmap","httptoo","inproc","iter","mime","orderedmap","perf","pproffd","prioritybitmap","pubsub","resource","slices","x"]
+  revision = "b41e3843fdeafb3c2840cb36fe9199c9beabf8ff"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/anacrolix/sync"
+  packages = ["."]
+  revision = "eee974e4f8c1e1f38d16e32713dd408d6b02ca55"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/anacrolix/torrent"
+  packages = [".","bencode","iplist","logonce","metainfo","mmap_span","mse","peer_protocol","storage","tracker","util"]
+  revision = "a41adc49b5fb2467f84f27b2395cb2bff052bfd5"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/anacrolix/utp"
+  packages = ["."]
+  revision = "87ba7933b8d7520e5e6e27460e25e42c2fccab9f"
+
+[[projects]]
+  branch = "master"
   name = "github.com/armon/go-metrics"
   packages = ["."]
   revision = "7aa49fde808223f8dadfdbfd3a20ff6c19e5f9ec"
@@ -30,6 +72,18 @@
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elbv2","service/s3","service/s3/s3iface","service/s3/s3manager","service/sts"]
   revision = "32f50a06b82225ea99d3c400c20cba02874f0db7"
   version = "v1.12.29"
+
+[[projects]]
+  name = "github.com/boltdb/bolt"
+  packages = ["."]
+  revision = "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8"
+  version = "v1.3.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/bradfitz/iter"
+  packages = ["."]
+  revision = "454541ec3da2a73fc34fd049b19ee5777bf19345"
 
 [[projects]]
   branch = "master"
@@ -44,10 +98,28 @@
   version = "v1.1.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/dustin/go-humanize"
+  packages = ["."]
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/edsrzf/mmap-go"
+  packages = ["."]
+  revision = "0bce6a6887123b67a60366d2c9fe2dfb74289d2e"
+
+[[projects]]
   name = "github.com/gizak/termui"
   packages = ["."]
   revision = "bfde399a8caee62789593f2cbbda70feee4d5553"
   version = "v2.1.1"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/glycerine/go-unsnap-stream"
+  packages = ["."]
+  revision = "62a9a9eb44fd8932157b1a8ace2149eff5971af6"
 
 [[projects]]
   name = "github.com/go-ini/ini"
@@ -66,6 +138,18 @@
   name = "github.com/golang/protobuf"
   packages = ["proto","ptypes/any"]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/golang/snappy"
+  packages = ["."]
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/google/btree"
+  packages = ["."]
+  revision = "316fb6d3f031ae8f4d457c6c5186b9e3ded70435"
 
 [[projects]]
   branch = "master"
@@ -157,6 +241,12 @@
   version = "v0.0.2"
 
 [[projects]]
+  name = "github.com/mattn/go-sqlite3"
+  packages = ["."]
+  revision = "ed69081a91fd053f17672236b0dd52ba7485e1a3"
+  version = "v1.4.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/miekg/dns"
   packages = [".","internal/socket"]
@@ -167,6 +257,12 @@
   name = "github.com/mitchellh/go-wordwrap"
   packages = ["."]
   revision = "ad45545899c7b13c020ea92b2072220eefad42b8"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mschoch/smat"
+  packages = ["."]
+  revision = "90eadee771aeab36e8bf796039b8c261bebebe4f"
 
 [[projects]]
   branch = "master"
@@ -187,6 +283,18 @@
   version = "v1.2.0"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/petar/GoLLRB"
+  packages = ["llrb"]
+  revision = "53be0d36a84c2a886ca057d34b6aa4468df9ccb4"
+
+[[projects]]
+  name = "github.com/philhofer/fwd"
+  packages = ["."]
+  revision = "bb6d471dc95d4fe11e432687f8b70ff496cf3136"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/pkg/errors"
   packages = ["."]
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
@@ -194,9 +302,39 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/ryszard/goskiplist"
+  packages = ["skiplist"]
+  revision = "2dfbae5fcf46374f166f8969cb07e167f1be6273"
+
+[[projects]]
+  branch = "master"
   name = "github.com/sean-/seed"
   packages = ["."]
   revision = "e2103e2c35297fb7e17febb81e49b312087a2372"
+
+[[projects]]
+  name = "github.com/spaolacci/murmur3"
+  packages = ["."]
+  revision = "9f5d223c60793748f04a9d5b4b4eacddfc1f755d"
+  version = "v1.1"
+
+[[projects]]
+  name = "github.com/tinylib/msgp"
+  packages = ["msgp"]
+  revision = "b2b6a672cf1e5b90748f79b8b81fc8c5cf0571a1"
+  version = "1.0.2"
+
+[[projects]]
+  name = "github.com/willf/bitset"
+  packages = ["."]
+  revision = "d860f346b89450988a379d7d705e83c58d1ea227"
+  version = "v1.1.3"
+
+[[projects]]
+  name = "github.com/willf/bloom"
+  packages = ["."]
+  revision = "54e3b963ee1652b06c4562cb9b6020ebc6e36e59"
+  version = "v2.0.3"
 
 [[projects]]
   branch = "master"
@@ -215,6 +353,12 @@
   name = "golang.org/x/text"
   packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
   revision = "88f656faf3f37f690df1a32515b479415e1a6769"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/time"
+  packages = ["rate"]
+  revision = "6dc17368e09b0e8634d71cac8168d853e869a0c7"
 
 [[projects]]
   branch = "master"
@@ -243,6 +387,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "30565496af72669e0da3b27aad491fb2cf04e2f47051d3d33094fb341658743c"
+  inputs-digest = "8ca54791abb1f063f7f242e0389846148732013f7d96e1b28de707fcf7c817f2"
   solver-name = "gps-cdcl"
   solver-version = 1

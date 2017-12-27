@@ -5,14 +5,9 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"net/http"
 	"path/filepath"
 	"sync"
-	"time"
 
-	yaml "gopkg.in/yaml.v1"
-
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pkg/errors"
@@ -20,50 +15,15 @@ import (
 	"github.com/james-lawrence/bw"
 )
 
-func newS3PFromConfig(serialized []byte) (_ Protocol, err error) {
-	var (
-		cfg  s3config
-		s    *session.Session
-		sopt session.Options
-	)
-
-	if err = errors.WithStack(yaml.Unmarshal(serialized, &cfg)); err != nil {
-		return nil, err
-	}
-
-	sopt = session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-		Config: aws.Config{
-			Region:     aws.String(cfg.Region),
-			HTTPClient: &http.Client{Timeout: 5 * time.Second},
-		},
-	}
-
-	if s, err = session.NewSessionWithOptions(sopt); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return s3P{
-		s3config: cfg,
-		Session:  s,
-	}, nil
-}
-
-type s3config struct {
-	Bucket    string
-	KeyPrefix string `yaml:"key_prefix"`
-	Region    string
-}
-
 type s3P struct {
-	s3config
+	s3Config
 	*session.Session
 }
 
 func (t s3P) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 	out, in := io.Pipe()
-	bucket := t.s3config.Bucket
-	key := filepath.Join(t.s3config.KeyPrefix, bw.RandomID(uid).String())
+	bucket := t.s3Config.Bucket
+	key := filepath.Join(t.s3Config.KeyPrefix, bw.RandomID(uid).String())
 
 	return s3u{
 		dst: in,

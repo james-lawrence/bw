@@ -83,6 +83,7 @@ message Peer {
   uint32 RPCPort = 4;
   uint32 RaftPort = 5;
   uint32 SWIMPort = 6;
+  uint32 TorrentPort = 7;
 }
 
 message WatchRequest {}

@@ -37,12 +37,17 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	return t.agentCmd.bind(
-		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config) agent.ServerOption {
-			dlreg := storage.New(
-				storage.OptionProtocols(
-					storage.NewS3Protocol(),
-				),
+		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config, dl storage.DownloadProtocol) agent.ServerOption {
+			var (
+				dlreg storage.Registry
 			)
+
+			if dl == nil {
+				dlreg = storage.New(storage.OptionDefaultProtocols(config.Root))
+			} else {
+				dlreg = storage.New(storage.OptionDefaultProtocols(config.Root, dl))
+			}
+
 
 			deployments := deployment.New(
 				p,

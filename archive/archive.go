@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -41,7 +42,7 @@ func Pack(dst io.Writer, paths ...string) (err error) {
 		}
 	}
 
-	return errors.Wrap(tw.Flush(), "failed to flush archive")
+	return logx.MaybeLog(errors.Wrap(tw.Flush(), "failed to flush archive"))
 }
 
 // LoadAndUnpack ...

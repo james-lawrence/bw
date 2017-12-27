@@ -42,6 +42,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
+	parent.Flag("agent-torrent", "address for the Torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
 
@@ -49,7 +50,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config) agent.ServerOption) error {
+func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) agent.ServerOption) error {
 	var (
 		err    error
 		c      clustering.Cluster
@@ -57,6 +58,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		secret []byte
 		p      raftutil.Protocol
 		upload storage.Protocol
+		download storage.DownloadProtocol
 	)
 
 	log.SetPrefix("[AGENT] ")
@@ -71,10 +73,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return err
 	}
 
-	if upload, err = t.config.Storage.Protocol(); err != nil {
-		return err
-	}
-
 	if t.listener, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
 	}
@@ -83,7 +81,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return err
 	}
 
-	if creds, err = t.config.TLSConfig.BuildServer(); err != nil {
+	if creds, err = t.config.BuildServer(); err != nil {
 		return err
 	}
 
@@ -123,6 +121,23 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	)
 
 	cx := cluster.New(local, c)
+	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {
+		var (
+			tc storage.TorrentConfig
+		)
+
+		opts := []storage.TorrentOption{
+			storage.TorrentOptionBind(t.config.TorrentBind),
+			storage.TorrentOptionDHTPeers(cx),
+			storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirDeploys)),
+		}
+
+		if tc, err = storage.NewTorrent(opts...); err != nil {
+			return err
+		}
+
+		upload, download = tc.Uploader(), tc.Downloader()
+	}
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
 	q := quorum.New(
@@ -135,7 +150,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	server := agent.NewServer(
 		cx,
-		aoptions(dispatcher, local.Peer, t.config),
+		aoptions(dispatcher, local.Peer, t.config, download),
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
