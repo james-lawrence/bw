@@ -1,7 +1,8 @@
 syntax = "proto3";
 package agent;
 
-// Deployment Event.
+// Represents every message sent between nodes. effectively describes all possible events we may want
+// to act upon.
 message Message {
   enum Type { PeerEvent = 0; LogEvent = 1; DeployEvent = 2; PeersFoundEvent = 3; PeersCompletedEvent = 4;}
 

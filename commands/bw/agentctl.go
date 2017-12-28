@@ -8,6 +8,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/alecthomas/kingpin"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -16,8 +18,6 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/systemx"
-	"github.com/alecthomas/kingpin"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -86,7 +86,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 			Name: bw.MustGenerateID().String(),
 			Ip:   systemx.HostnameOrLocalhost(),
 		},
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
 	coptions := []agent.ConnectOption{

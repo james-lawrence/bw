@@ -2,6 +2,8 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 
 #### cleanup/bugfixes
 
+#### prevent concurrent deploys
+
 #### custom plugins
 - allow for custom plugins to be executed.
 - plugins must be registered with 2 pieces of information: /executable/path and the extension to register.

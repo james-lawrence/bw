@@ -20,7 +20,6 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/ux"
-	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +39,7 @@ type deployCmd struct {
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeTerm).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
+		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeLog).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
 		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
@@ -107,11 +106,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
-		agent.Peer{
-			Name: "deploy",
-			Ip:   systemx.HostnameOrLocalhost(),
-		},
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
+		newClientPeer(),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
 	coptions := []agent.ConnectOption{
@@ -120,7 +116,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+			clustering.OptionAliveDelegate(deployclient.AliveHandler{}),
 		),
 	}
 

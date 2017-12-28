@@ -4,14 +4,13 @@ import (
 	"log"
 	"time"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/ux"
-	"github.com/james-lawrence/bw/x/systemx"
-	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -53,11 +52,8 @@ func (t *agentInfo) _info() (err error) {
 	}
 
 	local := cluster.NewLocal(
-		agent.Peer{
-			Name: bw.MustGenerateID().String(),
-			Ip:   systemx.HostnameOrLocalhost(),
-		},
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Deploy)),
+		newClientPeer(),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
 	coptions := []agent.ConnectOption{

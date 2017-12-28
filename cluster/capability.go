@@ -3,13 +3,13 @@ package cluster
 import "github.com/james-lawrence/bw/x/debugx"
 
 const (
-	// Deploy represents a node that communicates with the cluster but isn't an actual
+	// Passive represents a node that communicates with the cluster but isn't considered an actual
 	// member. Useful for agents that perform things like monitoring, commandline interfaces, etc.
-	// by default a node is not a lurker.
-	Deploy int = iota
+	// by default a node is not passive.
+	Passive int = iota
 
-	// Quorum represents a node that is part of the quorum set.
-	Quorum
+	// Node represents an active member of the cluster
+	Node
 
 	// LastCapability just marks the maximum ability integer value.
 	// useful for looping over abilities: for i := 0; i < LastCapability; i++

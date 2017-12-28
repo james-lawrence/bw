@@ -129,7 +129,8 @@ func (x Peer_State) String() string {
 }
 func (Peer_State) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{13, 0} }
 
-// Deployment Event.
+// Represents every message sent between nodes. effectively describes all possible events we may want
+// to act upon.
 type Message struct {
 	// Identifies which field is filled in.
 	Type Message_Type `protobuf:"varint,1,opt,name=type,enum=agent.Message_Type" json:"type,omitempty"`
