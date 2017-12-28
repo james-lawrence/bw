@@ -87,7 +87,7 @@ func main() {
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
-		log.Printf("failed to parse initialization arguments: %+v\n", err)
+		log.Printf("%+v\n", err)
 		cancel()
 	}
 
