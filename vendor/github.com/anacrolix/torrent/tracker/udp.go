@@ -10,7 +10,6 @@ import (
 	"net"
 	"net/url"
 	"time"
-	"log"
 
 	"github.com/anacrolix/missinggo"
 	"github.com/anacrolix/missinggo/pproffd"
@@ -99,7 +98,6 @@ func (c *udpAnnounce) Do(req *AnnounceRequest) (res AnnounceResponse, err error)
 	reqURI := c.url.RequestURI()
 	// Clearly this limits the request URI to 255 bytes. BEP 41 supports
 	// longer but I'm not fussed.
-	log.Println("UDP ACCOUNCE", len(reqURI), reqURI)
 	options := append([]byte{optionTypeURLData, byte(len(reqURI))}, []byte(reqURI)...)
 	b, err := c.request(ActionAnnounce, req, options)
 	if err != nil {
@@ -239,20 +237,17 @@ func (c *udpAnnounce) connect() (err error) {
 			hmp.NoPort = false
 			hmp.Port = 80
 		}
-		log.Println("dialing")
 		c.socket, err = net.Dial("udp", hmp.String())
 		if err != nil {
 			return
 		}
 		c.socket = pproffd.WrapNetConn(c.socket)
 	}
-	log.Println("connecting")
 	b, err := c.request(ActionConnect, nil, nil)
 	if err != nil {
 		return
 	}
 	var res ConnectionResponse
-	log.Println("connection response")
 	err = readBody(b, &res)
 	if err != nil {
 		return

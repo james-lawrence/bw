@@ -9,7 +9,7 @@ bearded-wookie uses SSL/TLS to encrypt all data transfered between agents and cl
 - no required infrastructure. any additional infrastructure should be optional.
 - support different deployment strategies. %age, batch, one at a time.
 - no centralized server.
-- ease of use. mainly around deployment and getting started.
+- ease of use. mainly around deployment and initial setup.
 
 #### workspace
 workspace are the top level namespace that describes a deployment.
@@ -19,7 +19,7 @@ from deployed environments, or for different distros.
 
 #### environments
 environments are used to namespace the different clusters
-you deploy into. such as production vs staging. environments have there own configuration
+you deploy into. such as production vs staging. environments have their own configuration
 that tell the agent how to connect to the cluster.
 
 #### directives

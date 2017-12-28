@@ -1,5 +1,3 @@
-// Package storage provides implementations for downloading and uploading archives.
-// current implementations: fs (filesystem), aws s3.
 package storage
 
 import (

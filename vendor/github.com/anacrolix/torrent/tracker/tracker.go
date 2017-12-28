@@ -5,7 +5,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"log"
 )
 
 // Marshalled as binary by the UDP client, so be careful making changes.
@@ -66,10 +65,8 @@ func AnnounceHost(cl *http.Client, urlStr string, req *AnnounceRequest, host str
 	}
 	switch _url.Scheme {
 	case "http", "https":
-		log.Println("HTTTTTTTTTTTTTTTTTTTTP WAAAT")
 		return announceHTTP(cl, req, _url, host)
 	case "udp":
-		log.Println("UDPPPPPPPPPPPP WAAAT")
 		return announceUDP(req, _url)
 	default:
 		err = ErrBadScheme

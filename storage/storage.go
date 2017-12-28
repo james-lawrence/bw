@@ -1,3 +1,6 @@
+// Package storage provides implementations for downloading and uploading archives
+// to nodes within the cluster.
+// current implementations: torrent (bittorrent), and s3.
 package storage
 
 import (
@@ -8,8 +11,6 @@ import (
 )
 
 const (
-	tmpProtocol     = "tmpfile"
-	fileProtocol    = "file"
 	s3Protocol      = "s3"
 	torrentProtocol = "magnet"
 
