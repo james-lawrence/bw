@@ -1,6 +1,7 @@
 package clustering
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -107,7 +108,7 @@ func newBootstrap(options ...BootstrapOption) bootstrap {
 }
 
 // Bootstrap - bootstraps the provided cluster using the options provided.
-func Bootstrap(c cluster, options ...BootstrapOption) error {
+func Bootstrap(ctx context.Context, c cluster, options ...BootstrapOption) error {
 	var (
 		err      error
 		joined   int
@@ -127,6 +128,14 @@ func Bootstrap(c cluster, options ...BootstrapOption) error {
 retry:
 
 	for _, s := range b.Peering {
+		// check if the join has been cancelled.
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		log.Printf("%T: locating peers\n", s)
 		if peers, err = s.Peers(); err != nil {
 			log.Printf("failed to load peers: %T: %s\n", s, err)
 			continue
@@ -138,11 +147,12 @@ retry:
 			continue
 		}
 
-		if joined == 0 {
+		if joined <= 1 {
 			log.Printf("join succeeded but no new peers were located: %T\n", s)
 			continue
 		}
 
+		log.Println("breaking out of loop")
 		break
 	}
 

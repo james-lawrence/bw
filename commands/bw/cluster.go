@@ -28,7 +28,7 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.config.RaftBind.String()).TCPVar(&t.config.RaftBind)
 }
 
-func (t *clusterCmd) Join(conf agent.Config, snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
+func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
 	type peers interface {
 		Peers() ([]string, error)
 	}
@@ -53,27 +53,23 @@ func (t *clusterCmd) Join(conf agent.Config, snap peering.File, options ...clust
 		return c, errors.Wrap(err, "failed to join cluster")
 	}
 
-	clipeers := peering.Closure(func() ([]string, error) {
-		addresses := make([]string, 0, len(t.bootstrap))
-		for _, addr := range t.bootstrap {
-			addresses = append(addresses, addr.String())
-		}
-
-		return addresses, nil
-	})
-
+	clipeers := peering.NewStaticTCP(t.bootstrap...)
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.BootstrapAttempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(
 		clipeers,
+		snap,
+		peering.DNS{
+			Port:  conf.SWIMBind.Port,
+			Hosts: conf.DNSBootstrap,
+		},
 		peering.AWSAutoscaling{
 			Port:               conf.SWIMBind.Port,
 			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
 		},
-		snap,
 	)
 
-	if err = clustering.Bootstrap(c, peerings, joins, attempts); err != nil {
+	if err = clustering.Bootstrap(ctx, c, peerings, joins, attempts); err != nil {
 		return c, errors.Wrap(err, "failed to bootstrap cluster")
 	}
 

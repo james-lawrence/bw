@@ -1,6 +1,10 @@
 package peering
 
-import "github.com/hashicorp/memberlist"
+import (
+	"net"
+
+	"github.com/hashicorp/memberlist"
+)
 
 // cluster is used to extract the peers within a cluster from the underlying implementations.
 type cluster interface {
@@ -13,6 +17,16 @@ type Closure func() ([]string, error)
 // Peers - returns the results of the closure.
 func (t Closure) Peers() ([]string, error) {
 	return t()
+}
+
+// NewStaticTCP built a static set of peers from TCPAddr.
+func NewStaticTCP(peers ...*net.TCPAddr) Static {
+	addresses := make([]string, 0, len(peers))
+	for _, addr := range peers {
+		addresses = append(addresses, addr.String())
+	}
+
+	return NewStatic(addresses...)
 }
 
 // NewStatic converts a set of peers into a peering strategy

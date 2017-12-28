@@ -110,7 +110,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
 	}
 
-	if c, err = t.global.cluster.Join(t.config, fssnapshot, options...); err != nil {
+	if c, err = t.global.cluster.Join(t.global.ctx, t.config, fssnapshot, options...); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 

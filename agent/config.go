@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/tls"
 	"log"
@@ -157,11 +158,11 @@ func clusterConnect(details ConnectInfo, copts []clustering.Option, bopts []clus
 		clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1)),
 		clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts),
 		clustering.BootstrapOptionPeeringStrategies(
-			peering.Closure(BootstrapPeers(details.Quorum...)),
+			BootstrapPeers(details.Quorum...),
 		),
 	}, bopts...)
 
-	if err = clustering.Bootstrap(c, bopts...); err != nil {
+	if err = clustering.Bootstrap(context.Background(), c, bopts...); err != nil {
 		return c, errors.Wrap(err, "failed to connect to cluster")
 	}
 
@@ -182,15 +183,13 @@ func (t ConfigClient) creds() (credentials.TransportCredentials, error) {
 }
 
 // BootstrapPeers converts a list of Peers into a list of addresses to bootstrap from.
-func BootstrapPeers(peers ...*Peer) func() ([]string, error) {
+func BootstrapPeers(peers ...*Peer) peering.Static {
 	speers := make([]string, 0, len(peers))
 	for _, p := range peers {
 		speers = append(speers, SWIMAddress(*p))
 	}
 
-	return func() ([]string, error) {
-		return speers, nil
-	}
+	return peering.NewStatic(speers...)
 }
 
 // NewConfig creates a default configuration.
@@ -292,6 +291,7 @@ type Config struct {
 	CA                string
 	ServerName        string
 	TorrentBind       *net.TCPAddr
+	DNSBootstrap      []string `yaml:"dnsBootstrap"`
 	AWSBootstrap      struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
