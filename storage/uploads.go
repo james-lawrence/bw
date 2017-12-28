@@ -8,7 +8,7 @@ import (
 	"log"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v1"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 )
