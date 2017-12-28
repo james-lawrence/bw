@@ -13,6 +13,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/deployclient"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
@@ -102,6 +103,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}
 
 	log.Println("configuration:", spew.Sdump(config))
+	events := make(chan agent.Message, 100)
+	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
 		agent.Peer{
@@ -116,13 +119,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
+			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
 			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		),
 	}
-
-	events := make(chan agent.Message, 100)
-	t.initializeUX(t.uxmode, events)
 
 	logRetryError := func(err error) {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "connection to cluster failed"))

@@ -106,7 +106,7 @@ func NodeToPeer(n *memberlist.Node) (_zerop agent.Peer, err error) {
 	}
 
 	return agent.Peer{
-		Status:      agent.Peer_Unknown,
+		Status:      agent.Peer_State(m.Status),
 		Name:        n.Name,
 		Ip:          n.Addr.String(),
 		RPCPort:     m.RPCPort,

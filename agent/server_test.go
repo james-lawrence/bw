@@ -42,7 +42,7 @@ var _ = Describe("Server", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(info.Deployments).To(BeEmpty())
 			tmp := c.Local()
-			tmp.Status = Peer_Unknown
+			tmp.Status = Peer_Node
 			Expect(info.Peer).To(Equal(&tmp))
 		})
 	})

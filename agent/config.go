@@ -302,7 +302,7 @@ type Config struct {
 func (t Config) Peer() Peer {
 	// TODO: have a separate advertise address for the IP field.
 	return Peer{
-		Status:      Peer_Ready,
+		Status:      Peer_Node,
 		Name:        t.Name,
 		Ip:          t.RPCBind.IP.String(),
 		RPCPort:     uint32(t.RPCBind.Port),

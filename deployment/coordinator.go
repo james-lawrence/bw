@@ -130,7 +130,7 @@ func (t *coordinator) Deploy(archive *agent.Archive) (d agent.Deploy, err error)
 	)
 
 	if d = t.start(*archive); d.Stage != agent.Deploy_Deploying {
-		return d, status(d.Stage)
+		return d, errors.Errorf("failed to initiate deploy: %s", d.Stage.String())
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {

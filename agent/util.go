@@ -80,7 +80,7 @@ func NewPeer(id string, opts ...PeerOption) Peer {
 		SWIMPort:    2001,
 		RaftPort:    2002,
 		TorrentPort: 2003,
-		Status:      Peer_Ready,
+		Status:      Peer_Node,
 	}
 
 	return NewPeerFromTemplate(p, opts...)

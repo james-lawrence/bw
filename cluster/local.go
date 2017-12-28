@@ -33,10 +33,11 @@ func NewLocal(p agent.Peer, options ...localOption) Local {
 	}
 
 	m := Metadata{
-		Capability: l.Capability,
-		RPCPort:    l.Peer.RPCPort,
-		RaftPort:   l.Peer.RaftPort,
-		SWIMPort:   l.Peer.SWIMPort,
+		Status:      int32(l.Peer.Status),
+		Capability:  l.Capability,
+		RPCPort:     l.Peer.RPCPort,
+		RaftPort:    l.Peer.RaftPort,
+		SWIMPort:    l.Peer.SWIMPort,
 		TorrentPort: l.Peer.TorrentPort,
 	}
 

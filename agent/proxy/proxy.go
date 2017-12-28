@@ -32,7 +32,9 @@ func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) 
 			return *info.Latest, nil
 		}
 
-		return _d, nil
+		return agent.Deploy{
+			Stage: agent.Deploy_Completed,
+		}, nil
 	}
 }
 

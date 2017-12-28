@@ -76,7 +76,7 @@ message ConnectInfo {
 }
 
 message Peer {
-  enum State { Unknown = 0; Ready = 1; Canary = 2; Deploying = 3; Failed = 4; Left = 5;}
+  enum State { Node = 0; Client = 2; Gone = 3; }
   State Status = 1;
   string ip = 2;
   string name = 3;
