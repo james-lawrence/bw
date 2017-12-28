@@ -17,9 +17,8 @@ import (
 )
 
 type clusterCmd struct {
-	config               *agent.Config
-	bootstrap            []*net.TCPAddr
-	AWSAutoscalingGroups []string
+	config    *agent.Config
+	bootstrap []*net.TCPAddr
 }
 
 func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) {
@@ -27,7 +26,6 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.SWIMBind.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.config.SWIMBind.String()).TCPVar(&t.config.SWIMBind)
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.config.RaftBind.String()).TCPVar(&t.config.RaftBind)
-	parent.Flag("cluster-asg", "autoscaling groups to check, only useful if you have multiple autoscaling groups").StringsVar(&t.AWSAutoscalingGroups)
 }
 
 func (t *clusterCmd) Join(conf agent.Config, snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
@@ -70,7 +68,7 @@ func (t *clusterCmd) Join(conf agent.Config, snap peering.File, options ...clust
 		clipeers,
 		peering.AWSAutoscaling{
 			Port:               conf.SWIMBind.Port,
-			SupplimentalGroups: t.AWSAutoscalingGroups,
+			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
 		},
 		snap,
 	)

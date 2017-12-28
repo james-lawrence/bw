@@ -277,22 +277,24 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 
 // Config - configuration for the
 type Config struct {
-	Name                  string
-	Root                  string        // root directory to store long term data.
-	KeepN                 int           `yaml:"keepN"`
-	MinimumNodes          int           `yaml:"minimumNodes"`
-	BootstrapAttempts     int           `yaml:"bootstrapAttempts"`
-	SnapshotFrequency     time.Duration `yaml:"snapshotFrequency"`
-	RPCBind               *net.TCPAddr
-	RaftBind              *net.TCPAddr
-	SWIMBind              *net.TCPAddr
-	Secret                string
-	Key                   string
-	Cert                  string
-	CA                    string
-	ServerName            string
-	TorrentStorageEnabled bool `yaml:"torrentStorageEnabled"`
-	TorrentBind           *net.TCPAddr
+	Name              string
+	Root              string        // root directory to store long term data.
+	KeepN             int           `yaml:"keepN"`
+	MinimumNodes      int           `yaml:"minimumNodes"`
+	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
+	RPCBind           *net.TCPAddr
+	RaftBind          *net.TCPAddr
+	SWIMBind          *net.TCPAddr
+	Secret            string
+	Key               string
+	Cert              string
+	CA                string
+	ServerName        string
+	TorrentBind       *net.TCPAddr
+	AWSBootstrap      struct {
+		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
+	} `yaml:"awsBootstrap"`
 }
 
 // Peer - builds the Peer information from the configuration. by default
