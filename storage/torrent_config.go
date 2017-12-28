@@ -21,6 +21,13 @@ import (
 // TorrentOption ...
 type TorrentOption func(*TorrentConfig)
 
+// TorrentOptionDebug debug the torrent server.
+func TorrentOptionDebug(a bool) TorrentOption {
+	return func(c *TorrentConfig) {
+		c.Config.Debug = a
+	}
+}
+
 // TorrentOptionBind set address to bind to.
 func TorrentOptionBind(a net.Addr) TorrentOption {
 	return func(c *TorrentConfig) {
@@ -62,10 +69,16 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 
 	c = TorrentConfig{
 		Config: torrent.Config{
-			// Debug:           true,
-			Seed:            true,
-			DisableTrackers: true,
-			DHTConfig:       dht.ServerConfig{},
+			EncryptionPolicy: torrent.EncryptionPolicy{
+				ForceEncryption: true,
+			},
+			Seed:                       true,
+			DisableTrackers:            true,
+			DisableTCP:                 true,
+			HalfOpenConnsPerTorrent:    1,
+			EstablishedConnsPerTorrent: 5,
+			TorrentPeersHighWater:      5,
+			TorrentPeersLowWater:       1,
 			// DHTConfig: torrentUtil{}.debugDHT(),
 		},
 	}
