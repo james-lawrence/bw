@@ -74,12 +74,13 @@ func PeerOptionStatus(c Peer_State) PeerOption {
 // NewPeer ...
 func NewPeer(id string, opts ...PeerOption) Peer {
 	p := Peer{
-		Name:     id,
-		Ip:       systemx.HostIP(systemx.HostnameOrLocalhost()).String(),
-		RPCPort:  2000,
-		SWIMPort: 2001,
-		RaftPort: 2002,
-		Status:   Peer_Ready,
+		Name:        id,
+		Ip:          systemx.HostIP(systemx.HostnameOrLocalhost()).String(),
+		RPCPort:     2000,
+		SWIMPort:    2001,
+		RaftPort:    2002,
+		TorrentPort: 2003,
+		Status:      Peer_Ready,
 	}
 
 	return NewPeerFromTemplate(p, opts...)

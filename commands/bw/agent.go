@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/storage"
+	"github.com/james-lawrence/bw/x/timex"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -123,19 +124,22 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	cx := cluster.New(local, c)
 	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {
 		var (
-			tc storage.TorrentConfig
+			tc  storage.TorrentConfig
+			tcu storage.TorrentUtil
 		)
 
 		opts := []storage.TorrentOption{
 			storage.TorrentOptionBind(t.config.TorrentBind),
 			storage.TorrentOptionDHTPeers(cx),
-			storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirDeploys)),
+			storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirTorrents)),
 		}
 
 		if tc, err = storage.NewTorrent(opts...); err != nil {
 			return err
 		}
 
+		go timex.Every(time.Minute, func() { tcu.ClearTorrents(tc) })
+		go timex.Every(time.Minute, func() { tcu.PrintTorrentInfo(tc) })
 		upload, download = tc.Uploader(), tc.Downloader()
 	}
 

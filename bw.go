@@ -20,6 +20,8 @@ const (
 	DirRaft = "raft"
 	// DirPlugins the name of the directory dealing with plugins for the agent.
 	DirPlugins = "plugins"
+	// DirTorrents the name of the directory for storing torrent information.
+	DirTorrents = "torrents"
 )
 
 // RandomID a random identifier.

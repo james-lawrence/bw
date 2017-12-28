@@ -17,7 +17,7 @@ const (
 )
 
 type cluster interface {
-	Peers() []agent.Peer
+	Quorum() []agent.Peer
 	Local() agent.Peer
 }
 

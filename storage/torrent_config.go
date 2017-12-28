@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
 	// "math"
 
 	"github.com/anacrolix/dht"
@@ -41,7 +40,7 @@ func TorrentOptionDataDir(a string) TorrentOption {
 func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	return func(c *TorrentConfig) {
 		c.Config.DHTConfig.StartingNodes = func() (peers []dht.Addr, err error) {
-			for _, peer := range a.Peers() {
+			for _, peer := range a.Quorum() {
 				if a.Local().Name == peer.Name {
 					continue
 				}
@@ -57,6 +56,10 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 
 // NewTorrent ...
 func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
+	var (
+		util TorrentUtil
+	)
+
 	c = TorrentConfig{
 		Config: torrent.Config{
 			// Debug:           true,
@@ -75,17 +78,17 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 		return c, errors.WithStack(err)
 	}
 
+	if err = util.loadDir(c.Config.DataDir, c.client); err != nil {
+		return c, errors.WithStack(err)
+	}
+
 	mi := metainfo.MetaInfo{}
 	mi.SetDefaults()
+
 	if c.announce, err = c.client.DHT().Announce(mi.HashInfoBytes(), 0, true); err != nil {
 		return c, errors.WithStack(err)
 	}
 
-	go func() {
-		for _ = range time.Tick(30 * time.Second) {
-			c.client.DHT().WriteStatus(os.Stderr)
-		}
-	}()
 	return c, nil
 }
 
@@ -105,7 +108,7 @@ func (t TorrentConfig) Downloader() DownloadProtocol {
 }
 
 // Uploader ...
-func (t TorrentConfig) Uploader() (_ UploadProtocol) {
+func (t TorrentConfig) Uploader() UploadProtocol {
 	return torrentP{
 		config: t.Config,
 		client: t.client,
@@ -115,7 +118,7 @@ func (t TorrentConfig) Uploader() (_ UploadProtocol) {
 type torrentP struct {
 	config torrent.Config
 	client *torrent.Client
-	util   torrentUtil
+	util   TorrentUtil
 }
 
 func (t torrentP) Protocol() string {
@@ -137,9 +140,9 @@ func (t torrentP) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 	)
 
 	id := bw.RandomID(uid)
-	fpath := t.util.FilePath(t.config.DataDir, id.String())
+	fpath := t.util.filePath(t.config.DataDir, id.String())
 
-	if dst, err = t.util.CreateFile(fpath); err != nil {
+	if dst, err = t.util.createFile(fpath); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
