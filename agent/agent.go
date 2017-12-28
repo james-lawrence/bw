@@ -1,9 +1,13 @@
 package agent
 
 import (
+	"context"
 	"hash"
 	"io"
+	"log"
+	"time"
 
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/clustering"
 
 	"google.golang.org/grpc/credentials"
@@ -57,6 +61,30 @@ type connect struct {
 		Bootstrap []clustering.BootstrapOption
 		Snapshot  []clustering.SnapshotOption
 	}
+}
+
+// ConnectClientUntilSuccess continuously tries to make a connection until successful.
+func ConnectClientUntilSuccess(ctx context.Context, delay backoff.Strategy, config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+	for i := 0; true; i++ {
+		if creds, cl, c, err = ConnectClient(config, options...); err == nil {
+			break
+		}
+
+		// cleanup any resources that where created.
+		cl.Close()
+		c.Shutdown()
+
+		select {
+		case <-ctx.Done():
+			return creds, cl, c, ctx.Err()
+		default:
+		}
+
+		log.Println("failed to connect to cluster", err)
+		time.Sleep(delay.Backoff(i))
+	}
+
+	return creds, cl, c, err
 }
 
 // ConnectClient ...

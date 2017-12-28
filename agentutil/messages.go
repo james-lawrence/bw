@@ -30,6 +30,20 @@ func LogEvent(p agent.Peer, s string) agent.Message {
 	}
 }
 
+// LogError create a log event message from an error.
+func LogError(p agent.Peer, s error) agent.Message {
+	return agent.Message{
+		Type: agent.Message_LogEvent,
+		Peer: &p,
+		Ts:   time.Now().Unix(),
+		Event: &agent.Message_Log{
+			Log: &agent.Log{
+				Log: s.Error(),
+			},
+		},
+	}
+}
+
 // PeerEvent ...
 func PeerEvent(p agent.Peer) agent.Message {
 	return agent.Message{

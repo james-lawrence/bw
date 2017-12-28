@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -15,11 +16,11 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/ux"
-	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
@@ -122,7 +123,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		),
 	}
 
-	if _, client, c, err = agent.ConnectClient(config, coptions...); err != nil {
+	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, backoff.Constant(time.Second), config, coptions...); err != nil {
 		return err
 	}
 
@@ -134,24 +135,25 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}()
 
 	log.Println("connected to cluster")
-	debugx.Printf("configuration:\n%#v\n", config)
 
 	events := make(chan agent.Message, 100)
+
+	t.initializeUX(t.uxmode, events)
+
 	go func() {
 		if watcherr := client.Watch(events); watcherr != nil {
-			events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("event watch failed: %v", watcherr))
+			events <- agentutil.LogError(local.Peer, errors.Wrap(watcherr, "events connection lost"))
 		}
 		<-t.global.ctx.Done()
 		close(events)
 	}()
 
-	t.initializeUX(t.uxmode, events)
-
 	events <- agentutil.LogEvent(local.Peer, "uploading archive")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
-		log.Println("failed to build archive file", err)
-		return err
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		return nil
 	}
 	defer os.Remove(dst.Name())
 	defer dst.Close()
@@ -161,15 +163,21 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}
 
 	if dstinfo, err = dst.Stat(); err != nil {
-		return errors.WithStack(err)
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		return nil
 	}
 
 	if _, err = dst.Seek(0, io.SeekStart); err != nil {
-		return errors.WithStack(err)
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		return nil
 	}
 
 	if info, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
-		return err
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		return nil
 	}
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location))
@@ -184,7 +192,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 		}
 
-		log.Println("deployment complete")
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
 	}()
 
 	return err

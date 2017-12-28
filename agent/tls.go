@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
-	"log"
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
@@ -70,11 +69,6 @@ func (t Config) BuildServer() (creds *tls.Config, err error) {
 		return creds, errors.New("failed to append client certs")
 	}
 
-	log.Println("loading client cert", t.Cert)
-	log.Println("loading client key", t.Key)
-	log.Println("loading authority cert", t.CA)
-	log.Println("using server name", t.ServerName)
-
 	creds = &tls.Config{
 		ServerName:   t.ServerName,
 		ClientAuth:   tls.RequireAndVerifyClientCert,
@@ -93,10 +87,6 @@ func (t ConfigClient) BuildClient() (creds *tls.Config, err error) {
 		ca   []byte
 	)
 
-	log.Println("loading client cert", t.Cert)
-	log.Println("loading client key", t.Key)
-	log.Println("loading authority cert", t.CA)
-	log.Println("using server name", t.ServerName)
 	if cert, err = tls.LoadX509KeyPair(t.Cert, t.Key); err != nil {
 		return nil, errors.WithStack(err)
 	}

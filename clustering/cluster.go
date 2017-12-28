@@ -37,6 +37,10 @@ type Cluster struct {
 
 // Leave ...
 func (t Cluster) Leave(d time.Duration) (err error) {
+	if t.list == nil {
+		return nil
+	}
+
 	if cause := t.list.Leave(d); cause != nil {
 		err = cause
 	}
@@ -93,6 +97,5 @@ func (t Cluster) LocalAddr() net.IP {
 
 // Shutdown - leaves the cluster.
 func (t Cluster) Shutdown() error {
-	t.list.Leave(3 * time.Second)
-	return t.list.Shutdown()
+	return t.Leave(3 * time.Second)
 }
