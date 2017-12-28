@@ -2,14 +2,12 @@ package storage
 
 import (
 	"io"
-	"log"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/anacrolix/torrent"
+	"github.com/anacrolix/torrent/metainfo"
 	"github.com/anacrolix/torrent/storage"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -17,6 +15,7 @@ type torrentD struct {
 	client *torrent.Client
 	dir    string
 	magnet string
+	util   torrentUtil
 }
 
 func (t torrentD) Download() io.ReadCloser {
@@ -25,9 +24,18 @@ func (t torrentD) Download() io.ReadCloser {
 		newt bool
 		dst  *os.File
 		tt   *torrent.Torrent
-		spec *torrent.TorrentSpec
+		m    metainfo.Magnet
 	)
 
+	if m, err = metainfo.ParseMagnetURI(t.magnet); err != nil {
+		return newErrReader(errors.WithStack(err))
+	}
+
+	if dst, err = t.util.CreateTorrent(t.dir, m.DisplayName); err != nil {
+		return newErrReader(errors.WithStack(err))
+	}
+
+	fpath := t.util.Dir(t.dir, m.DisplayName)
 	peers := make([]torrent.Peer, 0, t.client.DHT().NumNodes())
 	for _, n := range t.client.DHT().Nodes() {
 		peers = append(peers, torrent.Peer{
@@ -37,36 +45,19 @@ func (t torrentD) Download() io.ReadCloser {
 		})
 	}
 
-	if spec, err = torrent.TorrentSpecFromMagnetURI(t.magnet); err != nil {
-		return newErrReader(errors.WithStack(err))
-	}
-	fpath := filepath.Join(t.dir, spec.DisplayName, ".torrent")
-	spec.Storage = storage.NewFile(fpath)
-
-	if tt, newt, err = t.client.AddTorrentSpec(spec); err != nil {
-		return newErrReader(errors.WithStack(err))
-	} else if newt {
-		timeout := time.After(30 * time.Second)
+	if tt, newt = t.client.AddTorrentInfoHashWithStorage(m.InfoHash, storage.NewFile(fpath)); newt {
 		select {
 		case <-tt.GotInfo():
-		case <-timeout:
+		case <-time.After(30 * time.Second):
 			return newErrReader(errors.New("timed out waiting for torrent info"))
 		}
-
-		log.Println("KNOWN PEERS", spew.Sdump(peers))
-		tt.AddPeers(peers)
+		t.client.DHT().Announce(m.InfoHash, 0, true)
 	}
 
-	info := tt.Info()
-	log.Println("DOWNLOADING", fpath, info.Length)
+	tt.AddPeers(peers)
 	tt.DownloadAll()
-	t.client.DHT().Announce(tt.InfoHash(), 0, true)
 
-	if dst, err = torrentDestination(filepath.Join(t.dir, info.Name, ".torrent", info.Name)); err != nil {
-		return newErrReader(errors.WithStack(err))
-	}
-
-	t.client.DHT().Announce(tt.InfoHash(), 0, true)
+	// TODO: see about removing the tee reader. does the torrent do the proper thing with file storage.
 	return newTeeReader(tt.NewReader(), dst)
 }
 
@@ -85,12 +76,9 @@ type teeReader struct {
 }
 
 func (t *teeReader) Read(p []byte) (n int, err error) {
-	log.Println("TRYING TO READ FILE")
-	// ctx := context.WithTimeout(context.Background(), 5*time.Second)
 	n, err = t.r.Read(p)
-	log.Println("READ FILE BYTES", n, err)
 	if n > 0 {
-		if n, err := t.w.Write(p[:n]); err != nil {
+		if n, err = t.w.Write(p[:n]); err != nil {
 			return n, err
 		}
 	}

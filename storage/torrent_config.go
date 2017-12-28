@@ -5,7 +5,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"time"
 	// "math"
 
@@ -63,15 +62,8 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 			// Debug:           true,
 			Seed:            true,
 			DisableTrackers: true,
-			DHTConfig:       dht.ServerConfig{
-			// OnQuery: func(query *krpc.Msg, source net.Addr) (bool) {
-			// 	log.Println("QUERY",source.String(), spew.Sdump(query))
-			// 	return true
-			// },
-			// OnAnnouncePeer: func(infoHash metainfo.Hash, peer dht.Peer) {
-			// 	log.Println("received announce", peer.String(), infoHash.String())
-			// },
-			},
+			DHTConfig:       dht.ServerConfig{},
+			// DHTConfig: torrentUtil{}.debugDHT(),
 		},
 	}
 
@@ -123,6 +115,7 @@ func (t TorrentConfig) Uploader() (_ Protocol) {
 type torrentP struct {
 	config torrent.Config
 	client *torrent.Client
+	util   torrentUtil
 }
 
 func (t torrentP) Protocol() string {
@@ -144,8 +137,9 @@ func (t torrentP) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 	)
 
 	id := bw.RandomID(uid)
+	fpath := t.util.FilePath(t.config.DataDir, id.String())
 
-	if dst, err = torrentDestination(filepath.Join(t.config.DataDir, id.String(), ".torrent", id.String())); err != nil {
+	if dst, err = t.util.CreateFile(fpath); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
@@ -155,21 +149,4 @@ func (t torrentP) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
 		dst:    dst,
 		client: t.client,
 	}, nil
-}
-
-func torrentDestination(path string) (*os.File, error) {
-	var (
-		err error
-		dst *os.File
-	)
-
-	if err = os.MkdirAll(filepath.Join(filepath.Dir(path)), 0755); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if dst, err = os.Create(path); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return dst, err
 }
