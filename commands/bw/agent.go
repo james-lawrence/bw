@@ -52,12 +52,12 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) agent.ServerOption) error {
 	var (
-		err    error
-		c      clustering.Cluster
-		creds  *tls.Config
-		secret []byte
-		p      raftutil.Protocol
-		upload storage.Protocol
+		err      error
+		c        clustering.Cluster
+		creds    *tls.Config
+		secret   []byte
+		p        raftutil.Protocol
+		upload   storage.UploadProtocol
 		download storage.DownloadProtocol
 	)
 
@@ -143,7 +143,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx, dispatcher),
-		quorum.OptionUpload(upload),
+		upload,
 		quorum.OptionCredentials(tlscreds),
 	)
 	go (&q).Observe(p, make(chan raft.Observation, 200))

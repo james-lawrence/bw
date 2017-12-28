@@ -193,13 +193,6 @@ func (t *proxyDispatch) close() {
 // Option option for the quorum rpc.
 type Option func(*Quorum)
 
-// OptionUpload set the upload storage protocol.
-func OptionUpload(proto storage.Protocol) Option {
-	return func(q *Quorum) {
-		q.uploads = proto
-	}
-}
-
 // OptionCredentials set the dial credentials options for the agent.
 // when the credentials are nil then insecure connections are used.
 func OptionCredentials(c credentials.TransportCredentials) Option {
@@ -238,22 +231,18 @@ func disabledRaftProxy() RaftProxy {
 }
 
 // New new quorum instance based on the options.
-func New(c cluster, d deploy, options ...Option) Quorum {
+func New(c cluster, d deploy, upload storage.UploadProtocol, options ...Option) Quorum {
 	sm := NewStateMachine()
 	r := Quorum{
 		stateMachine: sm,
-		uploads: storage.ProtocolFunc(
-			func(uid []byte, _ uint64) (storage.Uploader, error) {
-				return storage.NewTempFileUploader()
-			},
-		),
-		creds:     grpc.WithInsecure(),
-		m:         &sync.Mutex{},
-		proxy:     disabledRaftProxy(),
-		pdispatch: &proxyDispatch{o: &sync.Once{}},
-		ldispatch: stateMachineDispatch{sm: sm},
-		deploy:    d,
-		c:         c,
+		uploads:      upload,
+		creds:        grpc.WithInsecure(),
+		m:            &sync.Mutex{},
+		proxy:        disabledRaftProxy(),
+		pdispatch:    &proxyDispatch{o: &sync.Once{}},
+		ldispatch:    stateMachineDispatch{sm: sm},
+		deploy:       d,
+		c:            c,
 	}
 
 	for _, opt := range options {
@@ -266,7 +255,7 @@ func New(c cluster, d deploy, options ...Option) Quorum {
 // Quorum implements quorum functionality.
 type Quorum struct {
 	stateMachine *StateMachine
-	uploads      storage.Protocol
+	uploads      storage.UploadProtocol
 	m            *sync.Mutex
 	c            cluster
 	creds        grpc.DialOption

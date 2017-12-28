@@ -2,6 +2,7 @@ package quorum_test
 
 import (
 	"context"
+	"errors"
 	"net"
 	"sync"
 
@@ -13,6 +14,7 @@ import (
 	. "github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agenttestutil"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/storage"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -63,6 +65,7 @@ func buildNode(p agent.Peer, deployer *mockdeploy) (wg *sync.WaitGroup, cancel c
 	quorum := New(
 		c,
 		deployer,
+		storage.NewErrUploadProtocol(errors.New("upload protocol not specified")),
 		OptionRaftProxy(NewRaftProxy(agent.RaftAddress(p), raft.Leader, nil)),
 	)
 

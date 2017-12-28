@@ -16,20 +16,12 @@ import (
 )
 
 type uploadConfig interface {
-	Uploader() (Protocol, error)
+	Uploader() (UploadProtocol, error)
 }
 
-// Protocol builds io.WriteCloser given the expected size of the upload.
-type Protocol interface {
+// UploadProtocol builds io.WriteCloser given the expected size of the upload.
+type UploadProtocol interface {
 	NewUpload(uid []byte, bytes uint64) (Uploader, error)
-}
-
-// ProtocolFunc - pure function protocol
-type ProtocolFunc func(uid []byte, bytes uint64) (Uploader, error)
-
-// NewUpload - implements Protocol
-func (t ProtocolFunc) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
-	return t(uid, bytes)
 }
 
 // Uploader upload a file using the underlying protocol.
@@ -45,12 +37,12 @@ type Uploader interface {
 
 // LoadUploadProtocol loads protocols based on well known files
 // in the provided directory. if none are found it returns nil.
-func LoadUploadProtocol(dir string) (p Protocol) {
+func LoadUploadProtocol(dir string) (p UploadProtocol) {
 	var (
 		err error
 	)
 
-	if p, err = uploadProtocolFromFile(filepath.Join(dir, "s3.storage"), defaultS3Config); err != nil {
+	if p, err = uploadFromFile(filepath.Join(dir, "s3.storage"), defaultS3Config); err != nil {
 		log.Println("failed to load s3 configuration", err)
 	} else {
 		return p
@@ -59,7 +51,7 @@ func LoadUploadProtocol(dir string) (p Protocol) {
 	return nil
 }
 
-func uploadProtocolFromFile(path string, p uploadConfig) (_ Protocol, err error) {
+func uploadFromFile(path string, p uploadConfig) (_ UploadProtocol, err error) {
 	var (
 		b []byte
 	)
@@ -75,27 +67,14 @@ func uploadProtocolFromFile(path string, p uploadConfig) (_ Protocol, err error)
 	return p.Uploader()
 }
 
-// // ProtocolFromConfig builds an upload protocol from a configuration.
-// func ProtocolFromConfig(protocol string, serialized []byte) (_ Protocol, err error) {
-// 	switch protocol {
-// 	case fileProtocol:
-// 		var p Local
-// 		return newProtocolFromConfig(serialized, &p)
-// 	case s3Protocol:
-// 		return newS3PFromConfig(serialized)
-// 	case tmpProtocol:
-// 		fallthrough
-// 	default:
-// 		return ProtocolFunc(
-// 			func(uid []byte, _ uint64) (Uploader, error) {
-// 				return NewTempFileUploader()
-// 			},
-// 		), nil
-// 	}
-// }
-
-func newProtocolFromConfig(serialized []byte, v Protocol) (_ Protocol, err error) {
+func newProtocolFromConfig(serialized []byte, v UploadProtocol) (_ UploadProtocol, err error) {
 	return v, errors.WithStack(yaml.Unmarshal(serialized, v))
+}
+
+// NewNoopUpload utility helper for returning a uploader that does nothing but
+// return the specified error.
+func NewNoopUpload(err error) Uploader {
+	return errUploader{err: err}
 }
 
 type errUploader struct {
@@ -112,6 +91,19 @@ func (t errUploader) Upload(io.Reader) (hash.Hash, error) {
 // file, the string uri of its location or an error.
 func (t errUploader) Info() (hash.Hash, string, error) {
 	return nil, "", t.err
+}
+
+// NewErrUploadProtocol upload protocol builder that returns an error
+func NewErrUploadProtocol(err error) UploadProtocol {
+	return errUploadProtocol{err: err}
+}
+
+type errUploadProtocol struct {
+	err error
+}
+
+func (t errUploadProtocol) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
+	return nil, t.err
 }
 
 func upload(src io.Reader, sha hash.Hash, dst io.Writer) (hash.Hash, error) {

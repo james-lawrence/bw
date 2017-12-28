@@ -105,7 +105,7 @@ func (t TorrentConfig) Downloader() DownloadProtocol {
 }
 
 // Uploader ...
-func (t TorrentConfig) Uploader() (_ Protocol) {
+func (t TorrentConfig) Uploader() (_ UploadProtocol) {
 	return torrentP{
 		config: t.Config,
 		client: t.client,

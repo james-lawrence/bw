@@ -41,7 +41,7 @@ func (t s3Config) Downloader() (DownloadProtocol, error) {
 	return ProtocolS3{S3: s3.New(s)}, nil
 }
 
-func (t s3Config) Uploader() (_ Protocol, err error) {
+func (t s3Config) Uploader() (_ UploadProtocol, err error) {
 	var (
 		s    *session.Session
 		sopt session.Options
