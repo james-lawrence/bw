@@ -4,10 +4,8 @@ import (
 	"context"
 	"hash"
 	"io"
-	"log"
 	"time"
 
-	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/clustering"
 
 	"google.golang.org/grpc/credentials"
@@ -64,7 +62,10 @@ type connect struct {
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
-func ConnectClientUntilSuccess(ctx context.Context, delay backoff.Strategy, config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+func ConnectClientUntilSuccess(
+	ctx context.Context,
+	config ConfigClient, onRetry func(error), options ...ConnectOption,
+) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
 	for i := 0; true; i++ {
 		if creds, cl, c, err = ConnectClient(config, options...); err == nil {
 			break
@@ -80,8 +81,8 @@ func ConnectClientUntilSuccess(ctx context.Context, delay backoff.Strategy, conf
 		default:
 		}
 
-		log.Println("failed to connect to cluster", err)
-		time.Sleep(delay.Backoff(i))
+		onRetry(err)
+		time.Sleep(250 * time.Millisecond)
 	}
 
 	return creds, cl, c, err

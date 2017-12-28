@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"regexp"
-	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -16,7 +15,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
-	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/deployment"
@@ -123,22 +121,24 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		),
 	}
 
-	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, backoff.Constant(time.Second), config, coptions...); err != nil {
-		return err
+	events := make(chan agent.Message, 100)
+	t.initializeUX(t.uxmode, events)
+
+	logRetryError := func(err error) {
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "connection to cluster failed"))
 	}
 
+	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
 		if err = client.Close(); err != nil {
-			log.Println("failed to close client")
+			log.Println("failed to close client", err)
 		}
 	}()
-
-	log.Println("connected to cluster")
-
-	events := make(chan agent.Message, 100)
-
-	t.initializeUX(t.uxmode, events)
 
 	go func() {
 		if watcherr := client.Watch(events); watcherr != nil {
