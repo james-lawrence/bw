@@ -28,7 +28,11 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 
 func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.Dialer, snap peering.File) (clustering.Cluster, error) {
 	clipeers := peering.NewStaticTCP(t.bootstrap...)
-	return commandutils.ClusterJoin(ctx, conf, d, clipeers, snap)
+	dnspeers := peering.DNS{
+		Hosts: []string{t.config.ServerName},
+		Port:  t.config.SWIMBind.Port,
+	}
+	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, snap)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
