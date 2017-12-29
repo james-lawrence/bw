@@ -201,6 +201,10 @@ func NewConfig(options ...ConfigOption) Config {
 		SnapshotFrequency: time.Hour,
 		MinimumNodes:      3,
 		BootstrapAttempts: math.MaxInt32,
+		DNSBind: dnsBind{
+			TTL:       60,
+			Frequency: time.Hour,
+		},
 	}
 
 	newTLSAgent(DefaultTLSCredentialsRoot, "")(&c)
@@ -291,10 +295,16 @@ type Config struct {
 	CA                string
 	ServerName        string
 	TorrentBind       *net.TCPAddr
+	DNSBind           dnsBind  `yaml:"dnsBind"`
 	DNSBootstrap      []string `yaml:"dnsBootstrap"`
 	AWSBootstrap      struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
+}
+
+type dnsBind struct {
+	TTL       uint32 // TTL for the generated records.
+	Frequency time.Duration
 }
 
 // Peer - builds the Peer information from the configuration. by default

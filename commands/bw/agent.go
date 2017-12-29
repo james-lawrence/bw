@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
+	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/timex"
 
@@ -97,20 +98,20 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		Timeout: 3 * time.Second,
 	})
 
-	options := []clustering.Option{
+	cdialer := commandutils.NewClusterDialer(
+		t.config,
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 		clustering.OptionEventDelegate(&p),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-	}
-
+	)
 	fssnapshot := peering.File{
 		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
 	}
 
-	if c, err = t.global.cluster.Join(t.global.ctx, t.config, fssnapshot, options...); err != nil {
+	if c, err = t.global.cluster.Join(t.global.ctx, t.config, cdialer, fssnapshot); err != nil {
 		return errors.Wrap(err, "failed to join cluster")
 	}
 

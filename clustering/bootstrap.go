@@ -73,7 +73,7 @@ func BootstrapOptionAllowRetry(s allowRetry) BootstrapOption {
 }
 
 // BootstrapOptionPeeringStrategies - set the strategies for peering.
-func BootstrapOptionPeeringStrategies(p ...peering) BootstrapOption {
+func BootstrapOptionPeeringStrategies(p ...Source) BootstrapOption {
 	return func(b *bootstrap) {
 		b.Peering = p
 	}
@@ -90,7 +90,7 @@ type bootstrap struct {
 	Backoff      backoff
 	AllowRetry   allowRetry
 	JoinStrategy joinStrategy
-	Peering      []peering
+	Peering      []Source
 }
 
 func newBootstrap(options ...BootstrapOption) bootstrap {

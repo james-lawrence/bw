@@ -5,11 +5,9 @@ import (
 	"log"
 	"net"
 	"os"
-	"path/filepath"
 	"sync"
 	"syscall"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/commands"
 	"github.com/james-lawrence/bw/x/debugx"
@@ -92,10 +90,4 @@ func main() {
 	}
 
 	global.cleanup.Wait()
-}
-
-func loadConfiguration(environment string) (agent.ConfigClient, error) {
-	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
-	log.Println("loading configuration", path)
-	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }

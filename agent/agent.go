@@ -125,8 +125,3 @@ type Uploader interface {
 	Upload(io.Reader) (hash.Hash, error)
 	Info() (hash.Hash, string, error)
 }
-
-// Eventer ...
-type Eventer interface {
-	Send(...Message)
-}

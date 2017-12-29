@@ -69,7 +69,7 @@
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elbv2","service/s3","service/s3/s3iface","service/s3/s3manager","service/sts"]
+  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elbv2","service/route53","service/s3","service/s3/s3iface","service/s3/s3manager","service/sts"]
   revision = "82ad808f2307df0776c038bfd7ea85440a35c02e"
   version = "v1.12.53"
 
@@ -387,6 +387,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e46a37e389ac5cfa617b5990cf52d58c204e3121d28011ff82dccfc4e3aa6048"
+  inputs-digest = "3d717b29f62591751414de469e91f0040dd022652588896ab9067d04e8e24876"
   solver-name = "gps-cdcl"
   solver-version = 1

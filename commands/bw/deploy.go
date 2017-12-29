@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
@@ -97,7 +98,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		info    agent.Archive
 	)
 
-	if config, err = loadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
 
@@ -106,7 +107,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
-		newClientPeer(),
+		commandutils.NewClientPeer(),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 

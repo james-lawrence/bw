@@ -3,16 +3,14 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"log"
 	"net"
 
+	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-
-	"github.com/alecthomas/kingpin"
+	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/pkg/errors"
 )
 
@@ -28,52 +26,9 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.config.RaftBind.String()).TCPVar(&t.config.RaftBind)
 }
 
-func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, snap peering.File, options ...clustering.Option) (clustering.Cluster, error) {
-	type peers interface {
-		Peers() ([]string, error)
-	}
-
-	var (
-		err error
-		c   clustering.Cluster
-	)
-
-	log.Println("connecting to cluster")
-	defer log.Println("connection to cluster complete")
-
-	defaults := []clustering.Option{
-		clustering.OptionBindAddress(conf.SWIMBind.IP.String()),
-		clustering.OptionBindPort(conf.SWIMBind.Port),
-		clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
-		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-	}
-
-	options = append(defaults, options...)
-	if c, err = clustering.NewOptions(options...).NewCluster(); err != nil {
-		return c, errors.Wrap(err, "failed to join cluster")
-	}
-
+func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.Dialer, snap peering.File) (clustering.Cluster, error) {
 	clipeers := peering.NewStaticTCP(t.bootstrap...)
-	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
-	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.BootstrapAttempts))
-	peerings := clustering.BootstrapOptionPeeringStrategies(
-		clipeers,
-		snap,
-		peering.DNS{
-			Port:  conf.SWIMBind.Port,
-			Hosts: conf.DNSBootstrap,
-		},
-		peering.AWSAutoscaling{
-			Port:               conf.SWIMBind.Port,
-			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
-		},
-	)
-
-	if err = clustering.Bootstrap(ctx, c, peerings, joins, attempts); err != nil {
-		return c, errors.Wrap(err, "failed to bootstrap cluster")
-	}
-
-	return c, nil
+	return commandutils.ClusterJoin(ctx, conf, d, clipeers, snap)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {

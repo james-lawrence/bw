@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -47,12 +48,12 @@ func (t *agentInfo) _info() (err error) {
 	)
 	defer t.global.shutdown()
 
-	if config, err = loadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
 
 	local := cluster.NewLocal(
-		newClientPeer(),
+		commandutils.NewClientPeer(),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 

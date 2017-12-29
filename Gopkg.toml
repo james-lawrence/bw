@@ -85,3 +85,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/anacrolix/torrent"
+
+[[constraint]]
+  name = "github.com/miekg/dns"
+  version = "1.0.1"

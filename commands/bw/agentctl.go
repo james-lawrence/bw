@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/systemx"
@@ -75,7 +76,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		creds  credentials.TransportCredentials
 	)
 
-	if config, err = loadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
 

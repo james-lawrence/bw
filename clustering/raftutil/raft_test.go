@@ -104,6 +104,7 @@ var _ = Describe("Raft", func() {
 
 			log.Println("peers1", clustering.Peers(c1))
 			Expect(clustering.Bootstrap(
+				context.Background(),
 				c2,
 				clustering.BootstrapOptionPeeringStrategies(
 					peering.NewStatic(clustering.Peers(c1)...),
@@ -112,6 +113,7 @@ var _ = Describe("Raft", func() {
 
 			log.Println("peers2", clustering.Peers(c1))
 			Expect(clustering.Bootstrap(
+				context.Background(),
 				c3,
 				clustering.BootstrapOptionPeeringStrategies(
 					peering.NewStatic(clustering.Peers(c1)...),
@@ -134,6 +136,7 @@ var _ = Describe("Raft", func() {
 				cancel1, c1, r1, err = newLocalNode(lp1)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(clustering.Bootstrap(
+					context.Background(),
 					c1,
 					clustering.BootstrapOptionPeeringStrategies(
 						peering.NewStatic(clustering.Peers(c2)...),

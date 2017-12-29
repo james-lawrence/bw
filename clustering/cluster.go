@@ -23,9 +23,9 @@ type snapshotter interface {
 	Snapshot([]string) error
 }
 
-// peering is used to pull peers from various sources, typically from a snapshot.
+// Source is used to pull peers from various sources, typically from a snapshot.
 // used when bootstraping a cluster.
-type peering interface {
+type Source interface {
 	Peers() ([]string, error)
 }
 
