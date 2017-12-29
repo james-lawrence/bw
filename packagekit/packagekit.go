@@ -68,6 +68,9 @@ type Transaction interface {
 	//   err := tx.Packages("installed;~devel")
 	Packages(filter PackageFilter) ([]Package, error)
 
+	// Resolve a list of packages into their ids.
+	Resolve(filter PackageFilter, packageIDs ...string) ([]Package, error)
+
 	// Installs a list of packages
 	//
 	// packageIDs - array of package identifiers describing what packages to install.
@@ -76,7 +79,7 @@ type Transaction interface {
 	// example: htop;;;
 	// example: htop;2.0.2-1;;
 	// example: htop;2.0.2-1;x86_64;
-	InstallPackages(packageIDs ...string) error
+	InstallPackages(options TransactionFlag, packageIDs ...string) error
 
 	// InstallLocalFile(paths ...string) error
 
@@ -96,6 +99,7 @@ const methodDBUSRemoveMatch = "org.freedesktop.DBus.RemoveMatch"
 // packagekit dbus methods.
 const methodTransactionDownloadPackages = "org.freedesktop.PackageKit.Transaction.DownloadPackages"
 const methodTransactionGetPackages = "org.freedesktop.PackageKit.Transaction.GetPackages"
+const methodTransactionResolve = "org.freedesktop.PackageKit.Transaction.Resolve"
 const methodTransactionCancel = "org.freedesktop.PackageKit.Transaction.Cancel"
 const methodTransactionRefreshCache = "org.freedesktop.PackageKit.Transaction.RefreshCache"
 const methodTransactionInstallPackages = "org.freedesktop.PackageKit.Transaction.InstallPackages"
@@ -121,7 +125,7 @@ func MaybeCancel(tx Transaction, err error) error {
 // Package Provides basic Information about a package.
 type Package struct {
 	ID      string
-	Info    uint32
+	Info    InfoEnum
 	Summary string
 }
 
@@ -279,7 +283,7 @@ const (
 
 // InfoEnum The enumerated types used in Package() - these have to refer to a specific
 // package action, rather than a general state
-type InfoEnum uint64
+type InfoEnum uint32
 
 // The enumerated types used in Package() - these have to refer to a specific
 // package action, rather than a general state

@@ -3,7 +3,6 @@ package directives
 import (
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/james-lawrence/bw/directives/packages"
 	"github.com/james-lawrence/bw/packagekit"
@@ -38,11 +37,19 @@ func (t PackageLoader) Build(r io.Reader) (Directive, error) {
 			c   packagekit.Client
 			tx  packagekit.Transaction
 		)
-		log.Println("--------------------- PackageKit Transaction")
+
 		if c, tx, err = packagekit.NewTransaction(); err != nil {
 			return err
 		}
 		defer c.Shutdown()
+
+		if err = packages.RefreshCache(packagekitAdapter{tx}); err != nil {
+			return err
+		}
+
+		if tx, err = c.CreateTransaction(); err != nil {
+			return err
+		}
 
 		return packages.Install(packagekitAdapter{tx}, pkgs...)
 	}), nil
@@ -52,11 +59,37 @@ type packagekitAdapter struct {
 	packagekit.Transaction
 }
 
-func (t packagekitAdapter) InstallPackages(pacs ...packages.Package) error {
+func (t packagekitAdapter) Resolve(pacs ...packages.Package) (pr []packages.Package, err error) {
+	var (
+		rpacs []packagekit.Package
+	)
+
 	spacs := make([]string, 0, len(pacs))
 	for _, pac := range pacs {
 		spacs = append(spacs, fmt.Sprintf("%s;%s;%s;%s", pac.Name, pac.Version, pac.Architecture, pac.Repository))
 	}
 
-	return t.Transaction.InstallPackages(spacs...)
+	if rpacs, err = t.Transaction.Resolve(packagekit.FilterNone, spacs...); err != nil {
+		return pr, err
+	}
+
+	for _, pkg := range rpacs {
+		var p packages.Package
+		if p, err = packages.Parse(pkg.ID); err != nil {
+			return pr, err
+		}
+		pr = append(pr, p)
+	}
+
+	return pr, err
+}
+
+func (t packagekitAdapter) InstallPackages(pacs ...packages.Package) (err error) {
+	spacs := make([]string, 0, len(pacs))
+	for _, pac := range pacs {
+		spacs = append(spacs, fmt.Sprintf("%s;%s;%s;%s", pac.Name, pac.Version, pac.Architecture, pac.Repository))
+	}
+
+	options := packagekit.TransactionFlagNone | packagekit.TransactionFlagAllowDowngrade | packagekit.TransactionFlagAllowReinstall
+	return t.Transaction.InstallPackages(options, spacs...)
 }

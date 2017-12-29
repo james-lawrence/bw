@@ -9,7 +9,7 @@ import (
 var _ = Describe("Parser", func() {
 	DescribeTable("parsing",
 		func(example string, expected Package) {
-			Expect(parse(example)).To(Equal(expected))
+			Expect(Parse(example)).To(Equal(expected))
 		},
 		Entry("example 1", `package`, Package{Name: "package"}),
 		Entry("example 2", `package;`, Package{Name: "package"}),

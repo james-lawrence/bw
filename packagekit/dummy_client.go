@@ -30,7 +30,7 @@ func FakePackageList(count int) []Package {
 	for i := 0; i < count; i++ {
 		p := Package{
 			ID:      fake.Characters(64),
-			Info:    rand.Uint32(),
+			Info:    InfoEnum(rand.Uint32()),
 			Summary: strings.Join(fake.Words(10, false), " "),
 		}
 		packages = append(packages, p)
@@ -89,8 +89,13 @@ func (t dummyTransaction) Packages(filter PackageFilter) ([]Package, error) {
 }
 
 // InstallPackages - Installs the list of packages.
-func (t dummyTransaction) InstallPackages(packageIDs ...string) error {
+func (t dummyTransaction) InstallPackages(options TransactionFlag, packageIDs ...string) error {
 	return nil
+}
+
+// Resolve
+func (t dummyTransaction) Resolve(filter PackageFilter, packageIDs ...string) ([]Package, error) {
+	return t.PackageList, nil
 }
 
 // DownloadPackages - NotImplemented

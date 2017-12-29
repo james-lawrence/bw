@@ -11,7 +11,7 @@ func NewClient() (Client, error) {
 		return nil, err
 	}
 
-	return dbusClient{systemBus: systemBus, pkgKit: systemBus.Object(pkDbusInterface, pkDbusObjectPath)}, nil
+	return conn{systemBus: systemBus, pkgKit: systemBus.Object(pkDbusInterface, pkDbusObjectPath)}, nil
 }
 
 // NewTransaction convience method for getting a transaction directly.

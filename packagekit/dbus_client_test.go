@@ -98,7 +98,7 @@ var _ = Describe("DbusClient", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				packageIDs := []string{"htop;;;"}
-				err = transaction.InstallPackages(packageIDs...)
+				err = transaction.InstallPackages(0, packageIDs...)
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})

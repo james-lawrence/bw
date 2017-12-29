@@ -1,6 +1,8 @@
 package awsx
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -43,12 +45,13 @@ func AutoscalingPeers(supplimental ...string) (peers []ec2.Instance, err error) 
 		return peers, errors.Errorf("no autoscaling instance found for: %s", ident.InstanceID)
 	}
 
-	agn := make([]string, 0, len(supplimental))
-	copy(agn, supplimental)
-
+	agn := make([]string, 0, len(supplimental)+len(iao.AutoScalingInstances))
 	for _, instance := range iao.AutoScalingInstances {
 		agn = append(agn, aws.StringValue(instance.AutoScalingGroupName))
 	}
+	log.Println("discovered groups", agn)
+	log.Println("supplimental groups", supplimental)
+	agn = append(agn, supplimental...)
 
 	dasgi := &autoscaling.DescribeAutoScalingGroupsInput{
 		AutoScalingGroupNames: aws.StringSlice(agn),

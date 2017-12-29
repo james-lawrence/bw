@@ -11,20 +11,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// dbusClient - Client configured to interact with the PackageKit api on a single
+// conn - Client configured to interact with the PackageKit api on a single
 // systemBus connection. Implements the Client interface.
-type dbusClient struct {
+type conn struct {
 	systemBus *dbus.Conn     // dbus system bus connection.
 	pkgKit    dbus.BusObject // packagekit dbus object
 }
 
-func (t dbusClient) Shutdown() error {
+func (t conn) Shutdown() error {
 	return t.systemBus.Close()
 }
 
 // CreateTransaction - Creates a PackageKit transaction on a private systemBus
 // connection.
-func (t dbusClient) CreateTransaction() (Transaction, error) {
+func (t conn) CreateTransaction() (Transaction, error) {
 	var (
 		err           error
 		transactionID dbus.ObjectPath
@@ -62,22 +62,22 @@ func (t dbusClient) CreateTransaction() (Transaction, error) {
 }
 
 // TransactionList - Not implemented.
-func (t dbusClient) TransactionList() ([]Transaction, error) {
+func (t conn) TransactionList() ([]Transaction, error) {
 	return []Transaction{}, errNotImplemented
 }
 
 // CanAuthorize - Not implemented.
-func (t dbusClient) CanAuthorize(actionID string) (uint32, error) {
+func (t conn) CanAuthorize(actionID string) (uint32, error) {
 	return 0, errNotImplemented
 }
 
 // DaemonState - Not implemented.
-func (t dbusClient) DaemonState() (string, error) {
+func (t conn) DaemonState() (string, error) {
 	return "", errNotImplemented
 }
 
 // SuggestDaemonQuit - Not implemented.
-func (t dbusClient) SuggestDaemonQuit() error {
+func (t conn) SuggestDaemonQuit() error {
 	return errNotImplemented
 }
 
@@ -142,9 +142,11 @@ func (t dbusTransaction) RefreshCache() error {
 	var (
 		err error
 	)
+
 	pathRule := "path=" + string(t.transaction.Path())
 	signals := []string{
 		transactionSignal(pathRule),
+		propertiesSignal(pathRule),
 	}
 
 	// Listen for signals
@@ -165,14 +167,62 @@ func (t dbusTransaction) RefreshCache() error {
 	return err
 }
 
+// Resolve - resolves packages into their ids
+func (t dbusTransaction) Resolve(filter PackageFilter, packageIDs ...string) (packages []Package, err error) {
+	pathRule := "path=" + string(t.transaction.Path())
+	signals := []string{
+		transactionSignal(pathRule),
+		propertiesSignal(pathRule),
+	}
+
+	// Listen for signals
+	for _, signal := range signals {
+		if err = t.listenFor(signal); err != nil {
+			return packages, err
+		}
+		defer t.stopListeningFor(signal)
+	}
+
+	flags := dbus.Flags(0)
+	if err = t.transaction.Call(methodTransactionResolve, flags, filter, packageIDs).Store(); err != nil {
+		return packages, errors.Wrap(err, "failed to resolve packages")
+	}
+
+	packages = make([]Package, 0, len(packageIDs))
+	for {
+		var (
+			event *dbus.Signal
+		)
+
+		if event, err = awaitEvent(10*time.Second, t.signalChan); err != nil {
+			return packages, err
+		}
+
+		switch event.Name {
+		case signalTransactionPackage:
+			info, id, summary := handlePackage(event)
+			packages = append(packages, Package{
+				ID:      id,
+				Info:    info,
+				Summary: summary,
+			})
+		case signalTransactionFinished:
+			return packages, err
+		}
+	}
+
+	return packages, err
+}
+
 // InstallPackages - Installs a list of Packages.
-func (t dbusTransaction) InstallPackages(packageIDs ...string) error {
+func (t dbusTransaction) InstallPackages(options TransactionFlag, packageIDs ...string) error {
 	var (
 		err error
 	)
 	pathRule := "path=" + string(t.transaction.Path())
 	signals := []string{
 		transactionSignal(pathRule),
+		propertiesSignal(pathRule),
 	}
 
 	// Listen for signals
@@ -184,8 +234,7 @@ func (t dbusTransaction) InstallPackages(packageIDs ...string) error {
 	}
 
 	flags := dbus.Flags(0)
-	transactionFlags := TransactionFlag(TransactionFlagNone | TransactionFlagAllowDowngrade)
-	if err = t.transaction.Call(methodTransactionInstallPackages, flags, transactionFlags, packageIDs).Store(); err != nil {
+	if err = t.transaction.Call(methodTransactionInstallPackages, flags, options, packageIDs).Store(); err != nil {
 		return errors.Wrap(err, "failed to install packages")
 	}
 
@@ -273,7 +322,7 @@ func awaitEvent(timeout time.Duration, c chan *dbus.Signal) (*dbus.Signal, error
 }
 
 func propertiesSignal(rules ...string) string {
-	return fmt.Sprintf("type='signal',interface='%s',%s", "org.freedesktop.DBus.Properties", strings.Join(rules, ","))
+	return fmt.Sprintf("type='signal',interface='org.freedesktop.DBus.Properties',%s", strings.Join(rules, ","))
 }
 
 func transactionSignal(rules ...string) string {

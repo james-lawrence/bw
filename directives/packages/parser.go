@@ -8,7 +8,7 @@ type parseResult interface {
 	Result() (Package, error)
 }
 
-func parse(s string) (Package, error) {
+func Parse(s string) (Package, error) {
 	p := &parser{
 		lexer: lex(s),
 		state: nameFn,

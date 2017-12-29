@@ -39,7 +39,7 @@ func ParseYAML(r io.Reader) ([]Package, error) {
 
 	results = make([]Package, 0, len(decoded))
 	for _, pkg := range decoded {
-		if p, err := parse(pkg); err == nil {
+		if p, err := Parse(pkg); err == nil {
 			results = append(results, p)
 		} else {
 			return results, errors.Wrapf(err, "failed to parse package directive: %s", pkg)
@@ -53,11 +53,46 @@ type transaction interface {
 	// Cancel this transaction.
 	Cancel() error
 
+	// Resolve a set of packages
+	Resolve(pkgs ...Package) ([]Package, error)
+
 	// Installs a set of packages
 	InstallPackages(pkgs ...Package) error
 
 	// RefreshCache refreshes the package cache.
 	RefreshCache() error
+}
+
+// RefreshCache ...
+func RefreshCache(tx transaction) (err error) {
+	log.Println("------------------- refreshing cache")
+	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
+		goto done
+	}
+
+done:
+	return maybeCancel(tx, err)
+}
+
+// Resolve ...
+func Resolve(tx transaction, pacs ...Package) (pset []Package, err error) {
+	if len(pacs) == 0 {
+		return pset, tx.Cancel()
+	}
+
+	log.Println("------------------- refreshing cache")
+	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
+		goto done
+	}
+
+	log.Println("------------------- resolving packages")
+	if pset, err = tx.Resolve(pacs...); err != nil {
+		err = errors.Wrap(err, "tx.Resolve failed")
+		goto done
+	}
+
+done:
+	return pset, maybeCancel(tx, err)
 }
 
 // Install installs the provided packages.
@@ -68,11 +103,6 @@ func Install(tx transaction, pacs ...Package) error {
 
 	if len(pacs) == 0 {
 		return tx.Cancel()
-	}
-
-	log.Println("------------------- refreshing cache")
-	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
-		goto done
 	}
 
 	log.Println("------------------- installing packages")
