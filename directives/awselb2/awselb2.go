@@ -1,8 +1,14 @@
-// Package awselb2 requires the following permissions in aws:
+// Package awselb2 is used to attach and detach instances from elastic load balancers.
+// requires the following permissions in aws:
 // autoscaling:DescribeAutoScalingInstances
+// elasticloadbalancing:DescribeLoadBalancers
+// elasticloadbalancing:DeregisterInstancesFromLoadBalancer
+// elasticloadbalancing:RegisterInstancesWithLoadBalancer
 package awselb2
 
 import (
+	"log"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -74,14 +80,17 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 		iao      *autoscaling.DescribeAutoScalingInstancesOutput
 		instance *autoscaling.InstanceDetails
 		asg      *autoscaling.DescribeAutoScalingGroupsOutput
-		group    *autoscaling.Group
 	)
 
-	if ident, err = ec2metadata.New(sess, aws.NewConfig().WithRegion(ident.Region)).GetInstanceIdentityDocument(); err != nil {
+	if ident, err = ec2metadata.New(sess, aws.NewConfig()).GetInstanceIdentityDocument(); err != nil {
 		return lbs, errors.WithStack(err)
 	}
 
-	asgs = autoscaling.New(sess, aws.NewConfig().WithRegion(ident.Region))
+	sess = sess.Copy(&aws.Config{
+		Region: aws.String(ident.Region),
+	})
+
+	asgs = autoscaling.New(sess)
 
 	if iao, err = asgs.DescribeAutoScalingInstances(&autoscaling.DescribeAutoScalingInstancesInput{InstanceIds: []*string{&ident.InstanceID}}); err != nil {
 		return lbs, errors.WithStack(err)
@@ -99,13 +108,18 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 	if len(asg.AutoScalingGroups) == 0 {
 		return lbs, errors.Errorf("no autoscaling group found for: %s", *instance.AutoScalingGroupName)
 	}
-	group = asg.AutoScalingGroups[0]
 
 	elb := elbv2.New(sess)
 
-	if dio, err = elb.DescribeLoadBalancers(&elbv2.DescribeLoadBalancersInput{Names: group.LoadBalancerNames, LoadBalancerArns: group.TargetGroupARNs}); err != nil {
-		return lbs, errors.WithStack(err)
+	for _, group := range asg.AutoScalingGroups {
+		log.Println("group loadbalancers", aws.StringValueSlice(group.LoadBalancerNames))
+		log.Println("group target group arms", aws.StringValueSlice(group.TargetGroupARNs))
+		if dio, err = elb.DescribeLoadBalancers(&elbv2.DescribeLoadBalancersInput{Names: group.LoadBalancerNames}); err != nil {
+			return lbs, errors.WithStack(err)
+		}
+
+		lbs = append(lbs, dio.LoadBalancers...)
 	}
 
-	return dio.LoadBalancers, err
+	return lbs, err
 }

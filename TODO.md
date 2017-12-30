@@ -6,6 +6,8 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 
 #### make packagekit less sensitive to repository information
 
+#### properly wait for instance to be reattached to ELBv2.
+
 #### custom plugins
 - allow for custom plugins to be executed.
 - plugins must be registered with 2 pieces of information: /executable/path and the extension to register.

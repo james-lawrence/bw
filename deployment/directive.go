@@ -107,6 +107,8 @@ func (t Directive) deploy() {
 		dshell,
 		dpkg,
 		dfs,
+		directives.NewAWSELBAttach(),
+		directives.NewAWSELBDetach(),
 		directives.NewAWSELB2Attach(),
 		directives.NewAWSELB2Detach(),
 	}

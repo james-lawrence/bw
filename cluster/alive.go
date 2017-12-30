@@ -25,7 +25,6 @@ func (AliveDefault) NotifyAlive(peer *memberlist.Node) (err error) {
 	}
 
 	if BitField(m.Capability).Has(Passive) {
-		log.Println("NotifyAlive ignoring", peer.Name)
 		return fmt.Errorf("ignoring peer: %s", peer.Name)
 	}
 
