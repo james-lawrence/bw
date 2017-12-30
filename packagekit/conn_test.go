@@ -3,13 +3,15 @@
 package packagekit_test
 
 import (
+	"context"
+
 	. "github.com/james-lawrence/bw/packagekit"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("DbusClient", func() {
+var _ = Describe("Conn", func() {
 	Describe("Client", func() {
 		var client Client
 
@@ -78,41 +80,67 @@ var _ = Describe("DbusClient", func() {
 				// Get the list of all installed packages and verify that it has a length > 0
 				firstTransaction, err := client.CreateTransaction()
 				Expect(err).ToNot(HaveOccurred())
-				allInstalledPackages, err := firstTransaction.Packages(FilterInstalled)
+				allInstalledPackages, err := firstTransaction.Packages(context.Background(), FilterInstalled)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(allInstalledPackages)).To(BeNumerically(">", 0))
 
 				// Get the list of installed devel packages
 				secondTransaction, err := client.CreateTransaction()
 				Expect(err).ToNot(HaveOccurred())
-				installedDevelPackages, err := secondTransaction.Packages(FilterDevel | FilterInstalled)
+				installedDevelPackages, err := secondTransaction.Packages(context.Background(), FilterDevel|FilterInstalled)
 				Expect(err).ToNot(HaveOccurred())
 				// Make sure allInstalledPackages is greater than installedDevelPackages
 				Expect(len(installedDevelPackages)).To(BeNumerically(">", 0))
 			})
 		})
 
-		Describe("InstallPackages", func() {
-			PIt("Installs a list of packages successfully", func() {
+		Describe("Resolve", func() {
+			It("Resolve a list of package names", func() {
 				transaction, err := client.CreateTransaction()
 				Expect(err).ToNot(HaveOccurred())
-
-				packageIDs := []string{"htop;;;"}
-				err = transaction.InstallPackages(0, packageIDs...)
+				pset, err := transaction.Resolve(context.Background(), FilterNone|FilterDevel, "htop")
 				Expect(err).ToNot(HaveOccurred())
+				Expect(pset).To(HaveLen(1))
+			})
+		})
+
+		Describe("InstallPackages", func() {
+			It("Installs a list of packages successfully", func() {
+				// TODO: https://github.com/hughsie/PackageKit/issues/229
+				// transaction, err := client.CreateTransaction()
+				// Expect(err).ToNot(HaveOccurred())
+				// pset := []string{"htop"}
+				// ppset, err := transaction.Resolve(context.Background(), FilterNone, pset...)
+				// Expect(err).ToNot(HaveOccurred())
+				// pset = make([]string, 0, len(ppset))
+				// for _, p := range ppset {
+				// 	pset = append(pset, p.ID)
+				// }
+				p := Package{
+					ID: "htop;2.0.2-2;x86_64;extra",
+				}
+
+				transaction, err := client.CreateTransaction()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(transaction.InstallPackages(context.Background(), TransactionFlagSimulate, p)).ToNot(HaveOccurred())
 			})
 		})
 
 		Describe("Cancel", func() {
 			// This will fail if we haven't already called another method on
 			// the transaction. Pending until we have an efficient way to handle this.
-			PIt("should not return an error", func() {
+			It("should not return an error", func() {
 				transaction, err := client.CreateTransaction()
 				Expect(err).ToNot(HaveOccurred())
 
+				started := make(chan struct{})
 				// TODO call a method on the transaction.
-
-				err = transaction.Cancel()
+				go func() {
+					close(started)
+					transaction.RefreshCache(context.Background())
+				}()
+				<-started
+				err = IgnoreNotSupported(transaction.Cancel())
 				Expect(err).ToNot(HaveOccurred())
 			})
 		})
@@ -121,7 +149,8 @@ var _ = Describe("DbusClient", func() {
 			It("should not return an error", func() {
 				transaction, err := client.CreateTransaction()
 				Expect(err).ToNot(HaveOccurred())
-				Expect(transaction.DownloadPackages(false)).ToNot(HaveOccurred())
+				_, err = transaction.DownloadPackages(context.Background(), false)
+				Expect(err).ToNot(HaveOccurred())
 			})
 		})
 	})

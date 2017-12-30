@@ -1,6 +1,10 @@
 package packagekit
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"time"
+)
 
 //go:generate stringer -type=ErrorEnum -type=InfoEnum -type=ExitEnum
 
@@ -66,10 +70,10 @@ type Transaction interface {
 	// Emits all packages matching the specified filter.
 	//   err := tx.Packages("none")
 	//   err := tx.Packages("installed;~devel")
-	Packages(filter PackageFilter) ([]Package, error)
+	Packages(ctx context.Context, filter PackageFilter) ([]Package, error)
 
 	// Resolve a list of packages into their ids.
-	Resolve(filter PackageFilter, packageIDs ...string) ([]Package, error)
+	Resolve(ctx context.Context, filter PackageFilter, packageIDs ...string) ([]Package, error)
 
 	// Installs a list of packages
 	//
@@ -79,7 +83,7 @@ type Transaction interface {
 	// example: htop;;;
 	// example: htop;2.0.2-1;;
 	// example: htop;2.0.2-1;x86_64;
-	InstallPackages(options TransactionFlag, packageIDs ...string) error
+	InstallPackages(ctx context.Context, options TransactionFlag, pkg ...Package) error
 
 	// InstallLocalFile(paths ...string) error
 
@@ -88,9 +92,9 @@ type Transaction interface {
 	// storeInCache - Whether we should store the downloaded packages in the cache.
 	//   err := tx.DownloadPackages(true, "gnome-shell")
 	// packageIDs - array of package identifiers describing what packages to download.
-	DownloadPackages(storeInCache bool, packageIDs ...string) error
+	DownloadPackages(ctx context.Context, storeInCache bool, packageIDs ...Package) (time.Duration, error)
 
-	RefreshCache() error
+	RefreshCache(ctx context.Context) (time.Duration, error)
 }
 
 const methodDBUSAddMatch = "org.freedesktop.DBus.AddMatch"

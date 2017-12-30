@@ -87,12 +87,18 @@ func (t Directive) deploy() {
 
 	t.dctx.Log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
 	defer t.dctx.Log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
+	dc := directives.Context{
+		RootDirectory: t.dctx.Root,
+		Log:           t.dctx.Log,
+	}
 
 	dshell = directives.ShellLoader{
 		Context: shell.NewContext(t.sctx, shell.OptionLogger(t.dctx.Log)),
 	}
 	dfs = directives.ArchiveLoader{}
-	dpkg = directives.PackageLoader{}
+	dpkg = directives.PackageLoader{
+		Context: dc,
+	}
 	dst = filepath.Join(t.dctx.Root, "archive")
 
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)

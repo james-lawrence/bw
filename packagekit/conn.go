@@ -1,11 +1,9 @@
 package packagekit
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"time"
-
-	"strings"
 
 	"github.com/godbus/dbus"
 	"github.com/pkg/errors"
@@ -34,19 +32,19 @@ func (t conn) CreateTransaction() (Transaction, error) {
 	// connection.
 	systemBus, err := dbus.SystemBusPrivate()
 	if err != nil {
-		return dbusTransaction{}, err
+		return transactionConn{}, err
 	}
 
 	// setup code for private system bus. The godbus package should be handling
 	// all this in the invoked method.....
 	if err = systemBus.Auth(nil); err != nil {
 		systemBus.Close()
-		return dbusTransaction{}, err
+		return transactionConn{}, err
 	}
 
 	if err = systemBus.Hello(); err != nil {
 		systemBus.Close()
-		return dbusTransaction{}, err
+		return transactionConn{}, err
 	}
 
 	channel := make(chan *dbus.Signal, 1000)
@@ -54,11 +52,11 @@ func (t conn) CreateTransaction() (Transaction, error) {
 
 	pkgKitObject := systemBus.Object(pkDbusInterface, pkDbusObjectPath)
 	if err = pkgKitObject.Call(methodCreateTransaction, 0).Store(&transactionID); err != nil {
-		return dbusTransaction{}, err
+		return transactionConn{}, err
 	}
 
 	transactionObject := systemBus.Object(pkDbusInterface, transactionID)
-	return dbusTransaction{systemBus: systemBus, transaction: transactionObject, signalChan: channel}, nil
+	return transactionConn{systemBus: systemBus, transaction: transactionObject, signalChan: channel}, nil
 }
 
 // TransactionList - Not implemented.
@@ -81,29 +79,30 @@ func (t conn) SuggestDaemonQuit() error {
 	return errNotImplemented
 }
 
-// dbusTransaction - Represents a single PackageKit Transaction.
-type dbusTransaction struct {
+// transactionConn - Represents a single PackageKit Transaction.
+type transactionConn struct {
 	systemBus   *dbus.Conn        // dbus system bus connection.
 	transaction dbus.BusObject    // packagekit transaction dbus object
 	signalChan  chan *dbus.Signal // channel for recieving signals
 }
 
 // Cancel - Cancel the current Transaction.
-func (t dbusTransaction) Cancel() error {
-	return t.transaction.Call(methodTransactionCancel, 0).Store()
+func (t transactionConn) Cancel() error {
+	err := parseDBusError(t.transaction.Call(methodTransactionCancel, 0).Store())
+	return errors.WithStack(err)
 }
 
 // Packages - Returns a list of Packages filtered according to the provided Filter.
-func (t dbusTransaction) Packages(filter PackageFilter) ([]Package, error) {
+func (t transactionConn) Packages(ctx context.Context, filter PackageFilter) ([]Package, error) {
 	var (
 		err      error
 		pathRule = "path=" + string(t.transaction.Path())
-		packages = make([]Package, 0, 1000)
+		packages = make([]Package, 0, 100)
 	)
 
 	signals := []string{
-		transactionSignal(pathRule, "member=Package"),
-		transactionSignal(pathRule, "member=Finished"),
+		transactionSignal(pathRule),
+		propertiesSignal(pathRule),
 	}
 
 	// Listen for signals
@@ -123,7 +122,7 @@ func (t dbusTransaction) Packages(filter PackageFilter) ([]Package, error) {
 			event *dbus.Signal
 		)
 
-		if event, err = awaitEvent(10*time.Second, t.signalChan); err != nil {
+		if event, err = awaitEvent(ctx, t.signalChan); err != nil {
 			return packages, err
 		}
 
@@ -138,11 +137,7 @@ func (t dbusTransaction) Packages(filter PackageFilter) ([]Package, error) {
 	}
 }
 
-func (t dbusTransaction) RefreshCache() error {
-	var (
-		err error
-	)
-
+func (t transactionConn) RefreshCache(ctx context.Context) (d time.Duration, err error) {
 	pathRule := "path=" + string(t.transaction.Path())
 	signals := []string{
 		transactionSignal(pathRule),
@@ -152,23 +147,21 @@ func (t dbusTransaction) RefreshCache() error {
 	// Listen for signals
 	for _, signal := range signals {
 		if err = t.listenFor(signal); err != nil {
-			return err
+			return d, err
 		}
 		defer t.stopListeningFor(signal)
 	}
 
 	if err = t.transaction.Call(methodTransactionRefreshCache, dbus.Flags(0), true).Store(); err != nil {
-		return errors.Wrap(err, "failed to invoked refresh cache")
+		return d, errors.Wrap(err, "failed to invoked refresh cache")
 	}
 
 	// Wait for the method to finish
-	duration, err := awaitCompletion(10*time.Second, t.signalChan)
-	log.Println("RefreshCache completed in", duration)
-	return err
+	return awaitCompletion(ctx, t.signalChan)
 }
 
 // Resolve - resolves packages into their ids
-func (t dbusTransaction) Resolve(filter PackageFilter, packageIDs ...string) (packages []Package, err error) {
+func (t transactionConn) Resolve(ctx context.Context, filter PackageFilter, packageIDs ...string) (packages []Package, err error) {
 	pathRule := "path=" + string(t.transaction.Path())
 	signals := []string{
 		transactionSignal(pathRule),
@@ -194,7 +187,7 @@ func (t dbusTransaction) Resolve(filter PackageFilter, packageIDs ...string) (pa
 			event *dbus.Signal
 		)
 
-		if event, err = awaitEvent(10*time.Second, t.signalChan); err != nil {
+		if event, err = awaitEvent(ctx, t.signalChan); err != nil {
 			return packages, err
 		}
 
@@ -210,12 +203,10 @@ func (t dbusTransaction) Resolve(filter PackageFilter, packageIDs ...string) (pa
 			return packages, err
 		}
 	}
-
-	return packages, err
 }
 
 // InstallPackages - Installs a list of Packages.
-func (t dbusTransaction) InstallPackages(options TransactionFlag, packageIDs ...string) error {
+func (t transactionConn) InstallPackages(ctx context.Context, options TransactionFlag, pset ...Package) error {
 	var (
 		err error
 	)
@@ -234,26 +225,19 @@ func (t dbusTransaction) InstallPackages(options TransactionFlag, packageIDs ...
 	}
 
 	flags := dbus.Flags(0)
-	if err = t.transaction.Call(methodTransactionInstallPackages, flags, options, packageIDs).Store(); err != nil {
+	if err = t.transaction.Call(methodTransactionInstallPackages, flags, options, mapPackageID(pset...)).Store(); err != nil {
 		return errors.Wrap(err, "failed to install packages")
 	}
 
 	// Wait for the method to finish
-	_, err = awaitCompletion(10*time.Second, t.signalChan)
+	_, err = awaitCompletion(ctx, t.signalChan)
 	return err
 }
 
 // DownloadPackages - NotImplemented
-func (t dbusTransaction) DownloadPackages(storeInCache bool, packageIDs ...string) (err error) {
-	const (
-		timeout = 10 * time.Second
-	)
-	var (
-		duration time.Duration
-	)
-
-	if len(packageIDs) == 0 {
-		return nil
+func (t transactionConn) DownloadPackages(ctx context.Context, storeInCache bool, pset ...Package) (d time.Duration, err error) {
+	if len(pset) == 0 {
+		return d, nil
 	}
 
 	pathRule := "path=" + string(t.transaction.Path())
@@ -264,77 +248,24 @@ func (t dbusTransaction) DownloadPackages(storeInCache bool, packageIDs ...strin
 	// Listen for signals
 	for _, signal := range signals {
 		if err = t.listenFor(signal); err != nil {
-			return err
+			return d, err
 		}
 		defer t.stopListeningFor(signal)
 	}
 
-	if err = t.transaction.Call(methodTransactionDownloadPackages, dbus.Flags(0), storeInCache, packageIDs).Store(); err != nil {
-		return errors.Wrap(err, "failed to download packages")
+	if err = t.transaction.Call(methodTransactionDownloadPackages, dbus.Flags(0), storeInCache, mapPackageID(pset...)).Store(); err != nil {
+		return d, errors.Wrap(err, "failed to download packages")
 	}
 
 	// Wait for the method to finish
-	duration, err = awaitCompletion(timeout, t.signalChan)
-	log.Println("downloadPackages completed in", duration)
-	return err
+	return awaitCompletion(ctx, t.signalChan)
 }
 
-func awaitCompletion(timeout time.Duration, c chan *dbus.Signal) (time.Duration, error) {
-	start := time.Now()
-	d := time.NewTimer(timeout)
-	defer d.Stop()
-	for {
-		select {
-		case _ = <-d.C:
-			return time.Now().Sub(start), errors.Errorf("operation timed out: %d", timeout)
-		case event := <-c:
-			d.Reset(timeout)
-			switch event.Name {
-			case signalTransactionFinished:
-				err := handleFinished(event)
-				duration := exitDuration(err)
-				return duration, ignoreSuccess(err)
-			case signalTransactionError:
-				return time.Now().Sub(start), handleError(event)
-			case signalTransactionDestroy:
-				return time.Now().Sub(start), nil
-			}
-		}
-	}
-}
-
-func awaitEvent(timeout time.Duration, c chan *dbus.Signal) (*dbus.Signal, error) {
-	d := time.NewTimer(timeout)
-	defer d.Stop()
-	select {
-	case _ = <-d.C:
-		return nil, errors.Errorf("operation timed out: %d", timeout)
-	case event := <-c:
-		d.Reset(timeout)
-		switch event.Name {
-		case signalTransactionFinished:
-			return event, ignoreSuccess(handleFinished(event))
-		case signalTransactionError:
-			return event, handleError(event)
-		}
-		return event, nil
-	}
-}
-
-func propertiesSignal(rules ...string) string {
-	return fmt.Sprintf("type='signal',interface='org.freedesktop.DBus.Properties',%s", strings.Join(rules, ","))
-}
-
-func transactionSignal(rules ...string) string {
-	signal := fmt.Sprintf("type='signal',interface='%s',%s", pkTransactionDbusInterface, strings.Join(rules, ","))
-	return signal
-}
-
-func (t dbusTransaction) listenFor(signal string) error {
+func (t transactionConn) listenFor(signal string) error {
 	return t.systemBus.BusObject().Call(methodDBUSAddMatch, 0, signal).Err
 }
 
-func (t dbusTransaction) stopListeningFor(signal string) error {
+func (t transactionConn) stopListeningFor(signal string) error {
 	return t.systemBus.BusObject().Call(methodDBUSRemoveMatch, 0, signal).Err
 }
 
@@ -348,19 +279,6 @@ func handlePackage(signal *dbus.Signal) (infox InfoEnum, pkg string, summary str
 	}
 
 	return InfoEnum(info), pkg, summary
-}
-
-func handleError(signal *dbus.Signal) error {
-	var (
-		err  string
-		code uint32
-	)
-
-	if decodeErr := errors.Wrapf(dbus.Store(signal.Body, &code, &err), "failed to decode %s", signalTransactionError); decodeErr != nil {
-		return decodeErr
-	}
-
-	return transactionError{code: ErrorEnum(code), msg: err}
 }
 
 func handleItemProgress(signal *dbus.Signal) (id string, status, percentage uint32) {

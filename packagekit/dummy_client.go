@@ -1,8 +1,10 @@
 package packagekit
 
 import (
+	"context"
 	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/manveru/faker"
 )
@@ -84,25 +86,25 @@ func (t dummyTransaction) Cancel() error {
 }
 
 // Packages - Returns the list of packages stored in the struct.
-func (t dummyTransaction) Packages(filter PackageFilter) ([]Package, error) {
+func (t dummyTransaction) Packages(ctx context.Context, filter PackageFilter) ([]Package, error) {
 	return t.PackageList, nil
 }
 
 // InstallPackages - Installs the list of packages.
-func (t dummyTransaction) InstallPackages(options TransactionFlag, packageIDs ...string) error {
+func (t dummyTransaction) InstallPackages(ctx context.Context, options TransactionFlag, pset ...Package) error {
 	return nil
 }
 
 // Resolve
-func (t dummyTransaction) Resolve(filter PackageFilter, packageIDs ...string) ([]Package, error) {
+func (t dummyTransaction) Resolve(ctx context.Context, filter PackageFilter, pset ...string) ([]Package, error) {
 	return t.PackageList, nil
 }
 
 // DownloadPackages - NotImplemented
-func (t dummyTransaction) DownloadPackages(storeInCache bool, packageIDs ...string) error {
-	return errNotImplemented
+func (t dummyTransaction) DownloadPackages(ctx context.Context, storeInCache bool, pset ...Package) (time.Duration, error) {
+	return 0, errNotImplemented
 }
 
-func (t dummyTransaction) RefreshCache() error {
-	return nil
+func (t dummyTransaction) RefreshCache(ctx context.Context) (time.Duration, error) {
+	return 0, nil
 }

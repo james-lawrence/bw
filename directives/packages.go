@@ -1,6 +1,7 @@
 package directives
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -9,7 +10,9 @@ import (
 )
 
 // PackageLoader reads a set of packages to install from an io.Reader
-type PackageLoader struct{}
+type PackageLoader struct {
+	Context
+}
 
 // Ext extensions to succeed against.
 func (PackageLoader) Ext() []string {
@@ -43,7 +46,7 @@ func (t PackageLoader) Build(r io.Reader) (Directive, error) {
 		}
 		defer c.Shutdown()
 
-		if err = packages.RefreshCache(packagekitAdapter{tx}); err != nil {
+		if err = packages.RefreshCache(t.Context.Log, packagekitAdapter{tx}); err != nil {
 			return err
 		}
 
@@ -51,7 +54,7 @@ func (t PackageLoader) Build(r io.Reader) (Directive, error) {
 			return err
 		}
 
-		return packages.Install(packagekitAdapter{tx}, pkgs...)
+		return packages.Install(t.Context.Log, packagekitAdapter{tx}, pkgs...)
 	}), nil
 }
 
@@ -59,37 +62,27 @@ type packagekitAdapter struct {
 	packagekit.Transaction
 }
 
-func (t packagekitAdapter) Resolve(pacs ...packages.Package) (pr []packages.Package, err error) {
-	var (
-		rpacs []packagekit.Package
-	)
-
+func (t packagekitAdapter) Resolve(ctx context.Context, pacs ...packages.Package) (rpacs []packagekit.Package, err error) {
 	spacs := make([]string, 0, len(pacs))
 	for _, pac := range pacs {
 		spacs = append(spacs, fmt.Sprintf("%s;%s;%s;%s", pac.Name, pac.Version, pac.Architecture, pac.Repository))
 	}
 
-	if rpacs, err = t.Transaction.Resolve(packagekit.FilterNone, spacs...); err != nil {
-		return pr, err
+	if rpacs, err = t.Transaction.Resolve(ctx, packagekit.FilterNone, spacs...); err != nil {
+		return rpacs, err
 	}
 
-	for _, pkg := range rpacs {
-		var p packages.Package
-		if p, err = packages.Parse(pkg.ID); err != nil {
-			return pr, err
-		}
-		pr = append(pr, p)
-	}
-
-	return pr, err
+	return rpacs, err
 }
 
-func (t packagekitAdapter) InstallPackages(pacs ...packages.Package) (err error) {
-	spacs := make([]string, 0, len(pacs))
+func (t packagekitAdapter) InstallPackages(ctx context.Context, pacs ...packages.Package) (err error) {
+	spacs := make([]packagekit.Package, 0, len(pacs))
 	for _, pac := range pacs {
-		spacs = append(spacs, fmt.Sprintf("%s;%s;%s;%s", pac.Name, pac.Version, pac.Architecture, pac.Repository))
+		spacs = append(spacs, packagekit.Package{
+			ID: fmt.Sprintf("%s;%s;%s;%s", pac.Name, pac.Version, pac.Architecture, pac.Repository),
+		})
 	}
 
 	options := packagekit.TransactionFlagNone | packagekit.TransactionFlagAllowDowngrade | packagekit.TransactionFlagAllowReinstall
-	return t.Transaction.InstallPackages(options, spacs...)
+	return t.Transaction.InstallPackages(ctx, options, spacs...)
 }

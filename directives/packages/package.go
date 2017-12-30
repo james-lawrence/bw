@@ -1,10 +1,13 @@
 package packages
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"log"
+	"time"
 
+	"github.com/james-lawrence/bw/packagekit"
 	"github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"
@@ -54,72 +57,80 @@ type transaction interface {
 	Cancel() error
 
 	// Resolve a set of packages
-	Resolve(pkgs ...Package) ([]Package, error)
+	Resolve(ctx context.Context, pkgs ...Package) ([]packagekit.Package, error)
 
 	// Installs a set of packages
-	InstallPackages(pkgs ...Package) error
+	InstallPackages(ctx context.Context, pkgs ...Package) error
 
 	// RefreshCache refreshes the package cache.
-	RefreshCache() error
+	RefreshCache(context.Context) (time.Duration, error)
 }
 
 // RefreshCache ...
-func RefreshCache(tx transaction) (err error) {
-	log.Println("------------------- refreshing cache")
-	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
+func RefreshCache(l logger, tx transaction) (err error) {
+	var (
+		d time.Duration
+	)
+
+	ctx, done := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+	defer done()
+
+	l.Println("------------------- initiated cache refresh -------------------")
+	if d, err = tx.RefreshCache(ctx); err != nil {
 		goto done
 	}
-
+	l.Printf("cache refresh duration: %s\n", d)
+	l.Println("------------------- completed cache refresh -------------------")
 done:
-	return maybeCancel(tx, err)
+	return maybeCancel(tx, errors.Wrap(err, "failed cache refresh"))
 }
 
 // Resolve ...
-func Resolve(tx transaction, pacs ...Package) (pset []Package, err error) {
+func Resolve(l logger, tx transaction, pacs ...Package) (pset []packagekit.Package, err error) {
 	if len(pacs) == 0 {
 		return pset, tx.Cancel()
 	}
 
-	log.Println("------------------- refreshing cache")
-	if err = errors.Wrap(tx.RefreshCache(), "tx.RefreshCache failed"); err != nil {
+	ctx, done := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+	defer done()
+	l.Println("------------------- initiated package resolution -------------------")
+	if pset, err = tx.Resolve(ctx, pacs...); err != nil {
 		goto done
 	}
-
-	log.Println("------------------- resolving packages")
-	if pset, err = tx.Resolve(pacs...); err != nil {
-		err = errors.Wrap(err, "tx.Resolve failed")
-		goto done
-	}
-
+	l.Println("------------------- completed package resolution -------------------")
 done:
-	return pset, maybeCancel(tx, err)
+	return pset, maybeCancel(tx, errors.Wrap(err, "failed package resolution"))
 }
 
 // Install installs the provided packages.
-func Install(tx transaction, pacs ...Package) error {
-	var (
-		err error
-	)
-
+func Install(l logger, tx transaction, pacs ...Package) (err error) {
 	if len(pacs) == 0 {
 		return tx.Cancel()
 	}
 
-	log.Println("------------------- installing packages")
-	if err = errors.Wrap(tx.InstallPackages(pacs...), "tx.IntallPackages failed"); err != nil {
+	ctx, done := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+	defer done()
+	l.Println("------------------- initiated package installation -------------------")
+	if err = errors.Wrap(tx.InstallPackages(ctx, pacs...), "failed package installation"); err != nil {
 		goto done
 	}
-
+	l.Println("------------------- completed package installation -------------------")
 done:
-	return maybeCancel(tx, err)
+	return maybeCancel(tx, errors.Wrap(err, "failed package installation"))
 }
 
 func maybeCancel(tx transaction, err error) error {
 	if err != nil {
-		log.Println("package installation failed", err)
 		tx.Cancel()
+		log.Println(err)
 		return err
 	}
 
 	return nil
+}
+
+type logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
 }

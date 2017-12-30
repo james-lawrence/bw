@@ -8,6 +8,7 @@ type parseResult interface {
 	Result() (Package, error)
 }
 
+// Parse ...
 func Parse(s string) (Package, error) {
 	p := &parser{
 		lexer: lex(s),
