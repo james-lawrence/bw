@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
@@ -129,6 +130,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
+
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
@@ -145,6 +147,9 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		close(events)
 	}()
 
+	if err = ioutil.WriteFile(filepath.Join(t.deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+		return err
+	}
 	events <- agentutil.LogEvent(local.Peer, "uploading archive")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {

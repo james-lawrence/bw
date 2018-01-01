@@ -58,6 +58,7 @@ type ConfigClient struct {
 	Cert        string
 	CA          string
 	ServerName  string
+	Environment string
 }
 
 // Connect to the address in the config client.

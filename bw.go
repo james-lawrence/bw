@@ -22,6 +22,8 @@ const (
 	DirPlugins = "plugins"
 	// DirTorrents the name of the directory for storing torrent information.
 	DirTorrents = "torrents"
+	// EnvFile environment file name.
+	EnvFile = "bw.env"
 )
 
 // RandomID a random identifier.

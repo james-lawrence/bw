@@ -55,6 +55,13 @@ func OptionLogger(l logger) Option {
 	}
 }
 
+// OptionEnviron set the environment for shell commands.
+func OptionEnviron(l []string) Option {
+	return func(ctx *Context) {
+		ctx.Environ = l
+	}
+}
+
 // NewContext creates a new context using the provided context as a base and then applies options.
 func NewContext(tmp Context, options ...Option) Context {
 	for _, opt := range options {

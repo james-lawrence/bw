@@ -3,6 +3,7 @@ package deployment
 import (
 	"path/filepath"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/directives"
 	"github.com/james-lawrence/bw/directives/dynplugin"
@@ -77,30 +78,19 @@ func (t Directive) Deploy(dctx DeployContext) {
 
 func (t Directive) deploy() {
 	var (
-		err    error
-		dfs    directives.ArchiveLoader
-		dshell directives.ShellLoader
-		dpkg   directives.PackageLoader
-		dst    string
-		d      []directives.Directive
+		err     error
+		dfs     directives.ArchiveLoader
+		dshell  directives.ShellLoader
+		dpkg    directives.PackageLoader
+		dst     string
+		d       []directives.Directive
+		environ []string
 	)
 
 	t.dctx.Log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
 	defer t.dctx.Log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
-	dc := directives.Context{
-		RootDirectory: t.dctx.Root,
-		Log:           t.dctx.Log,
-	}
 
-	dshell = directives.ShellLoader{
-		Context: shell.NewContext(t.sctx, shell.OptionLogger(t.dctx.Log)),
-	}
-	dfs = directives.ArchiveLoader{}
-	dpkg = directives.PackageLoader{
-		Context: dc,
-	}
 	dst = filepath.Join(t.dctx.Root, "archive")
-
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
 	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {
@@ -109,6 +99,30 @@ func (t Directive) deploy() {
 	}
 
 	t.dctx.Log.Println("completed download", dst)
+
+	if environ, err = shell.EnvironFromFile(filepath.Join(dst, bw.EnvFile)); err != nil {
+		t.dctx.Done(err)
+		return
+	}
+
+	dc := directives.Context{
+		RootDirectory: t.dctx.Root,
+		Log:           t.dctx.Log,
+	}
+
+	dshell = directives.ShellLoader{
+		Context: shell.NewContext(
+			t.sctx,
+			shell.OptionLogger(t.dctx.Log),
+			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
+		),
+	}
+
+	dfs = directives.ArchiveLoader{}
+	dpkg = directives.PackageLoader{
+		Context: dc,
+	}
+
 	loaders := []directives.Loader{
 		dshell,
 		dpkg,
