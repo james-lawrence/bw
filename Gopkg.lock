@@ -325,6 +325,12 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/subosito/gotenv"
+  packages = ["."]
+  revision = "009e1f9581dc712aba5682a279dee155ca3eeded"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/tinylib/msgp"
   packages = ["msgp"]
   revision = "b2b6a672cf1e5b90748f79b8b81fc8c5cf0571a1"
@@ -393,6 +399,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0fe6784dcf180bcb927abfb281ed366ebec040e80e0eac3a53974af0581c5be2"
+  inputs-digest = "d4303bb7eeeec2617be08d45fd78c8a5732ec4395e11b02ddcbe98702d6d2cea"
   solver-name = "gps-cdcl"
   solver-version = 1

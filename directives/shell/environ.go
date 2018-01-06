@@ -1,12 +1,14 @@
 package shell
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 
-	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
+	"github.com/subosito/gotenv"
 )
 
 // EnvironFromFile loads an environment from a file.
@@ -41,15 +43,19 @@ func Environ(s string) (environ []string, err error) {
 	var (
 		ir map[string]string
 	)
-	if ir, err = godotenv.Unmarshal(string(s)); err != nil {
+
+	if ir = gotenv.Parse(strings.NewReader(string(s))); err != nil {
 		return environ, errors.WithStack(err)
 	}
 
 	environ = make([]string, 0, len(ir))
 	for k, v := range ir {
 		var line string
-		if line, err = godotenv.Marshal(map[string]string{k: v}); err != nil {
-			return environ, errors.WithStack(err)
+
+		if strings.ContainsAny(v, " \n\t") {
+			line = fmt.Sprintf("%s=\"%s\"", k, v)
+		} else {
+			line = fmt.Sprintf("%s=%s", k, v)
 		}
 
 		environ = append(environ, line)

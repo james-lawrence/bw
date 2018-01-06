@@ -38,16 +38,16 @@ var _ = Describe("Environ", func() {
 			sort.Strings(expected)
 			Expect(result).To(Equal(expected))
 		},
-		Entry("basic environment", "FOO=BAR", "FOO=\"BAR\""),
+		Entry("basic environment", "FOO=BAR", "FOO=BAR"),
 		Entry("quoted environment", "FOO=\"HELLO WORLD\"", "FOO=\"HELLO WORLD\""),
-		Entry("multiline environment 1", fromMap(map[string]string{"FOO": "HELLO\nWORLD"}), "FOO=\"HELLO\\nWORLD\""),
-		Entry("multiline environment 2", "FOO=\"HELLO\\nWORLD\"", "FOO=\"HELLO\\nWORLD\""),
+		Entry("multiline environment 1", fromMap(map[string]string{"FOO": "HELLO\nWORLD"}), "FOO=\"HELLO\nWORLD\""),
+		Entry("multiline environment 2", "FOO=\"HELLO\\nWORLD\"", "FOO=\"HELLO\nWORLD\""),
 		Entry(
 			"environmnet file example",
 			mustReadString(".fixtures/environ.env"),
-			"SIMPLE=\"VALUE\"",
-			"QUOTED=\"VALUE\"",
-			"MULTILINE=\"Line1\\nLine2\"",
+			"SIMPLE=VALUE",
+			"QUOTED=\"QUOTED VALUE\"",
+			"MULTILINE=\"Line1\nLine2\"",
 		),
 	)
 })

@@ -41,13 +41,13 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 		}
 	}
 
-	log.Println("dropped", dropped, "torrents due to missing deploy directory")
+	log.Println(dropped, "torrents dropped due to missing deploy directory")
 }
 
 // PrintTorrentInfo prints information about the torrent cluster.
 func (TorrentUtil) PrintTorrentInfo(c TorrentConfig) {
 	c.client.DHT().WriteStatus(os.Stderr)
-	log.Println("active torrents", len(c.client.Torrents()))
+	log.Println(len(c.client.Torrents()), "torrents running")
 }
 
 func (t TorrentUtil) loadDir(dir string, c *torrent.Client) error {
