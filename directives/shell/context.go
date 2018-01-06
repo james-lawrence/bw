@@ -62,6 +62,13 @@ func OptionEnviron(l []string) Option {
 	}
 }
 
+// OptionDir set working directory for the command
+func OptionDir(l string) Option {
+	return func(ctx *Context) {
+		ctx.dir = l
+	}
+}
+
 // NewContext creates a new context using the provided context as a base and then applies options.
 func NewContext(tmp Context, options ...Option) Context {
 	for _, opt := range options {
@@ -81,6 +88,7 @@ type Context struct {
 	FQDN      string
 	Environ   []string
 	output    io.Writer
+	dir       string
 }
 
 // %H hostname

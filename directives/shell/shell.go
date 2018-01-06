@@ -45,6 +45,7 @@ func (t Exec) execute(ctx Context) error {
 	cmd.Env = ctx.Environ
 	cmd.Stderr = ctx.output
 	cmd.Stdout = ctx.output
+	cmd.Dir = ctx.dir
 
 	return t.lenient(ctx, cmd.Run())
 }

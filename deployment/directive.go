@@ -115,6 +115,7 @@ func (t Directive) deploy() {
 			t.sctx,
 			shell.OptionLogger(t.dctx.Log),
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
+			shell.OptionDir(filepath.Join(dc.RootDirectory, "archive")),
 		),
 	}
 
