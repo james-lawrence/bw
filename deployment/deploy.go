@@ -189,7 +189,6 @@ func (t Deploy) Deploy(c cluster) {
 
 // Dispatch - implements dispatcher interface.
 func (t Deploy) Dispatch(m ...agent.Message) error {
-	// logDispatcher{}.Dispatch(m...)
 	return logx.MaybeLog(t.worker.dispatcher.Dispatch(m...))
 }
 

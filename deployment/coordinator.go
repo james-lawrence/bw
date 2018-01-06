@@ -85,14 +85,6 @@ type coordinator struct {
 func (t *coordinator) background() {
 	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
 	for done := range t.completed {
-		// cleanup workspace directory prior to execution. this leaves the last deployment
-		// available until the next run.
-		if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-			soft = errors.Wrap(soft, "failed to clear workspace directory")
-			done.Dispatch(agentutil.LogEvent(done.Local, soft.Error()))
-			log.Println(soft)
-		}
-
 		d := done.complete()
 		switch d.Stage {
 		case agent.Deploy_Completed:
@@ -128,6 +120,18 @@ func (t *coordinator) Deploy(archive *agent.Archive) (d agent.Deploy, err error)
 	var (
 		dctx DeployContext
 	)
+
+	// cleanup workspace directory prior to deployment. this leaves the last deployment
+	// is available until the next run for debugging.
+	// IMPORTANT: torrent storage relies on this behaviour in order to prevent
+	// downloads from becoming permanently blocked waiting for the archive to be downloaded.
+	// without this behaviour the torrent can be removed while nodes are still trying to deploy.
+	// preventing further deploys.
+	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
+		soft = errors.Wrap(soft, "failed to clear workspace directory")
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, soft.Error()))
+		log.Println(soft)
+	}
 
 	if d = t.start(*archive); d.Stage != agent.Deploy_Deploying {
 		return d, errors.Errorf("failed to initiate deploy: %s", d.Stage.String())

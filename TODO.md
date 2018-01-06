@@ -1,7 +1,8 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- make packagekit less sensitive to repository information
+- make torrent storage timeout if it cannot successfully download an archive within a reasonable amount of time.
+- make packagekit less sensitive to repository information.
 - properly wait for instance to be reattached to ELBv2.
 
 #### prevent concurrent deploys
