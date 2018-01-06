@@ -1,50 +1,42 @@
 package bwfs
 
 import (
+	"io"
 	"log"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
+	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/gutengo/fil"
-	"github.com/james-lawrence/bw/inflaters"
-	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
 
-type downloader interface {
-	New(string) storage.Downloader
-}
-
-type downloaderClosure func(string) storage.Downloader
-
-func (t downloaderClosure) New(s string) storage.Downloader {
-	return t(s)
-}
-
-type inflater interface {
-	New(location, destination string, perm os.FileMode) inflaters.Inflater
-}
-
-type inflaterClosure func(location, destination string, perm os.FileMode) inflaters.Inflater
-
-func (t inflaterClosure) New(location, destination string, perm os.FileMode) inflaters.Inflater {
-	return t(location, destination, perm)
-}
+// Base-2 byte units.
+const (
+	KiB uint64 = 1024
+	MiB        = KiB * 1024
+	GiB        = MiB * 1024
+	TiB        = GiB * 1024
+	PiB        = TiB * 1024
+	EiB        = PiB * 1024
+)
 
 // New ...
-func New() Executer {
+func New(l logger, root string) Executer {
 	return Executer{
-		downloader: storage.New(),
-		inflater:   inflaterClosure(inflaters.New),
+		log:  l,
+		root: root,
 	}
 }
 
 // Executer downloads and processes a set of archives.
 // with a given context.
 type Executer struct {
-	downloader downloader
-	inflater   inflater
+	log  logger
+	root string
 }
 
 // Execute downloads and processes each archive.
@@ -59,12 +51,27 @@ func (t Executer) Execute(archives ...Archive) (err error) {
 }
 
 func (t Executer) archive(a Archive) (err error) {
-	local := t.downloader.New(a.URI).Download()
-	defer local.Close()
-	log.Println(a)
+	var (
+		src *os.File
+		dst *os.File
+		buf = make([]byte, 16*KiB)
+	)
 
-	if err = t.inflater.New(a.URI, a.Path, os.FileMode(a.Mode)).Inflate(local); err != nil {
-		return err
+	t.log.Println("archive", t.root, spew.Sdump(a))
+	p := filepath.Join(t.root, "archive", strings.TrimPrefix(a.URI, "file://"))
+	t.log.Println("source path", p)
+	if src, err = os.Open(p); err != nil {
+		return errors.WithStack(err)
+	}
+	defer src.Close()
+
+	if dst, err = os.Create(a.Path); err != nil {
+		return errors.WithStack(err)
+	}
+	defer dst.Close()
+
+	if _, err = io.CopyBuffer(dst, src, buf); err != nil {
+		return errors.WithStack(err)
 	}
 
 	if err = t.chown(a); err != nil {
@@ -105,4 +112,10 @@ func printIfErr(err error) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+type logger interface {
+	Print(...interface{})
+	Printf(string, ...interface{})
+	Println(...interface{})
 }

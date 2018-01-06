@@ -1,12 +1,10 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
+- make packagekit less sensitive to repository information
+- properly wait for instance to be reattached to ELBv2.
 
 #### prevent concurrent deploys
-
-#### make packagekit less sensitive to repository information
-
-#### properly wait for instance to be reattached to ELBv2.
 
 #### custom plugins
 - allow for custom plugins to be executed.

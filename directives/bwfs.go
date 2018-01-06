@@ -7,7 +7,9 @@ import (
 )
 
 // ArchiveLoader directive.
-type ArchiveLoader struct{}
+type ArchiveLoader struct {
+	Context
+}
 
 // Ext extensions to succeed against.
 func (ArchiveLoader) Ext() []string {
@@ -26,6 +28,6 @@ func (t ArchiveLoader) Build(r io.Reader) (Directive, error) {
 	}
 
 	return closure(func() error {
-		return bwfs.New().Execute(archives...)
+		return bwfs.New(t.Context.Log, t.Context.RootDirectory).Execute(archives...)
 	}), nil
 }

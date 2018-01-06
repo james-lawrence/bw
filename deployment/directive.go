@@ -118,7 +118,10 @@ func (t Directive) deploy() {
 		),
 	}
 
-	dfs = directives.ArchiveLoader{}
+	dfs = directives.ArchiveLoader{
+		Context: dc,
+	}
+
 	dpkg = directives.PackageLoader{
 		Context: dc,
 	}
