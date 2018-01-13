@@ -7,10 +7,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-type dispatcher interface {
-	Dispatch(...agent.Message) error
-}
-
 func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
 	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (

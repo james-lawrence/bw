@@ -147,7 +147,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
 	q := quorum.New(
 		cx,
-		proxy.NewProxy(cx, dispatcher),
+		proxy.NewProxy(cx),
 		upload,
 		quorum.OptionCredentials(tlscreds),
 	)

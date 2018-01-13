@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/debugx"
@@ -11,6 +12,11 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
+)
+
+const (
+	none int32 = iota
+	deploying
 )
 
 // NewStateMachine ...
@@ -34,8 +40,9 @@ func CommandToMessage(cmd []byte) (m agent.Message, err error) {
 // StateMachine ...
 type StateMachine struct {
 	agent.EventBus
-	m       *sync.RWMutex
-	details agent.Details
+	m         *sync.RWMutex
+	details   agent.Details
+	deploying int32
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -48,7 +55,7 @@ func (t *StateMachine) Apply(l *raft.Log) interface{} {
 		log.Println("barrier invoked", l.Index, l.Term)
 	case raft.LogCommand:
 		debugx.Println("command invoked", l.Index, l.Term)
-		t.decode(l.Data)
+		return t.decode(l.Data)
 	case raft.LogNoop:
 		log.Println("noop invoked", l.Index, l.Term)
 	}
@@ -56,20 +63,42 @@ func (t *StateMachine) Apply(l *raft.Log) interface{} {
 	return nil
 }
 
-func (t *StateMachine) decode(buf []byte) {
+func (t *StateMachine) deployCommand(dc *agent.DeployCommand) error {
+	switch dc.Command {
+	case agent.DeployCommand_Begin:
+		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
+			return errors.New("deploy already in progress")
+		}
+	default:
+		atomic.SwapInt32(&t.deploying, none)
+	}
+
+	return nil
+}
+
+func (t *StateMachine) decode(buf []byte) error {
 	var (
 		err error
 		m   agent.Message
 	)
 
 	if m, err = CommandToMessage(buf); err != nil {
-		log.Println("failed to decode command", err)
-		return
+		return err
+	}
+
+	switch event := m.GetEvent().(type) {
+	case *agent.Message_DeployCommand:
+		if err = t.deployCommand(event.DeployCommand); err != nil {
+			return err
+		}
+	default:
 	}
 
 	debugx.Println("dispatching into event bus")
 	t.EventBus.Dispatch(m)
 	debugx.Println("dispatched into event bus")
+
+	return nil
 }
 
 // Snapshot is used to support log compaction. This call should

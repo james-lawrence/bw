@@ -4,7 +4,14 @@ package agent;
 // Represents every message sent between nodes. effectively describes all possible events we may want
 // to act upon.
 message Message {
-  enum Type { PeerEvent = 0; LogEvent = 1; DeployEvent = 2; PeersFoundEvent = 3; PeersCompletedEvent = 4;}
+  enum Type {
+    PeerEvent = 0;
+    LogEvent = 1;
+    DeployCommandEvent = 2;
+    DeployEvent = 3;
+    PeersFoundEvent = 4;
+    PeersCompletedEvent = 5;
+  }
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -16,16 +23,31 @@ message Message {
     bool none = 4;
     int64 int = 5;
     Log log = 6;
-    Deploy deploy = 7;
+    DeployCommand deployCommand = 7;
+    Deploy deploy = 8;
   }
 }
 
+message DeployCommand {
+  enum Command { Begin = 0; Cancel = 1; Done = 2; }
+  Command command = 1;
+  Archive archive = 2;
+}
+
 message Deploy {
-  enum Stage { Failed = 0; Deploying = 1; Completed = 2;}
+  enum Stage { Failed = 0; Deploying = 1; Completed = 2; }
   Stage stage = 1;
   Archive archive = 2;
   string error = 3;
 }
+
+message DeployCommandRequest {
+  Archive archive = 1;
+  int64 concurrency = 2;
+  repeated Peer peers = 3;
+}
+message DeployCommandResult {}
+
 
 message Log {
   string log = 1;
@@ -63,13 +85,6 @@ message Status {
   repeated Archive Deployments = 3;
 }
 
-message DetailsRequest{}
-message Details {
-  bytes secret = 1;
-  repeated Peer Quorum = 2;
-  repeated Archive Deployments = 3;
-}
-
 message ConnectRequest {}
 message ConnectInfo {
   bytes secret = 1;
@@ -94,7 +109,7 @@ service Quorum {
   rpc Upload(stream ArchiveChunk) returns (Archive) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Dispatch(stream Message) returns (RecordResponse) {}
-  rpc Deploy(ProxyDeployRequest) returns (ProxyDeployResult) {}
+  rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
 }
 
 message ShutdownRequest{}
@@ -106,10 +121,3 @@ service Agent {
   rpc Info(StatusRequest) returns (Status) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
 }
-
-message ProxyDeployRequest {
-  Archive archive = 1;
-  int64 concurrency = 2;
-  repeated Peer peers = 3;
-}
-message ProxyDeployResult {}

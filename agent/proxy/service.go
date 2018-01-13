@@ -5,6 +5,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
 )
 
@@ -16,21 +17,19 @@ type clusterx interface {
 }
 
 // NewProxy ...
-func NewProxy(c clusterx, d dispatcher) Proxy {
+func NewProxy(c clusterx) Proxy {
 	return Proxy{
 		c: c,
-		d: d,
 	}
 }
 
 // Proxy - implements the deployer.
 type Proxy struct {
 	c clusterx
-	d dispatcher
 }
 
 // Deploy ...
-func (t Proxy) Deploy(max int64, creds grpc.DialOption, info agent.Archive, peers ...agent.Peer) {
+func (t Proxy) Deploy(d agent.Dispatcher, max int64, creds grpc.DialOption, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
@@ -46,14 +45,20 @@ func (t Proxy) Deploy(max int64, creds grpc.DialOption, info agent.Archive, peer
 
 	options := []deployment.Option{
 		deployment.DeployOptionChecker(deployment.OperationFunc(check(doptions...))),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(info, doptions...))),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(archive, doptions...))),
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(int(max))),
 	}
 
-	deployment.NewDeploy(
-		t.c.Local(),
-		t.d,
-		options...,
-	).Deploy(t.c)
+	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &archive})); err != nil {
+		return err
+	}
+
+	deployment.RunDeploy(t.c.Local(), t.c, d, options...)
+
+	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive})); err != nil {
+		return err
+	}
+
+	return nil
 }

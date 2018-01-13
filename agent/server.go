@@ -91,7 +91,7 @@ func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownRe
 func (t Server) Deploy(ctx context.Context, archive *Archive) (*ArchiveResult, error) {
 	var (
 		err error
-		d Deploy
+		d   Deploy
 	)
 	debugx.Println("deploy initiated", archive.Location)
 	if d, err = t.Deployer.Deploy(archive); err != nil {

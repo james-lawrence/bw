@@ -11,6 +11,11 @@ import (
 	"google.golang.org/grpc/credentials"
 )
 
+// Dispatcher - interface for dispatching messages.
+type Dispatcher interface {
+	Dispatch(...Message) error
+}
+
 // Client - client facade interface.
 type Client interface {
 	Shutdown() error

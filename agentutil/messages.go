@@ -62,6 +62,18 @@ func deployToArchive(d agent.Deploy) (a agent.Archive) {
 	return a
 }
 
+// DeployCommand send a deploy command message
+func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
+	return agent.Message{
+		Type: agent.Message_DeployCommandEvent,
+		Peer: &p,
+		Ts:   time.Now().Unix(),
+		Event: &agent.Message_DeployCommand{
+			DeployCommand: &dc,
+		},
+	}
+}
+
 // DeployEvent represents a deploy being triggered.
 func DeployEvent(p agent.Peer, d agent.Deploy) agent.Message {
 	return deployEvent(d.Stage, p, deployToArchive(d))

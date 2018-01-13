@@ -20,6 +20,7 @@ import (
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/grpcx"
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -32,7 +33,7 @@ type cluster interface {
 }
 
 type deploy interface {
-	Deploy(int64, grpc.DialOption, agent.Archive, ...agent.Peer)
+	Deploy(agent.Dispatcher, int64, grpc.DialOption, agent.Archive, ...agent.Peer) error
 }
 
 // errorFuture is used to return a static error.
@@ -119,10 +120,6 @@ func (t proxyRaft) Apply(cmd []byte, d time.Duration) raft.ApplyFuture {
 	return t.apply(cmd, d)
 }
 
-type dispatcher interface {
-	Dispatch(...agent.Message) error
-}
-
 type stateMachineDispatch struct {
 	sm *StateMachine
 }
@@ -145,17 +142,26 @@ type raftDispatch struct {
 func (t raftDispatch) Dispatch(messages ...agent.Message) (err error) {
 	for _, m := range messages {
 		var (
-			b []byte
+			ok     bool
+			b      []byte
+			future raft.ApplyFuture
 		)
 
 		if b, err = MessageToCommand(m); err != nil {
 			return err
 		}
 
-		if err = t.p.Apply(b, 5*time.Second).Error(); err != nil {
+		future = t.p.Apply(b, 5*time.Second)
+
+		if err = future.Error(); err != nil {
+			return err
+		}
+
+		if err, ok = future.Response().(error); ok {
 			return err
 		}
 	}
+
 	return nil
 }
 
@@ -213,7 +219,7 @@ func OptionRaftProxy(proxy RaftProxy) Option {
 }
 
 // OptionLeaderDispatch ...
-func OptionLeaderDispatch(d dispatcher) Option {
+func OptionLeaderDispatch(d agent.Dispatcher) Option {
 	return func(q *Quorum) {
 		q.ldispatch = d
 	}
@@ -261,7 +267,7 @@ type Quorum struct {
 	creds        grpc.DialOption
 	proxy        RaftProxy
 	pdispatch    *proxyDispatch
-	ldispatch    dispatcher
+	ldispatch    agent.Dispatcher
 	deploy       deploy
 }
 
@@ -323,10 +329,9 @@ func (t *Quorum) Deploy(concurrency int64, archive agent.Archive, peers ...agent
 
 	switch s := p.State(); s {
 	case raft.Leader:
-		debugx.Println("proxy deploy initiated")
-		t.deploy.Deploy(concurrency, t.creds, archive, peers...)
-		debugx.Println("proxy deploy completed")
-		return err
+		debugx.Println("deploy command initiated")
+		defer debugx.Println("deploy command completed")
+		return logx.MaybeLog(t.deploy.Deploy(t.ldispatch, concurrency, t.creds, archive, peers...))
 	default:
 		var (
 			c agent.Client
@@ -351,19 +356,9 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 		dst          agent.Uploader
 		chunk        *agent.ArchiveChunk
 	)
-	t.m.Lock()
-	p := t.proxy
-	t.m.Unlock()
 
 	debugx.Println("upload invoked")
 	defer debugx.Println("upload completed")
-
-	switch s := p.State(); s {
-	case raft.Leader, raft.Follower, raft.Candidate:
-	default:
-		log.Println("failed upload not a member of quorum", s.String(), p.Leader())
-		return errors.Errorf("upload must be run on a member of quorum: %s", s)
-	}
 
 	debugx.Println("upload: generating deployment ID")
 	if deploymentID, err = bw.GenerateID(); err != nil {
@@ -444,7 +439,7 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 	var (
 		err      error
 		m        *agent.Message
-		dispatch dispatcher
+		dispatch agent.Dispatcher
 	)
 	debugx.Println("dispatch initiated")
 	defer debugx.Println("dispatch completed")
@@ -459,7 +454,6 @@ func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
 
 	for m, err = in.Recv(); err == nil; m, err = in.Recv() {
 		if err = dispatch.Dispatch(*m); err != nil {
-			log.Println("failed", err)
 			return err
 		}
 	}

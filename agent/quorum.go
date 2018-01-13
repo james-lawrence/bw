@@ -22,9 +22,9 @@ type Quorum struct {
 }
 
 // Deploy ...
-func (t Quorum) Deploy(ctx context.Context, req *ProxyDeployRequest) (_ *ProxyDeployResult, err error) {
+func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *DeployCommandResult, err error) {
 	var (
-		_zero ProxyDeployResult
+		_zero DeployCommandResult
 	)
 	return &_zero, t.q.Deploy(req.Concurrency, *req.Archive)
 }

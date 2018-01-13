@@ -100,6 +100,11 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	return d
 }
 
+// RunDeploy convience function for executing a deploy.
+func RunDeploy(p agent.Peer, c cluster, di dispatcher, options ...Option) {
+	NewDeploy(p, di, options...).Deploy(c)
+}
+
 func loggingDeploy(peer agent.Peer) (agent.Deploy, error) {
 	log.Println("deploy triggered for peer", peer.String())
 	return agent.Deploy{Stage: agent.Deploy_Deploying}, nil
@@ -132,8 +137,8 @@ func (t worker) Complete() {
 
 func (t worker) DeployTo(peer agent.Peer) {
 	// Stop deployment when a single node fails.
-	// TODO: finish making this configurable.
-	if *t.failed > 0 && t.enforceFailures {
+	// TODO: make this configurable.
+	if atomic.LoadInt64(t.failed) > 0 && t.enforceFailures {
 		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 		return
 	}

@@ -113,7 +113,7 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 // of servers to deploy to.
 func (t Conn) RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
-	req := ProxyDeployRequest{
+	req := DeployCommandRequest{
 		Concurrency: concurrency,
 		Archive:     &archive,
 		Peers:       PeersToPtr(peers...),
@@ -212,6 +212,7 @@ func (t Conn) Dispatch(messages ...Message) (err error) {
 
 	for _, m := range messages {
 		if err = errors.WithStack(dst.Send(&m)); err != nil {
+			log.Println("failed to send message", err)
 			goto done
 		}
 	}

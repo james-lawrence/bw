@@ -26,10 +26,11 @@ type mockdeploy struct {
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(n int64, dopt grpc.DialOption, archive agent.Archive, peers ...agent.Peer) {
+func (t *mockdeploy) Deploy(_ agent.Dispatcher, n int64, dopt grpc.DialOption, archive agent.Archive, peers ...agent.Peer) error {
 	t.lastN = n
 	t.lastArchive = archive
 	t.lastPeers = peers
+	return nil
 }
 
 type stoppable interface {
