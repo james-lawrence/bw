@@ -7,10 +7,10 @@ import (
 	"os/user"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gutengo/fil"
+	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 )
 
@@ -52,20 +52,62 @@ func (t Executer) Execute(archives ...Archive) (err error) {
 
 func (t Executer) archive(a Archive) (err error) {
 	var (
+		info os.FileInfo
+	)
+
+	path := filepath.Join(t.root, a.URI)
+
+	t.log.Println("archive", t.root, spew.Sdump(a))
+	if info, err = os.Stat(path); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if info.IsDir() {
+		return copyDirectory(path, a)
+	}
+
+	return copyArchiveFile(t.root, path, a)
+}
+
+func copyArchiveFile(root string, path string, a Archive) (err error) {
+	var (
+		dstp    string
+		dstMode os.FileMode
+	)
+
+	dstMode = os.FileMode(a.Mode)
+	dstp = a.Path
+	if filepath.IsAbs(a.Path) {
+		dstp = filepath.Join(root, a.Path)
+	}
+
+	if err = copyFile(path, dstp, dstMode); err != nil {
+		return err
+	}
+
+	if err = chown(a); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func copyFile(srcp, dstp string, dstMode os.FileMode) (err error) {
+	var (
 		src *os.File
 		dst *os.File
 		buf = make([]byte, 16*KiB)
 	)
 
-	t.log.Println("archive", t.root, spew.Sdump(a))
-	p := filepath.Join(t.root, "archive", strings.TrimPrefix(a.URI, "file://"))
-	t.log.Println("source path", p)
-	if src, err = os.Open(p); err != nil {
+	debugx.Println("source path", srcp)
+	debugx.Println("destination", dstp, dstMode)
+
+	if src, err = os.Open(srcp); err != nil {
 		return errors.WithStack(err)
 	}
 	defer src.Close()
 
-	if dst, err = os.Create(a.Path); err != nil {
+	if dst, err = os.OpenFile(dstp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, dstMode); err != nil {
 		return errors.WithStack(err)
 	}
 	defer dst.Close()
@@ -74,14 +116,51 @@ func (t Executer) archive(a Archive) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if err = t.chown(a); err != nil {
-		return err
+	if err = os.Chmod(dstp, dstMode); err != nil {
+		return errors.WithStack(err)
 	}
 
 	return nil
 }
 
-func (t Executer) chown(a Archive) (err error) {
+func copyDirectory(dir string, a Archive) (err error) {
+	debugx.Println("copying directory", dir)
+	walker := func(path string, info os.FileInfo, err error) error {
+		var (
+			dstp string
+			mode = info.Mode()
+		)
+
+		if err != nil {
+			return err
+		}
+
+		if dstp, err = filepath.Rel(dir, path); err != nil {
+			return errors.WithStack(err)
+		}
+
+		dstp = filepath.Join(a.Path, dstp)
+		debugx.Println("copying", path, "to", dstp)
+
+		if info.IsDir() {
+			return errors.WithStack(os.Mkdir(dstp, mode))
+		}
+
+		return copyFile(path, dstp, mode)
+	}
+
+	if err = filepath.Walk(dir, walker); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err = chown(a); err != nil {
+		return err
+	}
+
+	return errors.WithStack(os.Chmod(a.Path, os.FileMode(a.Mode)))
+}
+
+func chown(a Archive) (err error) {
 	var (
 		owner *user.User
 		group *user.Group

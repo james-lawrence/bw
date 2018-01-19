@@ -1,7 +1,6 @@
 package bwfs
 
 import (
-	"net/url"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -9,7 +8,7 @@ import (
 
 func parse(l *lexer, a *Archive) (err error) {
 	var (
-		next pState = uriState{}
+		next pState = srcState{}
 	)
 
 	for next != nil && err == nil {
@@ -34,25 +33,37 @@ func (t doneState) Advance(tok token, a *Archive) (pState, error) {
 	}
 }
 
-type uriState struct{}
+type srcState struct{}
 
-func (t uriState) Advance(tok token, a *Archive) (next pState, err error) {
-	var (
-		uri *url.URL
-	)
-
+func (t srcState) Advance(tok token, a *Archive) (next pState, err error) {
 	if tok.typ != tokenText {
-		return nil, errors.Errorf("expected a uri token, received: %s", tok.typ)
+		return nil, errors.Errorf("expected a filepath token, received: %s", tok.typ)
 	}
 
-	if uri, err = url.Parse(tok.val); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	a.URI = uri.String()
+	a.URI = tok.val
 
 	return pathState{}, nil
 }
+
+// type uriState struct{}
+//
+// func (t uriState) Advance(tok token, a *Archive) (next pState, err error) {
+// 	var (
+// 		uri *url.URL
+// 	)
+//
+// 	if tok.typ != tokenText {
+// 		return nil, errors.Errorf("expected a uri token, received: %s", tok.typ)
+// 	}
+//
+// 	if uri, err = url.Parse(tok.val); err != nil {
+// 		return nil, errors.WithStack(err)
+// 	}
+//
+// 	a.URI = uri.String()
+//
+// 	return pathState{}, nil
+// }
 
 type pathState struct{}
 
