@@ -24,7 +24,7 @@ var _ = Describe("Bwfs", func() {
 			err error
 		)
 
-		if tmpdir, err = ioutil.TempDir(".fixtures", "test"); err != nil {
+		if tmpdir, err = ioutil.TempDir(".", "test"); err != nil {
 			Expect(err).ToNot(HaveOccurred())
 		}
 
