@@ -3,6 +3,7 @@ package agentutil
 import (
 	"bytes"
 	"log"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -10,6 +11,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/backoff"
 )
 
 type errString string
@@ -24,6 +26,26 @@ const (
 	// ErrFailedDeploymentQuorum ...
 	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
 )
+
+// BootstrapUntilSuccess continuously bootstraps until it succeeds.
+func BootstrapUntilSuccess(local agent.Peer, c cluster, creds credentials.TransportCredentials) {
+	var (
+		err error
+	)
+
+	bs := backoff.Maximum(10*time.Second, backoff.Exponential(2*time.Second))
+
+	for i := 0; ; i++ {
+		if err = Bootstrap(local, c, creds); err != nil {
+			log.Println("failed bootstrap", err)
+			time.Sleep(bs.Backoff(i))
+			log.Println("REATTEMPT BOOTSTRAP")
+			continue
+		}
+
+		return
+	}
+}
 
 // Bootstrap ...
 func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials) (err error) {
@@ -55,12 +77,22 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		return errors.Wrap(err, "failed to retrieve local")
 	}
 
+	if err = client.Close(); err != nil {
+		return errors.WithStack(err)
+	}
+
 	if len(status.Deployments) > 0 && bytes.Compare(latest.DeploymentID, status.Deployments[0].DeploymentID) == 0 {
 		log.Println("latest already deployed")
 		return nil
 	}
 
-	if _, err = client.Deploy(latest); err != nil {
+	if client, err = agent.DialQuorum(c, tcreds); err != nil {
+		return errors.WithStack(err)
+	}
+
+	// need to pass some sort of timeout here. since we're using the latest deploy,
+	// assume it'll be successful and give it an excessive timeout.
+	if err = client.RemoteDeploy(24*time.Hour, 1, latest, local); err != nil {
 		return errors.Wrap(err, "failed to deploy latest")
 	}
 

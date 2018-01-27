@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -26,7 +27,7 @@ type mockdeploy struct {
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(_ agent.Dispatcher, n int64, dopt grpc.DialOption, archive agent.Archive, peers ...agent.Peer) error {
+func (t *mockdeploy) Deploy(_ agent.Dispatcher, timeout time.Duration, n int64, dopt grpc.DialOption, archive agent.Archive, peers ...agent.Peer) error {
 	t.lastN = n
 	t.lastArchive = archive
 	t.lastPeers = peers
@@ -91,7 +92,7 @@ var _ = Describe("Quorum", func() {
 			defer cancel()
 			Expect(err).ToNot(HaveOccurred())
 			archive := agent.Archive{DeploymentID: bw.MustGenerateID()}
-			Expect(client.RemoteDeploy(5, archive)).ToNot(HaveOccurred())
+			Expect(client.RemoteDeploy(time.Minute, 5, archive)).ToNot(HaveOccurred())
 			Expect(md.lastArchive).To(Equal(archive))
 			Expect(md.lastN).To(Equal(int64(5)))
 		})

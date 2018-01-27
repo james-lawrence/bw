@@ -32,6 +32,7 @@ message DeployCommand {
   enum Command { Begin = 0; Cancel = 1; Done = 2; }
   Command command = 1;
   Archive archive = 2;
+  int64 timeout = 3; // when to consider the deploy failed.
 }
 
 message Deploy {
@@ -44,7 +45,8 @@ message Deploy {
 message DeployCommandRequest {
   Archive archive = 1;
   int64 concurrency = 2;
-  repeated Peer peers = 3;
+  int64 timeout = 3; // when to consider the deploy failed.
+  repeated Peer peers = 4;
 }
 message DeployCommandResult {}
 

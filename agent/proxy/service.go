@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"time"
+
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
@@ -29,7 +31,7 @@ type Proxy struct {
 }
 
 // Deploy ...
-func (t Proxy) Deploy(d agent.Dispatcher, max int64, creds grpc.DialOption, archive agent.Archive, peers ...agent.Peer) (err error) {
+func (t Proxy) Deploy(d agent.Dispatcher, timeout time.Duration, max int64, creds grpc.DialOption, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
@@ -50,7 +52,13 @@ func (t Proxy) Deploy(d agent.Dispatcher, max int64, creds grpc.DialOption, arch
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(int(max))),
 	}
 
-	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &archive})); err != nil {
+	cmd := agent.DeployCommand{
+		Timeout: int64(timeout),
+		Command: agent.DeployCommand_Begin,
+		Archive: &archive,
+	}
+
+	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
 		return err
 	}
 

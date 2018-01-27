@@ -71,11 +71,19 @@ func PeerOptionStatus(c Peer_State) PeerOption {
 	}
 }
 
+// PeerOptionName ...
+func PeerOptionName(n string) PeerOption {
+	return func(p *Peer) {
+		p.Name = n
+	}
+}
+
 // NewPeer ...
 func NewPeer(id string, opts ...PeerOption) Peer {
+	hn := systemx.HostnameOrLocalhost()
 	p := Peer{
 		Name:        id,
-		Ip:          systemx.HostIP(systemx.HostnameOrLocalhost()).String(),
+		Ip:          systemx.HostIP(hn).String(),
 		RPCPort:     2000,
 		SWIMPort:    2001,
 		RaftPort:    2002,

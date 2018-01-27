@@ -123,6 +123,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	)
 
 	cx := cluster.New(local, c)
+
 	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {
 		var (
 			tc  storage.TorrentConfig
@@ -165,9 +166,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	t.runServer(c)
 
-	if err = agentutil.Bootstrap(local.Peer, cx, tlscreds); err != nil {
-		return err
-	}
+	go agentutil.BootstrapUntilSuccess(local.Peer, cx, tlscreds)
 
 	return nil
 }

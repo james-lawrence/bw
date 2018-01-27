@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -22,6 +23,7 @@ import (
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -49,6 +51,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 
 	t.deployCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
 	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
+	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
 func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
@@ -59,6 +62,10 @@ func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
 	default:
 		go ux.Logging(t.global.ctx, t.global.cleanup, events)
 	}
+}
+
+func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.cancel)
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -108,7 +115,9 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
+		commandutils.NewClientPeer(
+			agent.PeerOptionName("local"),
+		),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
@@ -119,6 +128,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
 			clustering.OptionAliveDelegate(deployclient.AliveHandler{}),
+			clustering.OptionLogOutput(ioutil.Discard),
 		),
 	}
 
@@ -182,15 +192,15 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		return nil
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive created: leader(%s), deployID(%s), location(%s)", info.Peer.Name, bw.RandomID(info.DeploymentID), info.Location))
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("uploaded archive: location(%s)", info.Location))
 
 	cx := cluster.New(local, c)
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	go func() {
-		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s), total peers(%d)", max, bw.RandomID(info.DeploymentID), len(peers)))
+		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(info.DeploymentID)))
 
-		if cause := client.RemoteDeploy(max, info, peers...); cause != nil {
+		if cause := client.RemoteDeploy(time.Hour, max, info, peers...); cause != nil {
 			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 		}
 
@@ -198,4 +208,67 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}()
 
 	return err
+}
+
+func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
+	var (
+		client agent.Client
+		config agent.ConfigClient
+		c      clustering.Cluster
+	)
+	defer t.global.shutdown()
+
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	log.Println("configuration:", spew.Sdump(config))
+	events := make(chan agent.Message, 100)
+	t.initializeUX(t.uxmode, events)
+
+	local := cluster.NewLocal(
+		commandutils.NewClientPeer(),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	)
+
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionClustering(
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
+			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
+			clustering.OptionAliveDelegate(deployclient.AliveHandler{}),
+			clustering.OptionLogOutput(ioutil.Discard),
+		),
+	}
+
+	logRetryError := func(err error) {
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "connection to cluster failed"))
+	}
+
+	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+	logx.MaybeLog(c.Shutdown())
+
+	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+	go func() {
+		<-t.global.ctx.Done()
+		if err = client.Close(); err != nil {
+			log.Println("failed to close client", err)
+		}
+	}()
+
+	cmd := agent.DeployCommand{
+		Command: agent.DeployCommand_Cancel,
+	}
+
+	if err = client.Dispatch(agentutil.DeployCommand(local.Peer, cmd)); err != nil {
+		return err
+	}
+
+	events <- agentutil.LogEvent(local.Peer, "deploy cancelled")
+	time.Sleep(5 * time.Second)
+	return nil
 }

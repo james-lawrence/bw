@@ -23,7 +23,7 @@ func NewClientPeer(options ...agent.PeerOption) (p agent.Peer) {
 			Ip:     systemx.HostnameOrLocalhost(),
 			Status: agent.Peer_Client,
 		},
-		agent.PeerOptionStatus(agent.Peer_Client),
+		append(options, agent.PeerOptionStatus(agent.Peer_Client))...,
 	)
 }
 

@@ -1,9 +1,12 @@
 package agent
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type quorum interface {
-	Deploy(concurrency int64, archive Archive, peers ...Peer) error
+	Deploy(timeout time.Duration, concurrency int64, archive Archive, peers ...Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
 	Dispatch(in Quorum_DispatchServer) error
@@ -26,7 +29,7 @@ func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *Deplo
 	var (
 		_zero DeployCommandResult
 	)
-	return &_zero, t.q.Deploy(req.Concurrency, *req.Archive)
+	return &_zero, t.q.Deploy(time.Duration(req.Timeout), req.Concurrency, *req.Archive, PtrToPeers(req.Peers...)...)
 }
 
 // Upload ...

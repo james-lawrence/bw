@@ -3,8 +3,8 @@ package ux
 import (
 	"context"
 	"log"
+	"os"
 	"sync"
-	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -12,30 +12,25 @@ import (
 
 // Logging based ux
 func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message) {
+	logger := log.New(os.Stderr, "[CLIENT] ", 0)
 	defer wg.Done()
 	for {
 		select {
 		case m := <-events:
 			switch m.Type {
-			case agent.Message_PeersFoundEvent, agent.Message_PeersCompletedEvent:
-				log.Printf(
-					"%s %s:%s - %s: %d\n",
-					time.Unix(m.GetTs(), 0).Format(time.Stamp),
-					m.Peer.Name,
-					m.Peer.Ip,
-					m.Type,
-					m.GetInt(),
-				)
 			case agent.Message_PeerEvent:
-				log.Printf(
-					"%s - %s: %s\n",
+			case agent.Message_DeployCommandEvent:
+			case agent.Message_PeersCompletedEvent:
+				// Do nothing.
+			case agent.Message_PeersFoundEvent:
+				logger.Printf(
+					"%s - INFO - located %d peers\n",
 					messagePrefix(m),
-					m.Type,
-					m.Peer.Status,
+					m.GetInt(),
 				)
 			case agent.Message_DeployEvent:
 				d := m.GetDeploy()
-				log.Printf(
+				logger.Printf(
 					"%s - Deploy %s %s\n",
 					messagePrefix(m),
 					bw.RandomID(d.Archive.DeploymentID),
@@ -43,14 +38,13 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message)
 				)
 			case agent.Message_LogEvent:
 				d := m.GetLog()
-				log.Printf(
-					"%s %s - %s\n",
+				logger.Printf(
+					"%s - INFO - %s\n",
 					messagePrefix(m),
-					m.Type,
 					d.Log,
 				)
 			default:
-				log.Printf("%s - %s\n", messagePrefix(m), m.Type)
+				logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 			}
 		case _ = <-ctx.Done():
 			return

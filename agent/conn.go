@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"io"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -111,9 +112,10 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(concurrency int64, archive Archive, peers ...Peer) (err error) {
+func (t Conn) RemoteDeploy(duration time.Duration, concurrency int64, archive Archive, peers ...Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
+		Timeout:     int64(duration),
 		Concurrency: concurrency,
 		Archive:     &archive,
 		Peers:       PeersToPtr(peers...),

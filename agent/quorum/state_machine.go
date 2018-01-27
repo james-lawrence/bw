@@ -1,10 +1,12 @@
 package quorum
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/debugx"
@@ -40,9 +42,11 @@ func CommandToMessage(cmd []byte) (m agent.Message, err error) {
 // StateMachine ...
 type StateMachine struct {
 	agent.EventBus
-	m         *sync.RWMutex
-	details   agent.Details
-	deploying int32
+	m              *sync.RWMutex
+	details        agent.Status
+	deploying      int32
+	deployDeadline time.Time
+	currentDeploy  agent.DeployCommand
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -64,11 +68,21 @@ func (t *StateMachine) Apply(l *raft.Log) interface{} {
 }
 
 func (t *StateMachine) deployCommand(dc *agent.DeployCommand) error {
+	// reset deploy.
+	if t.deployDeadline.Before(time.Now()) {
+		log.Println("current deploy deadline expired", t.deployDeadline)
+		atomic.SwapInt32(&t.deploying, none)
+	}
+
 	switch dc.Command {
 	case agent.DeployCommand_Begin:
 		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
-			return errors.New("deploy already in progress")
+			return errors.New(fmt.Sprint("deploy already in progress: expires in", t.deployDeadline.Sub(time.Now())))
 		}
+		t.m.Lock()
+		t.deployDeadline = time.Now().Add(time.Duration(dc.Timeout))
+		t.currentDeploy = *dc
+		t.m.Unlock()
 	default:
 		atomic.SwapInt32(&t.deploying, none)
 	}
@@ -115,18 +129,18 @@ func (t *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
 // concurrently with any other command. The FSM must discard all previous
 // state.
 func (t *StateMachine) Restore(r io.ReadCloser) error {
-	t.details = agent.Details{}
+	t.details = agent.Status{}
 	return nil
 }
 
 // Details includes information about the details of the quorum.
 // who its members are, the latest deploys.
-func (t StateMachine) Details() (d agent.Details, err error) {
+func (t StateMachine) Details() (d agent.Status, err error) {
 	return t.details, nil
 }
 
 type quorumFSMSnapshot struct {
-	details agent.Details
+	details agent.Status
 }
 
 // Persist should dump all necessary state to the WriteCloser 'sink',

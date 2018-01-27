@@ -42,7 +42,8 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		Address: systemx.HostnameOrLocalhost(),
+		DeployTimeout: 20 * time.Minute,
+		Address:       systemx.HostnameOrLocalhost(),
 	}
 
 	ConfigClientTLS(DefaultTLSCredentialsRoot)(&config)
@@ -52,13 +53,14 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	Address     string
-	Concurrency float64
-	Key         string
-	Cert        string
-	CA          string
-	ServerName  string
-	Environment string
+	Address       string
+	Concurrency   float64
+	DeployTimeout time.Duration `yaml:"deployTimeout"`
+	Key           string
+	Cert          string
+	CA            string
+	ServerName    string
+	Environment   string
 }
 
 // Connect to the address in the config client.
