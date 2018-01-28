@@ -28,31 +28,36 @@ message Message {
   }
 }
 
+message DeployOptions {
+  int64 concurrency = 2;    // sets the number of simultaneously instance deploys to run.
+  int64 timeout = 3;        // how long to wait before a single deploy is considered a failure.
+  bool ignoreFailures = 4;  // ignore failures during the deploy.
+}
+
 message DeployCommand {
   enum Command { Begin = 0; Cancel = 1; Done = 2; }
   Command command = 1;
   Archive archive = 2;
-  int64 timeout = 3; // when to consider the deploy failed.
+  DeployOptions options = 5;
+}
+
+message DeployCommandRequest {
+  Archive archive = 1;
+  DeployOptions options = 5;
+  repeated Peer peers = 4;
+}
+message DeployCommandResult {}
+
+message Log {
+  string log = 1;
 }
 
 message Deploy {
   enum Stage { Failed = 0; Deploying = 1; Completed = 2; }
   Stage stage = 1;
   Archive archive = 2;
+  DeployOptions options = 4;
   string error = 3;
-}
-
-message DeployCommandRequest {
-  Archive archive = 1;
-  int64 concurrency = 2;
-  int64 timeout = 3; // when to consider the deploy failed.
-  repeated Peer peers = 4;
-}
-message DeployCommandResult {}
-
-
-message Log {
-  string log = 1;
 }
 
 message UploadMetadata {
@@ -68,7 +73,12 @@ message ArchiveChunk {
   }
 }
 
-message ArchiveResult {
+message DeployRequest {
+  Archive archive = 1;
+  DeployOptions options = 2;
+}
+
+message DeployResponse {
   Deploy deploy = 1;
 }
 
@@ -119,7 +129,7 @@ message ShutdownResponse{}
 
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectInfo) {}
-  rpc Deploy(Archive) returns (ArchiveResult) {}
+  rpc Deploy(DeployRequest) returns (DeployResponse) {}
   rpc Info(StatusRequest) returns (Status) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
 }

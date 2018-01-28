@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"io"
 	"log"
-	"time"
 
 	"google.golang.org/grpc"
 
@@ -112,13 +111,12 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(duration time.Duration, concurrency int64, archive Archive, peers ...Peer) (err error) {
+func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
-		Timeout:     int64(duration),
-		Concurrency: concurrency,
-		Archive:     &archive,
-		Peers:       PeersToPtr(peers...),
+		Archive: &a,
+		Options: &dopts,
+		Peers:   PeersToPtr(peers...),
 	}
 
 	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
@@ -129,14 +127,14 @@ func (t Conn) RemoteDeploy(duration time.Duration, concurrency int64, archive Ar
 }
 
 // Deploy ...
-func (t Conn) Deploy(info Archive) (d Deploy, err error) {
+func (t Conn) Deploy(options DeployOptions, archive Archive) (d Deploy, err error) {
 	var (
-		ar *ArchiveResult
+		ar *DeployResponse
 	)
 
 	rpc := NewAgentClient(t.conn)
 
-	if ar, err = rpc.Deploy(context.Background(), &info); err != nil {
+	if ar, err = rpc.Deploy(context.Background(), &DeployRequest{Options: &options, Archive: &archive}); err != nil {
 		return d, errors.Wrap(err, "failed to initiated deploy")
 	}
 

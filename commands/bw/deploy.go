@@ -17,7 +17,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/deployclient"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/archive"
+	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
@@ -33,12 +33,13 @@ const (
 )
 
 type deployCmd struct {
-	global        *global
-	uxmode        string
-	environment   string
-	deployspace   string
-	filteredIP    []net.IP
-	filteredRegex []*regexp.Regexp
+	global         *global
+	uxmode         string
+	environment    string
+	deployspace    string
+	filteredIP     []net.IP
+	filteredRegex  []*regexp.Regexp
+	ignoreFailures bool
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
@@ -69,12 +70,14 @@ func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 	return parent.Action(t.deploy)
 }
 
 func (t *deployCmd) filteredCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
+	parent.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 	return parent.Action(t.filtered)
 }
 
@@ -103,7 +106,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		client  agent.Client
 		config  agent.ConfigClient
 		c       clustering.Cluster
-		info    agent.Archive
+		archive agent.Archive
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
@@ -160,7 +163,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	if err = ioutil.WriteFile(filepath.Join(t.deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
-	events <- agentutil.LogEvent(local.Peer, "uploading archive")
+	events <- agentutil.LogEvent(local.Peer, "archive upload initiated")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
@@ -170,7 +173,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = archive.Pack(dst, t.deployspace); err != nil {
+	if err = packer.Pack(dst, t.deployspace); err != nil {
 		return err
 	}
 
@@ -186,21 +189,26 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		return nil
 	}
 
-	if info, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
+	if archive, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment complete")
 		return nil
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("uploaded archive: location(%s)", info.Location))
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: location(%s)", archive.Location))
 
 	cx := cluster.New(local, c)
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
+	dopts := agent.DeployOptions{
+		Concurrency:    int64(config.Partitioner().Partition(len(cx.Members()))),
+		Timeout:        int64(config.DeployTimeout),
+		IgnoreFailures: t.ignoreFailures,
+	}
 	go func() {
-		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(info.DeploymentID)))
+		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 
-		if cause := client.RemoteDeploy(time.Hour, max, info, peers...); cause != nil {
+		if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
 			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 		}
 

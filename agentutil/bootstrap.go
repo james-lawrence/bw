@@ -90,9 +90,14 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		return errors.WithStack(err)
 	}
 
+	dopts := agent.DeployOptions{
+		Concurrency: 1,
+		Timeout:     int64(24 * time.Hour),
+	}
+
 	// need to pass some sort of timeout here. since we're using the latest deploy,
 	// assume it'll be successful and give it an excessive timeout.
-	if err = client.RemoteDeploy(24*time.Hour, 1, latest, local); err != nil {
+	if err = client.RemoteDeploy(dopts, latest, local); err != nil {
 		return errors.Wrap(err, "failed to deploy latest")
 	}
 

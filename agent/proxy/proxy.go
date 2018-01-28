@@ -34,7 +34,7 @@ func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) 
 	}
 }
 
-func deploy(info agent.Archive, options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
+func deploy(dopts agent.DeployOptions, archive agent.Archive, options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
 	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c agent.Client
@@ -45,6 +45,6 @@ func deploy(info agent.Archive, options ...grpc.DialOption) func(n agent.Peer) (
 		}
 		defer c.Close()
 
-		return c.Deploy(info)
+		return c.Deploy(dopts, archive)
 	}
 }

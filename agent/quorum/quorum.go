@@ -33,7 +33,7 @@ type cluster interface {
 }
 
 type deploy interface {
-	Deploy(agent.Dispatcher, time.Duration, int64, grpc.DialOption, agent.Archive, ...agent.Peer) error
+	Deploy(grpc.DialOption, agent.Dispatcher, agent.DeployOptions, agent.Archive, ...agent.Peer) error
 }
 
 // errorFuture is used to return a static error.
@@ -319,7 +319,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 }
 
 // Deploy ...
-func (t *Quorum) Deploy(timeout time.Duration, concurrency int64, archive agent.Archive, peers ...agent.Peer) (err error) {
+func (t *Quorum) Deploy(dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
 	t.m.Lock()
 	p := t.proxy
 	t.m.Unlock()
@@ -331,7 +331,7 @@ func (t *Quorum) Deploy(timeout time.Duration, concurrency int64, archive agent.
 	case raft.Leader:
 		debugx.Println("deploy command initiated")
 		defer debugx.Println("deploy command completed")
-		return logx.MaybeLog(t.deploy.Deploy(t.ldispatch, timeout, concurrency, t.creds, archive, peers...))
+		return logx.MaybeLog(t.deploy.Deploy(t.creds, t.ldispatch, dopts, archive, peers...))
 	default:
 		var (
 			c agent.Client
@@ -343,7 +343,7 @@ func (t *Quorum) Deploy(timeout time.Duration, concurrency int64, archive agent.
 		}
 
 		defer c.Close()
-		return c.RemoteDeploy(timeout, concurrency, archive, peers...)
+		return c.RemoteDeploy(dopts, archive, peers...)
 	}
 }
 

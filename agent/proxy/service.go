@@ -1,8 +1,6 @@
 package proxy
 
 import (
-	"time"
-
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
@@ -30,8 +28,8 @@ type Proxy struct {
 	c clusterx
 }
 
-// Deploy ...
-func (t Proxy) Deploy(d agent.Dispatcher, timeout time.Duration, max int64, creds grpc.DialOption, archive agent.Archive, peers ...agent.Peer) (err error) {
+// Deploy the given archive to the specified peers.
+func (t Proxy) Deploy(creds grpc.DialOption, d agent.Dispatcher, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
@@ -47,14 +45,15 @@ func (t Proxy) Deploy(d agent.Dispatcher, timeout time.Duration, max int64, cred
 
 	options := []deployment.Option{
 		deployment.DeployOptionChecker(deployment.OperationFunc(check(doptions...))),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(archive, doptions...))),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(dopts, archive, doptions...))),
 		deployment.DeployOptionFilter(filter),
-		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(int(max))),
+		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
+		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
 	}
 
 	cmd := agent.DeployCommand{
-		Timeout: int64(timeout),
 		Command: agent.DeployCommand_Begin,
+		Options: &dopts,
 		Archive: &archive,
 	}
 

@@ -116,7 +116,7 @@ func (t *coordinator) Deployments() (_psIgnored agent.Deploy, _ignored []*agent.
 	return t.latestDeploy, archivePointers(archives...), nil
 }
 
-func (t *coordinator) Deploy(archive *agent.Archive) (d agent.Deploy, err error) {
+func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d agent.Deploy, err error) {
 	var (
 		dctx DeployContext
 	)
@@ -133,11 +133,11 @@ func (t *coordinator) Deploy(archive *agent.Archive) (d agent.Deploy, err error)
 		log.Println(soft)
 	}
 
-	if d = t.start(*archive); d.Stage != agent.Deploy_Deploying {
+	if d = t.start(archive); d.Stage != agent.Deploy_Deploying {
 		return d, errors.Errorf("failed to initiate deploy: %s", d.Stage.String())
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, t.local, *archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
+	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
 		return d, err
 	}
 

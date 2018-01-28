@@ -22,13 +22,13 @@ import (
 )
 
 type mockdeploy struct {
-	lastN       int64
+	lastOptions agent.DeployOptions
 	lastArchive agent.Archive
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(_ agent.Dispatcher, timeout time.Duration, n int64, dopt grpc.DialOption, archive agent.Archive, peers ...agent.Peer) error {
-	t.lastN = n
+func (t *mockdeploy) Deploy(dopt grpc.DialOption, _ agent.Dispatcher, opts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) error {
+	t.lastOptions = opts
 	t.lastArchive = archive
 	t.lastPeers = peers
 	return nil
@@ -87,14 +87,18 @@ var _ = Describe("Quorum", func() {
 		It("should trigger a deploy", func() {
 			md := &mockdeploy{}
 			p := agent.NewPeer("127.0.0.1", agent.PeerOptionIP(net.ParseIP("127.0.0.1")))
+			dopts := agent.DeployOptions{
+				Timeout:     int64(time.Minute),
+				Concurrency: 5,
+			}
 			wg, cancel, client, err := buildNode(p, md)
 			defer wg.Wait()
 			defer cancel()
 			Expect(err).ToNot(HaveOccurred())
 			archive := agent.Archive{DeploymentID: bw.MustGenerateID()}
-			Expect(client.RemoteDeploy(time.Minute, 5, archive)).ToNot(HaveOccurred())
+			Expect(client.RemoteDeploy(dopts, archive)).ToNot(HaveOccurred())
 			Expect(md.lastArchive).To(Equal(archive))
-			Expect(md.lastN).To(Equal(int64(5)))
+			Expect(md.lastOptions).To(Equal(dopts))
 		})
 
 		It("should be able to send and receive messages", func() {

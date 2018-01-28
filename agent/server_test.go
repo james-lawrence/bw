@@ -55,7 +55,7 @@ var _ = Describe("Server", func() {
 				clustering.NewMock(peers[0], peers[1:]...),
 			)
 			s := NewServer(c)
-			_, err := s.Deploy(context.Background(), &Archive{})
+			_, err := s.Deploy(context.Background(), &DeployRequest{Options: &DeployOptions{}, Archive: &Archive{}})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

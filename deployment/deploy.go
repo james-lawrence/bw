@@ -75,20 +75,26 @@ func DeployOptionDeployer(deployer operation) Option {
 	}
 }
 
+// DeployOptionIgnoreFailures set whether or not to ignore failures.
+func DeployOptionIgnoreFailures(ignore bool) Option {
+	return func(d *Deploy) {
+		d.worker.ignoreFailures = ignore
+	}
+}
+
 // NewDeploy by default deploys operate in one-at-a-time mode.
 func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:               make(chan func()),
-			wait:            new(sync.WaitGroup),
-			check:           constantChecker{Deploy: agent.Deploy{Stage: agent.Deploy_Completed}},
-			deploy:          OperationFunc(loggingDeploy),
-			dispatcher:      di,
-			local:           p,
-			completed:       new(int64),
-			failed:          new(int64),
-			enforceFailures: true,
+			c:          make(chan func()),
+			wait:       new(sync.WaitGroup),
+			check:      constantChecker{Deploy: agent.Deploy{Stage: agent.Deploy_Completed}},
+			deploy:     OperationFunc(loggingDeploy),
+			dispatcher: di,
+			local:      p,
+			completed:  new(int64),
+			failed:     new(int64),
 		},
 		partitioner: bw.ConstantPartitioner(1),
 	}
@@ -111,16 +117,16 @@ func loggingDeploy(peer agent.Peer) (agent.Deploy, error) {
 }
 
 type worker struct {
-	c               chan func()
-	wait            *sync.WaitGroup
-	local           agent.Peer
-	dispatcher      dispatcher
-	check           operation
-	deploy          operation
-	filter          Filter
-	completed       *int64
-	failed          *int64
-	enforceFailures bool
+	c              chan func()
+	wait           *sync.WaitGroup
+	local          agent.Peer
+	dispatcher     dispatcher
+	check          operation
+	deploy         operation
+	filter         Filter
+	completed      *int64
+	failed         *int64
+	ignoreFailures bool
 }
 
 func (t worker) work() {
@@ -138,7 +144,7 @@ func (t worker) Complete() {
 func (t worker) DeployTo(peer agent.Peer) {
 	// Stop deployment when a single node fails.
 	// TODO: make this configurable.
-	if atomic.LoadInt64(t.failed) > 0 && t.enforceFailures {
+	if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
 		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 		return
 	}
@@ -165,7 +171,7 @@ type Deploy struct {
 	worker
 }
 
-// Deploy ...
+// Deploy deploy to the cluster.
 func (t Deploy) Deploy(c cluster) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 
@@ -178,7 +184,6 @@ func (t Deploy) Deploy(c cluster) {
 	}
 
 	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
-
 	awaitCompletion(t, t.worker.check, nodes...)
 
 	t.Dispatch(agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
@@ -187,9 +192,8 @@ func (t Deploy) Deploy(c cluster) {
 		t.worker.DeployTo(peer)
 	}
 
+	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to complete"))
 	t.worker.Complete()
-
-	t.Dispatch(agentutil.LogEvent(t.worker.local, "deploy completed"))
 }
 
 // Dispatch - implements dispatcher interface.

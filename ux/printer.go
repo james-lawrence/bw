@@ -12,7 +12,7 @@ import (
 
 // Logging based ux
 func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message) {
-	logger := log.New(os.Stderr, "[CLIENT] ", 0)
+	out := log.New(os.Stderr, "[CLIENT] ", 0)
 	defer wg.Done()
 	for {
 		select {
@@ -23,28 +23,28 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message)
 			case agent.Message_PeersCompletedEvent:
 				// Do nothing.
 			case agent.Message_PeersFoundEvent:
-				logger.Printf(
+				out.Printf(
 					"%s - INFO - located %d peers\n",
 					messagePrefix(m),
 					m.GetInt(),
 				)
 			case agent.Message_DeployEvent:
 				d := m.GetDeploy()
-				logger.Printf(
-					"%s - Deploy %s %s\n",
+				out.Printf(
+					"%s - %s %s\n",
 					messagePrefix(m),
-					bw.RandomID(d.Archive.DeploymentID),
 					d.Stage,
+					bw.RandomID(d.Archive.DeploymentID),
 				)
 			case agent.Message_LogEvent:
 				d := m.GetLog()
-				logger.Printf(
+				out.Printf(
 					"%s - INFO - %s\n",
 					messagePrefix(m),
 					d.Log,
 				)
 			default:
-				logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
+				out.Printf("%s - %s\n", messagePrefix(m), m.Type)
 			}
 		case _ = <-ctx.Done():
 			return

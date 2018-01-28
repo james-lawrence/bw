@@ -20,8 +20,8 @@ type Dispatcher interface {
 type Client interface {
 	Shutdown() error
 	Upload(srcbytes uint64, src io.Reader) (Archive, error)
-	RemoteDeploy(timeout time.Duration, concurrency int64, archive Archive, peers ...Peer) error
-	Deploy(info Archive) (Deploy, error)
+	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
+	Deploy(DeployOptions, Archive) (Deploy, error)
 	Connect() (ConnectInfo, error)
 	Info() (Status, error)
 	Watch(out chan<- Message) error

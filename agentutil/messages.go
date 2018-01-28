@@ -54,6 +54,14 @@ func PeerEvent(p agent.Peer) agent.Message {
 	}
 }
 
+func deployToOptions(d agent.Deploy) (dopts agent.DeployOptions) {
+	if d.Options != nil {
+		return *d.Options
+	}
+
+	return dopts
+}
+
 func deployToArchive(d agent.Deploy) (a agent.Archive) {
 	if d.Archive != nil {
 		return *d.Archive
@@ -76,15 +84,15 @@ func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
 
 // DeployEvent represents a deploy being triggered.
 func DeployEvent(p agent.Peer, d agent.Deploy) agent.Message {
-	return deployEvent(d.Stage, p, deployToArchive(d))
+	return deployEvent(d.Stage, p, deployToOptions(d), deployToArchive(d))
 }
 
-func deployEvent(t agent.Deploy_Stage, p agent.Peer, a agent.Archive) agent.Message {
+func deployEvent(t agent.Deploy_Stage, p agent.Peer, di agent.DeployOptions, a agent.Archive) agent.Message {
 	return agent.Message{
 		Type:  agent.Message_DeployEvent,
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
-		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Archive: &a}},
+		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Options: &di, Archive: &a}},
 	}
 }
 
