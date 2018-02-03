@@ -143,10 +143,11 @@ func InitializeDeploymentDirectory(root string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	log.Println("creating plugins directory", filepath.Join(root, DirPlugins))
-	if err = os.MkdirAll(filepath.Join(root, DirPlugins), 0755); err != nil {
-		return errors.WithStack(err)
-	}
+	// TODO someday when we have plugins.
+	// log.Println("creating plugins directory", filepath.Join(root, DirPlugins))
+	// if err = os.MkdirAll(filepath.Join(root, DirPlugins), 0755); err != nil {
+	// 	return errors.WithStack(err)
+	// }
 
 	return nil
 }

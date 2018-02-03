@@ -1,8 +1,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
@@ -32,10 +30,6 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if plugins, err = dynplugin.Load("./plugins"); !os.IsNotExist(err) && err != nil {
-		return err
-	}
-
 	return t.agentCmd.bind(
 		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config, dl storage.DownloadProtocol) agent.ServerOption {
 			var (
@@ -47,7 +41,6 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 			} else {
 				dlreg = storage.New(storage.OptionDefaultProtocols(config.Root, dl))
 			}
-
 
 			deployments := deployment.New(
 				p,

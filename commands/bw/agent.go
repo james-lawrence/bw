@@ -35,8 +35,6 @@ type agentCmd struct {
 	*global
 	config     agent.Config
 	configFile string
-	server     *grpc.Server
-	listener   net.Listener
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
@@ -47,7 +45,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-torrent", "address for the Torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
-
+	parent.Flag("agent-unix-socket", "unix socket address of the agent").StringVar(&t.config.UnixDomainSocketPath)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
@@ -55,6 +53,9 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) agent.ServerOption) error {
 	var (
 		err      error
+		rpcBind  net.Listener
+		udsBind  net.Listener
+		server   *grpc.Server
 		c        clustering.Cluster
 		creds    *tls.Config
 		secret   []byte
@@ -75,8 +76,14 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		return err
 	}
 
-	if t.listener, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
+	if rpcBind, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
+	}
+
+	if t.config.UnixDomainSocketPath != "" {
+		if udsBind, err = net.Listen("unix", t.config.UnixDomainSocketPath); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	if secret, err = t.config.Hash(); err != nil {
@@ -154,31 +161,47 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	)
 	go (&q).Observe(p, make(chan raft.Observation, 200))
 
-	server := agent.NewServer(
+	a := agent.NewServer(
 		cx,
 		aoptions(dispatcher, local.Peer, t.config, download),
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
-	t.server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
-	agent.RegisterAgentServer(t.server, server)
-	agent.RegisterQuorumServer(t.server, agent.NewQuorum(&q))
+	aq := agent.NewQuorum(&q)
+	server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
+	agent.RegisterAgentServer(server, a)
+	agent.RegisterQuorumServer(server, aq)
+	t.runServer(server, c, rpcBind)
 
-	t.runServer(c)
+	if udsBind != nil {
+		server = grpc.NewServer(keepalive)
+		agent.RegisterAgentServer(server, a)
+		agent.RegisterQuorumServer(server, aq)
+		t.runServer(server, c, udsBind)
+	}
 
 	go agentutil.BootstrapUntilSuccess(local.Peer, cx, tlscreds)
+
+	t.gracefulShutdown(c, rpcBind, udsBind)
 
 	return nil
 }
 
-func (t *agentCmd) runServer(c clustering.Cluster) {
-	go t.server.Serve(t.listener)
+func (t *agentCmd) runServer(server *grpc.Server, c clustering.Cluster, listeners ...net.Listener) {
+	for _, l := range listeners {
+		go server.Serve(l)
+	}
+}
+
+func (t *agentCmd) gracefulShutdown(c clustering.Cluster, listeners ...net.Listener) {
 	t.global.cleanup.Add(1)
 	go func() {
 		defer t.global.cleanup.Done()
 		<-t.global.ctx.Done()
 
 		log.Println("left cluster", c.Shutdown())
-		log.Println("agent shutdown", t.listener.Close())
+		for _, l := range listeners {
+			log.Println("agent shutdown", l.Close())
+		}
 	}()
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/commands"
 	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/netx"
 	"github.com/james-lawrence/bw/x/systemx"
 
 	"github.com/alecthomas/kingpin"
@@ -29,6 +28,7 @@ type global struct {
 // agent: NETWORK=127.0.0.2; ./bin/bw agent --agent-name="node2" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent2/agent.config"
 // agent: NETWORK=127.0.0.3; ./bin/bw agent --agent-name="node3" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent3/agent.config"
 // agent: NETWORK=127.0.0.4; ./bin/bw agent --agent-name="node4" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent4/agent.config"
+// notifications: ./bin/bw notify --agent-config=".bwagent1/agent.config" --cluster=127.0.0.1:2001
 // client: ./bin/bw deploy
 
 // [agents] -> peers within the cluster
@@ -50,9 +50,8 @@ func main() {
 		}
 
 		agentcmd = &agentCmd{
-			config:   agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
-			global:   global,
-			listener: netx.NewNoopListener(),
+			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
+			global: global,
 		}
 		client = &deployCmd{
 			global: global,
