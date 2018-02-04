@@ -67,5 +67,6 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
+	log.Println(spew.Sdump(n))
 	return notifier.New(n...).Start(client)
 }
