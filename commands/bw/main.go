@@ -60,6 +60,7 @@ func main() {
 			global: global,
 		}
 		notify = &agentNotify{
+			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
 			global: global,
 		}
 		envinit = &initCredentials{
