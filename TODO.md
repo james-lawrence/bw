@@ -5,7 +5,8 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 - make packagekit less sensitive to repository information.
 - properly wait for instance to be reattached to ELBv2.
 
-#### prevent concurrent deploys
+#### integrate with vault PKI to dump client/server credentials for a given environment and PKI mount.
+#### integrate with aws KMS to dump client/server credentials for a given environment and key name.
 
 #### custom plugins
 - allow for custom plugins to be executed.
