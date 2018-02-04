@@ -1,0 +1,5 @@
+[[notifications.default]]
+[[notifications.slack]]
+  channel = "#private-testing-group"
+  webhook = "${WEBHOOK_URL}"
+  message = "${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT}"

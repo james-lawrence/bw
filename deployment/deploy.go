@@ -107,8 +107,8 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 }
 
 // RunDeploy convience function for executing a deploy.
-func RunDeploy(p agent.Peer, c cluster, di dispatcher, options ...Option) {
-	NewDeploy(p, di, options...).Deploy(c)
+func RunDeploy(p agent.Peer, c cluster, di dispatcher, options ...Option) (int64, bool) {
+	return NewDeploy(p, di, options...).Deploy(c)
 }
 
 func loggingDeploy(peer agent.Peer) (agent.Deploy, error) {
@@ -136,9 +136,11 @@ func (t worker) work() {
 	}
 }
 
-func (t worker) Complete() {
+func (t worker) Complete() (int64, bool) {
 	close(t.c)
 	t.wait.Wait()
+	failures := atomic.LoadInt64(t.failed)
+	return failures, t.ignoreFailures || failures == 0
 }
 
 func (t worker) DeployTo(peer agent.Peer) {
@@ -171,8 +173,9 @@ type Deploy struct {
 	worker
 }
 
-// Deploy deploy to the cluster.
-func (t Deploy) Deploy(c cluster) {
+// Deploy deploy to the cluster. returns deployment results.
+// failed nodes and if it was considered a success.
+func (t Deploy) Deploy(c cluster) (int64, bool) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 
 	t.Dispatch(agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
@@ -193,7 +196,8 @@ func (t Deploy) Deploy(c cluster) {
 	}
 
 	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to complete"))
-	t.worker.Complete()
+
+	return t.worker.Complete()
 }
 
 // Dispatch - implements dispatcher interface.

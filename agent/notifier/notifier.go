@@ -1,15 +1,14 @@
 package notifier
 
 import (
+	"log"
+
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/deployment/notifications"
 )
 
-type notifier interface {
-	Notify(agent.DeployCommand)
-}
-
 // New creates a notification agent from the given configuration.
-func New(n notifier) Notifier {
+func New(n ...notifications.Notifier) Notifier {
 	return Notifier{
 		n: n,
 	}
@@ -17,7 +16,7 @@ func New(n notifier) Notifier {
 
 // Notifier handles sending deployment notifications to various services.
 type Notifier struct {
-	n notifier
+	n []notifications.Notifier
 }
 
 // Start processes notifications from the client.
@@ -41,8 +40,11 @@ func (t Notifier) background(events chan agent.Message, done chan struct{}) {
 		case m := <-events:
 			switch event := m.GetEvent().(type) {
 			case *agent.Message_DeployCommand:
+				log.Println("deploy command received")
 				dc := *event.DeployCommand
-				notifyDeployCommand(t.n, dc)
+				for _, n := range t.n {
+					notifyDeployCommand(n, dc)
+				}
 			default:
 				// ignore other commands.
 			}
@@ -50,9 +52,9 @@ func (t Notifier) background(events chan agent.Message, done chan struct{}) {
 	}
 }
 
-func notifyDeployCommand(n notifier, dc agent.DeployCommand) {
+func notifyDeployCommand(n notifications.Notifier, dc agent.DeployCommand) {
 	switch dc.Command {
-	case agent.DeployCommand_Cancel, agent.DeployCommand_Done:
+	case agent.DeployCommand_Cancel, agent.DeployCommand_Done, agent.DeployCommand_Failed:
 		if dc.Archive != nil {
 			n.Notify(dc)
 		}

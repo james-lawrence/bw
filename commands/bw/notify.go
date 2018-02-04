@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -9,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/notifier"
 	"github.com/james-lawrence/bw/deployment/notifications"
+	"github.com/james-lawrence/bw/deployment/notifications/slack"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
@@ -57,5 +59,13 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		client.Close()
 	}()
 
-	return notifier.New(notifications.New()).Start(client)
+	n, err := notifications.DecodeConfig(filepath.Join(t.config.Root, "notifications.toml"), map[string]notifications.Creator{
+		"default": func() notifications.Notifier { return notifications.New() },
+		"slack":   func() notifications.Notifier { return slack.New() },
+	})
+	if err != nil {
+		return err
+	}
+
+	return notifier.New(n...).Start(client)
 }

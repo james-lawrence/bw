@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"log"
+
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
@@ -61,9 +63,13 @@ func (t Proxy) Deploy(creds grpc.DialOption, d agent.Dispatcher, dopts agent.Dep
 		return err
 	}
 
-	deployment.RunDeploy(t.c.Local(), t.c, d, options...)
+	dresult := agent.DeployCommand_Failed
+	if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
+		dresult = agent.DeployCommand_Done
+	}
 
-	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive})); err != nil {
+	log.Println("emitting deploy command")
+	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})); err != nil {
 		return err
 	}
 

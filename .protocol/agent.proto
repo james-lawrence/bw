@@ -35,7 +35,7 @@ message DeployOptions {
 }
 
 message DeployCommand {
-  enum Command { Begin = 0; Cancel = 1; Done = 2; }
+  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3;}
   Command command = 1;
   Archive archive = 2;
   DeployOptions options = 5;

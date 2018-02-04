@@ -271,6 +271,18 @@
   revision = "90eadee771aeab36e8bf796039b8c261bebebe4f"
 
 [[projects]]
+  name = "github.com/naoina/go-stringutil"
+  packages = ["."]
+  revision = "6b638e95a32d0c1131db0e7fe83775cbea4a0d0b"
+  version = "v0.1.0"
+
+[[projects]]
+  name = "github.com/naoina/toml"
+  packages = [".","ast"]
+  revision = "e6f5723bf2a66af014955e0888881314cf294129"
+  version = "v0.1.1"
+
+[[projects]]
   branch = "master"
   name = "github.com/nsf/termbox-go"
   packages = ["."]
@@ -399,6 +411,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "30ea5eaafd1c8d62f292cf0b80bec75590ccb803d1af6d93a5bf2af0d8d0f16b"
+  inputs-digest = "7e2a2dba15b34a074ca117eedd4b4a8512823d5f9228a219c18f81c9c50d9404"
   solver-name = "gps-cdcl"
   solver-version = 1

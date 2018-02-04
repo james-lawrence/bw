@@ -5,25 +5,16 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/pkg/errors"
 )
 
-type field struct {
-	Title string `json:"title"`
-	Value string `json:"value"`
-	Short bool   `json:"short"`
-}
-
 type notification struct {
-	Channel string  `json:"channel"`
-	Emoji   string  `json:"icon_emoji"`
-	Text    string  `json:"text"`
-	Fields  []field `json:"fields"`
+	Channel string `json:"channel"`
+	Text    string `json:"text"`
 }
 
 // New ...
@@ -55,17 +46,11 @@ func (t Notifier) Notify(dc agent.DeployCommand) {
 		resp *http.Response
 	)
 
-	msg := os.ExpandEnv(t.Message)
+	msg := notifications.ExpandEnv(t.Message, dc)
 
 	n := notification{
 		Channel: t.Channel,
 		Text:    msg,
-		Fields: []field{
-			{
-				Title: bw.RandomID(dc.Archive.DeploymentID).String(),
-				Value: dc.Command.String(),
-			},
-		},
 	}
 
 	if raw, err = json.Marshal(n); err != nil {
@@ -80,5 +65,22 @@ func (t Notifier) Notify(dc agent.DeployCommand) {
 
 	if resp.StatusCode > 299 {
 		log.Println("webhook request failed with status code", resp.StatusCode)
+	}
+}
+
+func colorFromCommand(c agent.DeployCommand_Command) string {
+	const (
+		ok     = "#8eb573"
+		failed = "#FF0000"
+		warn   = "#00FFFF"
+	)
+
+	switch c {
+	case agent.DeployCommand_Done:
+		return ok
+	case agent.DeployCommand_Cancel:
+		return warn
+	default:
+		return failed
 	}
 }
