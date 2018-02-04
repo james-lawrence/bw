@@ -2,14 +2,15 @@ package notifications
 
 import "github.com/james-lawrence/bw/agent"
 
-type creator func() alerts.Notifier
+// type creator func() alerts.Notifier
+//
+// var Plugins = map[string]creator{}
+//
+// func Add(name string, creator creator) {
+// 	Plugins[name] = creator
+// }
 
-var Plugins = map[string]creator{}
-
-func Add(name string, creator creator) {
-	Plugins[name] = creator
-}
-
+// Notifier ...
 type Notifier interface {
-	Notify(a agent.Archive)
+	Notify(agent.DeployCommand)
 }

@@ -283,25 +283,24 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 
 // Config - configuration for agent processes.
 type Config struct {
-	Name                 string
-	Root                 string        // root directory to store long term data.
-	UnixDomainSocketPath string        // used to export the agent to a unix domain socket
-	KeepN                int           `yaml:"keepN"`
-	MinimumNodes         int           `yaml:"minimumNodes"`
-	BootstrapAttempts    int           `yaml:"bootstrapAttempts"`
-	SnapshotFrequency    time.Duration `yaml:"snapshotFrequency"`
-	RPCBind              *net.TCPAddr
-	RaftBind             *net.TCPAddr
-	SWIMBind             *net.TCPAddr
-	Secret               string
-	Key                  string
-	Cert                 string
-	CA                   string
-	ServerName           string
-	TorrentBind          *net.TCPAddr
-	DNSBind              dnsBind  `yaml:"dnsBind"`
-	DNSBootstrap         []string `yaml:"dnsBootstrap"`
-	AWSBootstrap         struct {
+	Name              string
+	Root              string        // root directory to store long term data.
+	KeepN             int           `yaml:"keepN"`
+	MinimumNodes      int           `yaml:"minimumNodes"`
+	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
+	RPCBind           *net.TCPAddr
+	RaftBind          *net.TCPAddr
+	SWIMBind          *net.TCPAddr
+	Secret            string
+	Key               string
+	Cert              string
+	CA                string
+	ServerName        string
+	TorrentBind       *net.TCPAddr
+	DNSBind           dnsBind  `yaml:"dnsBind"`
+	DNSBootstrap      []string `yaml:"dnsBootstrap"`
+	AWSBootstrap      struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
 }
@@ -311,8 +310,7 @@ type dnsBind struct {
 	Frequency time.Duration
 }
 
-// Peer - builds the Peer information from the configuration. by default
-// a peer starts in the unknown state.
+// Peer - builds the Peer information from the configuration.
 func (t Config) Peer() Peer {
 	// TODO: have a separate advertise address for the IP field.
 	return Peer{

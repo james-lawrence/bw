@@ -8,6 +8,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/x/systemx"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
@@ -78,6 +79,20 @@ func (t Config) BuildServer() (creds *tls.Config, err error) {
 	}
 
 	return creds, nil
+}
+
+// GRPCCredentials creates grpc transport credentials from the TLS configuration.
+func (t Config) GRPCCredentials() (credentials.TransportCredentials, error) {
+	var (
+		err      error
+		tlscreds *tls.Config
+	)
+
+	if tlscreds, err = t.BuildServer(); err != nil {
+		return nil, err
+	}
+
+	return credentials.NewTLS(tlscreds), nil
 }
 
 // BuildClient ...

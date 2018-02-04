@@ -7,7 +7,10 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/pkg/errors"
+	"github.com/james-lawrence/bw/agent/notifier"
+	"github.com/james-lawrence/bw/deployment/notifications"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 type agentNotify struct {
@@ -17,13 +20,16 @@ type agentNotify struct {
 }
 
 func (t *agentNotify) configure(parent *kingpin.CmdClause) {
-	parent.Flag("agent-unix-socket", "unix socket address of the agent").StringVar(&t.config.UnixDomainSocketPath)
-	parent.Arg("config", "configuration file to use").Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configPath)
+	parent.Flag("agent-config", "configuration file to use").Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configPath)
+	parent.Flag("agent-address", "address of the RPC server to use").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
 	parent.Action(t.exec)
 }
 
 func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
-
+	var (
+		client agent.Client
+		creds  credentials.TransportCredentials
+	)
 	defer t.global.shutdown()
 
 	if err = bw.ExpandAndDecodeFile(t.configPath, &t.config); err != nil {
@@ -32,9 +38,24 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(t.config))
 
-	if t.config.UnixDomainSocketPath == "" {
-		return errors.New("unix dispatch is blank, cannot connect to an agent with a disabled socket")
+	if creds, err = t.config.GRPCCredentials(); err != nil {
+		return err
 	}
 
-	return nil
+	tcreds := grpc.WithTransportCredentials(creds)
+
+	if client, err = agent.Dial(t.config.RPCBind.String(), tcreds); err != nil {
+		return err
+	}
+
+	if client, err = agent.AddressProxyDialQuorum(t.config.RPCBind.String(), tcreds); err != nil {
+		return err
+	}
+
+	go func() {
+		<-t.global.ctx.Done()
+		client.Close()
+	}()
+
+	return notifier.New(notifications.New()).Start(client)
 }

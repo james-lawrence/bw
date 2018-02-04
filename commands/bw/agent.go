@@ -45,7 +45,6 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-torrent", "address for the Torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
-	parent.Flag("agent-unix-socket", "unix socket address of the agent").StringVar(&t.config.UnixDomainSocketPath)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
@@ -54,7 +53,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	var (
 		err      error
 		rpcBind  net.Listener
-		udsBind  net.Listener
 		server   *grpc.Server
 		c        clustering.Cluster
 		creds    *tls.Config
@@ -78,12 +76,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	if rpcBind, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
-	}
-
-	if t.config.UnixDomainSocketPath != "" {
-		if udsBind, err = net.Listen("unix", t.config.UnixDomainSocketPath); err != nil {
-			return errors.WithStack(err)
-		}
 	}
 
 	if secret, err = t.config.Hash(); err != nil {
@@ -173,16 +165,9 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	agent.RegisterQuorumServer(server, aq)
 	t.runServer(server, c, rpcBind)
 
-	if udsBind != nil {
-		server = grpc.NewServer(keepalive)
-		agent.RegisterAgentServer(server, a)
-		agent.RegisterQuorumServer(server, aq)
-		t.runServer(server, c, udsBind)
-	}
-
 	go agentutil.BootstrapUntilSuccess(local.Peer, cx, tlscreds)
 
-	t.gracefulShutdown(c, rpcBind, udsBind)
+	t.gracefulShutdown(c, rpcBind)
 
 	return nil
 }

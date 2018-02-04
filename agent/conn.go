@@ -27,6 +27,40 @@ func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
 	return conn, errors.New("failed to connect to a quorum node")
 }
 
+// AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
+func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
+	var (
+		client Client
+	)
+
+	if client, err = Dial(proxy, options...); err != nil {
+		return conn, err
+	}
+
+	return ProxyDialQuorum(client, options...)
+}
+
+// ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
+func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error) {
+	var (
+		cinfo ConnectInfo
+	)
+
+	if cinfo, err = c.Connect(); err != nil {
+		return conn, err
+	}
+
+	for _, q := range PtrToPeers(cinfo.Quorum...) {
+		if conn, err = Dial(RPCAddress(q), options...); err != nil {
+			log.Println("failed to dial", RPCAddress(q), err)
+			continue
+		}
+		return conn, nil
+	}
+
+	return conn, errors.New("failed to bootstrap from the provided peer")
+}
+
 // Dial connects to a node at the given address.
 func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error) {
 	var (

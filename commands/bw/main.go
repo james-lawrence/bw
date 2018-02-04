@@ -28,7 +28,7 @@ type global struct {
 // agent: NETWORK=127.0.0.2; ./bin/bw agent --agent-name="node2" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent2/agent.config"
 // agent: NETWORK=127.0.0.3; ./bin/bw agent --agent-name="node3" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent3/agent.config"
 // agent: NETWORK=127.0.0.4; ./bin/bw agent --agent-name="node4" --agent-bind=$NETWORK:2000 --cluster-bind=$NETWORK:2001 --cluster-bind-raft=$NETWORK:2002 --agent-torrent=${NETWORK}:2003 --cluster=127.0.0.1:2001 --agent-config=".bwagent4/agent.config"
-// notifications: ./bin/bw notify --agent-config=".bwagent1/agent.config" --cluster=127.0.0.1:2001
+// notifications: ./bin/bw notify --agent-config=".bwagent1/agent.config" --agent-address=127.0.0.1:2000
 // client: ./bin/bw deploy
 
 // [agents] -> peers within the cluster
@@ -59,6 +59,9 @@ func main() {
 		info = &agentInfo{
 			global: global,
 		}
+		notify = &agentNotify{
+			global: global,
+		}
 		envinit = &initCredentials{
 			global: global,
 		}
@@ -76,6 +79,7 @@ func main() {
 	})
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
+	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
 	info.configure(app.Command("info", "retrieve info about nodes within the cluster"))
 	envinit.configure(app.Command("credentials", "generate tls cert/key for an environment"))

@@ -3,22 +3,15 @@ package slack
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/systemd-alert/notifications"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
 )
-
-func init() {
-	notifications.Add("slack", func() alerts.Notifier {
-		return NewAlerter()
-	})
-}
 
 type field struct {
 	Title string `json:"title"`
@@ -33,9 +26,9 @@ type notification struct {
 	Fields  []field `json:"fields"`
 }
 
-// NewAlerter configures the Alerter
-func NewAlerter() *Alerter {
-	return &Alerter{
+// New ...
+func New() *Notifier {
+	return &Notifier{
 		client: defaultClient(),
 	}
 }
@@ -54,29 +47,25 @@ type Notifier struct {
 	client  *http.Client
 }
 
-// Notify about the provided units.
-func (t Notifier) Notify(d deployment.DeployContext) {
+// Notify send notification about a deploy
+func (t Notifier) Notify(dc agent.DeployCommand) {
 	var (
 		err  error
 		raw  []byte
 		resp *http.Response
 	)
-d.
-	if t.client == nil {
-		t.client = defaultClient()
-	}
-
-	fields := make([]field, 0, len(units))
-	for _, unit := range units {
-		fields = append(fields, field{Title: unit.Name, Value: fmt.Sprintf("%s - %s", unit.ActiveState, unit.SubState), Short: false})
-	}
 
 	msg := os.ExpandEnv(t.Message)
 
 	n := notification{
 		Channel: t.Channel,
 		Text:    msg,
-		Fields:  fields,
+		Fields: []field{
+			{
+				Title: bw.RandomID(dc.Archive.DeploymentID).String(),
+				Value: dc.Command.String(),
+			},
+		},
 	}
 
 	if raw, err = json.Marshal(n); err != nil {
