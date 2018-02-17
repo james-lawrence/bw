@@ -26,7 +26,7 @@ func (t leader) Update(c cluster) state {
 	debugx.Println("leader update invoked")
 	switch t.protocol.State() {
 	case raft.Leader:
-		if t.cleanupPeers(possiblePeers(c)...) {
+		if t.cleanupPeers(c.LocalNode(), possiblePeers(c)...) {
 			go t.raftp.unstable(time.Second)
 		}
 		return maintainState
@@ -35,18 +35,21 @@ func (t leader) Update(c cluster) state {
 		return peer{
 			raftp:    t.raftp,
 			protocol: t.protocol,
+			initTime: time.Now(),
 		}.Update(c)
 	}
 }
 
 // cleanupPeers returns true if the peer set was unstable.
-func (t leader) cleanupPeers(candidates ...*memberlist.Node) (unstable bool) {
+func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.Node) (unstable bool) {
 	config := t.protocol.GetConfiguration()
 	if err := config.Error(); err != nil {
 		log.Println("failed to retrieve peers", err)
 		return true
 	}
-	peers := config.Configuration().Servers
+
+	// remove self from peer set.
+	peers := removePeer(raft.ServerID(local.Name), config.Configuration().Servers...)
 	log.Println("candidates", peersToString(t.raftp.Port, candidates...))
 	log.Println("peers", peers)
 

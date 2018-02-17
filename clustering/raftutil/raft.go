@@ -136,12 +136,13 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 			_, trans := raft.NewInmemTransport("")
 			return trans, nil
 		},
-		ClusterChange:    sync.NewCond(&sync.Mutex{}),
-		init:             &sync.Once{},
-		sgroup:           &sync.WaitGroup{},
-		events:           make(chan Event, 100),
-		enableSingleNode: false,
-		config:           defaultRaftConfig(),
+		ClusterChange:          sync.NewCond(&sync.Mutex{}),
+		init:                   &sync.Once{},
+		sgroup:                 &sync.WaitGroup{},
+		events:                 make(chan Event, 100),
+		enableSingleNode:       false,
+		config:                 defaultRaftConfig(),
+		missingLeadershipGrace: time.Minute,
 	}
 
 	for _, opt := range options {
@@ -156,20 +157,22 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	Context          context.Context
-	Port             uint16
-	ClusterChange    *sync.Cond
-	Snapshots        raft.SnapshotStore
-	getStateMachine  func() raft.FSM
-	getTransport     func() (raft.Transport, error)
-	init             *sync.Once
-	cluster          *raft.Raft
-	observers        []*raft.Observer
-	sgroup           *sync.WaitGroup
-	clusterObserver  clusterObserver
-	events           chan Event
-	enableSingleNode bool
-	config           *raft.Config
+	Context                context.Context
+	Port                   uint16
+	ClusterChange          *sync.Cond
+	Snapshots              raft.SnapshotStore
+	getStateMachine        func() raft.FSM
+	getTransport           func() (raft.Transport, error)
+	init                   *sync.Once
+	cluster                *raft.Raft
+	transport              raft.Transport
+	observers              []*raft.Observer
+	sgroup                 *sync.WaitGroup
+	clusterObserver        clusterObserver
+	events                 chan Event
+	enableSingleNode       bool
+	config                 *raft.Config
+	missingLeadershipGrace time.Duration // how long to wait before a missing leader triggers a reset
 }
 
 // Raft returns the underlying raft instance, can be nil.
@@ -227,6 +230,18 @@ func (t Protocol) getPeers(c cluster) []string {
 	return peersToString(t.Port, possiblePeers(c)...)
 }
 
+func (t Protocol) deadlockedLeadership(p *raft.Raft, lastSeen time.Time) bool {
+	leader := p.Leader()
+
+	log.Println("current leader", leader, lastSeen.Format(time.RFC822Z))
+	if leader == "" && lastSeen.Add(t.missingLeadershipGrace).Before(time.Now()) {
+		log.Println("leader is missing and grace period has passed, resetting this peer", t.missingLeadershipGrace)
+		return true
+	}
+
+	return false
+}
+
 func (t Protocol) unstable(d time.Duration) {
 	log.Println("peers unstable, will refresh in", d)
 	time.Sleep(d)
@@ -278,15 +293,16 @@ func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
 	t.init.Do(func() {
 		// add this to the parent context waitgroup
 		contextx.WaitGroupAdd(t.Context, 1)
-		go t.waitShutdown(network)
+		go t.waitShutdown()
 	})
 
 	t.cluster = protocol
+	t.transport = network
 
 	return protocol, nil
 }
 
-func (t *Protocol) waitShutdown(transport raft.Transport) {
+func (t *Protocol) waitShutdown() {
 	defer log.Println("raft protocol clean shutdown")
 	defer contextx.WaitGroupDone(t.Context)
 	<-t.Context.Done()
@@ -298,21 +314,25 @@ func (t *Protocol) waitShutdown(transport raft.Transport) {
 	t.sgroup.Wait()
 	debugx.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
-	t.maybeShutdown()
-
-	if trans, ok := transport.(raft.WithClose); ok {
-		log.Println("closed transport", trans.Close())
-	}
+	t.maybeShutdown(t.transport)
 	debugx.Println("signaling wait group of completion")
 }
 
-func (t *Protocol) maybeShutdown() {
+func (t *Protocol) maybeShutdown(transport raft.Transport) {
 	if t.cluster == nil {
 		return
 	}
 
 	if err := t.cluster.Shutdown().Error(); err != nil {
 		log.Println("failed to shutdown raft", err)
+	}
+
+	if transport == nil {
+		return
+	}
+
+	if trans, ok := transport.(raft.WithClose); ok {
+		log.Println("closed transport", trans.Close())
 	}
 }
 
@@ -398,17 +418,29 @@ func Quorum(c cluster) []*memberlist.Node {
 // maybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
 // returns true if it left the raft protocol.
-func maybeLeave(protocol *raft.Raft, c cluster) bool {
+func maybeLeave(c cluster) bool {
 	if isMember(c) {
 		return false
 	}
 
 	log.Println("no longer a possible member of leadership, leaving raft cluster")
+	return true
+}
+
+func leave(util *Protocol, protocol *raft.Raft) {
 	if err := protocol.Shutdown().Error(); err != nil {
 		log.Println("failed to shutdown raft protocol", err)
+		return
 	}
 
-	return true
+	if util.transport == nil {
+		log.Println("expected a transport to exist during leave but its nil?!")
+		return
+	}
+
+	if trans, ok := util.transport.(raft.WithClose); ok {
+		log.Println("closed transport", trans.Close())
+	}
 }
 
 // isMember utility function for checking if the local node of the cluster is a member

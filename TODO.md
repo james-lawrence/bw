@@ -4,6 +4,7 @@ ordering of tasks in priority order. (minus cleanup those should be done as conv
 - make torrent storage timeout if it cannot successfully download an archive within a reasonable amount of time.
 - make packagekit less sensitive to repository information.
 - properly wait for instance to be reattached to ELBv2.
+- bootstrap process: allow for concurrent bootstraps to occur.
 
 #### integrate with vault PKI to dump client/server credentials for a given environment and PKI mount.
 #### integrate with aws KMS to dump client/server credentials for a given environment and key name.

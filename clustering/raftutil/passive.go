@@ -2,6 +2,7 @@ package raftutil
 
 import (
 	"log"
+	"time"
 
 	"github.com/james-lawrence/bw/x/debugx"
 
@@ -47,5 +48,6 @@ func (t passive) Update(c cluster) state {
 	return peer{
 		raftp:    t.raftp,
 		protocol: protocol,
+		initTime: time.Now(),
 	}.Update(c)
 }

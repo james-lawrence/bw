@@ -198,12 +198,13 @@ func BootstrapPeers(peers ...*Peer) peering.Static {
 // NewConfig creates a default configuration.
 func NewConfig(options ...ConfigOption) Config {
 	c := Config{
-		Name:              systemx.HostnameOrLocalhost(),
-		Root:              filepath.Join("/", "var", "cache", bw.DefaultDir),
-		KeepN:             3,
-		SnapshotFrequency: time.Hour,
-		MinimumNodes:      3,
-		BootstrapAttempts: math.MaxInt32,
+		Name:                   systemx.HostnameOrLocalhost(),
+		Root:                   filepath.Join("/", "var", "cache", bw.DefaultDir),
+		KeepN:                  3,
+		SnapshotFrequency:      time.Hour,
+		MinimumNodes:           3,
+		BootstrapAttempts:      math.MaxInt32,
+		BootstrapDeployTimeout: 5 * time.Minute,
 		DNSBind: dnsBind{
 			TTL:       60,
 			Frequency: time.Hour,
@@ -283,24 +284,25 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 
 // Config - configuration for agent processes.
 type Config struct {
-	Name              string
-	Root              string        // root directory to store long term data.
-	KeepN             int           `yaml:"keepN"`
-	MinimumNodes      int           `yaml:"minimumNodes"`
-	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
-	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
-	RPCBind           *net.TCPAddr
-	RaftBind          *net.TCPAddr
-	SWIMBind          *net.TCPAddr
-	Secret            string
-	Key               string
-	Cert              string
-	CA                string
-	ServerName        string
-	TorrentBind       *net.TCPAddr
-	DNSBind           dnsBind  `yaml:"dnsBind"`
-	DNSBootstrap      []string `yaml:"dnsBootstrap"`
-	AWSBootstrap      struct {
+	Name                   string
+	Root                   string        // root directory to store long term data.
+	KeepN                  int           `yaml:"keepN"`
+	MinimumNodes           int           `yaml:"minimumNodes"`
+	BootstrapAttempts      int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency      time.Duration `yaml:"snapshotFrequency"`
+	BootstrapDeployTimeout time.Duration `yaml:"bootstrapDeployTimeout"`
+	RPCBind                *net.TCPAddr
+	RaftBind               *net.TCPAddr
+	SWIMBind               *net.TCPAddr
+	Secret                 string
+	Key                    string
+	Cert                   string
+	CA                     string
+	ServerName             string
+	TorrentBind            *net.TCPAddr
+	DNSBind                dnsBind  `yaml:"dnsBind"`
+	DNSBootstrap           []string `yaml:"dnsBootstrap"`
+	AWSBootstrap           struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
 }

@@ -2,6 +2,7 @@ package agentutil
 
 import (
 	"bytes"
+	"context"
 	"log"
 	"time"
 
@@ -28,7 +29,7 @@ const (
 )
 
 // BootstrapUntilSuccess continuously bootstraps until it succeeds.
-func BootstrapUntilSuccess(local agent.Peer, c cluster, creds credentials.TransportCredentials) {
+func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, creds credentials.TransportCredentials) bool {
 	var (
 		err error
 	)
@@ -36,6 +37,12 @@ func BootstrapUntilSuccess(local agent.Peer, c cluster, creds credentials.Transp
 	bs := backoff.Maximum(10*time.Second, backoff.Exponential(2*time.Second))
 
 	for i := 0; ; i++ {
+		select {
+		case <-ctx.Done():
+			return false
+		default:
+		}
+
 		if err = Bootstrap(local, c, creds); err != nil {
 			log.Println("failed bootstrap", err)
 			time.Sleep(bs.Backoff(i))
@@ -43,7 +50,7 @@ func BootstrapUntilSuccess(local agent.Peer, c cluster, creds credentials.Transp
 			continue
 		}
 
-		return
+		return true
 	}
 }
 
