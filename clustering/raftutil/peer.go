@@ -29,7 +29,7 @@ func (t peer) lastContact() time.Time {
 
 func (t peer) Update(c cluster) state {
 	var (
-		nextState state = conditionTransition{
+		maintain state = conditionTransition{
 			next: t,
 			cond: t.raftp.ClusterChange,
 		}
@@ -49,5 +49,5 @@ func (t peer) Update(c cluster) state {
 		}
 	}
 
-	return nextState
+	return maintain
 }
