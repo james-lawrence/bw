@@ -1,11 +1,14 @@
 package logx
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
 
-// MaybeLog ...
+// MaybeLog logs if an error occurred.
 func MaybeLog(err error) error {
 	if err != nil {
-		log.Println(err)
+		log.Output(2, fmt.Sprintln(err))
 	}
 
 	return err
