@@ -14,6 +14,7 @@ import (
 
 	"github.com/james-lawrence/bw/x/contextx"
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/stringsx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -231,7 +232,7 @@ func (t Protocol) getPeers(c cluster) []string {
 }
 
 func (t Protocol) deadlockedLeadership(p *raft.Raft, lastSeen time.Time) bool {
-	leader := p.Leader()
+	leader := stringsx.DefaultIfBlank(string(p.Leader()), "[None]")
 
 	log.Println("current leader", leader, lastSeen.Format(time.RFC822Z))
 	if leader == "" && lastSeen.Add(t.missingLeadershipGrace).Before(time.Now()) {
