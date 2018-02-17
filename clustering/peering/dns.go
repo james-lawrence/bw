@@ -7,6 +7,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewDNS create a new DNS peering strategy
+func NewDNS(p int, hosts ...string) DNS {
+	return DNS{
+		Port:  p,
+		Hosts: hosts,
+	}
+}
+
 // DNS based peering
 type DNS struct {
 	Port  int // port to connect to.

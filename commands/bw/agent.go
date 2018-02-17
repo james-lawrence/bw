@@ -122,7 +122,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	)
 
 	cx := cluster.New(local, c)
-
 	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {
 		var (
 			tc  storage.TorrentConfig
@@ -140,7 +139,6 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 		}
 
 		go timex.Every(time.Minute, func() { tcu.ClearTorrents(tc) })
-		go timex.Every(time.Minute, func() { tcu.PrintTorrentInfo(tc) })
 		upload, download = tc.Uploader(), tc.Downloader()
 	}
 

@@ -10,7 +10,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
@@ -61,18 +60,6 @@ func ClusterJoin(ctx context.Context, conf agent.Config, dialer clustering.Diale
 	if c, err = dialer.Dial(); err != nil {
 		return c, err
 	}
-
-	defaultPeers = append(
-		defaultPeers,
-		peering.DNS{
-			Port:  conf.SWIMBind.Port,
-			Hosts: conf.DNSBootstrap,
-		},
-		peering.AWSAutoscaling{
-			Port:               conf.SWIMBind.Port,
-			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
-		},
-	)
 
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.BootstrapAttempts))

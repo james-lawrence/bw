@@ -1,7 +1,9 @@
 package deployment
 
 import (
+	"context"
 	"path/filepath"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/archive"
@@ -87,13 +89,15 @@ func (t Directive) deploy() {
 		environ []string
 	)
 
-	t.dctx.Log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
-	defer t.dctx.Log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
+	t.dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
+	defer t.dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", t.dctx.ID, t.dctx.Archive.Peer.Name, t.dctx.Archive.Location)
 
 	dst = filepath.Join(t.dctx.Root, "archive")
 	t.dctx.Log.Println("attempting to download", t.dctx.Archive.Location)
 
-	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download()), "retrieve archive"); err != nil {
+	timeout, done := context.WithTimeout(context.Background(), 30*time.Second)
+	defer done()
+	if err = errors.Wrapf(archive.Unpack(dst, t.dlreg.New(t.dctx.Archive.Location).Download(timeout, t.dctx.Archive)), "retrieve archive"); err != nil {
 		t.dctx.Done(err)
 		return
 	}

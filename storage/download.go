@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -8,13 +9,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
 // Downloader ...
 type Downloader interface {
-	Download() io.ReadCloser
+	Download(context.Context, agent.Archive) io.ReadCloser
 }
 
 func newDownload(rc io.ReadCloser) rcDownload {
@@ -25,14 +27,14 @@ type rcDownload struct {
 	io.ReadCloser
 }
 
-func (t rcDownload) Download() io.ReadCloser {
+func (t rcDownload) Download(context.Context, agent.Archive) io.ReadCloser {
 	return t.ReadCloser
 }
 
 // DownloadProtocol ...
 type DownloadProtocol interface {
 	Protocol() string
-	New(location string) Downloader
+	New() Downloader
 }
 
 type downloadConfig interface {
@@ -93,8 +95,7 @@ func newDownloadProtocolFromConfig(serialized []byte, v downloadConfig) (_ Downl
 }
 
 // New create a new downloader registry.
-func New(options ...Option) Registry {
-	r := Registry{}
+func New(options ...Option) (r Registry) {
 	for _, opt := range options {
 		opt(&r)
 	}
@@ -111,7 +112,7 @@ type Registry struct {
 func (t Registry) New(location string) Downloader {
 	for prefix, p := range t.protocols {
 		if strings.HasPrefix(location, prefix) {
-			return p.New(location)
+			return p.New()
 		}
 	}
 

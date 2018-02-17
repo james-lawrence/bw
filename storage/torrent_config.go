@@ -2,16 +2,12 @@ package storage
 
 import (
 	"crypto/sha256"
-	"log"
 	"net"
 	"os"
-	// "math"
+	"time"
 
 	"github.com/anacrolix/dht"
-	// "github.com/anacrolix/dht/krpc"
 	"github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/metainfo"
-	// "github.com/anacrolix/torrent/tracker"
 
 	"github.com/pkg/errors"
 
@@ -48,12 +44,7 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	return func(c *TorrentConfig) {
 		c.Config.DHTConfig.StartingNodes = func() (peers []dht.Addr, err error) {
 			for _, peer := range a.Quorum() {
-				if a.Local().Name == peer.Name {
-					continue
-				}
-
 				addr := net.UDPAddr{IP: net.ParseIP(peer.Ip), Port: int(peer.TorrentPort)}
-				log.Println("ADDED DHT PEER", peer.Name, addr.String())
 				peers = append(peers, dht.NewAddr(&addr))
 			}
 			return peers, err
@@ -72,14 +63,15 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 			EncryptionPolicy: torrent.EncryptionPolicy{
 				ForceEncryption: true,
 			},
-			Seed:                       true,
-			DisableTrackers:            true,
-			DisableTCP:                 true,
-			HalfOpenConnsPerTorrent:    1,
-			EstablishedConnsPerTorrent: 5,
-			TorrentPeersHighWater:      5,
-			TorrentPeersLowWater:       1,
-			// DHTConfig: torrentUtil{}.debugDHT(),
+			Seed:              true,
+			DisableTrackers:   true,
+			DisableTCP:        true,
+			HandshakesTimeout: 4 * time.Second,
+			// HalfOpenConnsPerTorrent:    1,
+			// EstablishedConnsPerTorrent: 5,
+			// TorrentPeersHighWater:      5,
+			// TorrentPeersLowWater:       1,
+			// DHTConfig:                  util.debugDHT(),
 		},
 	}
 
@@ -95,21 +87,13 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 		return c, errors.WithStack(err)
 	}
 
-	mi := metainfo.MetaInfo{}
-	mi.SetDefaults()
-
-	if c.announce, err = c.client.DHT().Announce(mi.HashInfoBytes(), 0, true); err != nil {
-		return c, errors.WithStack(err)
-	}
-
 	return c, nil
 }
 
 // TorrentConfig ...
 type TorrentConfig struct {
 	torrent.Config
-	client   *torrent.Client
-	announce *dht.Announce
+	client *torrent.Client
 }
 
 // Downloader ...
@@ -138,10 +122,9 @@ func (t torrentP) Protocol() string {
 	return torrentProtocol
 }
 
-func (t torrentP) New(location string) Downloader {
+func (t torrentP) New() Downloader {
 	return torrentD{
 		dir:    t.config.DataDir,
-		magnet: location,
 		client: t.client,
 	}
 }

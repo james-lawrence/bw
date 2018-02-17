@@ -45,9 +45,13 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 }
 
 // PrintTorrentInfo prints information about the torrent cluster.
-func (TorrentUtil) PrintTorrentInfo(c TorrentConfig) {
-	c.client.DHT().WriteStatus(os.Stderr)
-	log.Println(len(c.client.Torrents()), "torrents running")
+func (t TorrentUtil) PrintTorrentInfo(c TorrentConfig) {
+	t.printTorrentInfo(c.client)
+}
+
+func (TorrentUtil) printTorrentInfo(c *torrent.Client) {
+	c.DHT().WriteStatus(os.Stderr)
+	log.Println(len(c.Torrents()), "torrents running")
 }
 
 func (t TorrentUtil) loadDir(dir string, c *torrent.Client) error {
