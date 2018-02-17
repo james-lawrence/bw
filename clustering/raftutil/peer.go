@@ -45,12 +45,7 @@ func (t peer) Update(c cluster) state {
 		log.Println("peer current state", s)
 		if maybeLeave(c) || t.raftp.deadlockedLeadership(t.protocol, t.lastContact()) {
 			leave(t.raftp, t.protocol)
-			return conditionTransition{
-				next: passive{
-					raftp: t.raftp,
-				},
-				cond: t.raftp.ClusterChange,
-			}
+			return passive{raftp: t.raftp}
 		}
 	}
 

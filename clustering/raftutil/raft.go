@@ -92,6 +92,7 @@ func ProtocolOptionTCPTransport(tcp *net.TCPAddr, ts *tls.Config) ProtocolOption
 		if l, err = net.ListenTCP(tcp.Network(), tcp); err != nil {
 			return nil, errors.WithStack(err)
 		}
+
 		return raft.NewNetworkTransport(NewTLSStreamLayer(l, ts), 3, 2*time.Second, os.Stderr), nil
 	})
 }
