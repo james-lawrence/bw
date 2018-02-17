@@ -26,7 +26,7 @@ func (t leader) Update(c cluster) state {
 	debugx.Println("leader update invoked")
 	switch t.protocol.State() {
 	case raft.Leader:
-		if t.cleanupPeers(c.LocalNode(), possiblePeers(c)...) {
+		if t.cleanupPeers(c.LocalNode(), quorumPeers(c)...) {
 			go t.raftp.unstable(time.Second)
 		}
 		return maintainState

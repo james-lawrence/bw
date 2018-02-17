@@ -30,6 +30,7 @@ type cluster interface {
 	LocalNode() *memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(int, []byte) []*memberlist.Node
+	Peers() []agent.Peer
 }
 
 type deploy interface {
@@ -466,7 +467,7 @@ func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
 		peader agent.Peer
 	)
 
-	for _, peader = range t.c.Quorum() {
+	for _, peader = range t.c.Peers() {
 		if agent.RaftAddress(peader) == leader {
 			return peader
 		}

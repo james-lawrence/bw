@@ -29,7 +29,7 @@ func (t passive) Update(c cluster) state {
 	}
 
 	if !isMember(c) {
-		debugx.Println(c.LocalNode().Address(), "is not a member of", possiblePeers(c))
+		debugx.Println(c.LocalNode().Address(), "is not a member of", quorumPeers(c))
 		return maintainState
 	}
 

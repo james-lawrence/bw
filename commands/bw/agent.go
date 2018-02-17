@@ -163,20 +163,14 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
 	t.runServer(server, c, rpcBind)
-
-	// TODO: Move automatic bootstrapping out into a separate service.
-	go func() {
-		deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
-		defer done()
-		if agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, tlscreds) {
-			return
-		}
-		// if bootstrapping fails shutdown the process.
-		log.Println("failed to bootstrap node shutting down")
-		t.global.shutdown()
-	}()
-
 	t.gracefulShutdown(c, rpcBind)
+
+	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
+	defer done()
+	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, tlscreds) {
+		// if bootstrapping fails shutdown the process.
+		return errors.New("failed to bootstrap node shutting down")
+	}
 
 	return nil
 }

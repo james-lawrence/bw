@@ -152,7 +152,7 @@ retry:
 			continue
 		}
 
-		log.Println("breaking out of loop")
+		log.Println("joined", joined, "peers")
 		break
 	}
 

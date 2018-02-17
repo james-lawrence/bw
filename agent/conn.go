@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/grpc"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 )
@@ -21,6 +22,8 @@ func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
 			log.Println("failed to dial", RPCAddress(q), err)
 			continue
 		}
+
+		log.Println("quorum connection established", RPCAddress(q), spew.Sdump(q))
 		return conn, nil
 	}
 

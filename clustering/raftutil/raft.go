@@ -227,7 +227,7 @@ func (t Protocol) background() {
 }
 
 func (t Protocol) getPeers(c cluster) []string {
-	return peersToString(t.Port, possiblePeers(c)...)
+	return peersToString(t.Port, quorumPeers(c)...)
 }
 
 func (t Protocol) deadlockedLeadership(p *raft.Raft, lastSeen time.Time) bool {
@@ -411,8 +411,8 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 var leaderKey = []byte("leaders")
 
 // Quorum - returns the leader of the cluster.
-func Quorum(c cluster) []*memberlist.Node {
-	return possiblePeers(c)
+func Quorum(n int, c cluster) []*memberlist.Node {
+	return quorumPeers(c)
 }
 
 // maybeLeave - uses the provided cluster and raft protocol to determine
@@ -446,16 +446,21 @@ func leave(util *Protocol, protocol *raft.Raft) {
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
 func isMember(c cluster) bool {
-	return isPossiblePeer(c.LocalNode(), possiblePeers(c)...)
+	return isPossiblePeer(c.LocalNode(), quorumPeers(c)...)
 }
 
 // possiblePeers utility function for locating N possible peers for the raft protocol.
-func possiblePeers(c cluster) []*memberlist.Node {
+func possiblePeers(n int, c cluster) []*memberlist.Node {
+	return c.GetN(n, leaderKey)
+}
+
+// quorumPeers utility function for locating N possible peers for the raft protocol.
+func quorumPeers(c cluster) []*memberlist.Node {
 	return c.GetN(3, leaderKey)
 }
 
 func configuration(port uint16, c cluster) (conf raft.Configuration) {
-	for _, peer := range possiblePeers(c) {
+	for _, peer := range quorumPeers(c) {
 		p := raft.ServerAddress(peerToString(port, peer))
 		conf.Servers = append(conf.Servers, raft.Server{ID: raft.ServerID(peer.Name), Suffrage: raft.Voter, Address: p})
 	}
