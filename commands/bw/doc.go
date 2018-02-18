@@ -24,4 +24,8 @@
 //  bw agent --cluster=example.com:2001
 //  bw agent --agent-name="node1" --agent-bind=:2000 --cluster-bind=:2001 --cluster-bind-raft=:2002 --agent-torrent=:2003
 //  bw agent --agent-config=".bw/agent.config"
+//  bw deploy
+//
+// Getting Started
+//  TODO: documentation around getting bearded wookie setup.
 package main
