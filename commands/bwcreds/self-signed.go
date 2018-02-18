@@ -25,11 +25,11 @@ type selfSigned struct {
 }
 
 func (t *selfSigned) configure(parent *kingpin.CmdClause) {
-	commandutils.EnvironmentFlag(parent).StringVar(&t.credentials)
-	parent.Flag("duration", "how long the certificate should last").Default("8760h").DurationVar(&t.duration)
-	parent.Flag("rsa-bits", "size of RSA key to generate.").Default("4096").IntVar(&t.bits)
+	commandutils.EnvironmentArg(parent).StringVar(&t.credentials)
 	parent.Arg("common-name", "common name of the authority").StringVar(&t.common)
 	parent.Arg("hosts", "hosts the certificate should match").StringsVar(&t.hosts)
+	parent.Flag("duration", "how long the certificate should last").Default("8760h").DurationVar(&t.duration)
+	parent.Flag("rsa-bits", "size of RSA key to generate.").Default("4096").IntVar(&t.bits)
 	parent.Action(t.generate)
 }
 
