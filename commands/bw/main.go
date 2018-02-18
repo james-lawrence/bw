@@ -63,9 +63,6 @@ func main() {
 			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
 			global: global,
 		}
-		envinit = &initCredentials{
-			global: global,
-		}
 		agentctl = &actlCmd{
 			global: global,
 		}
@@ -83,7 +80,6 @@ func main() {
 	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
 	info.configure(app.Command("info", "retrieve info about nodes within the cluster"))
-	envinit.configure(app.Command("credentials", "generate tls cert/key for an environment"))
 	workspace.configure(app.Command("workspace", "workspace related commands"))
 	environment.configure(app.Command("environment", "environment related commands"))
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl"))

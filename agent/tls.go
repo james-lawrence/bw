@@ -15,7 +15,7 @@ import (
 
 const (
 	// DefaultTLSCredentialsRoot default name of the parent directory for the credentials
-	DefaultTLSCredentialsRoot = "default"
+	DefaultTLSCredentialsRoot = bw.DefaultEnvironmentName
 	// DefaultTLSKeyCA default name for the certificate authority key.
 	DefaultTLSKeyCA = "tlsca.key"
 	// DefaultTLSCertCA default name for the certificate authority certificate.

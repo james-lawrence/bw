@@ -16,7 +16,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/alecthomas/template"
-  packages = [".","parse"]
+  packages = [
+    ".",
+    "parse"
+  ]
   revision = "a0175ee3bccc567396460bf5acd36800cb10c49c"
 
 [[projects]]
@@ -28,7 +31,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/dht"
-  packages = [".","krpc"]
+  packages = [
+    ".",
+    "krpc"
+  ]
   revision = "d16ede1d837fae13f52778d556af12470249cfac"
 
 [[projects]]
@@ -40,7 +46,23 @@
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/missinggo"
-  packages = [".","assert","bitmap","httptoo","inproc","iter","mime","orderedmap","perf","pproffd","prioritybitmap","pubsub","resource","slices","x"]
+  packages = [
+    ".",
+    "assert",
+    "bitmap",
+    "httptoo",
+    "inproc",
+    "iter",
+    "mime",
+    "orderedmap",
+    "perf",
+    "pproffd",
+    "prioritybitmap",
+    "pubsub",
+    "resource",
+    "slices",
+    "x"
+  ]
   revision = "b41e3843fdeafb3c2840cb36fe9199c9beabf8ff"
 
 [[projects]]
@@ -52,7 +74,19 @@
 [[projects]]
   branch = "master"
   name = "github.com/anacrolix/torrent"
-  packages = [".","bencode","iplist","logonce","metainfo","mmap_span","mse","peer_protocol","storage","tracker","util"]
+  packages = [
+    ".",
+    "bencode",
+    "iplist",
+    "logonce",
+    "metainfo",
+    "mmap_span",
+    "mse",
+    "peer_protocol",
+    "storage",
+    "tracker",
+    "util"
+  ]
   revision = "898db894e076940613c3243926fda63b708267ef"
 
 [[projects]]
@@ -69,7 +103,41 @@
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
-  packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/restxml","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elb","service/elbv2","service/route53","service/s3","service/s3/s3iface","service/s3/s3manager","service/sts"]
+  packages = [
+    "aws",
+    "aws/awserr",
+    "aws/awsutil",
+    "aws/client",
+    "aws/client/metadata",
+    "aws/corehandlers",
+    "aws/credentials",
+    "aws/credentials/ec2rolecreds",
+    "aws/credentials/endpointcreds",
+    "aws/credentials/stscreds",
+    "aws/defaults",
+    "aws/ec2metadata",
+    "aws/endpoints",
+    "aws/request",
+    "aws/session",
+    "aws/signer/v4",
+    "internal/shareddefaults",
+    "private/protocol",
+    "private/protocol/ec2query",
+    "private/protocol/query",
+    "private/protocol/query/queryutil",
+    "private/protocol/rest",
+    "private/protocol/restxml",
+    "private/protocol/xml/xmlutil",
+    "service/autoscaling",
+    "service/ec2",
+    "service/elb",
+    "service/elbv2",
+    "service/route53",
+    "service/s3",
+    "service/s3/s3iface",
+    "service/s3/s3manager",
+    "service/sts"
+  ]
   revision = "82ad808f2307df0776c038bfd7ea85440a35c02e"
   version = "v1.12.53"
 
@@ -110,6 +178,12 @@
   revision = "0bce6a6887123b67a60366d2c9fe2dfb74289d2e"
 
 [[projects]]
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
+  version = "v1.0"
+
+[[projects]]
   name = "github.com/gizak/termui"
   packages = ["."]
   revision = "bfde399a8caee62789593f2cbbda70feee4d5553"
@@ -136,7 +210,10 @@
 [[projects]]
   branch = "master"
   name = "github.com/golang/protobuf"
-  packages = ["proto","ptypes/any"]
+  packages = [
+    "proto",
+    "ptypes/any"
+  ]
   revision = "1e59b77b52bf8e4b449a57e6f79f21226d571845"
 
 [[projects]]
@@ -165,6 +242,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/hashicorp/go-cleanhttp"
+  packages = ["."]
+  revision = "d5fe4b57a186c716b0e00b8c301cbd9b4182694d"
+
+[[projects]]
+  branch = "master"
   name = "github.com/hashicorp/go-immutable-radix"
   packages = ["."]
   revision = "8aac2701530899b64bdea735a1de8da899815220"
@@ -183,6 +266,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/hashicorp/go-rootcerts"
+  packages = ["."]
+  revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
+
+[[projects]]
+  branch = "master"
   name = "github.com/hashicorp/go-sockaddr"
   packages = ["."]
   revision = "9b4c5fa5b10a683339a270d664474b9f4aee62fc"
@@ -192,6 +281,22 @@
   name = "github.com/hashicorp/golang-lru"
   packages = ["simplelru"]
   revision = "0a025b7e63adc15a622f29b0b2c4c3848243bbf6"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/hashicorp/hcl"
+  packages = [
+    ".",
+    "hcl/ast",
+    "hcl/parser",
+    "hcl/scanner",
+    "hcl/strconv",
+    "hcl/token",
+    "json/parser",
+    "json/scanner",
+    "json/token"
+  ]
+  revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
   name = "github.com/hashicorp/memberlist"
@@ -206,9 +311,27 @@
   revision = "0919aa6a43618e19335d2ac609d4ff079ce75ed8"
 
 [[projects]]
+  name = "github.com/hashicorp/vault"
+  packages = [
+    "api",
+    "helper/compressutil",
+    "helper/jsonutil",
+    "helper/parseutil"
+  ]
+  revision = "5acd6a21d5a69ab49d0f7c0bf540123a9b2c696d"
+  version = "v0.9.3"
+
+[[projects]]
   branch = "master"
   name = "github.com/huin/goupnp"
-  packages = [".","dcps/internetgateway2","httpu","scpd","soap","ssdp"]
+  packages = [
+    ".",
+    "dcps/internetgateway2",
+    "httpu",
+    "scpd",
+    "soap",
+    "ssdp"
+  ]
   revision = "dceda08e705b2acee36aab47d765ed801f64cfc7"
 
 [[projects]]
@@ -260,9 +383,21 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/mitchellh/go-homedir"
+  packages = ["."]
+  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
+
+[[projects]]
+  branch = "master"
   name = "github.com/mitchellh/go-wordwrap"
   packages = ["."]
   revision = "ad45545899c7b13c020ea92b2072220eefad42b8"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
+  revision = "a4e142e9c047c904fa2f1e144d9a84e6133024bc"
 
 [[projects]]
   branch = "master"
@@ -278,7 +413,10 @@
 
 [[projects]]
   name = "github.com/naoina/toml"
-  packages = [".","ast"]
+  packages = [
+    ".",
+    "ast"
+  ]
   revision = "e6f5723bf2a66af014955e0888881314cf294129"
   version = "v0.1.1"
 
@@ -290,13 +428,46 @@
 
 [[projects]]
   name = "github.com/onsi/ginkgo"
-  packages = [".","config","extensions/table","internal/codelocation","internal/containernode","internal/failer","internal/leafnodes","internal/remote","internal/spec","internal/spec_iterator","internal/specrunner","internal/suite","internal/testingtproxy","internal/writer","reporters","reporters/stenographer","reporters/stenographer/support/go-colorable","reporters/stenographer/support/go-isatty","types"]
+  packages = [
+    ".",
+    "config",
+    "extensions/table",
+    "internal/codelocation",
+    "internal/containernode",
+    "internal/failer",
+    "internal/leafnodes",
+    "internal/remote",
+    "internal/spec",
+    "internal/spec_iterator",
+    "internal/specrunner",
+    "internal/suite",
+    "internal/testingtproxy",
+    "internal/writer",
+    "reporters",
+    "reporters/stenographer",
+    "reporters/stenographer/support/go-colorable",
+    "reporters/stenographer/support/go-isatty",
+    "types"
+  ]
   revision = "9eda700730cba42af70d53180f9dcce9266bc2bc"
   version = "v1.4.0"
 
 [[projects]]
   name = "github.com/onsi/gomega"
-  packages = [".","format","internal/assertion","internal/asyncassertion","internal/oraclematcher","internal/testingtsupport","matchers","matchers/support/goraph/bipartitegraph","matchers/support/goraph/edge","matchers/support/goraph/node","matchers/support/goraph/util","types"]
+  packages = [
+    ".",
+    "format",
+    "internal/assertion",
+    "internal/asyncassertion",
+    "internal/oraclematcher",
+    "internal/testingtsupport",
+    "matchers",
+    "matchers/support/goraph/bipartitegraph",
+    "matchers/support/goraph/edge",
+    "matchers/support/goraph/node",
+    "matchers/support/goraph/util",
+    "types"
+  ]
   revision = "c893efa28eb45626cdaa76c9f653b62488858837"
   version = "v1.2.0"
 
@@ -331,6 +502,12 @@
   revision = "e2103e2c35297fb7e17febb81e49b312087a2372"
 
 [[projects]]
+  branch = "master"
+  name = "github.com/sethgrid/pester"
+  packages = ["."]
+  revision = "b18953f5db2922a73aaf89652abf7b5ee95cb516"
+
+[[projects]]
   name = "github.com/spaolacci/murmur3"
   packages = ["."]
   revision = "9f5d223c60793748f04a9d5b4b4eacddfc1f755d"
@@ -363,13 +540,32 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["ed25519","ed25519/internal/edwards25519"]
+  packages = [
+    "ed25519",
+    "ed25519/internal/edwards25519"
+  ]
   revision = "95a4943f35d008beabde8c11e5075a1b714e6419"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
-  packages = ["bpf","context","html","html/atom","html/charset","http2","http2/hpack","idna","internal/iana","internal/socket","internal/timeseries","ipv4","ipv6","lex/httplex","trace"]
+  packages = [
+    "bpf",
+    "context",
+    "html",
+    "html/atom",
+    "html/charset",
+    "http2",
+    "http2/hpack",
+    "idna",
+    "internal/iana",
+    "internal/socket",
+    "internal/timeseries",
+    "ipv4",
+    "ipv6",
+    "lex/httplex",
+    "trace"
+  ]
   revision = "d866cfc389cec985d6fda2859936a575a55a3ab6"
 
 [[projects]]
@@ -381,7 +577,34 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = ["collate","collate/build","encoding","encoding/charmap","encoding/htmlindex","encoding/internal","encoding/internal/identifier","encoding/japanese","encoding/korean","encoding/simplifiedchinese","encoding/traditionalchinese","encoding/unicode","internal/colltab","internal/gen","internal/tag","internal/triegen","internal/ucd","internal/utf8internal","language","runes","secure/bidirule","transform","unicode/bidi","unicode/cldr","unicode/norm","unicode/rangetable"]
+  packages = [
+    "collate",
+    "collate/build",
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
+    "internal/colltab",
+    "internal/gen",
+    "internal/tag",
+    "internal/triegen",
+    "internal/ucd",
+    "internal/utf8internal",
+    "language",
+    "runes",
+    "secure/bidirule",
+    "transform",
+    "unicode/bidi",
+    "unicode/cldr",
+    "unicode/norm",
+    "unicode/rangetable"
+  ]
   revision = "e19ae1496984b1c655b8044a65c0300a3c878dd3"
 
 [[projects]]
@@ -398,7 +621,23 @@
 
 [[projects]]
   name = "google.golang.org/grpc"
-  packages = [".","codes","connectivity","credentials","grpclb/grpc_lb_v1","grpclog","internal","keepalive","metadata","naming","peer","stats","status","tap","transport"]
+  packages = [
+    ".",
+    "codes",
+    "connectivity",
+    "credentials",
+    "grpclb/grpc_lb_v1",
+    "grpclog",
+    "internal",
+    "keepalive",
+    "metadata",
+    "naming",
+    "peer",
+    "stats",
+    "status",
+    "tap",
+    "transport"
+  ]
   revision = "b3ddf786825de56a4178401b7e174ee332173b66"
   version = "v1.5.2"
 
@@ -411,6 +650,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7e2a2dba15b34a074ca117eedd4b4a8512823d5f9228a219c18f81c9c50d9404"
+  inputs-digest = "9ea9d6f6a92ec9573bba4ee3ddf4e3224dfbf2318456fd20a0fdfb61371eff51"
   solver-name = "gps-cdcl"
   solver-version = 1

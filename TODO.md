@@ -1,12 +1,14 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- make torrent storage timeout if it cannot successfully download an archive within a reasonable amount of time.
-- make packagekit less sensitive to repository information.
 - properly wait for instance to be reattached to ELBv2.
 - bootstrap process: allow for concurrent bootstraps to occur.
+- update vault credentials to use signing endpoint instead of issue, prevents private key from being
+sent over the wire.
 
-#### integrate with vault PKI to dump client/server credentials for a given environment and PKI mount.
+#### finish package kit integration
+- occassionally fails to detect when a package finishes installing and times out.
+
 #### integrate with aws KMS to dump client/server credentials for a given environment and key name.
 
 #### custom plugins
