@@ -8,10 +8,10 @@
   version = "v0.3.16"
 
 [[projects]]
+  branch = "master"
   name = "github.com/alecthomas/kingpin"
   packages = ["."]
-  revision = "947dcec5ba9c011838740e680966fd7087a71d0d"
-  version = "v2.2.6"
+  revision = "2a5eb223fafee7c394892041bc175938a9592594"
 
 [[projects]]
   branch = "master"
@@ -102,6 +102,7 @@
   revision = "7aa49fde808223f8dadfdbfd3a20ff6c19e5f9ec"
 
 [[projects]]
+  branch = "master"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -120,6 +121,7 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/ec2query",
@@ -138,8 +140,7 @@
     "service/s3/s3manager",
     "service/sts"
   ]
-  revision = "82ad808f2307df0776c038bfd7ea85440a35c02e"
-  version = "v1.12.53"
+  revision = "b80dd2206c8eba8afd8930df003d126a7905d2d2"
 
 [[projects]]
   name = "github.com/boltdb/bolt"
@@ -299,10 +300,10 @@
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
+  branch = "master"
   name = "github.com/hashicorp/memberlist"
   packages = ["."]
-  revision = "ce8abaa0c60c2d6bee7219f5ddf500e0a1457b28"
-  version = "v0.1.0"
+  revision = "2288bf30e9c8d7b5f6549bf62e07120d72fd4b6c"
 
 [[projects]]
   branch = "master"
@@ -645,11 +646,11 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "9ea9d6f6a92ec9573bba4ee3ddf4e3224dfbf2318456fd20a0fdfb61371eff51"
+  inputs-digest = "89da8f504a9e5416a27994ac81f0ce045eee74c8af7e844f83cbb3560631cd31"
   solver-name = "gps-cdcl"
   solver-version = 1

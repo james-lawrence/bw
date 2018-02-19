@@ -39,15 +39,10 @@ func testRaftConfig() *raft.Config {
 var _ = Describe("Raft", func() {
 	Context("peers", func() {
 		It("a node should be able to join and leave repeatedly", func() {
-
 			newLocalPeer := func(p *memberlist.Node) cluster.Local {
-				return cluster.NewLocal(agent.Peer{
-					Ip:       p.Addr.String(),
-					Name:     p.Name,
-					RPCPort:  uint32(2000),
-					SWIMPort: uint32(2001),
-					RaftPort: uint32(2002),
-				})
+				return cluster.NewLocal(
+					agent.NewPeer(p.Name, agent.PeerOptionIP(p.Addr)),
+				)
 			}
 
 			newLocalNode := func(l cluster.Local) (cancel context.CancelFunc, c clustering.Cluster, r *Protocol, err error) {

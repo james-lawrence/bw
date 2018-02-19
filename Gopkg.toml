@@ -23,9 +23,11 @@
 
 [[constraint]]
   name = "github.com/alecthomas/kingpin"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/davecgh/go-spew"
@@ -43,9 +45,11 @@
 
 [[constraint]]
   name = "github.com/gutengo/fil"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/hashicorp/memberlist"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/hashicorp/raft"
@@ -75,12 +79,6 @@
 [[constraint]]
   name = "google.golang.org/grpc"
   version = "~1.5.1"
-
-[[constraint]]
-  name = "gopkg.in/yaml.v1"
-
-[[constraint]]
-  name = "gopkg.in/yaml.v2"
 
 [[constraint]]
   branch = "master"
