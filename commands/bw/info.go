@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -51,7 +52,7 @@ func (t *agentInfo) _info() (err error) {
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
-
+	log.Println("configuration", spew.Sdump(config))
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),

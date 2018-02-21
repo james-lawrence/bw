@@ -65,7 +65,7 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	log.Println("writing private key", keypath)
-	if err = ioutil.WriteFile(certpath, []byte(credentials.Data["private_key"].(string)), 0600); err != nil {
+	if err = ioutil.WriteFile(keypath, []byte(credentials.Data["private_key"].(string)), 0600); err != nil {
 		return errors.Wrapf(err, "failed to write private key to %s", keypath)
 	}
 

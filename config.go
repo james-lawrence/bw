@@ -111,11 +111,11 @@ func ExpandAndDecodeFile(path string, dst interface{}) (err error) {
 		return nil
 	}
 
-	log.Println("loaded configuration", path)
-
 	if raw, err = ioutil.ReadFile(path); err != nil {
 		return errors.WithStack(err)
 	}
+
+	log.Println("loaded configuration", path)
 
 	return ExpandAndDecode(raw, dst)
 }
