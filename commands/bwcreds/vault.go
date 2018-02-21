@@ -56,12 +56,12 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println("credentials fingerprint", credentials.Data["serial_number"])
 
-	capath := bw.DefaultLocation(filepath.Join(t.environment, agent.DefaultTLSCertCA), "")
-	keypath := bw.DefaultLocation(filepath.Join(t.environment, agent.DefaultTLSKeyClient), "")
-	certpath := bw.DefaultLocation(filepath.Join(t.environment, agent.DefaultTLSCertClient), "")
+	capath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertCA)
+	keypath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSKeyClient)
+	certpath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertClient)
 	if t.agentCredentials {
-		keypath = bw.DefaultLocation(filepath.Join(t.environment, agent.DefaultTLSKeyServer), "")
-		certpath = bw.DefaultLocation(filepath.Join(t.environment, agent.DefaultTLSCertServer), "")
+		keypath = filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSKeyServer)
+		certpath = filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertServer)
 	}
 
 	log.Println("writing private key", keypath)
