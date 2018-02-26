@@ -46,7 +46,7 @@ func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn
 // ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error) {
 	var (
-		cinfo ConnectInfo
+		cinfo ConnectResponse
 	)
 
 	if cinfo, err = c.Connect(); err != nil {
@@ -107,7 +107,7 @@ func (t Conn) Shutdown() (err error) {
 func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 	var (
 		stream Quorum_UploadClient
-		_info  *Archive
+		_info  *UploadResponse
 	)
 
 	rpc := NewQuorumClient(t.conn)
@@ -115,10 +115,10 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
 
-	initialChunk := &ArchiveChunk{
+	initialChunk := &UploadChunk{
 		Checksum: []byte{},
 		Data:     []byte{},
-		InitialChunkMetadata: &ArchiveChunk_Metadata{
+		InitialChunkMetadata: &UploadChunk_Metadata{
 			Metadata: &UploadMetadata{Bytes: srcbytes},
 		},
 	}
@@ -139,11 +139,11 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 		return info, errors.Wrap(err, "failed to receive archive")
 	}
 
-	if !bytes.Equal(_info.Checksum, checksum.Sum(nil)) {
-		return info, errors.Errorf("checksums mismatch: archive(%s), expected(%s)", hex.EncodeToString(_info.Checksum), hex.EncodeToString(checksum.Sum(nil)))
+	if !bytes.Equal(_info.Archive.Checksum, checksum.Sum(nil)) {
+		return info, errors.Errorf("checksums mismatch: archive(%s), expected(%s)", hex.EncodeToString(_info.Archive.Checksum), hex.EncodeToString(checksum.Sum(nil)))
 	}
 
-	return *_info, err
+	return *_info.Archive, err
 }
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
@@ -183,9 +183,9 @@ func (t Conn) Deploy(options DeployOptions, archive Archive) (d Deploy, err erro
 }
 
 // Connect ...
-func (t Conn) Connect() (d ConnectInfo, err error) {
+func (t Conn) Connect() (d ConnectResponse, err error) {
 	var (
-		response *ConnectInfo
+		response *ConnectResponse
 	)
 
 	rpc := NewAgentClient(t.conn)
@@ -193,17 +193,14 @@ func (t Conn) Connect() (d ConnectInfo, err error) {
 		return d, errors.WithStack(err)
 	}
 
-	return ConnectInfo{
-		Secret: response.Secret,
-		Quorum: response.Quorum,
-	}, nil
+	return *response, nil
 }
 
 // Info ...
-func (t Conn) Info() (_zeroInfo Status, err error) {
+func (t Conn) Info() (_zeroInfo StatusResponse, err error) {
 	var (
 		_zero StatusRequest
-		info  *Status
+		info  *StatusResponse
 	)
 	rpc := NewAgentClient(t.conn)
 	if info, err = rpc.Info(context.Background(), &_zero); err != nil {
@@ -261,10 +258,10 @@ done:
 func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
-		return errors.Wrap(stream.Send(&ArchiveChunk{
+		return errors.Wrap(stream.Send(&UploadChunk{
 			Checksum:             checksum,
 			Data:                 chunk,
-			InitialChunkMetadata: &ArchiveChunk_None{},
+			InitialChunkMetadata: &UploadChunk_None{},
 		}), "failed to write chunk")
 	}
 

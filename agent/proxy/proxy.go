@@ -11,7 +11,7 @@ func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) 
 	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c    agent.Client
-			info agent.Status
+			info agent.StatusResponse
 		)
 
 		if c, err = agent.Dial(agent.RPCAddress(n), options...); err != nil {
@@ -24,8 +24,13 @@ func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) 
 			return _d, err
 		}
 
+		// TODO DEPRECATED: Remove latest in next version. use deployments going forward.
 		if info.Latest != nil {
 			return *info.Latest, nil
+		}
+
+		if len(info.Deployments) > 0 {
+			return *info.Deployments[0], nil
 		}
 
 		return agent.Deploy{

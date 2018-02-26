@@ -13,42 +13,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-const archiveMetadataName = "archive.metadata"
+const deployMetadataName = "deploy.metadata"
 
-func archivePointers(archives ...agent.Archive) []*agent.Archive {
-	out := make([]*agent.Archive, 0, len(archives))
-	for _, a := range archives {
-		tmp := a
-		out = append(out, &tmp)
-	}
-	return out
-}
-
-func readAllArchiveMetadata(root string) ([]agent.Archive, error) {
-	archives := make([]agent.Archive, 0, 5)
+func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
+	deployments := make([]agent.Deploy, 0, 10)
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		var (
-			a agent.Archive
+			d agent.Deploy
 		)
 
 		if err != nil || path == root || !info.IsDir() {
 			return errors.WithStack(err)
 		}
 
-		if a, err = readArchiveMetadata(filepath.Join(path, archiveMetadataName)); err != nil {
+		if d, err = readDeployMetadata(filepath.Join(path, deployMetadataName)); err != nil {
 			return err
 		}
 
-		archives = append(archives, a)
+		deployments = append(deployments, d)
 
 		return filepath.SkipDir
 	})
 
-	return archives, err
+	return deployments, err
 }
 
-func readArchiveMetadata(path string) (a agent.Archive, err error) {
+func readDeployMetadata(path string) (a agent.Deploy, err error) {
 	var (
 		raw []byte
 	)
@@ -64,21 +55,21 @@ func readArchiveMetadata(path string) (a agent.Archive, err error) {
 	return a, nil
 }
 
-// writeArchiveMetadata writes out the archive.metadata to disk.
-func writeArchiveMetadata(dctx DeployContext) error {
+// writeDeployMetadata writes out the archive.metadata to disk.
+func writeDeployMetadata(dir string, d agent.Deploy) error {
 	var (
 		err error
 		dst *os.File
 		raw []byte
 	)
 
-	if dst, err = os.OpenFile(filepath.Join(dctx.Root, archiveMetadataName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if dst, err = os.OpenFile(filepath.Join(dir, deployMetadataName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return errors.WithStack(err)
 	}
 	defer func() { logErr(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
 	defer func() { logErr(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
 
-	if raw, err = proto.Marshal(&dctx.Archive); err != nil {
+	if raw, err = proto.Marshal(&d); err != nil {
 		return errors.WithStack(err)
 	}
 

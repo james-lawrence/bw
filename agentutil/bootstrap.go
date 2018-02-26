@@ -57,8 +57,8 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, cre
 // Bootstrap ...
 func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials) (err error) {
 	var (
-		status agent.Status
-		latest agent.Archive
+		status agent.StatusResponse
+		latest agent.Deploy
 		client agent.Client
 	)
 
@@ -66,7 +66,7 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
 
-	if latest, err = DetermineLatestArchive(c, tcreds); err != nil {
+	if latest, err = DetermineLatestDeployment(c, tcreds); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case ErrNoDeployments:
 			log.Println("no deployments found")
@@ -88,7 +88,7 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		return errors.WithStack(err)
 	}
 
-	if len(status.Deployments) > 0 && bytes.Compare(latest.DeploymentID, status.Deployments[0].DeploymentID) == 0 {
+	if len(status.Deployments) > 0 && bytes.Compare(latest.Archive.DeploymentID, status.Deployments[0].Archive.DeploymentID) == 0 {
 		log.Println("latest already deployed")
 		return nil
 	}
@@ -104,7 +104,7 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 
 	// need to pass some sort of timeout here. since we're using the latest deploy,
 	// assume it'll be successful and give it an excessive timeout.
-	if err = client.RemoteDeploy(dopts, latest, local); err != nil {
+	if err = client.RemoteDeploy(dopts, *latest.Archive, local); err != nil {
 		return errors.Wrap(err, "failed to deploy latest")
 	}
 

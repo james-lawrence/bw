@@ -1,6 +1,25 @@
 syntax = "proto3";
 package agent;
 
+message Archive {
+  bytes deploymentID = 1;
+  Peer peer = 2;
+  string location = 3;
+  bytes checksum = 4;
+  int64 ts = 5; // unix timestamp.
+}
+
+message Peer {
+  enum State { Node = 0; Client = 2; Gone = 3; }
+  State Status = 1;
+  string ip = 2;
+  string name = 3;
+  uint32 RPCPort = 4;
+  uint32 RaftPort = 5;
+  uint32 SWIMPort = 6;
+  uint32 TorrentPort = 7;
+}
+
 // Represents every message sent between nodes. effectively describes all possible events we may want
 // to act upon.
 message Message {
@@ -35,7 +54,7 @@ message DeployOptions {
 }
 
 message DeployCommand {
-  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3;}
+  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3; }
   Command command = 1;
   Archive archive = 2;
   DeployOptions options = 5;
@@ -64,7 +83,7 @@ message UploadMetadata {
   uint64 bytes = 1;
 }
 
-message ArchiveChunk {
+message UploadChunk {
   bytes data = 1;
   bytes checksum = 2;
   oneof initialChunkMetadata {
@@ -73,63 +92,48 @@ message ArchiveChunk {
   }
 }
 
+message UploadResponse {
+  Archive archive = 1;
+}
+
+message WatchRequest {}
+message DispatchResponse {}
+
+service Quorum {
+  rpc Upload(stream UploadChunk) returns (UploadResponse) {}
+  rpc Watch(WatchRequest) returns (stream Message) {}
+  rpc Dispatch(stream Message) returns (DispatchResponse) {}
+  rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
+}
+
+message ConnectRequest {}
+message ConnectResponse {
+  bytes secret = 1;
+  repeated Peer quorum = 2;
+}
+
+message StatusRequest {}
+message StatusResponse {
+  Peer peer = 1;
+  Deploy latest = 2;
+  repeated Archive archives = 3;
+  repeated Deploy deployments = 4;
+}
+
 message DeployRequest {
   Archive archive = 1;
   DeployOptions options = 2;
 }
-
 message DeployResponse {
   Deploy deploy = 1;
-}
-
-message Archive {
-  bytes deploymentID = 1;
-  Peer peer = 2;
-  string location = 3;
-  bytes checksum = 4;
-  int64 ts = 5; // unix timestamp.
-}
-
-message StatusRequest {}
-message Status {
-  Peer Peer = 1;
-  Deploy Latest = 2;
-  repeated Archive Deployments = 3;
-}
-
-message ConnectRequest {}
-message ConnectInfo {
-  bytes secret = 1;
-  repeated Peer Quorum = 2;
-}
-
-message Peer {
-  enum State { Node = 0; Client = 2; Gone = 3; }
-  State Status = 1;
-  string ip = 2;
-  string name = 3;
-  uint32 RPCPort = 4;
-  uint32 RaftPort = 5;
-  uint32 SWIMPort = 6;
-  uint32 TorrentPort = 7;
-}
-
-message WatchRequest {}
-message RecordResponse {}
-
-service Quorum {
-  rpc Upload(stream ArchiveChunk) returns (Archive) {}
-  rpc Watch(WatchRequest) returns (stream Message) {}
-  rpc Dispatch(stream Message) returns (RecordResponse) {}
-  rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
 }
 
 message ShutdownRequest{}
 message ShutdownResponse{}
 
 service Agent {
-  rpc Connect(ConnectRequest) returns (ConnectInfo) {}
+  rpc Connect(ConnectRequest) returns (ConnectResponse) {}
+  rpc Info(StatusRequest) returns (StatusResponse) {}
   rpc Deploy(DeployRequest) returns (DeployResponse) {}
-  rpc Info(StatusRequest) returns (Status) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
 }

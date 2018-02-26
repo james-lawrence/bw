@@ -21,7 +21,7 @@ type cluster interface {
 	Local() agent.Peer
 	Peers() []agent.Peer
 	Quorum() []agent.Peer
-	Connect() agent.ConnectInfo
+	Connect() agent.ConnectResponse
 }
 
 // DialPeer dial the peer

@@ -66,7 +66,7 @@ type ConfigClient struct {
 // Connect to the address in the config client.
 func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
-		details ConnectInfo
+		details ConnectResponse
 	)
 
 	conn := newConnect(options...)
@@ -85,7 +85,7 @@ func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.Trans
 // ConnectLeader ...
 func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
 	var (
-		details ConnectInfo
+		details ConnectResponse
 		success bool
 		tmp     Conn
 	)
@@ -115,7 +115,7 @@ func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials
 	return creds, client, c, nil
 }
 
-func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details ConnectInfo, err error) {
+func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details ConnectResponse, err error) {
 	if creds, err = t.creds(); err != nil {
 		return creds, client, details, err
 	}
@@ -146,7 +146,7 @@ func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionFromFloat64(t.Concurrency)
 }
 
-func clusterConnect(details ConnectInfo, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+func clusterConnect(details ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
 		clustering.OptionLogOutput(os.Stderr),

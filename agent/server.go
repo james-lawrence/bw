@@ -11,7 +11,7 @@ import (
 type deployer interface {
 	// Deploy trigger a deploy
 	Deploy(DeployOptions, Archive) (Deploy, error)
-	Deployments() (Deploy, []*Archive, error)
+	Deployments() ([]Deploy, error)
 }
 
 type noopDeployer struct{}
@@ -20,8 +20,8 @@ func (t noopDeployer) Deploy(DeployOptions, Archive) (d Deploy, err error) {
 	return d, err
 }
 
-func (t noopDeployer) Deployments() (Deploy, []*Archive, error) {
-	return Deploy{Stage: Deploy_Completed}, []*Archive(nil), nil
+func (t noopDeployer) Deployments() ([]Deploy, error) {
+	return []Deploy{}, nil
 }
 
 // ServerOption ...
@@ -103,30 +103,33 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 }
 
 // Info ...
-func (t Server) Info(ctx context.Context, _ *StatusRequest) (*Status, error) {
+func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, error) {
 	var (
 		err error
-		d   Deploy
-		a   []*Archive
+		d   []Deploy
 	)
 
 	tmp := t.cluster.Local()
 
-	if d, a, err = t.Deployer.Deployments(); err != nil {
-		a = []*Archive{}
-		d = Deploy{}
+	if d, err = t.Deployer.Deployments(); err != nil {
+		d = []Deploy{}
 		log.Println("failed to read deployments, defaulting to no deployments", err)
 	}
 
-	return &Status{
-		Latest:      &d,
+	// these fields are deprecated and can just use the first deployment (if any)
+	// to determine latest.
+	ddeprecated := deploysFirstOrDefault(Deploy{Stage: Deploy_Completed}, d...)
+	adeprecated := deployArchives(d...)
+	return &StatusResponse{
 		Peer:        &tmp,
-		Deployments: a,
+		Latest:      &ddeprecated,
+		Archives:    adeprecated,
+		Deployments: deployPointers(d...),
 	}, nil
 }
 
 // Connect ...
-func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *ConnectInfo, err error) {
+func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *ConnectResponse, err error) {
 	details := t.cluster.Connect()
 	return &details, nil
 }

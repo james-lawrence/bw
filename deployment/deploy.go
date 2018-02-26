@@ -195,8 +195,6 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		t.worker.DeployTo(peer)
 	}
 
-	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to complete"))
-
 	return t.worker.Complete()
 }
 

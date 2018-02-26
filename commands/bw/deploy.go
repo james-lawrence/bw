@@ -167,7 +167,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
 	}
 	defer os.Remove(dst.Name())
@@ -179,19 +179,19 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 
 	if dstinfo, err = dst.Stat(); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
 	}
 
 	if _, err = dst.Seek(0, io.SeekStart); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
 	}
 
 	if archive, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
 	}
 

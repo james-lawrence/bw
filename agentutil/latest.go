@@ -10,11 +10,12 @@ import (
 	"google.golang.org/grpc"
 )
 
-// DetermineLatestArchive ...
-func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agent.Archive, err error) {
+// DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
+// If no error occurs, latest.Archive is guaranteed to be populated.
+func DetermineLatestDeployment(c cluster, doptions ...grpc.DialOption) (latest agent.Deploy, err error) {
 	type result struct {
-		a     *agent.Archive
-		count int
+		deploy *agent.Deploy
+		count  int
 	}
 
 	var (
@@ -24,10 +25,10 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 	counts := make(map[string]result)
 	getlatest := func(c agent.Client) (err error) {
 		var (
-			a *agent.Archive
+			d *agent.Deploy
 		)
 
-		if a, err = LatestDeployment(c); err != nil {
+		if d, err = LatestDeployment(c); err != nil {
 			switch cause := errors.Cause(err); cause {
 			case ErrNoDeployments:
 				return nil
@@ -36,11 +37,11 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 			}
 		}
 
-		key := string(a.DeploymentID)
+		key := string(d.Archive.DeploymentID)
 		if r, ok := counts[key]; ok {
-			counts[key] = result{a: a, count: r.count + 1}
+			counts[key] = result{deploy: d, count: r.count + 1}
 		} else {
-			counts[key] = result{a: a, count: 1}
+			counts[key] = result{deploy: d, count: 1}
 		}
 
 		return nil
@@ -56,12 +57,18 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 
 	for _, v := range counts {
 		if v.count > quorum {
-			latest = *v.a
+			latest = *v.deploy
 			quorum = v.count
 		}
 	}
 
+	// should never happen, but if it does, guard against it.
+	if latest.Archive == nil {
+		return latest, errors.Wrap(ErrNoDeployments, "archive missing in deploy")
+	}
+
 	peers := c.Peers()
+
 	// check for quorum
 	log.Printf("quorum(%f) < members(%d) / 2.0: min(%f)\n", float64(quorum), len(peers)-1, float64((len(peers)-1))/2.0)
 	if float64(quorum) < float64((len(peers)-1))/2.0 {
@@ -72,9 +79,9 @@ func DetermineLatestArchive(c cluster, doptions ...grpc.DialOption) (latest agen
 }
 
 // LatestDeployment ...
-func LatestDeployment(c agent.Client) (a *agent.Archive, err error) {
+func LatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 	var (
-		info agent.Status
+		info agent.StatusResponse
 	)
 
 	if info, err = c.Info(); err != nil {

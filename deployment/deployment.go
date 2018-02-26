@@ -21,7 +21,7 @@ type deployer interface {
 type Coordinator interface {
 	// Deployments info about the deployment coordinator
 	// idle, canary, deploying, locked, and the list of recent deployments.
-	Deployments() (agent.Deploy, []*agent.Archive, error)
+	Deployments() ([]agent.Deploy, error)
 	// Deploy trigger a deploy
 	Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error)
 }

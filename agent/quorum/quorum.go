@@ -355,7 +355,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 		checksum     hash.Hash
 		location     string
 		dst          agent.Uploader
-		chunk        *agent.ArchiveChunk
+		chunk        *agent.UploadChunk
 	)
 
 	debugx.Println("upload invoked")
@@ -386,12 +386,14 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 			}
 
 			tmp := t.c.Local()
-			return stream.SendAndClose(&agent.Archive{
-				Peer:         &tmp,
-				Location:     location,
-				Checksum:     checksum.Sum(nil),
-				DeploymentID: deploymentID,
-				Ts:           time.Now().UTC().Unix(),
+			return stream.SendAndClose(&agent.UploadResponse{
+				Archive: &agent.Archive{
+					Peer:         &tmp,
+					Location:     location,
+					Checksum:     checksum.Sum(nil),
+					DeploymentID: deploymentID,
+					Ts:           time.Now().UTC().Unix(),
+				},
 			})
 		}
 

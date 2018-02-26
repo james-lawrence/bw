@@ -22,8 +22,8 @@ type Client interface {
 	Upload(srcbytes uint64, src io.Reader) (Archive, error)
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
 	Deploy(DeployOptions, Archive) (Deploy, error)
-	Connect() (ConnectInfo, error)
-	Info() (Status, error)
+	Connect() (ConnectResponse, error)
+	Info() (StatusResponse, error)
 	Watch(out chan<- Message) error
 	Dispatch(messages ...Message) error
 	Close() error
@@ -117,7 +117,7 @@ type cluster interface {
 	Local() Peer
 	Peers() []Peer
 	Quorum() []Peer
-	Connect() ConnectInfo
+	Connect() ConnectResponse
 }
 
 // downloader ...

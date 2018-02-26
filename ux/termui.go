@@ -8,10 +8,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gizak/termui"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/gizak/termui"
 )
 
 // NewTermui - terminal based ux.

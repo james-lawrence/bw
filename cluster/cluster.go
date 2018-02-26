@@ -61,7 +61,7 @@ func (t Cluster) Quorum() []agent.Peer {
 }
 
 // Connect connection information for the cluster.
-func (t Cluster) Connect() agent.ConnectInfo {
+func (t Cluster) Connect() agent.ConnectResponse {
 	var (
 		secret []byte
 	)
@@ -70,7 +70,7 @@ func (t Cluster) Connect() agent.ConnectInfo {
 		secret = c.SecretKey
 	}
 
-	return agent.ConnectInfo{
+	return agent.ConnectResponse{
 		Secret: secret,
 		Quorum: agent.PeersToPtr(t.Quorum()...),
 	}

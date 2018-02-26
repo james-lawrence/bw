@@ -42,7 +42,7 @@ func CommandToMessage(cmd []byte) (m agent.Message, err error) {
 type StateMachine struct {
 	agent.EventBus
 	m         *sync.RWMutex
-	details   agent.Status
+	details   agent.StatusResponse
 	deploying int32
 }
 
@@ -116,18 +116,18 @@ func (t *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
 // concurrently with any other command. The FSM must discard all previous
 // state.
 func (t *StateMachine) Restore(r io.ReadCloser) error {
-	t.details = agent.Status{}
+	t.details = agent.StatusResponse{}
 	return nil
 }
 
 // Details includes information about the details of the quorum.
 // who its members are, the latest deploys.
-func (t StateMachine) Details() (d agent.Status, err error) {
+func (t StateMachine) Details() (d agent.StatusResponse, err error) {
 	return t.details, nil
 }
 
 type quorumFSMSnapshot struct {
-	details agent.Status
+	details agent.StatusResponse
 }
 
 // Persist should dump all necessary state to the WriteCloser 'sink',

@@ -75,17 +75,17 @@ func (t *agentInfo) _info() (err error) {
 	cx := cluster.New(local, c)
 	agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
 		var (
-			info agent.Status
+			info agent.StatusResponse
 		)
+
 		if info, err = c.Info(); err != nil {
 			return errors.WithStack(err)
 		}
 
 		log.Printf("Server: %s:%s\n", info.Peer.Name, info.Peer.Ip)
-		log.Printf("Status: %s\n", info.Peer.Status.String())
 		log.Println("Previous Deployment: Time                          - DeploymentID               - Checksum")
 		for _, d := range info.Deployments {
-			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Ts, 0).UTC(), bw.RandomID(d.DeploymentID), bw.RandomID(d.Checksum))
+			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Archive.Ts, 0).UTC(), bw.RandomID(d.Archive.DeploymentID), bw.RandomID(d.Archive.Checksum))
 		}
 
 		return nil

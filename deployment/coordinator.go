@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -15,6 +16,11 @@ import (
 	"github.com/james-lawrence/bw/x/logx"
 )
 
+const (
+	coordinaterWaiting   = 0
+	coordinatorDeploying = 1
+)
+
 // New Builds a deployment Coordinator.
 func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator {
 	const (
@@ -22,11 +28,10 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 	)
 
 	coord := &coordinator{
-		local:        local,
-		deployer:     d,
-		Mutex:        &sync.Mutex{},
-		latestDeploy: agent.Deploy{Stage: agent.Deploy_Completed},
-		completed:    make(chan DeployResult),
+		local:     local,
+		deployer:  d,
+		Mutex:     &sync.Mutex{},
+		completed: make(chan DeployResult),
 	}
 
 	// default options.
@@ -70,15 +75,16 @@ func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
 }
 
 type coordinator struct {
-	keepN        int // never set manually. always set by CoordinatorOptionKeepN
-	root         string
-	deploysRoot  string // never set manually. always set by CoordinatorOptionRoot
-	local        agent.Peer
-	deployer     deployer
-	dispatcher   dispatcher
-	cleanup      agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
-	completed    chan DeployResult
-	latestDeploy agent.Deploy
+	keepN         int // never set manually. always set by CoordinatorOptionKeepN
+	root          string
+	deploysRoot   string // never set manually. always set by CoordinatorOptionRoot
+	local         agent.Peer
+	deployer      deployer
+	dispatcher    dispatcher
+	cleanup       agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	completed     chan DeployResult
+	currentDeploy agent.Deploy
+	deploying     uint32
 	*sync.Mutex
 }
 
@@ -86,40 +92,46 @@ func (t *coordinator) background() {
 	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
 	for done := range t.completed {
 		d := done.complete()
+
+		if err := writeDeployMetadata(done.Root, d); err != nil {
+			log.Println("failed to write deploy metadata", err)
+		}
+
 		switch d.Stage {
 		case agent.Deploy_Completed:
 			t.update(d, agentutil.KeepNewestN(t.keepN))
 		default:
 			t.update(d, agentutil.KeepOldestN(t.keepN))
 		}
+
+		atomic.SwapUint32(&t.deploying, coordinaterWaiting)
 	}
 }
 
 // Info about the state of the agent.
-func (t *coordinator) Deployments() (_psIgnored agent.Deploy, _ignored []*agent.Archive, err error) {
-	var (
-		archives []agent.Archive
-	)
-
+func (t *coordinator) Deployments() (deployments []agent.Deploy, err error) {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 
-	if archives, err = readAllArchiveMetadata(t.deploysRoot); err != nil {
-		return agent.Deploy{}, _ignored, err
+	if deployments, err = readAllDeployMetadata(t.deploysRoot); err != nil {
+		return deployments, err
 	}
 
-	sort.Slice(archives, func(i int, j int) bool {
-		a, b := archives[i], archives[j]
-		return a.Ts > b.Ts
+	sort.Slice(deployments, func(i int, j int) bool {
+		a, b := deployments[i], deployments[j]
+		return a.Archive.Ts > b.Archive.Ts
 	})
 
-	return t.latestDeploy, archivePointers(archives...), nil
+	return deployments, nil
 }
 
 func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d agent.Deploy, err error) {
 	var (
+		ok   bool
 		dctx DeployContext
 	)
+
+	d = agent.Deploy{Archive: &archive, Stage: agent.Deploy_Deploying}
 
 	// cleanup workspace directory prior to deployment. this leaves the last deployment
 	// is available until the next run for debugging.
@@ -133,44 +145,35 @@ func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		log.Println(soft)
 	}
 
-	if d = t.start(archive); d.Stage != agent.Deploy_Deploying {
-		return d, errors.Errorf("failed to initiate deploy: %s", d.Stage.String())
+	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		return d, err
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
+	if err = writeDeployMetadata(dctx.Root, d); err != nil {
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		return d, errors.WithStack(err)
+	}
+
+	if ok = atomic.CompareAndSwapUint32(&t.deploying, coordinaterWaiting, coordinatorDeploying); !ok {
+		err = errors.Errorf("already deploying: %s - %s", bw.RandomID(t.currentDeploy.Archive.DeploymentID).String(), t.currentDeploy.Stage)
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
 		return d, err
 	}
 
 	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
-
-	if err = writeArchiveMetadata(dctx); err != nil {
-		return d, err
-	}
 
 	t.deployer.Deploy(dctx)
 
 	return d, nil
 }
 
-func (t *coordinator) start(a agent.Archive) agent.Deploy {
+func (t *coordinator) update(d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
 	t.Mutex.Lock()
 	defer t.Mutex.Unlock()
 
-	switch t.latestDeploy.Stage {
-	case agent.Deploy_Completed, agent.Deploy_Failed:
-	default:
-		return agent.Deploy{Archive: &a, Stage: agent.Deploy_Failed}
-	}
-
-	t.latestDeploy = agent.Deploy{Archive: &a, Stage: agent.Deploy_Deploying}
-
-	return t.latestDeploy
-}
-
-func (t *coordinator) update(d agent.Deploy, c agentutil.Cleaner) {
-	t.Mutex.Lock()
-	defer t.Mutex.Unlock()
-
-	t.latestDeploy = d
+	t.currentDeploy = d
 	t.cleanup = c
+
+	return d
 }
