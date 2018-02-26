@@ -20,6 +20,23 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message)
 			switch m.Type {
 			case agent.Message_PeerEvent:
 			case agent.Message_DeployCommandEvent:
+				switch m.GetDeployCommand().Command {
+				case agent.DeployCommand_Begin:
+					out.Printf(
+						"%s - INFO - deployment initiated\n",
+						messagePrefix(m),
+					)
+				case agent.DeployCommand_Done:
+					out.Printf(
+						"%s - INFO - deployment completed\n",
+						messagePrefix(m),
+					)
+				case agent.DeployCommand_Failed:
+					out.Printf(
+						"%s - INFO - deployment failed\n",
+						messagePrefix(m),
+					)
+				}
 			case agent.Message_PeersCompletedEvent:
 				// Do nothing.
 			case agent.Message_PeersFoundEvent:

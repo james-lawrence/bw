@@ -211,8 +211,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
 			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 		}
-
-		events <- agentutil.LogEvent(local.Peer, "deployment complete")
 	}()
 
 	return err
