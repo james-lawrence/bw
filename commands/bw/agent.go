@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/timex"
 
@@ -47,10 +48,9 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configFile)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
-	(&dummy{agentCmd: t}).configure(parent.Command("dummy", "dummy deployment"))
 }
 
-func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) agent.ServerOption) error {
+func (t *agentCmd) bind(coordinator func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) deployment.Coordinator) error {
 	var (
 		err      error
 		rpcBind  net.Listener
@@ -144,6 +144,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 	}
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
+	deployer := coordinator(dispatcher, local.Peer, t.config, download)
 	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx),
@@ -154,7 +155,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	a := agent.NewServer(
 		cx,
-		aoptions(dispatcher, local.Peer, t.config, download),
+		agent.ServerOptionDeployer(deployer),
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
@@ -167,7 +168,7 @@ func (t *agentCmd) bind(aoptions func(*agentutil.Dispatcher, agent.Peer, agent.C
 
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
 	defer done()
-	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, tlscreds) {
+	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, tlscreds, deployer) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

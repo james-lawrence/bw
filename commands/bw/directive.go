@@ -31,7 +31,7 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	return t.agentCmd.bind(
-		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config, dl storage.DownloadProtocol) agent.ServerOption {
+		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config, dl storage.DownloadProtocol) deployment.Coordinator {
 			var (
 				dlreg storage.Registry
 			)
@@ -53,7 +53,8 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 				deployment.CoordinatorOptionRoot(config.Root),
 				deployment.CoordinatorOptionKeepN(config.KeepN),
 			)
-			return agent.ServerOptionDeployer(deployments)
+
+			return deployments
 		},
 	)
 }

@@ -15,6 +15,13 @@ import (
 	"github.com/james-lawrence/bw/backoff"
 )
 
+// Coordinator is in charge of coordinating deployments.
+type deployer interface {
+	// Deploy trigger a deploy
+	Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error)
+	Deployments() ([]agent.Deploy, error)
+}
+
 type errString string
 
 func (t errString) Error() string {
@@ -29,7 +36,7 @@ const (
 )
 
 // BootstrapUntilSuccess continuously bootstraps until it succeeds.
-func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, creds credentials.TransportCredentials) bool {
+func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, creds credentials.TransportCredentials, d deployer) bool {
 	var (
 		err error
 	)
@@ -43,7 +50,7 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, cre
 		default:
 		}
 
-		if err = Bootstrap(local, c, creds); err != nil {
+		if err = Bootstrap(local, c, creds, d); err != nil {
 			log.Println("failed bootstrap", err)
 			time.Sleep(bs.Backoff(i))
 			log.Println("REATTEMPT BOOTSTRAP")
@@ -55,7 +62,7 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, cre
 }
 
 // Bootstrap ...
-func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials) (err error) {
+func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials, d deployer) (err error) {
 	var (
 		status agent.StatusResponse
 		latest agent.Deploy
@@ -93,19 +100,8 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		return nil
 	}
 
-	if client, err = agent.DialQuorum(c, tcreds); err != nil {
+	if _, err = d.Deploy(agent.DeployOptions{}, *latest.Archive); err != nil {
 		return errors.WithStack(err)
-	}
-
-	dopts := agent.DeployOptions{
-		Concurrency: 1,
-		Timeout:     int64(24 * time.Hour),
-	}
-
-	// need to pass some sort of timeout here. since we're using the latest deploy,
-	// assume it'll be successful and give it an excessive timeout.
-	if err = client.RemoteDeploy(dopts, *latest.Archive, local); err != nil {
-		return errors.Wrap(err, "failed to deploy latest")
 	}
 
 	return nil
