@@ -41,8 +41,6 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 		return newErrReader(errors.WithStack(err))
 	}
 
-	t.util.printTorrentInfo(t.client)
-
 	if m, err = metainfo.ParseMagnetURI(archive.Location); err != nil {
 		return newErrReader(errors.WithStack(err))
 	}

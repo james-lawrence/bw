@@ -21,7 +21,6 @@ import (
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
-	"github.com/james-lawrence/bw/x/timex"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -50,17 +49,18 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 }
 
-func (t *agentCmd) bind(coordinator func(*agentutil.Dispatcher, agent.Peer, agent.Config, storage.DownloadProtocol) deployment.Coordinator) error {
+func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol) deployment.Coordinator) error {
 	var (
-		err      error
-		rpcBind  net.Listener
-		server   *grpc.Server
-		c        clustering.Cluster
-		creds    *tls.Config
-		secret   []byte
-		p        raftutil.Protocol
-		upload   storage.UploadProtocol
-		download storage.DownloadProtocol
+		err           error
+		rpcBind       net.Listener
+		server        *grpc.Server
+		c             clustering.Cluster
+		creds         *tls.Config
+		secret        []byte
+		p             raftutil.Protocol
+		upload        storage.UploadProtocol
+		download      storage.DownloadProtocol
+		deployResults []chan deployment.DeployResult
 	)
 
 	log.SetPrefix("[AGENT] ")
@@ -127,6 +127,7 @@ func (t *agentCmd) bind(coordinator func(*agentutil.Dispatcher, agent.Peer, agen
 		var (
 			tc  storage.TorrentConfig
 			tcu storage.TorrentUtil
+			tdr = make(chan deployment.DeployResult)
 		)
 
 		opts := []storage.TorrentOption{
@@ -139,12 +140,20 @@ func (t *agentCmd) bind(coordinator func(*agentutil.Dispatcher, agent.Peer, agen
 			return err
 		}
 
-		go timex.Every(time.Minute, func() { tcu.ClearTorrents(tc) })
+		go func() {
+			for range tdr {
+				tcu.ClearTorrents(tc)
+				tcu.PrintTorrentInfo(tc)
+			}
+		}()
+
+		deployResults = append(deployResults, tdr)
 		upload, download = tc.Uploader(), tc.Downloader()
 	}
 
 	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
-	deployer := coordinator(dispatcher, local.Peer, t.config, download)
+	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}
+	deployer := coordinator(actx, download)
 	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx),
@@ -173,6 +182,7 @@ func (t *agentCmd) bind(coordinator func(*agentutil.Dispatcher, agent.Peer, agen
 		return errors.New("failed to bootstrap node shutting down")
 	}
 
+	go deployment.ResultBus(actx.completedDeploys, deployResults...)
 	return nil
 }
 

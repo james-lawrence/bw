@@ -73,7 +73,6 @@ func (t Local) LocalState(join bool) []byte {
 
 // GetBroadcasts ...
 func (t Local) GetBroadcasts(overhead, limit int) [][]byte {
-	// log.Println("GetBroadcasts invoked overhead:", overhead, "limit:", limit)
 	return [][]byte(nil)
 }
 

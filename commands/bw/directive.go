@@ -2,14 +2,18 @@ package main
 
 import (
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/directives/dynplugin"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/storage"
 
 	"github.com/alecthomas/kingpin"
 )
+
+type agentContext struct {
+	Config           agent.Config
+	Dispatcher       agent.Dispatcher
+	completedDeploys chan deployment.DeployResult
+}
 
 type directive struct {
 	*agentCmd
@@ -22,8 +26,7 @@ func (t *directive) configure(cmd *kingpin.CmdClause) error {
 
 func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	var (
-		sctx    shell.Context
-		plugins []dynplugin.Directive
+		sctx shell.Context
 	)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
@@ -31,27 +34,23 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	return t.agentCmd.bind(
-		func(d *agentutil.Dispatcher, p agent.Peer, config agent.Config, dl storage.DownloadProtocol) deployment.Coordinator {
+		func(actx agentContext, dl storage.DownloadProtocol) deployment.Coordinator {
 			var (
-				dlreg storage.Registry
+				dlreg = storage.New(storage.OptionDefaultProtocols(actx.Config.Root, dl))
 			)
 
-			if dl == nil {
-				dlreg = storage.New(storage.OptionDefaultProtocols(config.Root))
-			} else {
-				dlreg = storage.New(storage.OptionDefaultProtocols(config.Root, dl))
-			}
+			deploy := deployment.NewDirective(
+				deployment.DirectiveOptionShellContext(sctx),
+			)
 
 			deployments := deployment.New(
-				p,
-				deployment.NewDirective(
-					deployment.DirectiveOptionShellContext(sctx),
-					deployment.DirectiveOptionPlugins(plugins...),
-					deployment.DirectiveOptionDownloadRegistry(dlreg),
-				),
-				deployment.CoordinatorOptionDispatcher(d),
-				deployment.CoordinatorOptionRoot(config.Root),
-				deployment.CoordinatorOptionKeepN(config.KeepN),
+				actx.Config.Peer(),
+				deploy,
+				deployment.CoordinatorOptionDispatcher(actx.Dispatcher),
+				deployment.CoordinatorOptionRoot(actx.Config.Root),
+				deployment.CoordinatorOptionKeepN(actx.Config.KeepN),
+				deployment.CoordinatorOptionDeployResults(actx.completedDeploys),
+				deployment.CoordinatorOptionStorage(dlreg),
 			)
 
 			return deployments

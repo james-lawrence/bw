@@ -1,18 +1,22 @@
 package deployment
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/archive"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/logx"
 )
 
@@ -32,6 +36,7 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 		deployer:  d,
 		Mutex:     &sync.Mutex{},
 		completed: make(chan DeployResult),
+		dlreg:     storage.New(),
 	}
 
 	// default options.
@@ -74,17 +79,33 @@ func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
 	}
 }
 
+// CoordinatorOptionDeployResults set the channel to send deploy results to.
+func CoordinatorOptionDeployResults(dst chan DeployResult) CoordinatorOption {
+	return func(d *coordinator) {
+		d.completedObserver = dst
+	}
+}
+
+// CoordinatorOptionStorage set the storage registry.
+func CoordinatorOptionStorage(reg storage.Registry) CoordinatorOption {
+	return func(d *coordinator) {
+		d.dlreg = reg
+	}
+}
+
 type coordinator struct {
-	keepN         int // never set manually. always set by CoordinatorOptionKeepN
-	root          string
-	deploysRoot   string // never set manually. always set by CoordinatorOptionRoot
-	local         agent.Peer
-	deployer      deployer
-	dispatcher    dispatcher
-	cleanup       agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
-	completed     chan DeployResult
-	currentDeploy agent.Deploy
-	deploying     uint32
+	keepN             int // never set manually. always set by CoordinatorOptionKeepN
+	root              string
+	deploysRoot       string // never set manually. always set by CoordinatorOptionRoot
+	local             agent.Peer
+	deployer          deployer
+	dispatcher        dispatcher
+	dlreg             storage.Registry
+	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	completed         chan DeployResult
+	completedObserver chan DeployResult
+	currentDeploy     agent.Deploy
+	deploying         uint32
 	*sync.Mutex
 }
 
@@ -102,6 +123,10 @@ func (t *coordinator) background() {
 			t.update(d, agentutil.KeepNewestN(t.keepN))
 		default:
 			t.update(d, agentutil.KeepOldestN(t.keepN))
+		}
+
+		if t.completedObserver != nil {
+			t.completedObserver <- done
 		}
 
 		atomic.SwapUint32(&t.deploying, coordinaterWaiting)
@@ -145,7 +170,13 @@ func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		log.Println(soft)
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, DeployContextOptionCompleted(t.completed), DeployContextOptionDispatcher(t.dispatcher)); err != nil {
+	dcopts := []DeployContextOption{
+		DeployContextOptionCompleted(t.completed),
+		DeployContextOptionDispatcher(t.dispatcher),
+		DeployContextOptionDeadline(time.Now().Add(time.Duration(opts.Timeout))),
+	}
+
+	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, dcopts...); err != nil {
 		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
 		return d, err
 	}
@@ -163,6 +194,10 @@ func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 
 	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
 
+	if err = downloadArchive(t.dlreg, dctx); err != nil {
+		return d, err
+	}
+
 	t.deployer.Deploy(dctx)
 
 	return d, nil
@@ -176,4 +211,28 @@ func (t *coordinator) update(d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
 	t.cleanup = c
 
 	return d
+}
+
+func downloadArchive(dlreg storage.Registry, dctx DeployContext) error {
+	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+
+	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
+	timeout, done := context.WithDeadline(context.Background(), dctx.deadline)
+	defer done()
+	if err := errors.Wrapf(archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(timeout, dctx.Archive)), "retrieve archive"); err != nil {
+		return err
+	}
+
+	dctx.Log.Println("completed download", dctx.ArchiveRoot)
+	return nil
+}
+
+// ResultBus bus for deploy results.
+func ResultBus(in chan DeployResult, out ...chan DeployResult) {
+	for result := range in {
+		for _, dst := range out {
+			dst <- result
+		}
+	}
 }

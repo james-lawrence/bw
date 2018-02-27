@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -43,6 +44,13 @@ func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
 	}
 }
 
+// DeployContextOptionDeadline ...
+func DeployContextOptionDeadline(d time.Time) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.deadline = d
+	}
+}
+
 // NewDeployContext ...
 func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
@@ -61,13 +69,15 @@ func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...
 	}
 
 	dctx := DeployContext{
-		Local:      p,
-		ID:         id,
-		Root:       root,
-		Log:        logger,
-		Archive:    a,
-		logfile:    logfile,
-		dispatcher: logDispatcher{},
+		Local:       p,
+		ID:          id,
+		Root:        root,
+		ArchiveRoot: filepath.Join(root, "archive"),
+		Log:         logger,
+		Archive:     a,
+		logfile:     logfile,
+		dispatcher:  logDispatcher{},
+		deadline:    time.Now().UTC().Add(5 * time.Minute),
 	}
 
 	for _, opt := range options {
@@ -126,14 +136,16 @@ func (t logDispatcher) Dispatch(ms ...agent.Message) error {
 
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
-	Local      agent.Peer
-	ID         bw.RandomID
-	Root       string
-	Log        logger
-	logfile    *os.File
-	Archive    agent.Archive
-	dispatcher dispatcher
-	completed  chan DeployResult
+	Local       agent.Peer
+	ID          bw.RandomID
+	Root        string
+	ArchiveRoot string
+	Log         logger
+	logfile     *os.File
+	Archive     agent.Archive
+	dispatcher  dispatcher
+	deadline    time.Time
+	completed   chan DeployResult
 }
 
 // Dispatch an event to the cluster
