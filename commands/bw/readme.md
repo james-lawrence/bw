@@ -9,7 +9,7 @@ NETWORK=127.0.0.4; ./bin/bw agent --agent-name="node4" --agent-bind=$NETWORK:200
 ### client commands
 ```bash
 ./bin/bw deploy
-./bin/bw notify --agent-address=$NETWORK:2000
+NETWORK=127.0.0.1; ./bin/bw notify --agent-address=$NETWORK:2000
 ```
 
 ### notification command
