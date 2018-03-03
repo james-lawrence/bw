@@ -1,3 +1,6 @@
+// Package quorum implements the distributed FSM used to manage deploys.
+// TODO:
+//  - create a agent connection pool.
 package quorum
 
 import (
@@ -18,10 +21,17 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/grpcx"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
+
+type stateMachine interface {
+	Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) error
+	// Cancel a deploy.
+	Cancel() error
+	Dispatch(...agent.Message) error
+	State() raft.RaftState
+}
 
 type cluster interface {
 	Local() agent.Peer
@@ -33,170 +43,8 @@ type cluster interface {
 	Peers() []agent.Peer
 }
 
-type deploy interface {
+type deployer interface {
 	Deploy(agent.Dialer, agent.Dispatcher, agent.DeployOptions, agent.Archive, ...agent.Peer) error
-}
-
-// errorFuture is used to return a static error.
-type errorFuture struct {
-	err error
-}
-
-func (e errorFuture) Error() error {
-	return e.err
-}
-
-func (e errorFuture) Response() interface{} {
-	return nil
-}
-
-func (e errorFuture) Index() uint64 {
-	return 0
-}
-
-type pbObserver struct {
-	dst  agent.Quorum_WatchServer
-	done context.CancelFunc
-}
-
-func (t pbObserver) Receive(messages ...agent.Message) (err error) {
-	var (
-		cause error
-	)
-
-	for _, m := range messages {
-		if err = t.dst.Send(&m); err != nil {
-			if cause = errors.Cause(err); cause == context.Canceled {
-				return nil
-			}
-
-			t.done()
-
-			if grpcx.IgnoreShutdownErrors(cause) == nil {
-				return nil
-			}
-
-			return errors.Wrapf(err, "error type %T", cause)
-		}
-	}
-
-	return nil
-}
-
-// RaftProxy - proxy implementation of the raft protocol
-type RaftProxy interface {
-	State() raft.RaftState
-	Leader() raft.ServerAddress
-	Apply([]byte, time.Duration) raft.ApplyFuture
-}
-
-// NewRaftProxy utility function for tests.
-func NewRaftProxy(leader string, s raft.RaftState, apply func([]byte, time.Duration) raft.ApplyFuture) RaftProxy {
-	return proxyRaft{
-		leader: leader,
-		state:  s,
-		apply:  apply,
-	}
-}
-
-type proxyRaft struct {
-	leader string
-	state  raft.RaftState
-	apply  func(cmd []byte, d time.Duration) raft.ApplyFuture
-}
-
-func (t proxyRaft) State() raft.RaftState {
-	return t.state
-}
-
-func (t proxyRaft) Leader() raft.ServerAddress {
-	return raft.ServerAddress(t.leader)
-}
-
-func (t proxyRaft) Apply(cmd []byte, d time.Duration) raft.ApplyFuture {
-	if t.apply == nil {
-		return errorFuture{err: errors.New("apply cannot be executed on a proxy node")}
-	}
-
-	return t.apply(cmd, d)
-}
-
-type stateMachineDispatch struct {
-	sm *StateMachine
-}
-
-func (t stateMachineDispatch) Dispatch(m ...agent.Message) error {
-	t.sm.Dispatch(m...)
-	return nil
-}
-
-type disabledDispatch struct{}
-
-func (disabledDispatch) Dispatch(m ...agent.Message) error {
-	return errors.New("dispatch disabled not currently enable for this server")
-}
-
-type raftDispatch struct {
-	p RaftProxy
-}
-
-func (t raftDispatch) Dispatch(messages ...agent.Message) (err error) {
-	for _, m := range messages {
-		var (
-			ok     bool
-			b      []byte
-			future raft.ApplyFuture
-		)
-
-		if b, err = MessageToCommand(m); err != nil {
-			return err
-		}
-
-		future = t.p.Apply(b, 5*time.Second)
-
-		if err = future.Error(); err != nil {
-			return err
-		}
-
-		if err, ok = future.Response().(error); ok {
-			return err
-		}
-	}
-
-	return nil
-}
-
-type proxyDispatch struct {
-	dialer agent.Dialer
-	peader agent.Peer
-	client agent.Client
-	o      *sync.Once
-}
-
-func (t *proxyDispatch) Dispatch(messages ...agent.Message) (err error) {
-	t.o.Do(func() {
-		if t.client, err = t.dialer.Dial(t.peader); err != nil {
-			t.o = &sync.Once{}
-		}
-	})
-
-	if err != nil {
-		return errors.Wrap(err, "proxy dispatch dial failure")
-	}
-
-	for _, m := range messages {
-		if err = errors.Wrapf(t.client.Dispatch(m), "proxy dispatch: %s - %s", t.peader.Name, t.peader.Ip); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (t *proxyDispatch) close() {
-	if t.client != nil {
-		t.client.Close()
-	}
 }
 
 // Option option for the quorum rpc.
@@ -209,44 +57,24 @@ func OptionDialer(d agent.Dialer) Option {
 	}
 }
 
-// OptionRaftProxy ...
-func OptionRaftProxy(proxy RaftProxy) Option {
-	return func(q *Quorum) {
-		q.proxy = proxy
-	}
-}
-
-// OptionLeaderDispatch ...
-func OptionLeaderDispatch(d agent.Dispatcher) Option {
-	return func(q *Quorum) {
-		q.ldispatch = d
-	}
-}
-
 // OptionStateMachineDispatch ...
-func OptionStateMachineDispatch(d *StateMachine) Option {
+func OptionStateMachineDispatch(d stateMachine) Option {
 	return func(q *Quorum) {
-		q.stateMachine = d
+		q.sm = d
 	}
-}
-
-func disabledRaftProxy() RaftProxy {
-	return NewRaftProxy("", raft.Shutdown, nil)
 }
 
 // New new quorum instance based on the options.
-func New(c cluster, d deploy, upload storage.UploadProtocol, options ...Option) Quorum {
-	sm := NewStateMachine()
+func New(c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
 	r := Quorum{
-		stateMachine: sm,
-		uploads:      upload,
-		dialer:       agent.NewDialer(grpc.WithInsecure()),
-		m:            &sync.Mutex{},
-		proxy:        disabledRaftProxy(),
-		pdispatch:    &proxyDispatch{o: &sync.Once{}},
-		ldispatch:    stateMachineDispatch{sm: sm},
-		deploy:       d,
-		c:            c,
+		EventBus: agent.NewEventBusDefault(),
+		bus:      make(chan agent.Message, 100),
+		sm:       &DisabledMachine{},
+		uploads:  upload,
+		dialer:   agent.NewDialer(grpc.WithInsecure()),
+		m:        &sync.Mutex{},
+		deploy:   d,
+		c:        c,
 	}
 
 	for _, opt := range options {
@@ -258,23 +86,28 @@ func New(c cluster, d deploy, upload storage.UploadProtocol, options ...Option) 
 
 // Quorum implements quorum functionality.
 type Quorum struct {
-	stateMachine *StateMachine
-	uploads      storage.UploadProtocol
-	m            *sync.Mutex
-	c            cluster
-	dialer       agent.Dialer
-	proxy        RaftProxy
-	pdispatch    *proxyDispatch
-	ldispatch    agent.Dispatcher
-	deploy       deploy
+	agent.EventBus
+	bus     chan agent.Message
+	sm      stateMachine
+	uploads storage.UploadProtocol
+	m       *sync.Mutex
+	c       cluster
+	dialer  agent.Dialer
+	deploy  deployer
 }
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
+	go func() {
+		for m := range t.bus {
+			t.EventBus.Dispatch(m)
+		}
+	}()
 	go rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
-			return t.stateMachine
+			wal := NewWAL()
+			return &wal
 		}),
 		raftutil.ProtocolOptionObservers(
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
@@ -291,56 +124,28 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	for o := range events {
 		switch o.Data.(type) {
 		case raft.LeaderObservation:
-			t.pdispatch.close()
-
 			if o.Raft.Leader() == "" {
 				debugx.Println("leader lost disabling quorum locally")
-				t.proxy = disabledRaftProxy()
-				t.pdispatch = &proxyDispatch{o: &sync.Once{}}
-				t.ldispatch = disabledDispatch{}
+				t.sm = DisabledMachine{}
 				continue
 			}
 
-			peader := t.findLeader(string(o.Raft.Leader()))
-			debugx.Println("leader identified, enabling quorum locally", peader.Name, peader.Ip)
-			t.proxy = o.Raft
-			t.ldispatch = raftDispatch{p: o.Raft}
-			t.pdispatch = &proxyDispatch{
-				peader: peader,
-				o:      &sync.Once{},
-				dialer: t.dialer,
+			t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
+			if o.Raft.State() == raft.Leader {
+				t.sm = func() stateMachine {
+					sm := NewStateMachine(t.c, o.Raft, t.dialer, t.deploy, STOObserver(t.bus))
+					return &sm
+				}()
 			}
 		}
 	}
 }
 
 // Deploy ...
-func (t *Quorum) Deploy(dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
-	t.m.Lock()
-	p := t.proxy
-	t.m.Unlock()
-
+func (t *Quorum) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
 	debugx.Println("deploy invoked")
 	defer debugx.Println("deploy completed")
-
-	switch s := p.State(); s {
-	case raft.Leader:
-		debugx.Println("deploy command initiated")
-		defer debugx.Println("deploy command completed")
-		return logx.MaybeLog(t.deploy.Deploy(t.dialer, t.ldispatch, dopts, archive, peers...))
-	default:
-		var (
-			c agent.Client
-		)
-
-		debugx.Println("forwarding deploy request to leader")
-		if c, err = t.dialer.Dial(t.findLeader(string(p.Leader()))); err != nil {
-			return err
-		}
-
-		defer c.Close()
-		return c.RemoteDeploy(dopts, archive, peers...)
-	}
+	return logx.MaybeLog(t.sm.Deploy(dopts, a, peers...))
 }
 
 // Upload ...
@@ -410,7 +215,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 // Watch watch for events.
 func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	t.m.Lock()
-	p := t.proxy
+	p := t.sm
 	t.m.Unlock()
 
 	debugx.Println("watch invoked")
@@ -425,9 +230,9 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	ctx, done := context.WithCancel(context.Background())
 
 	debugx.Println("event observer: registering")
-	o := t.stateMachine.Register(pbObserver{dst: out, done: done})
+	o := t.Register(pbObserver{dst: out, done: done})
 	debugx.Println("event observer: registered")
-	defer t.stateMachine.Remove(o)
+	defer t.Remove(o)
 
 	<-ctx.Done()
 
@@ -435,43 +240,22 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 }
 
 // Dispatch record deployment events.
-func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) error {
+func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) (err error) {
 	var (
-		err      error
-		m        *agent.Message
-		dispatch agent.Dispatcher
+		m *agent.Message
 	)
 	debugx.Println("dispatch initiated")
 	defer debugx.Println("dispatch completed")
-	t.m.Lock()
-	p := t.proxy
-	t.m.Unlock()
-
-	dispatch = t.pdispatch
-	if p.State() == raft.Leader {
-		dispatch = t.ldispatch
-	}
 
 	for m, err = in.Recv(); err == nil; m, err = in.Recv() {
-		if err = dispatch.Dispatch(*m); err != nil {
+		t.m.Lock()
+		p := t.sm
+		t.m.Unlock()
+
+		if err = p.Dispatch(*m); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func (t Quorum) findLeader(leader string) (_zero agent.Peer) {
-	var (
-		peader agent.Peer
-	)
-
-	for _, peader = range t.c.Peers() {
-		if agent.RaftAddress(peader) == leader {
-			return peader
-		}
-	}
-
-	log.Println("-------------------- failed to locate leader --------------------")
-	return _zero
 }

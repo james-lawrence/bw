@@ -48,6 +48,11 @@ message Message {
   }
 }
 
+// Write ahead log
+message WAL {
+  repeated Message messages = 1;
+}
+
 message DeployOptions {
   int64 concurrency = 2;    // sets the number of simultaneously instance deploys to run.
   int64 timeout = 3;        // how long to wait before a single deploy is considered a failure.
@@ -61,6 +66,14 @@ message DeployCommand {
   DeployOptions options = 5;
 }
 
+message Deploy {
+  enum Stage { Failed = 0; Deploying = 1; Completed = 2; }
+  Stage stage = 1;
+  Archive archive = 2;
+  DeployOptions options = 4;
+  string error = 3;
+}
+
 message DeployCommandRequest {
   Archive archive = 1;
   DeployOptions options = 5;
@@ -70,14 +83,6 @@ message DeployCommandResult {}
 
 message Log {
   string log = 1;
-}
-
-message Deploy {
-  enum Stage { Failed = 0; Deploying = 1; Completed = 2; }
-  Stage stage = 1;
-  Archive archive = 2;
-  DeployOptions options = 4;
-  string error = 3;
 }
 
 message UploadMetadata {

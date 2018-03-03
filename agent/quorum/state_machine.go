@@ -1,17 +1,13 @@
 package quorum
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"sync"
-	"sync/atomic"
-
-	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/x/debugx"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 )
 
@@ -20,137 +16,115 @@ const (
 	deploying
 )
 
-// NewStateMachine ...
-func NewStateMachine() *StateMachine {
-	return &StateMachine{
-		m:        &sync.RWMutex{},
-		EventBus: agent.NewEventBus(),
+// StateMachineOption options for the state machine.
+type StateMachineOption func(*StateMachine)
+
+// STOObserver state machine observer, when not nil the state machine will block
+// to write the message to the observer.
+func STOObserver(m chan agent.Message) StateMachineOption {
+	return func(sm *StateMachine) {
+		sm.observer = m
 	}
 }
 
-// MessageToCommand ...
-func MessageToCommand(m agent.Message) ([]byte, error) {
-	return proto.Marshal(&m)
+// NewStateMachine stores the state of the cluster.
+func NewStateMachine(l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, options ...StateMachineOption) StateMachine {
+	sm := StateMachine{
+		local:    l,
+		state:    r,
+		dialer:   d,
+		deployer: deploy,
+	}
+
+	for _, opt := range options {
+		opt(&sm)
+	}
+
+	return sm
 }
 
-// CommandToMessage ...
-func CommandToMessage(cmd []byte) (m agent.Message, err error) {
-	return m, errors.WithStack(proto.Unmarshal(cmd, &m))
-}
-
-// StateMachine ...
+// StateMachine encapsulates the details of the raft cluster. granting a type safe API
+// to the underlying state machine.
 type StateMachine struct {
-	agent.EventBus
-	m         *sync.RWMutex
-	details   agent.StatusResponse
-	deploying int32
+	deployer
+	local    cluster
+	state    *raft.Raft
+	dialer   agent.Dialer
+	internal raft.FSM
+	observer chan agent.Message
 }
 
-// Apply log is invoked once a log entry is committed.
-// It returns a value which will be made available in the
-// ApplyFuture returned by Raft.Apply method if that
-// method was called on the same Raft node as the FSM.
-func (t *StateMachine) Apply(l *raft.Log) interface{} {
-	switch l.Type {
-	case raft.LogBarrier:
-		log.Println("barrier invoked", l.Index, l.Term)
-	case raft.LogCommand:
-		debugx.Println("command invoked", l.Index, l.Term)
-		return t.decode(l.Data)
-	case raft.LogNoop:
-		log.Println("noop invoked", l.Index, l.Term)
-	}
-
-	return nil
+// State returns the state of the raft cluster.
+func (t *StateMachine) State() raft.RaftState {
+	return t.state.State()
 }
 
-func (t *StateMachine) deployCommand(dc *agent.DeployCommand) error {
-	switch dc.Command {
-	case agent.DeployCommand_Begin:
-		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
-			return errors.New(fmt.Sprint("deploy already in progress"))
+// Leader returns the current leader.
+func (t *StateMachine) Leader() (peader agent.Peer, err error) {
+	for _, peader = range t.local.Peers() {
+		if agent.RaftAddress(peader) == string(t.state.Leader()) {
+			return peader, err
 		}
-	default:
-		atomic.SwapInt32(&t.deploying, none)
 	}
 
-	return nil
+	return peader, errors.New("failed to locate leader")
 }
 
-func (t *StateMachine) decode(buf []byte) error {
+// DialLeader dials the leader using the given dialer.
+func (t *StateMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 	var (
-		err error
-		m   agent.Message
+		leader agent.Peer
 	)
 
-	if m, err = CommandToMessage(buf); err != nil {
-		return err
+	if leader, err = t.Leader(); err != nil {
+		return c, err
 	}
 
-	switch event := m.GetEvent().(type) {
-	case *agent.Message_DeployCommand:
-		if err = t.deployCommand(event.DeployCommand); err != nil {
+	return d.Dial(leader)
+}
+
+// Dispatch a message to the WAL.
+func (t *StateMachine) Dispatch(messages ...agent.Message) (err error) {
+	for _, m := range messages {
+		if err = t.writeWAL(m, 10*time.Second); err != nil {
 			return err
 		}
-	default:
 	}
 
-	debugx.Println("dispatching into event bus")
-	t.EventBus.Dispatch(m)
-	debugx.Println("dispatched into event bus")
-
 	return nil
 }
 
-// Snapshot is used to support log compaction. This call should
-// return an FSMSnapshot which can be used to save a point-in-time
-// snapshot of the FSM. Apply and Snapshot are not called in multiple
-// threads, but Apply will be called concurrently with Persist. This means
-// the FSM should be implemented in a fashion that allows for concurrent
-// updates while a snapshot is happening.
-func (t *StateMachine) Snapshot() (raft.FSMSnapshot, error) {
-	return quorumFSMSnapshot{details: t.details}, nil
+// Deploy trigger a deploy.
+func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
+	debugx.Println("deploy command initiated")
+	defer debugx.Println("deploy command completed")
+	return t.deployer.Deploy(t.dialer, t, dopts, a, peers...)
 }
 
-// Restore is used to restore an FSM from a snapshot. It is not called
-// concurrently with any other command. The FSM must discard all previous
-// state.
-func (t *StateMachine) Restore(r io.ReadCloser) error {
-	t.details = agent.StatusResponse{}
-	return nil
+// Cancel cancel a ongoing deploy.
+func (t *StateMachine) Cancel() error {
+	dc := agent.DeployCommand{Command: agent.DeployCommand_Cancel}
+	return t.writeWAL(agentutil.DeployCommand(t.local.Local(), dc), 10*time.Second)
 }
 
-// Details includes information about the details of the quorum.
-// who its members are, the latest deploys.
-func (t StateMachine) Details() (d agent.StatusResponse, err error) {
-	return t.details, nil
-}
-
-type quorumFSMSnapshot struct {
-	details agent.StatusResponse
-}
-
-// Persist should dump all necessary state to the WriteCloser 'sink',
-// and call sink.Close() when finished or call sink.Cancel() on error.
-func (t quorumFSMSnapshot) Persist(sink raft.SnapshotSink) (err error) {
+func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	var (
-		state []byte
+		encoded []byte
+		future  raft.ApplyFuture
 	)
 
-	if state, err = proto.Marshal(&t.details); err != nil {
-		sink.Cancel()
+	if encoded, err = proto.Marshal(&m); err != nil {
 		return errors.WithStack(err)
 	}
 
-	if _, err = sink.Write(state); err != nil {
-		sink.Cancel()
-		return errors.WithStack(err)
+	// write the event to the WAL.
+	if future = t.state.Apply(encoded, 10*time.Second); future.Error() != nil {
+		return errors.WithStack(future.Error())
 	}
 
-	return sink.Close()
-}
+	if t.observer != nil {
+		t.observer <- m
+	}
 
-// Release is invoked when we are finished with the snapshot.
-func (t quorumFSMSnapshot) Release() {
-
+	return nil
 }

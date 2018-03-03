@@ -10,8 +10,11 @@ generate:
 install: generate
 	go install -ldflags=$(LDFLAGS) $(PACKAGE)/...
 
+install-debug:
+	go install -tags="debug.enabled" -ldflags=$(LDFLAGS) $(PACKAGE)/...
+
 test:
-	ginkgo -r -p .
+	ginkgo -r -p -keepGoing .
 
 release-push: release
 	git tag --force $(RELEASE)

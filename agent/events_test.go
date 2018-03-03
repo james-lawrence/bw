@@ -9,7 +9,7 @@ import (
 
 var _ = Describe("Events", func() {
 	It("should be able to dispatch messages", func() {
-		bus := NewEventBus()
+		bus := NewEventBusDefault()
 		obs := &countingEventObserver{}
 		obsr := bus.Register(obs)
 		defer bus.Remove(obsr)

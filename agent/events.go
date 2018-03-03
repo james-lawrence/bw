@@ -10,10 +10,15 @@ import (
 	"github.com/james-lawrence/bw/x/debugx"
 )
 
+// NewEventBusDefault ...
+func NewEventBusDefault() EventBus {
+	return NewEventBus(make(chan []Message, 1000))
+}
+
 // NewEventBus event bus.
-func NewEventBus() EventBus {
+func NewEventBus(c chan []Message) EventBus {
 	e := EventBus{
-		buffer:    make(chan []Message, 1000),
+		buffer:    c,
 		m:         &sync.RWMutex{},
 		observers: map[int64]Observer{},
 		serial:    new(int64),

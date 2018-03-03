@@ -35,7 +35,7 @@ func (t fakeClient) Close() error {
 	return t.errResult
 }
 
-func (t fakeClient) Upload(srcbytes uint64, src io.Reader) (agent.Archive, error) {
+func (t fakeClient) Upload(initiator string, srcbytes uint64, src io.Reader) (agent.Archive, error) {
 	return t.archive, t.errResult
 }
 

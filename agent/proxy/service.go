@@ -32,6 +32,16 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		filter deployment.Filter
 	)
 
+	cmd := agent.DeployCommand{
+		Command: agent.DeployCommand_Begin,
+		Options: &dopts,
+		Archive: &archive,
+	}
+
+	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
+		return err
+	}
+
 	filter = deployment.AlwaysMatch
 	if len(peers) > 0 {
 		filter = deployment.Peers(peers...)
@@ -43,16 +53,6 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
-	}
-
-	cmd := agent.DeployCommand{
-		Command: agent.DeployCommand_Begin,
-		Options: &dopts,
-		Archive: &archive,
-	}
-
-	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
-		return err
 	}
 
 	dresult := agent.DeployCommand_Failed
