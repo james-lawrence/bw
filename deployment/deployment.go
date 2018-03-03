@@ -154,7 +154,7 @@ func (t DeployContext) Dispatch(m ...agent.Message) error {
 }
 
 // Done is responsible for closing out the deployment context.
-func (t DeployContext) Done(result error) {
+func (t DeployContext) Done(result error) error {
 	logErr(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
 	logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
 
@@ -164,6 +164,8 @@ func (t DeployContext) Done(result error) {
 			DeployContext: t,
 		}
 	}
+
+	return result
 }
 
 type logger interface {

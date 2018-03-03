@@ -187,7 +187,11 @@ func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	}
 
 	if ok = atomic.CompareAndSwapUint32(&t.deploying, coordinaterWaiting, coordinatorDeploying); !ok {
-		err = errors.Errorf("already deploying: %s - %s", bw.RandomID(t.currentDeploy.Archive.DeploymentID).String(), t.currentDeploy.Stage)
+		err = errors.Errorf("already deploying - unknown deployment - %s", t.currentDeploy.Stage)
+		if t.currentDeploy.Archive != nil {
+			err = errors.Errorf("already deploying: %s - %s", bw.RandomID(t.currentDeploy.Archive.DeploymentID).String(), t.currentDeploy.Stage)
+		}
+
 		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
 		return d, err
 	}
@@ -195,7 +199,7 @@ func (t *coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
-		return d, err
+		return d, dctx.Done(err)
 	}
 
 	t.deployer.Deploy(dctx)

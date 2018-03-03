@@ -9,9 +9,9 @@ func deployPointers(deploys ...Deploy) []*Deploy {
 	return out
 }
 
-func deploysFirstOrDefault(def Deploy, deploys ...Deploy) Deploy {
+func deploysFirstOrDefault(def *Deploy, deploys ...Deploy) *Deploy {
 	if len(deploys) > 0 {
-		return deploys[0]
+		return &(deploys[0])
 	}
 
 	return def

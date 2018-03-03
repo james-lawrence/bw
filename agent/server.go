@@ -118,11 +118,11 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 
 	// these fields are deprecated and can just use the first deployment (if any)
 	// to determine latest.
-	ddeprecated := deploysFirstOrDefault(Deploy{Stage: Deploy_Completed}, d...)
+	ddeprecated := deploysFirstOrDefault(nil, d...)
 	adeprecated := deployArchives(d...)
 	return &StatusResponse{
 		Peer:        &tmp,
-		Latest:      &ddeprecated,
+		Latest:      ddeprecated,
 		Archives:    adeprecated,
 		Deployments: deployPointers(d...),
 	}, nil

@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/agent"
@@ -66,14 +67,13 @@ func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d deployer) (er
 		client agent.Client
 	)
 
-	// tcreds := grpc.WithTransportCredentials(creds)
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
 
 	if latest, err = DetermineLatestDeployment(c, dialer); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case ErrNoDeployments:
-			log.Println("no deployments found")
+			log.Println(cause)
 			return nil
 		default:
 			return errors.Wrap(cause, "failed to determine latest archive to bootstrapping")
@@ -92,11 +92,12 @@ func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d deployer) (er
 		return errors.WithStack(err)
 	}
 
-	if len(status.Deployments) > 0 && bytes.Compare(latest.Archive.DeploymentID, status.Deployments[0].Archive.DeploymentID) == 0 {
-		log.Println("latest already deployed")
+	if len(status.Deployments) > 0 && status.Deployments[0].Stage == agent.Deploy_Completed && bytes.Compare(latest.Archive.DeploymentID, status.Deployments[0].Archive.DeploymentID) == 0 {
+		log.Println("latest already deployed", spew.Sdump(status))
 		return nil
 	}
 
+	log.Println("bootstrapping with", spew.Sdump(latest))
 	if _, err = d.Deploy(agent.DeployOptions{}, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
