@@ -44,13 +44,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	tcreds := grpc.WithTransportCredentials(creds)
-
-	if client, err = agent.Dial(t.config.RPCBind.String(), tcreds); err != nil {
-		return err
-	}
-
-	if client, err = agent.AddressProxyDialQuorum(t.config.RPCBind.String(), tcreds); err != nil {
+	if client, err = agent.AddressProxyDialQuorum(t.config.RPCBind.String(), grpc.WithTransportCredentials(creds)); err != nil {
 		return err
 	}
 

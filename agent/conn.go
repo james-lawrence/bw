@@ -16,15 +16,13 @@ import (
 
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
-	var (
-		client Client
-	)
 
-	if client, err = Dial(proxy, options...); err != nil {
+	if conn, err = Dial(proxy, options...); err != nil {
 		return conn, err
 	}
+	defer conn.Close()
 
-	return ProxyDialQuorum(client, options...)
+	return ProxyDialQuorum(conn, options...)
 }
 
 // ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
