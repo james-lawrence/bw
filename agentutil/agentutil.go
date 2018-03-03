@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"sort"
 
-	"google.golang.org/grpc"
-
 	"github.com/james-lawrence/bw/agent"
 	clusterx "github.com/james-lawrence/bw/cluster"
 
@@ -24,18 +22,18 @@ type cluster interface {
 	Connect() agent.ConnectResponse
 }
 
-// DialPeer dial the peer
-func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err error) {
-	var (
-		addr string
-	)
-
-	if addr = agent.RPCAddress(p); addr == "" {
-		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
-	}
-
-	return agent.Dial(addr, options...)
-}
+// // DialPeer dial the peer
+// func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err error) {
+// 	var (
+// 		addr string
+// 	)
+//
+// 	if addr = agent.RPCAddress(p); addr == "" {
+// 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
+// 	}
+//
+// 	return agent.Dial(addr, options...)
+// }
 
 // Cleaner interface for cleaning workspace directories.
 type Cleaner interface {

@@ -4,17 +4,16 @@ package proxy
 
 import (
 	"github.com/james-lawrence/bw/agent"
-	"google.golang.org/grpc"
 )
 
-func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
+func check(d agent.Dialer) func(n agent.Peer) (agent.Deploy, error) {
 	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c    agent.Client
 			info agent.StatusResponse
 		)
 
-		if c, err = agent.Dial(agent.RPCAddress(n), options...); err != nil {
+		if c, err = d.Dial(n); err != nil {
 			return _d, err
 		}
 
@@ -39,13 +38,13 @@ func check(options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) 
 	}
 }
 
-func deploy(dopts agent.DeployOptions, archive agent.Archive, options ...grpc.DialOption) func(n agent.Peer) (agent.Deploy, error) {
+func deploy(dopts agent.DeployOptions, archive agent.Archive, dialer agent.Dialer) func(n agent.Peer) (agent.Deploy, error) {
 	return func(n agent.Peer) (_d agent.Deploy, err error) {
 		var (
 			c agent.Client
 		)
 
-		if c, err = agent.Dial(agent.RPCAddress(n), options...); err != nil {
+		if c, err = dialer.Dial(n); err != nil {
 			return _d, err
 		}
 		defer c.Close()

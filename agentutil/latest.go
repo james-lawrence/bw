@@ -6,13 +6,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/agent"
-
-	"google.golang.org/grpc"
 )
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
 // If no error occurs, latest.Archive is guaranteed to be populated.
-func DetermineLatestDeployment(c cluster, doptions ...grpc.DialOption) (latest agent.Deploy, err error) {
+func DetermineLatestDeployment(c cluster, d agent.Dialer) (latest agent.Deploy, err error) {
 	type result struct {
 		deploy *agent.Deploy
 		count  int
@@ -47,7 +45,7 @@ func DetermineLatestDeployment(c cluster, doptions ...grpc.DialOption) (latest a
 		return nil
 	}
 
-	if err = NewClusterOperation(Operation(getlatest))(c, doptions...); err != nil {
+	if err = NewClusterOperation(Operation(getlatest))(c, d); err != nil {
 		return latest, err
 	}
 

@@ -140,7 +140,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
@@ -253,7 +253,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if _, client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 	logx.MaybeLog(c.Shutdown())

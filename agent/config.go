@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
-	"log"
 	"math"
 	"net"
 	"os"
@@ -64,71 +63,43 @@ type ConfigClient struct {
 }
 
 // Connect to the address in the config client.
-func (t ConfigClient) Connect(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
+func (t ConfigClient) Connect(options ...ConnectOption) (client Client, d Dialer, c clustering.Cluster, err error) {
 	var (
 		details ConnectResponse
 	)
 
 	conn := newConnect(options...)
 
-	if creds, client, details, err = t.connect(); err != nil {
-		return creds, client, c, err
+	if client, d, details, err = t.connect(); err != nil {
+		return client, d, c, err
 	}
 
 	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
-		return creds, client, c, err
+		return client, d, c, err
 	}
 
-	return creds, client, c, nil
+	return client, d, c, nil
 }
 
-// ConnectLeader ...
-func (t ConfigClient) ConnectLeader(options ...ConnectOption) (creds credentials.TransportCredentials, client Conn, c clustering.Cluster, err error) {
+func (t ConfigClient) connect() (c Client, d Dialer, details ConnectResponse, err error) {
 	var (
-		details ConnectResponse
-		success bool
-		tmp     Conn
+		creds credentials.TransportCredentials
 	)
-	conn := newConnect(options...)
 
-	if creds, tmp, details, err = t.connect(); err != nil {
-		return creds, client, c, err
-	}
-	defer tmp.Close()
-
-	for _, p := range details.Quorum {
-		if client, err = Dial(RPCAddress(*p), grpc.WithTransportCredentials(creds)); err != nil {
-			log.Println("failed to connect to peer", p.Name, p.Ip, err)
-			continue
-		}
-		success = true
-	}
-
-	if !success {
-		return creds, client, c, errors.New("failed to connect to a member of the quorum")
-	}
-
-	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
-		return creds, client, c, err
-	}
-
-	return creds, client, c, nil
-}
-
-func (t ConfigClient) connect() (creds credentials.TransportCredentials, client Conn, details ConnectResponse, err error) {
 	if creds, err = t.creds(); err != nil {
-		return creds, client, details, err
+		return c, d, details, err
 	}
 
-	if client, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
-		return creds, client, details, err
+	d = NewDialer(grpc.WithTransportCredentials(creds))
+	if c, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
+		return c, d, details, err
 	}
 
-	if details, err = client.Connect(); err != nil {
-		return creds, client, details, err
+	if details, err = c.Connect(); err != nil {
+		return c, d, details, err
 	}
 
-	return creds, client, details, nil
+	return c, d, details, err
 }
 
 // LoadConfig create a new configuration from the specified path using the current

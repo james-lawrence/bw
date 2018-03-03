@@ -27,7 +27,7 @@ type mockdeploy struct {
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(dopt grpc.DialOption, _ agent.Dispatcher, opts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) error {
+func (t *mockdeploy) Deploy(_ agent.Dialer, _ agent.Dispatcher, opts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) error {
 	t.lastOptions = opts
 	t.lastArchive = archive
 	t.lastPeers = peers
@@ -84,8 +84,7 @@ func buildNode(p agent.Peer, deployer *mockdeploy) (wg *sync.WaitGroup, cancel c
 	agent.RegisterAgentServer(server, agent.NewServer(c))
 	agent.RegisterQuorumServer(server, agent.NewQuorum(&quorum))
 	go server.Serve(l)
-
-	client, err = agent.DialQuorum(c, grpc.WithInsecure())
+	client, err = agent.NewQuorumDialer(agent.NewDialer(grpc.WithInsecure())).Dial(c)
 	return wg, cancel, client, err
 }
 

@@ -8,9 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/backoff"
 )
@@ -36,7 +33,7 @@ const (
 )
 
 // BootstrapUntilSuccess continuously bootstraps until it succeeds.
-func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, creds credentials.TransportCredentials, d deployer) bool {
+func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer agent.Dialer, d deployer) bool {
 	var (
 		err error
 	)
@@ -50,7 +47,7 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, cre
 		default:
 		}
 
-		if err = Bootstrap(local, c, creds, d); err != nil {
+		if err = Bootstrap(local, c, dialer, d); err != nil {
 			log.Println("failed bootstrap", err)
 			time.Sleep(bs.Backoff(i))
 			log.Println("REATTEMPT BOOTSTRAP")
@@ -62,18 +59,18 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, cre
 }
 
 // Bootstrap ...
-func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentials, d deployer) (err error) {
+func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d deployer) (err error) {
 	var (
 		status agent.StatusResponse
 		latest agent.Deploy
 		client agent.Client
 	)
 
-	tcreds := grpc.WithTransportCredentials(creds)
+	// tcreds := grpc.WithTransportCredentials(creds)
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
 
-	if latest, err = DetermineLatestDeployment(c, tcreds); err != nil {
+	if latest, err = DetermineLatestDeployment(c, dialer); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case ErrNoDeployments:
 			log.Println("no deployments found")
@@ -83,7 +80,7 @@ func Bootstrap(local agent.Peer, c cluster, creds credentials.TransportCredentia
 		}
 	}
 
-	if client, err = DialPeer(local, tcreds); err != nil {
+	if client, err = dialer.Dial(local); err != nil {
 		return errors.Wrap(err, "failed to connect to local server")
 	}
 

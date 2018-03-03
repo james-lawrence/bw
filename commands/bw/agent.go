@@ -151,14 +151,16 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 		upload, download = tc.Uploader(), tc.Downloader()
 	}
 
-	dispatcher := agentutil.NewDispatcher(cx, grpc.WithTransportCredentials(tlscreds))
+	dialer := agent.NewDialer(grpc.WithTransportCredentials(tlscreds))
+	qdialer := agent.NewQuorumDialer(dialer)
+	dispatcher := agentutil.NewDispatcher(cx, qdialer)
 	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}
 	deployer := coordinator(actx, download)
 	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx),
 		upload,
-		quorum.OptionCredentials(tlscreds),
+		quorum.OptionDialer(dialer),
 	)
 	go (&q).Observe(p, make(chan raft.Observation, 200))
 
@@ -177,7 +179,7 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
 	defer done()
-	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, tlscreds, deployer) {
+	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, deployer) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

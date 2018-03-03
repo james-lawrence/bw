@@ -14,8 +14,6 @@ import (
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 type agentInfo struct {
@@ -43,8 +41,8 @@ func (t *agentInfo) info(ctx *kingpin.ParseContext) error {
 func (t *agentInfo) _info() (err error) {
 	var (
 		c      clustering.Cluster
-		creds  credentials.TransportCredentials
 		client agent.Client
+		dialer agent.Dialer
 		config agent.ConfigClient
 	)
 	defer t.global.shutdown()
@@ -68,7 +66,7 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectLeader(config, coptions...); err != nil {
+	if client, c, err = agent.Connect(config, coptions...); err != nil {
 		return err
 	}
 
@@ -89,7 +87,7 @@ func (t *agentInfo) _info() (err error) {
 		}
 
 		return nil
-	}))(cx, grpc.WithTransportCredentials(creds))
+	}))(cx, dialer)
 
 	events := make(chan agent.Message, 100)
 

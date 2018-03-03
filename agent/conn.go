@@ -10,25 +10,9 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 )
-
-// DialQuorum ...
-func DialQuorum(c cluster, options ...grpc.DialOption) (conn Conn, err error) {
-	for _, q := range c.Quorum() {
-		if conn, err = Dial(RPCAddress(q), options...); err != nil {
-			log.Println("failed to dial", RPCAddress(q), err)
-			continue
-		}
-
-		log.Println("quorum connection established", RPCAddress(q), spew.Sdump(q))
-		return conn, nil
-	}
-
-	return conn, errors.New("failed to connect to a quorum node")
-}
 
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {

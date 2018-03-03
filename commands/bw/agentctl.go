@@ -5,9 +5,6 @@ import (
 	"net"
 	"regexp"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -18,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
@@ -72,8 +70,8 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	var (
 		client agent.Client
 		config agent.ConfigClient
+		dialer agent.Dialer
 		c      clustering.Cluster
-		creds  credentials.TransportCredentials
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
@@ -100,13 +98,11 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		),
 	}
 
-	if creds, client, c, err = agent.ConnectClient(config, coptions...); err != nil {
+	if client, dialer, c, err = config.Connect(coptions...); err != nil {
 		return err
 	}
-	if err = client.Close(); err != nil {
-		return errors.Wrap(err, "failed to close client")
-	}
 
+	logx.MaybeLog(errors.WithMessage(client.Close(), "failed to close client"))
 	log.Println("connected to cluster")
 	debugx.Printf("configuration:\n%#v\n", config)
 
@@ -120,5 +116,5 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		}
 		return nil
 	}
-	return agentutil.Shutdown(peers, grpc.WithTransportCredentials(creds))
+	return agentutil.Shutdown(peers, dialer)
 }

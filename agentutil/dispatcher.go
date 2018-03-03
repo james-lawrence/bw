@@ -6,7 +6,6 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/logx"
-	"google.golang.org/grpc"
 )
 
 // NewBusDispatcher creates a in memory bus for messages.
@@ -31,10 +30,10 @@ func (t BusDispatcher) Dispatch(msgs ...agent.Message) error {
 }
 
 // NewDispatcher create a message dispatcher from the cluster and credentials.
-func NewDispatcher(c cluster, creds grpc.DialOption) *Dispatcher {
+func NewDispatcher(c cluster, d agent.QuorumDialer) *Dispatcher {
 	return &Dispatcher{
 		cluster: c,
-		creds:   creds,
+		dialer:  d,
 		m:       &sync.Mutex{},
 	}
 }
@@ -42,9 +41,9 @@ func NewDispatcher(c cluster, creds grpc.DialOption) *Dispatcher {
 // Dispatcher - dispatches messages.
 type Dispatcher struct {
 	cluster
-	c     agent.Client
-	creds grpc.DialOption
-	m     *sync.Mutex
+	dialer agent.QuorumDialer
+	c      agent.Client
+	m      *sync.Mutex
 }
 
 // Dispatch dispatches messages
@@ -69,7 +68,7 @@ func (t *Dispatcher) getClient() (c agent.Client, err error) {
 		return t.c, nil
 	}
 
-	if t.c, err = agent.DialQuorum(t.cluster, t.creds); err != nil {
+	if t.c, err = t.dialer.Dial(t.cluster); err != nil {
 		return t.c, err
 	}
 

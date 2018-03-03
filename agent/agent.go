@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/clustering"
-
-	"google.golang.org/grpc/credentials"
+	"github.com/james-lawrence/bw/x/logx"
+	"github.com/pkg/errors"
 )
 
 // Dispatcher - interface for dispatching messages.
@@ -70,19 +70,19 @@ type connect struct {
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config ConfigClient, onRetry func(error), options ...ConnectOption,
-) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+) (client Client, c clustering.Cluster, err error) {
 	for i := 0; true; i++ {
-		if creds, cl, c, err = ConnectClient(config, options...); err == nil {
+		if client, c, err = Connect(config, options...); err == nil {
 			break
 		}
 
-		// cleanup any resources that where created.
-		cl.Close()
-		c.Shutdown()
+		// when an error occurs, cleanup any resources.
+		logx.MaybeLog(errors.WithMessage(client.Close(), "failed to cleanup client"))
+		logx.MaybeLog(errors.WithMessage(c.Shutdown(), "failed to cleanup cluster"))
 
 		select {
 		case <-ctx.Done():
-			return creds, cl, c, ctx.Err()
+			return client, c, ctx.Err()
 		default:
 		}
 
@@ -90,27 +90,18 @@ func ConnectClientUntilSuccess(
 		time.Sleep(250 * time.Millisecond)
 	}
 
-	return creds, cl, c, err
+	return client, c, err
 }
 
-// ConnectClient ...
-func ConnectClient(config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
+// Connect returning just a single client to the caller.
+func Connect(config ConfigClient, options ...ConnectOption) (cl Client, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
-
-	return config.Connect(
+	cl, _, c, err = config.Connect(
 		ConnectOptionClustering(conn.clustering.Options...),
 		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
 	)
-}
 
-// ConnectLeader ...
-func ConnectLeader(config ConfigClient, options ...ConnectOption) (creds credentials.TransportCredentials, cl Conn, c clustering.Cluster, err error) {
-	conn := newConnect(options...)
-
-	return config.ConnectLeader(
-		ConnectOptionClustering(conn.clustering.Options...),
-		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
-	)
+	return cl, c, err
 }
 
 type cluster interface {

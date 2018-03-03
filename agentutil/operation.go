@@ -3,7 +3,6 @@ package agentutil
 import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
 type operation interface {
@@ -31,23 +30,27 @@ func (t PeerSet) Peers() []agent.Peer {
 }
 
 // NewClusterOperation applies an operation to every node in the cluster.
-func NewClusterOperation(o operation) func(peers, ...grpc.DialOption) error {
-	return func(c peers, options ...grpc.DialOption) (err error) {
-		var (
-			cx agent.Client
-		)
-
+func NewClusterOperation(o operation) func(peers, agent.Dialer) error {
+	return func(c peers, dialer agent.Dialer) (err error) {
 		for _, peer := range c.Peers() {
-			if cx, err = DialPeer(peer, options...); err != nil {
-				return errors.WithStack(err)
-			}
-			defer cx.Close()
-
-			if err = o.Visit(cx); err != nil {
-				return errors.WithStack(err)
+			if err = dialAndVisit(dialer, peer, o); err != nil {
+				return err
 			}
 		}
 
 		return nil
 	}
+}
+
+func dialAndVisit(dialer agent.Dialer, p agent.Peer, o operation) (err error) {
+	var (
+		cx agent.Client
+	)
+
+	if cx, err = dialer.Dial(p); err != nil {
+		return errors.WithStack(err)
+	}
+	defer cx.Close()
+
+	return errors.WithStack(o.Visit(cx))
 }

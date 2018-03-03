@@ -3,8 +3,6 @@ package proxy
 import (
 	"log"
 
-	"google.golang.org/grpc"
-
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -31,14 +29,10 @@ type Proxy struct {
 }
 
 // Deploy the given archive to the specified peers.
-func (t Proxy) Deploy(creds grpc.DialOption, d agent.Dispatcher, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
+func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
-
-	doptions := []grpc.DialOption{
-		creds,
-	}
 
 	filter = deployment.AlwaysMatch
 	if len(peers) > 0 {
@@ -46,8 +40,8 @@ func (t Proxy) Deploy(creds grpc.DialOption, d agent.Dispatcher, dopts agent.Dep
 	}
 
 	options := []deployment.Option{
-		deployment.DeployOptionChecker(deployment.OperationFunc(check(doptions...))),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(dopts, archive, doptions...))),
+		deployment.DeployOptionChecker(deployment.OperationFunc(check(dialer))),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(dopts, archive, dialer))),
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),

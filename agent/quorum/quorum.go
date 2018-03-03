@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -34,7 +33,7 @@ type cluster interface {
 }
 
 type deploy interface {
-	Deploy(grpc.DialOption, agent.Dispatcher, agent.DeployOptions, agent.Archive, ...agent.Peer) error
+	Deploy(agent.Dialer, agent.Dispatcher, agent.DeployOptions, agent.Archive, ...agent.Peer) error
 }
 
 // errorFuture is used to return a static error.
@@ -167,15 +166,15 @@ func (t raftDispatch) Dispatch(messages ...agent.Message) (err error) {
 }
 
 type proxyDispatch struct {
-	dialOptions []grpc.DialOption
-	peader      agent.Peer
-	client      agent.Conn
-	o           *sync.Once
+	dialer agent.Dialer
+	peader agent.Peer
+	client agent.Client
+	o      *sync.Once
 }
 
 func (t *proxyDispatch) Dispatch(messages ...agent.Message) (err error) {
 	t.o.Do(func() {
-		if t.client, err = agent.Dial(agent.RPCAddress(t.peader), t.dialOptions...); err != nil {
+		if t.client, err = t.dialer.Dial(t.peader); err != nil {
 			t.o = &sync.Once{}
 		}
 	})
@@ -194,21 +193,18 @@ func (t *proxyDispatch) Dispatch(messages ...agent.Message) (err error) {
 }
 
 func (t *proxyDispatch) close() {
-	t.client.Close()
+	if t.client != nil {
+		t.client.Close()
+	}
 }
 
 // Option option for the quorum rpc.
 type Option func(*Quorum)
 
-// OptionCredentials set the dial credentials options for the agent.
-// when the credentials are nil then insecure connections are used.
-func OptionCredentials(c credentials.TransportCredentials) Option {
+// OptionDialer set the dialer used to connect to the cluster.
+func OptionDialer(d agent.Dialer) Option {
 	return func(q *Quorum) {
-		if c == nil {
-			q.creds = grpc.WithInsecure()
-		} else {
-			q.creds = grpc.WithTransportCredentials(c)
-		}
+		q.dialer = d
 	}
 }
 
@@ -243,7 +239,7 @@ func New(c cluster, d deploy, upload storage.UploadProtocol, options ...Option) 
 	r := Quorum{
 		stateMachine: sm,
 		uploads:      upload,
-		creds:        grpc.WithInsecure(),
+		dialer:       agent.NewDialer(grpc.WithInsecure()),
 		m:            &sync.Mutex{},
 		proxy:        disabledRaftProxy(),
 		pdispatch:    &proxyDispatch{o: &sync.Once{}},
@@ -265,7 +261,7 @@ type Quorum struct {
 	uploads      storage.UploadProtocol
 	m            *sync.Mutex
 	c            cluster
-	creds        grpc.DialOption
+	dialer       agent.Dialer
 	proxy        RaftProxy
 	pdispatch    *proxyDispatch
 	ldispatch    agent.Dispatcher
@@ -311,9 +307,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			t.pdispatch = &proxyDispatch{
 				peader: peader,
 				o:      &sync.Once{},
-				dialOptions: []grpc.DialOption{
-					t.creds,
-				},
+				dialer: t.dialer,
 			}
 		}
 	}
@@ -332,14 +326,14 @@ func (t *Quorum) Deploy(dopts agent.DeployOptions, archive agent.Archive, peers 
 	case raft.Leader:
 		debugx.Println("deploy command initiated")
 		defer debugx.Println("deploy command completed")
-		return logx.MaybeLog(t.deploy.Deploy(t.creds, t.ldispatch, dopts, archive, peers...))
+		return logx.MaybeLog(t.deploy.Deploy(t.dialer, t.ldispatch, dopts, archive, peers...))
 	default:
 		var (
 			c agent.Client
 		)
 
 		debugx.Println("forwarding deploy request to leader")
-		if c, err = agent.Dial(agent.RPCAddress(t.findLeader(string(p.Leader()))), t.creds); err != nil {
+		if c, err = t.dialer.Dial(t.findLeader(string(p.Leader()))); err != nil {
 			return err
 		}
 
