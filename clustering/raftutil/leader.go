@@ -4,67 +4,89 @@ import (
 	"log"
 	"time"
 
-	"github.com/james-lawrence/bw/x/debugx"
-
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 )
 
 type leader struct {
-	raftp    *Protocol
-	protocol *raft.Raft
+	stateMeta
 }
 
 func (t leader) Update(c cluster) state {
 	var (
 		maintainState state = conditionTransition{
 			next: t,
-			cond: t.raftp.ClusterChange,
+			cond: t.protocol.ClusterChange,
 		}
 	)
 
-	debugx.Println("leader update invoked")
-	switch t.protocol.State() {
+	log.Println("leader update invoked")
+	switch t.r.State() {
 	case raft.Leader:
 		if t.cleanupPeers(c.LocalNode(), quorumPeers(c)...) {
-			go t.raftp.unstable(time.Second)
+			go t.protocol.unstable(time.Second)
+		}
+
+		if maybeLeave(c) {
+			if err := t.r.Barrier(5 * time.Second).Error(); err != nil {
+				log.Println("barrier write failed", err)
+				return maintainState
+			}
+			return leave(t, t.stateMeta)
 		}
 		return maintainState
 	default:
-		log.Println("lost leadership: demoting to peer")
-		return peer{
-			raftp:    t.raftp,
-			protocol: t.protocol,
-			initTime: time.Now(),
-		}.Update(c)
+		log.Println("lost leadership: leaving")
+		return leave(t, t.stateMeta)
 	}
 }
 
 // cleanupPeers returns true if the peer set was unstable.
 func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.Node) (unstable bool) {
-	config := t.protocol.GetConfiguration()
-	if err := config.Error(); err != nil {
+	const (
+		commitTimeout = 10 * time.Second
+	)
+
+	var (
+		err error
+		rs  raft.Server
+	)
+
+	if err = t.r.Barrier(commitTimeout).Error(); err != nil {
+		log.Println("barrier write failed", err)
+		return true
+	}
+
+	config := t.r.GetConfiguration()
+	if err = config.Error(); err != nil {
 		log.Println("failed to retrieve peers", err)
 		return true
 	}
 
 	// remove self from peer set.
 	peers := removePeer(raft.ServerID(local.Name), config.Configuration().Servers...)
-	log.Println("candidates", peersToString(t.raftp.Port, candidates...))
-	log.Println("peers", peers)
+	// log.Println(local.Name, "candidates", spew.Sdump(candidates))
+	// log.Println(local.Name, "peers", peers)
 
+	// we bail out when we fail to add peers because we don't want to remove peers
+	// if we failed to add the new peers to the leadership
 	for _, peer := range candidates {
-		id := raft.ServerID(peer.Name)
-		p := raft.ServerAddress(peerToString(t.raftp.Port, peer))
-		peers = removePeer(id, peers...)
-		if err := t.protocol.AddVoter(id, p, t.protocol.GetConfiguration().Index(), time.Second).Error(); err != nil {
+		if rs, err = t.protocol.RaftAddr(peer); err != nil {
+			log.Println("failed to lookup peer", err)
+
+			return true
+		}
+
+		peers = removePeer(rs.ID, peers...)
+
+		if err = t.r.AddVoter(rs.ID, rs.Address, t.r.GetConfiguration().Index(), commitTimeout).Error(); err != nil {
 			log.Println("failed to add peer", err)
-			unstable = true
+			return true
 		}
 	}
 
 	for _, peer := range peers {
-		if err := t.protocol.RemoveServer(peer.ID, t.protocol.GetConfiguration().Index(), time.Second).Error(); err != nil {
+		if err := t.r.RemoveServer(peer.ID, t.r.GetConfiguration().Index(), commitTimeout).Error(); err != nil {
 			log.Println("failed to remove peer", err)
 			unstable = true
 		}

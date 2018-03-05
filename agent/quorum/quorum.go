@@ -27,6 +27,7 @@ type cluster interface {
 	Local() agent.Peer
 	Quorum() []agent.Peer
 	LocalNode() *memberlist.Node
+	Members() []*memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(int, []byte) []*memberlist.Node
 	Peers() []agent.Peer
@@ -356,7 +357,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 	defer debugx.Println("upload completed")
 
 	debugx.Println("upload: generating deployment ID")
-	if deploymentID, err = bw.GenerateID(); err != nil {
+	if deploymentID, err = bw.SimpleGenerateID(); err != nil {
 		return err
 	}
 

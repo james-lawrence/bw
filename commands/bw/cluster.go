@@ -61,7 +61,7 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 	)
 }
 
-func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
+func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs *tls.Config
 	)
@@ -77,7 +77,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, options ...raf
 
 	return raftutil.NewProtocol(
 		ctx,
-		uint16(conf.RaftBind.Port),
+		sq,
 		append(defaultOptions, options...)...,
 	)
 }

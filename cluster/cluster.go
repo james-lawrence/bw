@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/pkg/errors"
@@ -114,4 +115,33 @@ func NodeToPeer(n *memberlist.Node) (_zerop agent.Peer, err error) {
 		RaftPort:    m.RaftPort,
 		TorrentPort: m.TorrentPort,
 	}, nil
+}
+
+// NewRaftAddressProvider converts memberlist.Node into a raft.Server
+func NewRaftAddressProvider(c cluster) RaftAddressProvider {
+	return RaftAddressProvider{
+		cluster: c,
+	}
+}
+
+// RaftAddressProvider ...
+type RaftAddressProvider struct {
+	cluster
+}
+
+// RaftAddr ...
+func (t RaftAddressProvider) RaftAddr(n *memberlist.Node) (_zero raft.Server, err error) {
+	var (
+		p agent.Peer
+	)
+
+	if p, err = NodeToPeer(n); err != nil {
+		return _zero, err
+	}
+
+	return raft.Server{
+		ID:       raft.ServerID(n.Name),
+		Address:  raft.ServerAddress(agent.RaftAddress(p)),
+		Suffrage: raft.Voter,
+	}, err
 }

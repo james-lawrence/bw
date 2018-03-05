@@ -2,35 +2,93 @@ package clusteringtestutil
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"time"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/pkg/errors"
 
 	"github.com/hashicorp/memberlist"
 )
 
+func defaultLocalConfig() *memberlist.Config {
+	conf := memberlist.DefaultLANConfig()
+	conf.TCPTimeout = time.Second
+	conf.IndirectChecks = 1
+	conf.RetransmitMult = 2
+	conf.SuspicionMult = 3
+	conf.PushPullInterval = 2 * time.Second
+	conf.ProbeTimeout = 200 * time.Millisecond
+	conf.ProbeInterval = time.Second
+	conf.GossipInterval = 100 * time.Millisecond
+	conf.GossipToTheDeadTime = 2 * time.Second
+	return conf
+}
+
+// NewPeerFromConfig ...
+func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) (c clustering.Cluster, err error) {
+	// The mock network cannot be shutdown cleanly, so ignore it, even though it would be ideal
+	// for this use case.
+	transport, err := memberlist.NewNetTransport(&memberlist.NetTransportConfig{
+		BindAddrs: []string{"127.0.0.1"},
+	})
+	if err != nil {
+		return c, errors.WithMessage(err, "new cluster failed")
+	}
+	defaultOpts := []clustering.Option{
+		clustering.OptionNodeID(bw.MustGenerateID().String()),
+		// clustering.OptionTransport(network.NewTransport()),
+		clustering.OptionTransport(transport),
+	}
+
+	options = append(defaultOpts, options...)
+
+	if c, err = clustering.NewOptionsFromConfig(config, options...).NewCluster(); err != nil {
+		return c, errors.WithMessage(err, "new cluster failed")
+	}
+
+	return c, err
+}
+
+// NewPeer ...
+func NewPeer(network *memberlist.MockNetwork, options ...clustering.Option) (c clustering.Cluster, err error) {
+	return NewPeerFromConfig(defaultLocalConfig(), options...)
+}
+
 // NewCluster ...
-func NewCluster(n int, opts ...clustering.Option) (out []clustering.Cluster, err error) {
+func NewCluster(n int, options ...clustering.Option) (network memberlist.MockNetwork, out []clustering.Cluster, err error) {
 	for i := 0; i < n; i++ {
 		var (
 			c clustering.Cluster
 		)
-		ip := net.ParseIP(fmt.Sprintf("127.0.0.%d", i+1))
-		opts = append(
-			opts,
-			clustering.OptionNodeID(ip.String()),
-			clustering.OptionBindAddress(ip.String()),
-		)
 
-		if c, err = clustering.NewCluster(opts...); err != nil {
+		if c, err = NewPeer(&network, options...); err != nil {
+			return network, out, errors.WithMessage(err, "new cluster failed")
+		}
+
+		if _, err = Connect(c, out...); err != nil {
 			ShutdownCluster(out...)
-			return out, err
+			ShutdownCluster(c)
+			return network, out, errors.WithMessage(err, "failed to connect")
 		}
 
 		out = append(out, c)
 	}
 
-	return out, nil
+	return network, out, nil
+}
+
+// Connect the local node to the provided peers.
+func Connect(local clustering.Cluster, peers ...clustering.Cluster) (int, error) {
+	log.Println("connecting to", len(peers))
+	addrs := make([]string, 0, len(peers))
+	for _, p := range peers {
+		addrs = append(addrs, p.LocalNode().Address())
+	}
+
+	return local.Join(addrs...)
 }
 
 // ShutdownCluster ...
@@ -44,23 +102,23 @@ func ShutdownCluster(nodes ...clustering.Cluster) (err error) {
 	return err
 }
 
-// NewPeers generates up to 254 peers with IPs
+// NewNodes generates up to 254 peers with IPs
 // between 127.0.0.1 and 127.0.0.n
-func NewPeers(n int) []*memberlist.Node {
+func NewNodes(n int) []*memberlist.Node {
 	if n >= 255 {
 		panic("only supports generating a cluster up to 254 nodes")
 	}
 
 	peers := make([]*memberlist.Node, 0, n)
 	for i := 0; i < n; i++ {
-		peers = append(peers, NewPeer(fmt.Sprintf("node-%d", i+1), net.ParseIP(fmt.Sprintf("127.0.0.%d", i+1))))
+		peers = append(peers, NewNode(fmt.Sprintf("node-%d", i+1), net.ParseIP(fmt.Sprintf("127.0.0.%d", i+1))))
 	}
 
 	return peers
 }
 
-// NewPeer creates a peer with the given name, and ip.
-func NewPeer(name string, ip net.IP) *memberlist.Node {
+// NewNode creates a peer with the given name, and ip.
+func NewNode(name string, ip net.IP) *memberlist.Node {
 	return &memberlist.Node{
 		Name: name,
 		Addr: ip,
@@ -69,6 +127,6 @@ func NewPeer(name string, ip net.IP) *memberlist.Node {
 
 // NewMock generates a new mock cluster with n peers.
 func NewMock(n int) clustering.Mock {
-	peers := NewPeers(n)
+	peers := NewNodes(n)
 	return clustering.NewMock(peers[0], peers[1:]...)
 }

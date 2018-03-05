@@ -2,52 +2,69 @@ package raftutil
 
 import (
 	"log"
+	"sync"
 	"time"
 
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/contextx"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
 type passive struct {
-	raftp *Protocol
+	protocol *Protocol
+	sgroup   *sync.WaitGroup
 }
 
 func (t passive) Update(c cluster) state {
 	var (
-		err      error
-		protocol *raft.Raft
+		err     error
+		r       *raft.Raft
+		network raft.Transport
 	)
 
-	debugx.Println("passive update invoked")
-	// if we're not a leader or something goes wrong during this update process
-	// maintain our current state.
+	// log.Println(c.LocalNode().Name, "passive update invoked")
 	maintainState := conditionTransition{
 		next: t,
-		cond: t.raftp.ClusterChange,
+		cond: t.protocol.ClusterChange,
 	}
 
 	if !isMember(c) {
-		debugx.Println(c.LocalNode().Address(), "is not a member of", quorumPeers(c))
-		return maintainState
+		// log.Println(c.LocalNode().Name, "is not a member of", quorumPeers(c), c.Members())
+		return delayedTransition{
+			next:     t,
+			Duration: t.protocol.PassiveCheckin,
+		}
 	}
 
-	log.Println("promoting self into raft protocol")
+	log.Println(c.LocalNode().Name, "promoting self into raft protocol")
 
-	if protocol, err = t.raftp.connect(c); err != nil {
+	if network, r, err = t.protocol.connect(c); err != nil {
 		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state"))
 		return maintainState
 	}
 
-	if err := protocol.BootstrapCluster(configuration(t.raftp.Port, c)).Error(); err != nil {
-		log.Println("bootstrap failed", err)
+	if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
+		log.Println("raft bootstrap failed", err)
+		t.protocol.maybeShutdown(c, r, network)
 		return maintainState
 	}
 
+	sm := stateMeta{
+		r:         r,
+		transport: network,
+		protocol:  t.protocol,
+		sgroup:    t.sgroup,
+		initTime:  time.Now(),
+	}
+
+	// add this to the parent context waitgroup
+	contextx.WaitGroupAdd(t.protocol.Context, 1)
+	go t.protocol.waitShutdown(c, sm)
+	sm.sgroup.Add(1)
+	go t.protocol.background(sm)
+
 	return peer{
-		raftp:    t.raftp,
-		protocol: protocol,
-		initTime: time.Now(),
+		stateMeta: sm,
 	}.Update(c)
 }

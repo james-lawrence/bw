@@ -1,21 +1,18 @@
 package raftutil
 
 import (
-	"log"
 	"time"
 
 	"github.com/hashicorp/raft"
 )
 
 type peer struct {
-	raftp    *Protocol
-	protocol *raft.Raft
-	initTime time.Time
+	stateMeta
 }
 
 func (t peer) lastContact() time.Time {
 	var (
-		lastContact = t.protocol.LastContact()
+		lastContact = t.r.LastContact()
 	)
 
 	// if lastContact is a zero time. then we've never had a leader.
@@ -31,22 +28,21 @@ func (t peer) Update(c cluster) state {
 	var (
 		maintain state = conditionTransition{
 			next: t,
-			cond: t.raftp.ClusterChange,
+			cond: t.protocol.ClusterChange,
 		}
 	)
 
-	switch s := t.protocol.State(); s {
+	switch s := t.r.State(); s {
 	case raft.Leader:
 		return leader{
-			raftp:    t.raftp,
-			protocol: t.protocol,
+			stateMeta: t.stateMeta,
 		}.Update(c)
 	default:
-		log.Println("peer current state", s)
-		if maybeLeave(c) || t.raftp.deadlockedLeadership(t.protocol, t.lastContact()) {
-			leave(t.raftp, t.protocol)
-			return passive{raftp: t.raftp}
+		// log.Println(c.LocalNode().Name, "peer current state", s)
+		if maybeLeave(c) || t.protocol.deadlockedLeadership(c.LocalNode(), t.r, t.lastContact()) {
+			return leave(t, t.stateMeta)
 		}
+		// log.Println(c.LocalNode().Name, "peer state updated")
 	}
 
 	return maintain

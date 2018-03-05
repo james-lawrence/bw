@@ -118,6 +118,13 @@ func OptionSecret(s []byte) Option {
 	}
 }
 
+// OptionTransport provide the transport for the node.
+func OptionTransport(transport memberlist.Transport) Option {
+	return func(opts *Options) {
+		opts.Config.Transport = transport
+	}
+}
+
 // NewOptionsFromConfig ...
 func NewOptionsFromConfig(c *memberlist.Config, options ...Option) Options {
 	opt := Options{

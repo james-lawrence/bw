@@ -2,7 +2,7 @@
 
 package packagekit
 
-import "strconv"
+import "fmt"
 
 const _ExitEnum_name = "ExitUnknownExitSuccessExitFailedExitCancelledExitKeyRequiredExitEULARequiredExitKilledExitMediaChangeRequiredExitNeedUntrustedExitCancelledPriorityExitSkipTransactionExitRepairRequired"
 
@@ -10,7 +10,7 @@ var _ExitEnum_index = [...]uint8{0, 11, 22, 32, 45, 60, 76, 86, 109, 126, 147, 1
 
 func (i ExitEnum) String() string {
 	if i >= ExitEnum(len(_ExitEnum_index)-1) {
-		return "ExitEnum(" + strconv.FormatInt(int64(i), 10) + ")"
+		return fmt.Sprintf("ExitEnum(%d)", i)
 	}
 	return _ExitEnum_name[_ExitEnum_index[i]:_ExitEnum_index[i+1]]
 }

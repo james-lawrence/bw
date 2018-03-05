@@ -87,24 +87,20 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 		return err
 	}
 
-	if p, err = t.global.cluster.Raft(t.global.ctx, t.config); err != nil {
-		return err
-	}
-
 	local := cluster.NewLocal(t.config.Peer())
 	tlscreds := credentials.NewTLS(creds)
 	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
 		Time:    10 * time.Second,
 		Timeout: 3 * time.Second,
 	})
-
+	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
 	cdialer := commandutils.NewClusterDialer(
 		t.config,
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
 		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
-		clustering.OptionEventDelegate(&p),
+		clustering.OptionEventDelegate(bq),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 	)
 	fssnapshot := peering.File{
@@ -121,6 +117,15 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 		clustering.SnapshotOptionFrequency(t.config.SnapshotFrequency),
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
+
+	sq := raftutil.BacklogQueueWorker{
+		Provider: cluster.NewRaftAddressProvider(c),
+		Queue:    make(chan raftutil.Event, 100),
+	}
+	go sq.Background(bq)
+	if p, err = t.global.cluster.Raft(t.global.ctx, t.config, sq); err != nil {
+		return err
+	}
 
 	cx := cluster.New(local, c)
 	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {

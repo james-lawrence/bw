@@ -16,7 +16,7 @@ import (
 var _ = Describe("Server", func() {
 	Context("Connect", func() {
 		It("should return cluster details", func() {
-			peers := clusteringtestutil.NewPeers(5)
+			peers := clusteringtestutil.NewNodes(5)
 
 			c := cluster.New(
 				cluster.NewLocal(NewPeer(fake.CharactersN(10))),
@@ -32,7 +32,7 @@ var _ = Describe("Server", func() {
 
 	Context("Info", func() {
 		It("should return information about the agent", func() {
-			peers := clusteringtestutil.NewPeers(5)
+			peers := clusteringtestutil.NewNodes(5)
 			c := cluster.New(
 				cluster.NewLocal(NewPeer(fake.CharactersN(10))),
 				clustering.NewMock(peers[0], peers[1:]...),
@@ -49,7 +49,7 @@ var _ = Describe("Server", func() {
 
 	Context("Deploy", func() {
 		It("should trigger a deploy on the server", func() {
-			peers := clusteringtestutil.NewPeers(5)
+			peers := clusteringtestutil.NewNodes(5)
 			c := cluster.New(
 				cluster.NewLocal(NewPeer(fake.CharactersN(10))),
 				clustering.NewMock(peers[0], peers[1:]...),

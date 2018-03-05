@@ -99,3 +99,8 @@ func (t Cluster) LocalAddr() net.IP {
 func (t Cluster) Shutdown() error {
 	return t.Leave(3 * time.Second)
 }
+
+// ForceShutdown -- do not use.
+func (t Cluster) ForceShutdown() error {
+	return t.list.Shutdown()
+}

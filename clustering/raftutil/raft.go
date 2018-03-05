@@ -8,12 +8,12 @@ import (
 	"log"
 	"net"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
 	"github.com/james-lawrence/bw/x/contextx"
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/james-lawrence/bw/x/stringsx"
 
 	"github.com/hashicorp/memberlist"
@@ -21,7 +21,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+type addressProdvider interface {
+	RaftAddr(*memberlist.Node) (raft.Server, error)
+}
+
 type cluster interface {
+	Members() []*memberlist.Node
 	LocalNode() *memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(int, []byte) []*memberlist.Node
@@ -38,6 +43,8 @@ const (
 	EventJoined = iota
 	// EventLeft ...
 	EventLeft
+	// EventUpdate ...
+	EventUpdate
 	// EventUnstable ...
 	EventUnstable
 )
@@ -49,7 +56,7 @@ type clusterObserver interface {
 // Event ...
 type Event struct {
 	Type clusterEventType
-	Peer *memberlist.Node
+	Peer raft.Server
 	Raft *raft.Raft
 }
 
@@ -125,12 +132,26 @@ func ProtocolOptionConfig(c *raft.Config) ProtocolOption {
 	}
 }
 
+// ProtocolOptionPassiveCheckin how often to check if the node should have promoted itself.
+func ProtocolOptionPassiveCheckin(d time.Duration) ProtocolOption {
+	return func(p *Protocol) {
+		p.PassiveCheckin = d
+	}
+}
+
+// ProtocolOptionLeadershipGrace how long to wait before considering the leader dead.
+func ProtocolOptionLeadershipGrace(d time.Duration) ProtocolOption {
+	return func(p *Protocol) {
+		p.leadershipGrace = d
+	}
+}
+
 // NewProtocol ...
-func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_ignored Protocol, err error) {
+func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
-		Context:   ctx,
-		Port:      port,
-		Snapshots: raft.NewInmemSnapshotStore(),
+		Context:        ctx,
+		StabilityQueue: q,
+		Snapshots:      raft.NewInmemSnapshotStore(),
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
 		},
@@ -138,13 +159,11 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 			_, trans := raft.NewInmemTransport("")
 			return trans, nil
 		},
-		ClusterChange:          sync.NewCond(&sync.Mutex{}),
-		init:                   &sync.Once{},
-		sgroup:                 &sync.WaitGroup{},
-		events:                 make(chan Event, 100),
-		enableSingleNode:       false,
-		config:                 defaultRaftConfig(),
-		missingLeadershipGrace: time.Minute,
+		ClusterChange:    sync.NewCond(&sync.Mutex{}),
+		enableSingleNode: false,
+		config:           defaultRaftConfig(),
+		leadershipGrace:  time.Minute,
+		PassiveCheckin:   time.Minute,
 	}
 
 	for _, opt := range options {
@@ -154,32 +173,33 @@ func NewProtocol(ctx context.Context, port uint16, options ...ProtocolOption) (_
 	return p, nil
 }
 
+type stateMeta struct {
+	initTime  time.Time
+	r         *raft.Raft
+	transport raft.Transport
+	protocol  *Protocol
+	sgroup    *sync.WaitGroup
+}
+
 // Protocol - utility data structure for holding information about a raft protocol
 // setup that are needed to connect, reconnect, and shutdown.
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
-	Context                context.Context
-	Port                   uint16
-	ClusterChange          *sync.Cond
-	Snapshots              raft.SnapshotStore
-	getStateMachine        func() raft.FSM
-	getTransport           func() (raft.Transport, error)
-	init                   *sync.Once
-	cluster                *raft.Raft
-	transport              raft.Transport
-	observers              []*raft.Observer
-	sgroup                 *sync.WaitGroup
-	clusterObserver        clusterObserver
-	events                 chan Event
-	enableSingleNode       bool
-	config                 *raft.Config
-	missingLeadershipGrace time.Duration // how long to wait before a missing leader triggers a reset
-}
+	Context          context.Context
+	StabilityQueue   BacklogQueueWorker
+	ClusterChange    *sync.Cond
+	Snapshots        raft.SnapshotStore
+	PassiveCheckin   time.Duration
+	getStateMachine  func() raft.FSM
+	getTransport     func() (raft.Transport, error)
+	transport        raft.Transport
+	observers        []*raft.Observer
+	clusterObserver  clusterObserver
+	enableSingleNode bool
+	config           *raft.Config
+	leadershipGrace  time.Duration // how long to wait before a missing leader triggers a reset
 
-// Raft returns the underlying raft instance, can be nil.
-func (t *Protocol) Raft() *raft.Raft {
-	return t.cluster
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
@@ -190,16 +210,12 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 
 	var (
 		s state = passive{
-			raftp: t,
+			protocol: t,
+			sgroup:   &sync.WaitGroup{},
 		}
 	)
 
 	defer debugx.Println("overlay shutdown")
-	t.sgroup.Add(1)
-	defer t.sgroup.Done()
-
-	t.sgroup.Add(1)
-	go t.background()
 
 	for {
 		select {
@@ -207,37 +223,40 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 			debugx.Println("overlay shutting down")
 			return
 		default:
-			// debugx.Printf("raft state transition %T\n", s)
 			s = s.Update(c)
 		}
 	}
 }
 
-func (t Protocol) background() {
-	defer t.sgroup.Done()
+// RaftAddr ...
+func (t *Protocol) RaftAddr(n *memberlist.Node) (raft.Server, error) {
+	return t.StabilityQueue.Provider.RaftAddr(n)
+}
+
+func (t Protocol) background(sm stateMeta) {
+	defer sm.sgroup.Done()
 	for {
 		select {
 		case <-t.Context.Done():
 			return
-		case e := <-t.events:
+		case e := <-t.StabilityQueue.Queue:
+			e.Raft = sm.r
 			if t.clusterObserver != nil {
 				handleClusterEvent(e, t.clusterObserver)
+			} else {
+				handleClusterEvent(e)
 			}
 			t.ClusterChange.Broadcast()
 		}
 	}
 }
 
-func (t Protocol) getPeers(c cluster) []string {
-	return peersToString(t.Port, quorumPeers(c)...)
-}
+func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
+	leader := string(p.Leader())
 
-func (t Protocol) deadlockedLeadership(p *raft.Raft, lastSeen time.Time) bool {
-	leader := stringsx.DefaultIfBlank(string(p.Leader()), "[None]")
-
-	log.Println("current leader", leader, lastSeen.Format(time.RFC822Z))
-	if leader == "" && lastSeen.Add(t.missingLeadershipGrace).Before(time.Now()) {
-		log.Println("leader is missing and grace period has passed, resetting this peer", t.missingLeadershipGrace)
+	log.Println(local.Name, "current leader", stringsx.DefaultIfBlank(leader, "[None]"), lastSeen)
+	if leader == "" && lastSeen.Add(t.leadershipGrace).Before(time.Now()) {
+		log.Println(local.Name, "leader is missing and grace period has passed, resetting this peer", t.leadershipGrace)
 		return true
 	}
 
@@ -262,71 +281,59 @@ func defaultRaftConfig() *raft.Config {
 }
 
 // connect - connect to the raft protocol overlay within the given cluster.
-func (t *Protocol) connect(c cluster) (*raft.Raft, error) {
+func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err error) {
 	var (
-		err      error
-		protocol *raft.Raft
-		network  raft.Transport
-		conf     raft.Config
+		conf raft.Config
 	)
 
 	if network, err = t.getTransport(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, nil, errors.WithStack(err)
 	}
 
 	conf = *t.config
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 
 	store := raft.NewInmemStore()
-	if protocol, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
-		return nil, err
+	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
+		return nil, nil, errors.WithStack(err)
 	}
 
-	protocol.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		log.Printf("raft observation (broadcasting change): %T, %#v\n", o.Data, o.Data)
+	r.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
+		log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
 		t.ClusterChange.Broadcast()
 		return false
 	}))
 
 	for _, o := range t.observers {
-		protocol.RegisterObserver(o)
+		r.RegisterObserver(o)
 	}
 
-	t.init.Do(func() {
-		// add this to the parent context waitgroup
-		contextx.WaitGroupAdd(t.Context, 1)
-		go t.waitShutdown()
-	})
-
-	t.cluster = protocol
-	t.transport = network
-
-	return protocol, nil
+	return network, r, nil
 }
 
-func (t *Protocol) waitShutdown() {
-	defer log.Println("raft protocol clean shutdown")
+func (t *Protocol) waitShutdown(c cluster, sm stateMeta) {
+	defer log.Println(c.LocalNode().Name, "raft protocol clean shutdown")
 	defer contextx.WaitGroupDone(t.Context)
 	<-t.Context.Done()
-	debugx.Println("initiating shutdown for raft protocol")
+	debugx.Println(c.LocalNode().Name, "initiating shutdown for raft protocol")
 	// notify the overlay function that something has occurred.
 	t.ClusterChange.Broadcast()
 	debugx.Println("waiting for overlay to complete")
 	// wait for the overlay to complete.
-	t.sgroup.Wait()
+	sm.sgroup.Wait()
 	debugx.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
-	t.maybeShutdown(t.transport)
+	t.maybeShutdown(c, sm.r, sm.transport)
 	debugx.Println("signaling wait group of completion")
 }
 
-func (t *Protocol) maybeShutdown(transport raft.Transport) {
-	if t.cluster == nil {
+func (t *Protocol) maybeShutdown(c cluster, r *raft.Raft, transport raft.Transport) {
+	if r == nil {
 		return
 	}
 
-	if err := t.cluster.Shutdown().Error(); err != nil {
-		log.Println("failed to shutdown raft", err)
+	if err := r.Shutdown().Error(); err != nil {
+		log.Println(c.LocalNode().Name, "failed to shutdown raft", err)
 	}
 
 	if transport == nil {
@@ -334,48 +341,8 @@ func (t *Protocol) maybeShutdown(transport raft.Transport) {
 	}
 
 	if trans, ok := transport.(raft.WithClose); ok {
-		log.Println("closed transport", trans.Close())
+		log.Println(c.LocalNode().Name, "closed transport", trans.Close())
 	}
-}
-
-// NotifyJoin is invoked when a node is detected to have joined.
-// The Node argument must not be modified.
-func (t *Protocol) NotifyJoin(peer *memberlist.Node) {
-	log.Println("Join:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
-	t.ClusterChange.Broadcast()
-	if t.cluster != nil && t.cluster.State() == raft.Leader {
-		dup := *peer
-		dup.Port = t.Port
-		t.events <- Event{
-			Peer: &dup,
-			Type: EventJoined,
-			Raft: t.cluster,
-		}
-	}
-}
-
-// NotifyLeave is invoked when a node is detected to have left.
-// The Node argument must not be modified.
-func (t *Protocol) NotifyLeave(peer *memberlist.Node) {
-	log.Println("Leave:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
-	t.ClusterChange.Broadcast()
-	if t.cluster != nil && t.cluster.State() == raft.Leader {
-		dup := *peer
-		dup.Port = t.Port
-		t.events <- Event{
-			Peer: peer,
-			Type: EventLeft,
-			Raft: t.cluster,
-		}
-	}
-}
-
-// NotifyUpdate is invoked when a node is detected to have
-// updated, usually involving the meta data. The Node argument
-// must not be modified.
-func (t *Protocol) NotifyUpdate(peer *memberlist.Node) {
-	log.Println("Update:", peer.Name, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(t.Port))))
-	t.ClusterChange.Broadcast()
 }
 
 func handleClusterEvent(e Event, obs ...clusterObserver) {
@@ -391,13 +358,12 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 
 	switch e.Type {
 	case EventJoined:
-		p := peerToString(e.Peer.Port, e.Peer)
-		future := e.Raft.AddVoter(raft.ServerID(e.Peer.Name), raft.ServerAddress(p), config.Index(), time.Second)
+		future := e.Raft.AddVoter(e.Peer.ID, e.Peer.Address, config.Index(), time.Second)
 		if err := future.Error(); err != nil {
 			log.Println("failed to add peer", err)
 		}
 	case EventLeft:
-		future := e.Raft.RemoveServer(raft.ServerID(e.Peer.Name), config.Index(), time.Second)
+		future := e.Raft.RemoveServer(e.Peer.ID, config.Index(), time.Second)
 		if err := future.Error(); err != nil {
 			log.Println("failed to remove peer", err)
 		}
@@ -405,6 +371,77 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 
 	for _, o := range obs {
 		o.Observer(e)
+	}
+}
+
+// QueuedEvent ...
+type QueuedEvent struct {
+	Event clusterEventType
+	Node  *memberlist.Node
+}
+
+// BacklogQueueWorker ...
+type BacklogQueueWorker struct {
+	Provider addressProdvider
+	Queue    chan Event
+}
+
+// Background ...
+func (t BacklogQueueWorker) Background(backlog BacklogQueue) {
+	var (
+		err error
+		rs  raft.Server
+	)
+
+	for n := range backlog.Backlog {
+		if rs, err = t.Provider.RaftAddr(n.Node); err != nil {
+			log.Println("ignoring join due to error decoding meta data", err)
+			return
+		}
+
+		t.Queue <- Event{
+			Type: n.Event,
+			Peer: rs,
+		}
+	}
+}
+
+// BacklogQueue ...
+type BacklogQueue struct {
+	Backlog chan QueuedEvent
+}
+
+// NotifyJoin is invoked when a node is detected to have joined.
+// The Node argument must not be modified.
+func (t BacklogQueue) NotifyJoin(n *memberlist.Node) {
+	log.Println("Join:", n.Name)
+	select {
+	case t.Backlog <- QueuedEvent{Event: EventJoined, Node: n}:
+	default:
+		log.Println("dropping node join onto the floor due to full queue", n.Name)
+	}
+}
+
+// NotifyLeave is invoked when a node is detected to have left.
+// The Node argument must not be modified.
+func (t BacklogQueue) NotifyLeave(n *memberlist.Node) {
+	log.Println("Leave:", n.Name)
+	select {
+	case t.Backlog <- QueuedEvent{Event: EventLeft, Node: n}:
+	default:
+		log.Println("dropping node leave onto the floor due to full queue", n.Name)
+	}
+}
+
+// NotifyUpdate is invoked when a node is detected to have
+// updated, usually involving the meta data. The Node argument
+// must not be modified.
+func (t BacklogQueue) NotifyUpdate(n *memberlist.Node) {
+	log.Println("Update:", n.Name)
+	select {
+	case t.Backlog <- QueuedEvent{Event: EventUpdate, Node: n}:
+	default:
+		log.Println("dropping node leave onto the floor due to full queue", n.Name)
 	}
 }
 
@@ -425,23 +462,32 @@ func maybeLeave(c cluster) bool {
 		return false
 	}
 
-	log.Println("no longer a possible member of leadership, leaving raft cluster")
+	log.Println(c.LocalNode().Name, "no longer a possible member of quorum, leaving raft cluster")
 	return true
 }
 
-func leave(util *Protocol, protocol *raft.Raft) {
-	if err := protocol.Shutdown().Error(); err != nil {
+func leave(current state, sm stateMeta) state {
+	if err := sm.r.Shutdown().Error(); err != nil {
 		log.Println("failed to shutdown raft protocol", err)
-		return
+		return current
 	}
 
-	if util.transport == nil {
+	if sm.transport == nil {
 		log.Println("expected a transport to exist during leave but its nil?!")
-		return
+		return current
 	}
 
-	if trans, ok := util.transport.(raft.WithClose); ok {
-		log.Println("closed transport", trans.Close())
+	if trans, ok := sm.transport.(raft.WithClose); ok {
+		log.Println("closing raft transport")
+		if err := trans.Close(); err != nil {
+			logx.MaybeLog(errors.WithMessage(err, "failed to close transport"))
+			return current
+		}
+	}
+
+	return passive{
+		protocol: sm.protocol,
+		sgroup:   sm.sgroup,
 	}
 }
 
@@ -453,6 +499,7 @@ func isMember(c cluster) bool {
 
 // possiblePeers utility function for locating N possible peers for the raft protocol.
 func possiblePeers(n int, c cluster) []*memberlist.Node {
+
 	return c.GetN(n, leaderKey)
 }
 
@@ -461,10 +508,19 @@ func quorumPeers(c cluster) []*memberlist.Node {
 	return c.GetN(3, leaderKey)
 }
 
-func configuration(port uint16, c cluster) (conf raft.Configuration) {
+func configuration(provider addressProdvider, c cluster) (conf raft.Configuration) {
+	var (
+		err error
+		rs  raft.Server
+	)
+
 	for _, peer := range quorumPeers(c) {
-		p := raft.ServerAddress(peerToString(port, peer))
-		conf.Servers = append(conf.Servers, raft.Server{ID: raft.ServerID(peer.Name), Suffrage: raft.Voter, Address: p})
+		if rs, err = provider.RaftAddr(peer); err != nil {
+			log.Println("ignoring peer, unable to compute address", peer.String(), err)
+			continue
+		}
+
+		conf.Servers = append(conf.Servers, rs)
 	}
 
 	return conf
@@ -483,15 +539,10 @@ func isPossiblePeer(local *memberlist.Node, peers ...*memberlist.Node) bool {
 }
 
 // peersToString ...
-func peersToString(port uint16, peers ...*memberlist.Node) []string {
+func peersToString(peers ...*memberlist.Node) []string {
 	results := make([]string, 0, len(peers))
 	for _, peer := range peers {
-		results = append(results, peerToString(port, peer))
+		results = append(results, peer.Name)
 	}
 	return results
-}
-
-// peerToString ...
-func peerToString(port uint16, peer *memberlist.Node) string {
-	return (&net.TCPAddr{IP: peer.Addr, Port: int(port)}).String()
 }

@@ -33,20 +33,27 @@ func (t RandomID) String() string {
 	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(t)
 }
 
+// SimpleGenerateID ...
+func SimpleGenerateID() (_ignored RandomID, err error) {
+	return GenerateID(rand.New(rand.NewSource(time.Now().Unix())))
+}
+
 // GenerateID generates a random ID.
-func GenerateID() (_ignored RandomID, err error) {
+func GenerateID(src *rand.Rand) (_ignored RandomID, err error) {
 	const n = 1024
 	randIDHash := md5.New()
-	if _, err = io.CopyN(randIDHash, rand.New(rand.NewSource(time.Now().Unix())), n); err != nil {
+	if _, err = io.CopyN(randIDHash, src, n); err != nil {
 		return _ignored, errors.Wrap(err, "failed generating data for deploymentID")
 	}
 
 	return randIDHash.Sum(nil), nil
 }
 
+var globalSrc = rand.New(rand.NewSource(time.Now().Unix()))
+
 // MustGenerateID generates a random ID, or panics.
 func MustGenerateID() RandomID {
-	id, err := GenerateID()
+	id, err := GenerateID(globalSrc)
 	if err != nil {
 		panic(err)
 	}
