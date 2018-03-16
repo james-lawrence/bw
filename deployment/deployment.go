@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -76,7 +75,7 @@ func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...
 		Log:         logger,
 		Archive:     a,
 		logfile:     logfile,
-		dispatcher:  logDispatcher{},
+		dispatcher:  agentutil.LogDispatcher{},
 		deadline:    time.Now().UTC().Add(5 * time.Minute),
 	}
 
@@ -123,15 +122,6 @@ func (t DeployResult) complete() agent.Deploy {
 
 type dispatcher interface {
 	Dispatch(...agent.Message) error
-}
-
-type logDispatcher struct{}
-
-func (t logDispatcher) Dispatch(ms ...agent.Message) error {
-	for _, m := range ms {
-		log.Printf("dispatched %#v\n", m)
-	}
-	return nil
 }
 
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.

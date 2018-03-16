@@ -45,21 +45,7 @@ func Pack(dst io.Writer, paths ...string) (err error) {
 	return logx.MaybeLog(errors.Wrap(tw.Flush(), "failed to flush archive"))
 }
 
-// LoadAndUnpack ...
-func LoadAndUnpack(directory, archivep string) (err error) {
-	var (
-		archive *os.File
-	)
-
-	if archive, err = os.Open(archivep); err != nil {
-		return errors.Wrap(err, "failed to open archive")
-	}
-	defer archive.Close()
-
-	return Unpack(directory, tar.NewReader(archive))
-}
-
-// Unpack ...
+// Unpack unpacks the archive from the reader into the root directory.
 func Unpack(root string, r io.Reader) (err error) {
 	var (
 		dst *os.File

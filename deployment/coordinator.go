@@ -42,7 +42,7 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 	// default options.
 	CoordinatorOptionRoot(os.TempDir())(coord)
 	CoordinatorOptionKeepN(defaultKeepN)(coord)
-	CoordinatorOptionDispatcher(logDispatcher{})(coord)
+	CoordinatorOptionDispatcher(agentutil.LogDispatcher{})(coord)
 
 	for _, opt := range options {
 		opt(coord)

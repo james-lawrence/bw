@@ -22,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
@@ -51,6 +52,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	}
 
 	t.deployCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
+	t.localCmd(common(parent.Command("local", "deploy to the local system"))).Hidden()
 	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
@@ -63,6 +65,10 @@ func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
 	default:
 		go ux.Logging(t.global.ctx, t.global.cleanup, events)
 	}
+}
+
+func (t *deployCmd) localCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.local)
 }
 
 func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -277,4 +283,67 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	events <- agentutil.LogEvent(local.Peer, "deploy cancelled")
 	time.Sleep(5 * time.Second)
 	return nil
+}
+
+func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
+	var (
+		dst     *os.File
+		sctx    shell.Context
+		dctx    deployment.DeployContext
+		root    string
+		archive agent.Archive
+	)
+
+	local := commandutils.NewClientPeer()
+	completed := make(chan deployment.DeployResult)
+
+	if sctx, err = shell.DefaultContext(); err != nil {
+		return err
+	}
+
+	if root, err = ioutil.TempDir("", "bwlocal"); err != nil {
+		return err
+	}
+	defer os.RemoveAll(root)
+
+	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
+		return errors.Wrap(err, "archive creation failed")
+	}
+
+	defer os.Remove(dst.Name())
+	defer dst.Close()
+
+	if err = packer.Pack(dst, t.deployspace); err != nil {
+		return errors.Wrap(err, "failed to pack archive")
+	}
+	log.Println("packed archive at", dst.Name())
+
+	if _, err = dst.Seek(0, io.SeekStart); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err = packer.Unpack(filepath.Join(root, "archive"), dst); err != nil {
+		return errors.Wrap(err, "failed to unpack archive")
+	}
+
+	archive = agent.Archive{
+		Location: dst.Name(),
+	}
+
+	options := []deployment.DeployContextOption{
+		deployment.DeployContextOptionCompleted(completed),
+	}
+
+	if dctx, err = deployment.NewDeployContext(root, local, archive, options...); err != nil {
+		return errors.Wrap(err, "failed to create deployment context")
+	}
+
+	deploy := deployment.NewDirective(
+		deployment.DirectiveOptionShellContext(sctx),
+	)
+
+	deploy.Deploy(dctx)
+
+	result := <-completed
+	return result.Error
 }

@@ -182,9 +182,11 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 	t.runServer(server, c, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
+	bootstrapCtx := actx
+	bootstrapCtx.Dispatcher = agentutil.LogDispatcher{}
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
 	defer done()
-	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, deployer) {
+	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, coordinator(bootstrapCtx, download)) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

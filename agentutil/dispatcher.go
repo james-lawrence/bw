@@ -8,6 +8,17 @@ import (
 	"github.com/james-lawrence/bw/x/logx"
 )
 
+// LogDispatcher dispatcher that just logs.
+type LogDispatcher struct{}
+
+// Dispatch ....
+func (t LogDispatcher) Dispatch(ms ...agent.Message) error {
+	for _, m := range ms {
+		log.Printf("dispatched %#v\n", m)
+	}
+	return nil
+}
+
 // NewBusDispatcher creates a in memory bus for messages.
 func NewBusDispatcher(c chan agent.Message) BusDispatcher {
 	return BusDispatcher{
