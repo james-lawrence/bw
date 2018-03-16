@@ -41,7 +41,10 @@ func (t constantChecker) Visit(agent.Peer) (agent.Deploy, error) {
 }
 
 type cluster interface {
+	Local() agent.Peer
 	Peers() []agent.Peer
+	Quorum() []agent.Peer
+	Connect() agent.ConnectResponse
 }
 
 // Option ...

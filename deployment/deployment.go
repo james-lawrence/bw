@@ -17,8 +17,8 @@ type deployer interface {
 	Deploy(dctx DeployContext)
 }
 
-// Coordinator is in charge of coordinating deployments.
-type Coordinator interface {
+// CoordinatorOld is in charge of coordinating deployments.
+type CoordinatorOld interface {
 	// Deployments info about the deployment coordinator
 	// idle, canary, deploying, locked, and the list of recent deployments.
 	Deployments() ([]agent.Deploy, error)
@@ -28,13 +28,6 @@ type Coordinator interface {
 
 // DeployContextOption options for a DeployContext
 type DeployContextOption func(dctx *DeployContext)
-
-// DeployContextOptionCompleted allows sending a signal that the deploy completed.
-func DeployContextOptionCompleted(completed chan DeployResult) DeployContextOption {
-	return func(dctx *DeployContext) {
-		dctx.completed = completed
-	}
-}
 
 // DeployContextOptionDispatcher ...
 func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
@@ -48,6 +41,12 @@ func DeployContextOptionDeadline(d time.Time) DeployContextOption {
 	return func(dctx *DeployContext) {
 		dctx.deadline = d
 	}
+}
+
+// AwaitDeployResult waits for the deployment result of the context
+func AwaitDeployResult(dctx DeployContext) DeployResult {
+	defer close(dctx.completed)
+	return <-dctx.completed
 }
 
 // NewDeployContext ...
@@ -77,6 +76,7 @@ func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...
 		logfile:     logfile,
 		dispatcher:  agentutil.LogDispatcher{},
 		deadline:    time.Now().UTC().Add(5 * time.Minute),
+		completed:   make(chan DeployResult),
 	}
 
 	for _, opt := range options {
@@ -127,6 +127,7 @@ type dispatcher interface {
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
 	Local       agent.Peer
+	completed   chan DeployResult
 	ID          bw.RandomID
 	Root        string
 	ArchiveRoot string
@@ -135,7 +136,6 @@ type DeployContext struct {
 	Archive     agent.Archive
 	dispatcher  dispatcher
 	deadline    time.Time
-	completed   chan DeployResult
 }
 
 // Dispatch an event to the cluster

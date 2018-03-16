@@ -49,7 +49,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 }
 
-func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol) deployment.Coordinator) error {
+func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtocol) deployment.Coordinator) error {
 	var (
 		err           error
 		rpcBind       net.Listener
@@ -160,7 +160,7 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 	qdialer := agent.NewQuorumDialer(dialer)
 	dispatcher := agentutil.NewDispatcher(cx, qdialer)
 	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}
-	deployer := coordinator(actx, download)
+	coordinator := newCoordinator(actx, download)
 	q := quorum.New(
 		cx,
 		proxy.NewProxy(cx),
@@ -171,7 +171,7 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 
 	a := agent.NewServer(
 		cx,
-		agent.ServerOptionDeployer(deployer),
+		agent.ServerOptionDeployer(&coordinator),
 		agent.ServerOptionShutdown(t.global.shutdown),
 	)
 
@@ -182,11 +182,13 @@ func (t *agentCmd) bind(coordinator func(agentContext, storage.DownloadProtocol)
 	t.runServer(server, c, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
-	bootstrapCtx := actx
-	bootstrapCtx.Dispatcher = agentutil.LogDispatcher{}
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
 	defer done()
-	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, coordinator(bootstrapCtx, download)) {
+
+	// override the dispatcher used for bootstrapping, no need to go through the normal process triggering events.
+	// in the future, we might want to consider bootstrapping prior to truly joining the cluster.
+	bcoordinator := deployment.CloneCoordinator(coordinator, deployment.CoordinatorOptionDispatcher(agentutil.LogDispatcher{}))
+	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, &bcoordinator) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

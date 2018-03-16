@@ -14,27 +14,14 @@ import (
 )
 
 // Coordinator is in charge of coordinating deployments.
-type deployer interface {
+type coordinator interface {
 	// Deploy trigger a deploy
 	Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error)
 	Deployments() ([]agent.Deploy, error)
 }
 
-type errString string
-
-func (t errString) Error() string {
-	return string(t)
-}
-
-const (
-	// ErrNoDeployments ...
-	ErrNoDeployments = errString("no deployments found")
-	// ErrFailedDeploymentQuorum ...
-	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
-)
-
 // BootstrapUntilSuccess continuously bootstraps until it succeeds.
-func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer agent.Dialer, d deployer) bool {
+func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer agent.Dialer, d coordinator) bool {
 	var (
 		err error
 	)
@@ -60,7 +47,7 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dia
 }
 
 // Bootstrap ...
-func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d deployer) (err error) {
+func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d coordinator) (err error) {
 	var (
 		status agent.StatusResponse
 		latest agent.Deploy

@@ -15,6 +15,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+type errString string
+
+func (t errString) Error() string {
+	return string(t)
+}
+
+const (
+	// ErrNoDeployments ...
+	ErrNoDeployments = errString("no deployments found")
+	// ErrFailedDeploymentQuorum ...
+	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
+)
+
 type cluster interface {
 	Local() agent.Peer
 	Peers() []agent.Peer

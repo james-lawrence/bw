@@ -295,7 +295,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	)
 
 	local := commandutils.NewClientPeer()
-	completed := make(chan deployment.DeployResult)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
 		return err
@@ -329,11 +328,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Location: dst.Name(),
 	}
 
-	options := []deployment.DeployContextOption{
-		deployment.DeployContextOptionCompleted(completed),
-	}
-
-	if dctx, err = deployment.NewDeployContext(root, local, archive, options...); err != nil {
+	if dctx, err = deployment.NewDeployContext(root, local, archive); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 
@@ -343,6 +338,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 
 	deploy.Deploy(dctx)
 
-	result := <-completed
+	result := deployment.AwaitDeployResult(dctx)
 	return result.Error
 }

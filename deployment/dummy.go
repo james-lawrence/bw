@@ -12,11 +12,7 @@ import (
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.
 func NewDummyCoordinator(p agent.Peer) Coordinator {
 	const sleepy = 60
-	return New(
-		p,
-		dummy{
-			sleepy: sleepy,
-		})
+	return New(p, dummy{sleepy: sleepy})
 }
 
 type dummy struct {
