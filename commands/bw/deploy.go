@@ -316,7 +316,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	if err = packer.Pack(dst, t.deployspace); err != nil {
 		return errors.Wrap(err, "failed to pack archive")
 	}
-	log.Println("packed archive at", dst.Name())
 
 	if _, err = dst.Seek(0, io.SeekStart); err != nil {
 		return errors.WithStack(err)
