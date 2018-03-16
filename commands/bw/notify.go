@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -48,9 +49,12 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
+	t.global.cleanup.Add(1)
 	go func() {
+		defer t.global.cleanup.Done()
 		<-t.global.ctx.Done()
 		client.Close()
+		time.Sleep(5 * time.Second)
 	}()
 
 	n, err := notifications.DecodeConfig(filepath.Join(t.config.Root, "notifications.toml"), map[string]notifications.Creator{
