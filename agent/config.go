@@ -91,7 +91,7 @@ func (t ConfigClient) connect() (c Client, d Dialer, details ConnectResponse, er
 	}
 
 	d = NewDialer(grpc.WithTransportCredentials(creds))
-	if c, err = Dial(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
+	if c, err = AddressProxyDialQuorum(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
 		return c, d, details, err
 	}
 
