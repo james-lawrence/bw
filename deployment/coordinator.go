@@ -48,11 +48,12 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 
 // CloneCoordinator build a coordinator from a pre-existing instance.
 func CloneCoordinator(c Coordinator, options ...CoordinatorOption) Coordinator {
+	dup := c
 	for _, opt := range options {
-		opt(&c)
+		opt(&dup)
 	}
 
-	return c
+	return dup
 }
 
 // CoordinatorOption options for the deployment coordinator.

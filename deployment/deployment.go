@@ -49,7 +49,8 @@ func AwaitDeployResult(dctx DeployContext) DeployResult {
 	return <-dctx.completed
 }
 
-// NewDeployContext ...
+// NewDeployContext create new deployment context containing configuration information
+// for a single deploy.
 func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
 		logfile *os.File
@@ -58,8 +59,13 @@ func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...
 
 	id := bw.RandomID(a.DeploymentID)
 	root := filepath.Join(workdir, id.String())
+	archiveDir := filepath.Join(root, "archive")
 	if err = os.MkdirAll(root, 0755); err != nil {
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
+	}
+
+	if err = os.MkdirAll(archiveDir, 0755); err != nil {
+		return _did, errors.WithMessage(err, "failed to create archive directory")
 	}
 
 	if logfile, logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
@@ -70,7 +76,7 @@ func NewDeployContext(workdir string, p agent.Peer, a agent.Archive, options ...
 		Local:       p,
 		ID:          id,
 		Root:        root,
-		ArchiveRoot: filepath.Join(root, "archive"),
+		ArchiveRoot: archiveDir,
 		Log:         logger,
 		Archive:     a,
 		logfile:     logfile,

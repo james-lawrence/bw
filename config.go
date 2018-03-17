@@ -67,6 +67,16 @@ func DefaultLocation(name, override string) string {
 	return locateFile(name, override, envconfig, home, system)
 }
 
+// DefaultUserDirLocation returns the user directory location.
+func DefaultUserDirLocation(name, override string) string {
+	user := systemx.CurrentUserOrDefault(fallbackUser)
+
+	envconfig := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), DefaultDir)
+	home := filepath.Join(user.HomeDir, ".config", DefaultDir)
+
+	return DefaultDirectory(name, override, envconfig, home)
+}
+
 // DefaultDirLocation looks for a directory one of the default directory locations.
 func DefaultDirLocation(rel string) string {
 	user := systemx.CurrentUserOrDefault(fallbackUser)

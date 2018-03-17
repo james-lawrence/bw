@@ -16,3 +16,9 @@ NETWORK=127.0.0.1; ./bin/bw notify --agent-address=$NETWORK:2000
 ```
 ./bin/bw notify --agent-config=".bwagent1/agent.config" --agent-address=127.0.0.1:2000
 ```
+
+### getting started
+```
+bw environment create {workspace} {server-address}
+bwcreds vault {workspace} {PKI_PATH} {server-address}
+```

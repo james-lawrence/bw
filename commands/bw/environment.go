@@ -2,6 +2,7 @@ package main
 
 import (
 	"html/template"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -28,7 +29,7 @@ type environmentCreate struct {
 
 func (t *environmentCreate) configure(parent *kingpin.CmdClause) {
 	parent.Flag("directory", "path of the environment directory to create").Default(bw.DefaultDeployspaceConfigDir).StringVar(&t.path)
-	parent.Flag("name", "name of the environment to create").Default(bw.DefaultEnvironmentName).StringVar(&t.name)
+	parent.Arg("name", "name of the environment being created").Required().StringVar(&t.name)
 	parent.Arg("address", "address to dial when connecting to this environment").Required().StringVar(&t.dialAddress)
 	parent.Action(t.generate)
 }
@@ -39,12 +40,12 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 	}
 	const (
 		skeletonEnvironment = `address: "{{.Address}}:2000"
-tlsconfig:
-    servername: "{{.Address}}"
-deploymentconfig:
-    strategy: percent
-    options:
-    percentage: 0.5`
+servername: "{{.Address}}"
+deployTimeout: "3m"
+concurrency: 0.2
+environment: |
+	BEARDED_WOOKIE_EXAMPLE=ENVIRONMENT_VARIABLE
+`
 	)
 	var (
 		dst *os.File
@@ -60,6 +61,16 @@ deploymentconfig:
 	defer dst.Close()
 
 	if err = template.Must(template.New("").Parse(skeletonEnvironment)).Execute(dst, context{Address: t.dialAddress}); err != nil {
+		return errors.WithStack(err)
+	}
+
+	environmentCredentialsDir := bw.DefaultLocation(t.name, "")
+	if os.Geteuid() > 0 {
+		environmentCredentialsDir = bw.DefaultUserDirLocation(t.name, "")
+	}
+
+	log.Println("creating configuration directory:", environmentCredentialsDir)
+	if err = os.MkdirAll(environmentCredentialsDir, 0700); err != nil {
 		return errors.WithStack(err)
 	}
 

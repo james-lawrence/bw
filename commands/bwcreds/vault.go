@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -55,6 +56,13 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	log.Println("credentials fingerprint", credentials.Data["serial_number"])
+	if os.Geteuid() > 0 {
+		path := bw.DefaultUserDirLocation(t.environment, "")
+		log.Println("creating workspace configuration directory:", path)
+		if err = os.MkdirAll(path, 0700); err != nil {
+			return errors.WithStack(err)
+		}
+	}
 
 	capath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertCA)
 	keypath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSKeyClient)
