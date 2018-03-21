@@ -33,7 +33,6 @@ func LoadConfiguration(environment string) (agent.ConfigClient, error) {
 	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
 
-// NewClusterDialer ...
 func NewClusterDialer(conf agent.Config, options ...clustering.Option) clustering.Dialer {
 	options = append(
 		[]clustering.Option{

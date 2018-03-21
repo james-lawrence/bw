@@ -10,7 +10,6 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/commands"
-	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/systemx"
 
@@ -19,7 +18,7 @@ import (
 
 type global struct {
 	systemIP net.IP
-	cluster  *commandutils.ClusterCmd
+	cluster  *clusterCmd
 	ctx      context.Context
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
@@ -32,7 +31,7 @@ func main() {
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
 		global          = &global{
 			systemIP: systemx.HostIP(systemx.HostnameOrLocalhost()),
-			cluster:  &commandutils.ClusterCmd{},
+			cluster:  &clusterCmd{},
 			ctx:      cleanup,
 			shutdown: cancel,
 			cleanup:  &sync.WaitGroup{},
@@ -42,10 +41,21 @@ func main() {
 			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
 			global: global,
 		}
+		client = &deployCmd{
+			global: global,
+		}
+		info = &agentInfo{
+			global: global,
+		}
 		notify = &agentNotify{
 			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
 			global: global,
 		}
+		agentctl = &actlCmd{
+			global: global,
+		}
+		workspace   = &workspaceCmd{global: global}
+		environment = &environmentCmd{global: global}
 	)
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
@@ -56,6 +66,11 @@ func main() {
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
+	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
+	workspace.configure(app.Command("workspace", "workspace related commands"))
+	environment.configure(app.Command("environment", "environment related commands"))
+	info.configure(app.Command("info", "retrieve info about nodes within the cluster").Hidden())
+	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
 		log.Printf("%+v\n", err)

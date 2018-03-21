@@ -39,7 +39,7 @@ type agentCmd struct {
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
-	t.global.cluster.Configure(parent, &t.config)
+	t.global.cluster.configure(parent, &t.config)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
