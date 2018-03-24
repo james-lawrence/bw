@@ -81,6 +81,7 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 		instance *autoscaling.InstanceDetails
 		asg      *autoscaling.DescribeAutoScalingGroupsOutput
 	)
+	lbs = []*elbv2.LoadBalancer{}
 
 	if ident, err = ec2metadata.New(sess, aws.NewConfig()).GetInstanceIdentityDocument(); err != nil {
 		return lbs, errors.WithStack(err)
@@ -97,7 +98,8 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 	}
 
 	if len(iao.AutoScalingInstances) == 0 {
-		return lbs, errors.Errorf("no autoscaling instance found for: %s", ident.InstanceID)
+		log.Printf("no autoscaling instance found for: %s", ident.InstanceID)
+		return lbs, nil
 	}
 	instance = iao.AutoScalingInstances[0]
 
