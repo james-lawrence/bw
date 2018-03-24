@@ -106,7 +106,8 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 	}
 
 	if len(asg.AutoScalingGroups) == 0 {
-		return lbs, errors.Errorf("no autoscaling group found for: %s", *instance.AutoScalingGroupName)
+		log.Printf("no autoscaling group found for: %s\n, ignoring", *instance.AutoScalingGroupName)
+		return lbs, nil
 	}
 
 	elb := elbv2.New(sess)
