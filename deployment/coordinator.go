@@ -90,9 +90,16 @@ func CoordinatorOptionDeployResults(dst chan DeployResult) CoordinatorOption {
 }
 
 // CoordinatorOptionStorage set the storage registry.
-func CoordinatorOptionStorage(reg storage.Registry) CoordinatorOption {
+func CoordinatorOptionStorage(reg storage.DownloadFactory) CoordinatorOption {
 	return func(d *Coordinator) {
 		d.dlreg = reg
+	}
+}
+
+// CoordinatorOptionQuiet disables the deployment logging.
+func CoordinatorOptionQuiet() CoordinatorOption {
+	return func(d *Coordinator) {
+		d.silenceLogging = true
 	}
 }
 
@@ -104,11 +111,12 @@ type Coordinator struct {
 	local             agent.Peer
 	deployer          deployer
 	dispatcher        dispatcher
-	dlreg             storage.Registry
+	dlreg             storage.DownloadFactory
 	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	completedObserver chan DeployResult
 	currentDeploy     agent.Deploy
 	deploying         uint32
+	silenceLogging    bool
 	*sync.Mutex
 }
 
@@ -179,6 +187,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	dcopts := []DeployContextOption{
 		DeployContextOptionDispatcher(t.dispatcher),
 		DeployContextOptionDeadline(time.Now().Add(time.Duration(opts.Timeout))),
+		DeployContextOptionQuiet(t.silenceLogging),
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, dcopts...); err != nil {
@@ -223,15 +232,15 @@ func (t *Coordinator) update(d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
 	return d
 }
 
-func downloadArchive(dlreg storage.Registry, dctx DeployContext) error {
+func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) error {
 	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
 	timeout, done := context.WithDeadline(context.Background(), dctx.deadline)
 	defer done()
-	if err := errors.Wrapf(archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(timeout, dctx.Archive)), "retrieve archive"); err != nil {
-		return err
+	if err := archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(timeout, dctx.Archive)); err != nil {
+		return errors.Wrapf(err, "retrieve archive")
 	}
 
 	dctx.Log.Println("completed download", dctx.ArchiveRoot)

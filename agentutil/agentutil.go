@@ -28,25 +28,16 @@ const (
 	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
 )
 
+type dialer interface {
+	Dial(agent.Peer) (zeroc agent.Client, err error)
+}
+
 type cluster interface {
 	Local() agent.Peer
 	Peers() []agent.Peer
 	Quorum() []agent.Peer
 	Connect() agent.ConnectResponse
 }
-
-// // DialPeer dial the peer
-// func DialPeer(p agent.Peer, options ...grpc.DialOption) (zeroc agent.Client, err error) {
-// 	var (
-// 		addr string
-// 	)
-//
-// 	if addr = agent.RPCAddress(p); addr == "" {
-// 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
-// 	}
-//
-// 	return agent.Dial(addr, options...)
-// }
 
 // Cleaner interface for cleaning workspace directories.
 type Cleaner interface {

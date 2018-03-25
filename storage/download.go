@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"archive/tar"
+	"bytes"
+	"compress/gzip"
 	"context"
 	"io"
 	"io/ioutil"
@@ -8,11 +11,18 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
+
+// DownloadFactory ...
+type DownloadFactory interface {
+	New(string) Downloader
+}
 
 // Downloader ...
 type Downloader interface {
@@ -117,4 +127,47 @@ func (t Registry) New(location string) Downloader {
 	}
 
 	return newDownload(newErrReader(errors.Errorf("unknown protocol: [%s]", location)))
+}
+
+// NoopRegistry simple registry that returns an err if set otherwise
+// an empty archive.
+type NoopRegistry struct {
+	Err error
+}
+
+// New ...
+func (t NoopRegistry) New(location string) Downloader {
+	if t.Err != nil {
+		return newDownload(newErrReader(t.Err))
+	}
+
+	return newDownload(buildArchive([]byte{}))
+}
+
+func buildArchive(input []byte) io.ReadCloser {
+	b := bytes.NewBuffer([]byte{})
+	gzw := gzip.NewWriter(b)
+	tw := tar.NewWriter(gzw)
+	header := tar.Header{
+		Name:     "example",
+		ModTime:  time.Now(),
+		Typeflag: tar.TypeReg,
+		Size:     int64(len(input)),
+		Mode:     0700,
+		Uid:      0,
+		Gid:      0,
+		Uname:    "root",
+		Gname:    "root",
+	}
+
+	if err := tw.WriteHeader(&header); err != nil {
+		return newDownload(newErrReader(err))
+	}
+
+	_, err := tw.Write(input)
+	if err = errorsx.Compact(err, tw.Flush(), tw.Close(), gzw.Flush(), gzw.Close()); err != nil {
+		return newErrReader(errors.New("failed to build archive"))
+	}
+
+	return ioutil.NopCloser(b)
 }

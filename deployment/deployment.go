@@ -1,6 +1,8 @@
 package deployment
 
 import (
+	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -17,15 +19,6 @@ type deployer interface {
 	Deploy(dctx DeployContext)
 }
 
-// CoordinatorOld is in charge of coordinating deployments.
-type CoordinatorOld interface {
-	// Deployments info about the deployment coordinator
-	// idle, canary, deploying, locked, and the list of recent deployments.
-	Deployments() ([]agent.Deploy, error)
-	// Deploy trigger a deploy
-	Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error)
-}
-
 // DeployContextOption options for a DeployContext
 type DeployContextOption func(dctx *DeployContext)
 
@@ -40,6 +33,15 @@ func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
 func DeployContextOptionDeadline(d time.Time) DeployContextOption {
 	return func(dctx *DeployContext) {
 		dctx.deadline = d
+	}
+}
+
+// DeployContextOptionQuiet disable logging, only used in tests.
+func DeployContextOptionQuiet(quiet bool) DeployContextOption {
+	return func(dctx *DeployContext) {
+		if quiet {
+			dctx.Log = dlog{log: log.New(ioutil.Discard, "", 0)}
+		}
 	}
 }
 

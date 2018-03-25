@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -185,10 +186,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
 	defer done()
 
-	// override the dispatcher used for bootstrapping, no need to go through the normal process triggering events.
-	// in the future, we might want to consider bootstrapping prior to truly joining the cluster.
-	bcoordinator := deployment.CloneCoordinator(coordinator, deployment.CoordinatorOptionDispatcher(agentutil.LogDispatcher{}))
-	if !agentutil.BootstrapUntilSuccess(deadline, local.Peer, cx, dialer, &bcoordinator) {
+	if !bootstrap.UntilSuccess(deadline, local.Peer, cx, dialer, coordinator) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

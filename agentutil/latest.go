@@ -10,7 +10,7 @@ import (
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
 // If no error occurs, latest.Archive is guaranteed to be populated.
-func DetermineLatestDeployment(c cluster, d agent.Dialer) (latest agent.Deploy, err error) {
+func DetermineLatestDeployment(c cluster, d dialer) (latest agent.Deploy, err error) {
 	type result struct {
 		deploy *agent.Deploy
 		count  int

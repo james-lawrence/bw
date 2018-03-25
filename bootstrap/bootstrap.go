@@ -1,4 +1,4 @@
-package agentutil
+package bootstrap
 
 import (
 	"bytes"
@@ -10,18 +10,24 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
+	"github.com/james-lawrence/bw/deployment"
 )
 
-// Coordinator is in charge of coordinating deployments.
-type coordinator interface {
-	// Deploy trigger a deploy
-	Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error)
-	Deployments() ([]agent.Deploy, error)
+type dialer interface {
+	Dial(agent.Peer) (zeroc agent.Client, err error)
 }
 
-// BootstrapUntilSuccess continuously bootstraps until it succeeds.
-func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer agent.Dialer, d coordinator) bool {
+type cluster interface {
+	Local() agent.Peer
+	Peers() []agent.Peer
+	Quorum() []agent.Peer
+	Connect() agent.ConnectResponse
+}
+
+// UntilSuccess continuously bootstraps until it succeeds.
+func UntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
 	var (
 		err error
 	)
@@ -35,7 +41,7 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dia
 		default:
 		}
 
-		if err = Bootstrap(local, c, dialer, d); err != nil {
+		if err = Bootstrap(ctx, local, c, dialer, coord); err != nil {
 			log.Println("failed bootstrap", err)
 			time.Sleep(bs.Backoff(i))
 			log.Println("REATTEMPT BOOTSTRAP")
@@ -46,20 +52,28 @@ func BootstrapUntilSuccess(ctx context.Context, local agent.Peer, c cluster, dia
 	}
 }
 
-// Bootstrap ...
-func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d coordinator) (err error) {
+// Bootstrap a server with the latest deploy.
+func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
 	var (
 		status agent.StatusResponse
 		latest agent.Deploy
 		client agent.Client
 	)
 
+	// Here we clone the coordinator to override some behaviours around dispatching and observations.
+	deployResults := make(chan deployment.DeployResult)
+	coord = deployment.CloneCoordinator(
+		coord,
+		deployment.CoordinatorOptionDispatcher(agentutil.LogDispatcher{}),
+		deployment.CoordinatorOptionDeployResults(deployResults),
+	)
+
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
 
-	if latest, err = DetermineLatestDeployment(c, dialer); err != nil {
+	if latest, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
 		switch cause := errors.Cause(err); cause {
-		case ErrNoDeployments:
+		case agentutil.ErrNoDeployments:
 			log.Println(cause)
 			return nil
 		default:
@@ -85,9 +99,14 @@ func Bootstrap(local agent.Peer, c cluster, dialer agent.Dialer, d coordinator) 
 	}
 
 	log.Println("bootstrapping with", spew.Sdump(latest))
-	if _, err = d.Deploy(agent.DeployOptions{}, *latest.Archive); err != nil {
+	if _, err = coord.Deploy(agent.DeployOptions{}, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 
-	return nil
+	select {
+	case <-ctx.Done():
+		return errors.Wrap(ctx.Err(), "failed to bootstrap timeout")
+	case deploy := <-deployResults:
+		return errors.Wrap(deploy.Error, "deployment failed")
+	}
 }

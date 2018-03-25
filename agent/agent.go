@@ -19,6 +19,7 @@ type Dispatcher interface {
 // Client - client facade interface.
 type Client interface {
 	Shutdown() error
+	Close() error
 	Upload(srcbytes uint64, src io.Reader) (Archive, error)
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
 	Deploy(DeployOptions, Archive) (Deploy, error)
@@ -26,7 +27,6 @@ type Client interface {
 	Info() (StatusResponse, error)
 	Watch(out chan<- Message) error
 	Dispatch(messages ...Message) error
-	Close() error
 }
 
 // ConnectOption - options for connecting to the cluster.
