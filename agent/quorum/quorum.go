@@ -367,7 +367,8 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 	}
 
 	debugx.Printf("upload: initializing protocol: %T\n", t.uploads)
-	if dst, err = t.uploads.NewUpload(deploymentID, chunk.GetMetadata().Bytes); err != nil {
+	metadata := chunk.GetMetadata()
+	if dst, err = t.uploads.NewUpload(deploymentID, metadata.Bytes); err != nil {
 		return err
 	}
 
@@ -387,6 +388,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 					Location:     location,
 					Checksum:     checksum.Sum(nil),
 					DeploymentID: deploymentID,
+					Initiator:    metadata.Initiator,
 					Ts:           time.Now().UTC().Unix(),
 				},
 			})

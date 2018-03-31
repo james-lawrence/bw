@@ -116,14 +116,12 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 		log.Println("failed to read deployments, defaulting to no deployments", err)
 	}
 
-	// these fields are deprecated and can just use the first deployment (if any)
-	// to determine latest.
-	ddeprecated := deploysFirstOrDefault(nil, d...)
-	adeprecated := deployArchives(d...)
+	// // these fields are deprecated and can just use the first deployment (if any)
+	// // to determine latest.
+	// ddeprecated := deploysFirstOrDefault(nil, d...)
+	// adeprecated := deployArchives(d...)
 	return &StatusResponse{
 		Peer:        &tmp,
-		Latest:      ddeprecated,
-		Archives:    adeprecated,
 		Deployments: deployPointers(d...),
 	}, nil
 }

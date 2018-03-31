@@ -9,18 +9,18 @@ func deployPointers(deploys ...Deploy) []*Deploy {
 	return out
 }
 
-func deploysFirstOrDefault(def *Deploy, deploys ...Deploy) *Deploy {
-	if len(deploys) > 0 {
-		return &(deploys[0])
-	}
-
-	return def
-}
-
-func deployArchives(deploys ...Deploy) []*Archive {
-	results := make([]*Archive, 0, len(deploys))
-	for _, a := range deploys {
-		results = append(results, a.Archive)
-	}
-	return results
-}
+// func deploysFirstOrDefault(def *Deploy, deploys ...Deploy) *Deploy {
+// 	if len(deploys) > 0 {
+// 		return &(deploys[0])
+// 	}
+//
+// 	return def
+// }
+//
+// func deployArchives(deploys ...Deploy) []*Archive {
+// 	results := make([]*Archive, 0, len(deploys))
+// 	for _, a := range deploys {
+// 		results = append(results, a.Archive)
+// 	}
+// 	return results
+// }

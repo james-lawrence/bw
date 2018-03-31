@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -25,6 +26,8 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/x/stringsx"
+	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
 
@@ -130,6 +133,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
+	u := systemx.CurrentUserOrDefault(user.User{Username: stringsx.DefaultIfBlank(os.Getenv("BEARDED_WOOKIE_DEPLOY_INITIATER"), "unknown")})
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
@@ -195,7 +199,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		return nil
 	}
 
-	if archive, err = client.Upload(uint64(dstinfo.Size()), dst); err != nil {
+	if archive, err = client.Upload(stringsx.DefaultIfBlank(u.Name, u.Username), uint64(dstinfo.Size()), dst); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil

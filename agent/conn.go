@@ -86,7 +86,7 @@ func (t Conn) Shutdown() (err error) {
 }
 
 // Upload ...
-func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
+func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archive, err error) {
 	var (
 		stream Quorum_UploadClient
 		_info  *UploadResponse
@@ -101,7 +101,10 @@ func (t Conn) Upload(srcbytes uint64, src io.Reader) (info Archive, err error) {
 		Checksum: []byte{},
 		Data:     []byte{},
 		InitialChunkMetadata: &UploadChunk_Metadata{
-			Metadata: &UploadMetadata{Bytes: srcbytes},
+			Metadata: &UploadMetadata{
+				Bytes:     total,
+				Initiator: initiator,
+			},
 		},
 	}
 

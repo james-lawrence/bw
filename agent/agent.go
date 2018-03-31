@@ -20,7 +20,7 @@ type Dispatcher interface {
 type Client interface {
 	Shutdown() error
 	Close() error
-	Upload(srcbytes uint64, src io.Reader) (Archive, error)
+	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
 	Deploy(DeployOptions, Archive) (Deploy, error)
 	Connect() (ConnectResponse, error)
