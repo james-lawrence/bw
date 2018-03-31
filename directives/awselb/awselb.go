@@ -93,6 +93,10 @@ func LoadbalancersAttach() (err error) {
 		if err = waitForAttach(elb1, lb, ident); err != nil {
 			return err
 		}
+
+		if err = waitForHealth(elb1, lb, ident); err != nil {
+			return err
+		}
 	}
 
 	log.Println("instance successfully attached")
@@ -149,7 +153,22 @@ func (t errString) Error() string {
 	return string(t)
 }
 
-const errInstanceNotFound = errString("instance not found")
+const (
+	errInstanceNotFound = errString("instance not found")
+	errUnhealthy        = errString("instance is unhealthy")
+)
+
+func waitForHealth(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
+	for {
+		if err = healthyInstance(e, lbd, i); err == errUnhealthy {
+			log.Println("instance unhealthy retrying")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		return errors.WithStack(err)
+	}
+}
 
 func waitForAttach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	for {
@@ -171,6 +190,35 @@ func waitForDetach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2met
 		log.Println("instance found retrying")
 		time.Sleep(2 * time.Second)
 	}
+}
+
+// will return nil when the instance is healthy.
+func healthyInstance(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
+	const (
+		inService = "InService"
+	)
+
+	var (
+		healthRequest elb.DescribeInstanceHealthInput
+		health        *elb.DescribeInstanceHealthOutput
+	)
+
+	healthRequest = elb.DescribeInstanceHealthInput{
+		LoadBalancerName: lbd.LoadBalancerName,
+		Instances:        []*elb.Instance{{InstanceId: aws.String(i.InstanceID)}},
+	}
+
+	if health, err = e.DescribeInstanceHealth(&healthRequest); err != nil {
+		return errors.WithStack(err)
+	}
+
+	for _, h := range health.InstanceStates {
+		if *h.State == inService {
+			return nil
+		}
+	}
+
+	return errUnhealthy
 }
 
 func hasInstance(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
