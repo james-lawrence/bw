@@ -125,6 +125,11 @@ func NewNode(name string, ip net.IP) *memberlist.Node {
 	}
 }
 
+// NewNodeFromAddress see NewNode
+func NewNodeFromAddress(name, ip string) *memberlist.Node {
+	return NewNode(name, net.ParseIP(ip))
+}
+
 // NewMock generates a new mock cluster with n peers.
 func NewMock(n int) clustering.Mock {
 	peers := NewNodes(n)

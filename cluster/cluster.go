@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"log"
+	"net"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -94,6 +95,15 @@ func NodesToPeers(nodes ...*memberlist.Node) []agent.Peer {
 	}
 
 	return peers
+}
+
+// PeerToNode - partial implementation, doesn't convert metadata.
+// do not use, except for tests.
+func PeerToNode(p agent.Peer) memberlist.Node {
+	return memberlist.Node{
+		Name: p.Name,
+		Addr: net.ParseIP(p.Ip),
+	}
 }
 
 // NodeToPeer converts a node to a peer

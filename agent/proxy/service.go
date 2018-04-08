@@ -1,8 +1,6 @@
 package proxy
 
 import (
-	"log"
-
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -62,7 +60,6 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		dresult = agent.DeployCommand_Done
 	}
 
-	log.Println("emitting deploy command")
 	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})); err != nil {
 		return err
 	}

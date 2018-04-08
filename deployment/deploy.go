@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/x/logx"
+	"github.com/pkg/errors"
 )
 
 // partitioner determines the number of nodes to simultaneously deploy to
@@ -69,9 +70,9 @@ func DeployOptionChecker(x operation) Option {
 }
 
 // DeployOptionDeployer set the strategy for deploying.
-func DeployOptionDeployer(deployer operation) Option {
+func DeployOptionDeployer(o operation) Option {
 	return func(d *Deploy) {
-		d.worker.deploy = deployer
+		d.worker.deploy = o
 	}
 }
 
@@ -132,6 +133,13 @@ type worker struct {
 func (t worker) work() {
 	defer t.wait.Done()
 	for f := range t.c {
+		// Stop deployment when a single node fails.
+		// TODO: make number of failures allowed configurable.
+		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
+			t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+			continue
+		}
+
 		f()
 	}
 }
@@ -144,13 +152,6 @@ func (t worker) Complete() (int64, bool) {
 }
 
 func (t worker) DeployTo(peer agent.Peer) {
-	// Stop deployment when a single node fails.
-	// TODO: make this configurable.
-	if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
-		return
-	}
-
 	t.c <- func() {
 		if _, err := t.deploy.Visit(peer); err != nil {
 			t.dispatcher.Dispatch(agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error())))
@@ -188,7 +189,6 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 
 	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
 	awaitCompletion(t, t.worker.check, nodes...)
-
 	t.Dispatch(agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
 	for _, peer := range nodes {
@@ -223,7 +223,7 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
 		for _, peer := range peers {
 			deploy, err := check.Visit(peer)
 			if err != nil {
-				log.Println("failed to check", peer.Name, err)
+				log.Printf("failed to check: %s - %T, %s\n", peer.Name, errors.Cause(err), err)
 			} else {
 				switch deploy.Stage {
 				case agent.Deploy_Completed:
