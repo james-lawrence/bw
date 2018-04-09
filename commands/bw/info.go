@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -66,12 +67,12 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if client, c, err = agent.Connect(config, coptions...); err != nil {
+	if client, dialer, c, err = config.Connect(coptions...); err != nil {
 		return err
 	}
 
 	cx := cluster.New(local, c)
-	agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
+	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
 		var (
 			info agent.StatusResponse
 		)
@@ -80,14 +81,15 @@ func (t *agentInfo) _info() (err error) {
 			return errors.WithStack(err)
 		}
 
-		log.Printf("Server: %s:%s\n", info.Peer.Name, info.Peer.Ip)
-		log.Println("Previous Deployment: Time                          - DeploymentID               - Checksum")
+		log.Printf("Server: %s:%s - %s\n", info.Peer.Name, info.Peer.Ip, info.Peer.Status)
+		log.Println("Previous Deployment: Time                          - DeploymentID               - Stage")
 		for _, d := range info.Deployments {
-			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Archive.Ts, 0).UTC(), bw.RandomID(d.Archive.DeploymentID), bw.RandomID(d.Archive.Checksum))
+			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Archive.Ts, 0).UTC(), bw.RandomID(d.Archive.DeploymentID), d.Stage)
 		}
 
 		return nil
 	}))(cx, dialer)
+	logx.MaybeLog(err)
 
 	events := make(chan agent.Message, 100)
 
