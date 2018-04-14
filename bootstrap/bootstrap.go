@@ -94,7 +94,7 @@ func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, 
 	}
 
 	if len(status.Deployments) > 0 && status.Deployments[0].Stage == agent.Deploy_Completed && bytes.Compare(latest.Archive.DeploymentID, status.Deployments[0].Archive.DeploymentID) == 0 {
-		log.Println("latest already deployed", spew.Sdump(status))
+		log.Println("latest already deployed")
 		return nil
 	}
 

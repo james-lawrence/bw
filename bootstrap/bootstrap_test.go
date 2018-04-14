@@ -118,11 +118,27 @@ var _ = Describe("Bootstrap", func() {
 		fc := fakeClient{
 			status: agent.StatusResponse{
 				Deployments: []*agent.Deploy{
+					// the latest deploy needs to be a failure to trigger the latest deploy check to fail.
 					{
+						Stage: agent.Deploy_Failed,
 						Archive: &agent.Archive{
 							Peer:         &p,
 							Ts:           time.Now().Unix(),
 							DeploymentID: bw.MustGenerateID(),
+						},
+						Options: &agent.DeployOptions{
+							Timeout: int64(time.Hour),
+						},
+					},
+					{
+						Stage: agent.Deploy_Completed,
+						Archive: &agent.Archive{
+							Peer:         &p,
+							Ts:           time.Now().Unix(),
+							DeploymentID: bw.MustGenerateID(),
+						},
+						Options: &agent.DeployOptions{
+							Timeout: int64(time.Hour),
 						},
 					},
 				},
@@ -146,7 +162,20 @@ var _ = Describe("Bootstrap", func() {
 		fc := fakeClient{
 			status: agent.StatusResponse{
 				Deployments: []*agent.Deploy{
+					// the latest deploy needs to be a failure to trigger the latest deploy check to fail.
 					{
+						Stage: agent.Deploy_Failed,
+						Archive: &agent.Archive{
+							Peer:         &p,
+							Ts:           time.Now().Unix(),
+							DeploymentID: bw.MustGenerateID(),
+						},
+						Options: &agent.DeployOptions{
+							Timeout: int64(time.Hour),
+						},
+					},
+					{
+						Stage: agent.Deploy_Completed,
 						Archive: &agent.Archive{
 							Peer:         &p,
 							Ts:           time.Now().Unix(),
