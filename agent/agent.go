@@ -24,6 +24,7 @@ type Client interface {
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
 	Deploy(DeployOptions, Archive) (Deploy, error)
 	Connect() (ConnectResponse, error)
+	Cancel() error
 	Info() (StatusResponse, error)
 	Watch(out chan<- Message) error
 	Dispatch(messages ...Message) error
@@ -70,9 +71,9 @@ type connect struct {
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config ConfigClient, onRetry func(error), options ...ConnectOption,
-) (client Client, c clustering.Cluster, err error) {
+) (client Client, d Dialer, c clustering.Cluster, err error) {
 	for i := 0; true; i++ {
-		if client, c, err = Connect(config, options...); err == nil {
+		if client, d, c, err = Connect(config, options...); err == nil {
 			break
 		}
 
@@ -81,7 +82,7 @@ func ConnectClientUntilSuccess(
 
 		select {
 		case <-ctx.Done():
-			return client, c, ctx.Err()
+			return client, d, c, ctx.Err()
 		default:
 		}
 
@@ -89,18 +90,18 @@ func ConnectClientUntilSuccess(
 		time.Sleep(250 * time.Millisecond)
 	}
 
-	return client, c, err
+	return client, d, c, err
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config ConfigClient, options ...ConnectOption) (cl Client, c clustering.Cluster, err error) {
+func Connect(config ConfigClient, options ...ConnectOption) (cl Client, d Dialer, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
-	cl, _, c, err = config.Connect(
+	cl, d, c, err = config.Connect(
 		ConnectOptionClustering(conn.clustering.Options...),
 		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
 	)
 
-	return cl, c, err
+	return cl, d, c, err
 }
 
 type cluster interface {

@@ -18,6 +18,9 @@ func EnvironFromFile(path string) (environ []string, err error) {
 	)
 
 	if src, err = os.Open(path); err != nil {
+		if os.IsNotExist(err) {
+			return environ, nil
+		}
 		return environ, errors.WithStack(err)
 	}
 	defer src.Close()

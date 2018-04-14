@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/james-lawrence/bw/x/timex"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -31,23 +32,19 @@ type Exec struct {
 	Timeout time.Duration
 }
 
-func (t Exec) execute(ctx Context) error {
-	timeout := t.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Minute
-	}
-
-	deadline, done := context.WithTimeout(context.Background(), timeout)
+func (t Exec) execute(ctx context.Context, sctx Context) error {
+	timeout := timex.DurationOrDefault(t.Timeout, 5*time.Minute)
+	deadline, done := context.WithTimeout(ctx, timeout)
 	defer done()
 
-	command := ctx.variableSubst(t.Command)
-	cmd := exec.CommandContext(deadline, ctx.Shell, "-c", command)
-	cmd.Env = ctx.Environ
-	cmd.Stderr = ctx.output
-	cmd.Stdout = ctx.output
-	cmd.Dir = ctx.dir
+	command := sctx.variableSubst(t.Command)
+	cmd := exec.CommandContext(deadline, sctx.Shell, "-c", command)
+	cmd.Env = sctx.Environ
+	cmd.Stderr = sctx.output
+	cmd.Stdout = sctx.output
+	cmd.Dir = sctx.dir
 
-	return t.lenient(ctx, cmd.Run())
+	return t.lenient(sctx, cmd.Run())
 }
 
 func (t Exec) lenient(ctx Context, err error) error {
@@ -60,12 +57,13 @@ func (t Exec) lenient(ctx Context, err error) error {
 }
 
 // Execute ...
-func Execute(ctx Context, commands ...Exec) error {
+func Execute(ctx context.Context, sctx Context, commands ...Exec) error {
 	for _, c := range commands {
-		fmt.Fprintln(ctx.output, "executing", ctx.Shell, "-c", c.Command)
-		if err := c.execute(ctx); err != nil {
+		fmt.Fprintln(sctx.output, "executing", sctx.Shell, "-c", c.Command)
+		if err := c.execute(ctx, sctx); err != nil {
 			return errors.Wrapf(err, "failed to execute: '%s'", c.Command)
 		}
+		fmt.Fprintln(sctx.output, "completed", sctx.Shell, "-c", c.Command)
 	}
 
 	return nil

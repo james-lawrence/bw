@@ -7,6 +7,7 @@
 package awselb2
 
 import (
+	"context"
 	"log"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,7 +19,7 @@ import (
 )
 
 // LoadbalancersDetach detaches the current instance from all the loadbalancers its a part of.
-func LoadbalancersDetach() (err error) {
+func LoadbalancersDetach(ctx context.Context) (err error) {
 	var (
 		sess     *session.Session
 		instance *autoscaling.InstanceDetails
@@ -36,7 +37,7 @@ func LoadbalancersDetach() (err error) {
 	elb := elbv2.New(sess)
 	targets := []*elbv2.TargetDescription{{Id: instance.InstanceId}}
 	for _, lb := range lbs {
-		if _, err = elb.DeregisterTargets(&elbv2.DeregisterTargetsInput{TargetGroupArn: lb.LoadBalancerArn, Targets: targets}); err != nil {
+		if _, err = elb.DeregisterTargetsWithContext(ctx, &elbv2.DeregisterTargetsInput{TargetGroupArn: lb.LoadBalancerArn, Targets: targets}); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -45,7 +46,7 @@ func LoadbalancersDetach() (err error) {
 }
 
 // LoadbalancersAttach attaches the current instance to all the loadbalancers its a part of.
-func LoadbalancersAttach() (err error) {
+func LoadbalancersAttach(ctx context.Context) (err error) {
 	var (
 		sess     *session.Session
 		instance *autoscaling.InstanceDetails
@@ -64,7 +65,7 @@ func LoadbalancersAttach() (err error) {
 
 	targets := []*elbv2.TargetDescription{{Id: instance.InstanceId}}
 	for _, lb := range lbs {
-		if _, err = elb.RegisterTargets(&elbv2.RegisterTargetsInput{TargetGroupArn: lb.LoadBalancerArn, Targets: targets}); err != nil {
+		if _, err = elb.RegisterTargetsWithContext(ctx, &elbv2.RegisterTargetsInput{TargetGroupArn: lb.LoadBalancerArn, Targets: targets}); err != nil {
 			return errors.WithStack(err)
 		}
 	}

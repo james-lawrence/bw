@@ -17,7 +17,6 @@ const deployMetadataName = "deploy.metadata"
 
 func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
 	deployments := make([]agent.Deploy, 0, 10)
-
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		var (
 			d agent.Deploy
@@ -35,6 +34,11 @@ func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
 
 		return filepath.SkipDir
 	})
+
+	// check if the root directory does not exist.
+	if os.IsNotExist(errors.Cause(err)) {
+		err = nil
+	}
 
 	return deployments, err
 }

@@ -3,6 +3,7 @@
 package awselb
 
 import (
+	"context"
 	"log"
 	"time"
 
@@ -15,7 +16,7 @@ import (
 )
 
 // LoadbalancersDetach detaches the current instance from all the loadbalancers its a part of.
-func LoadbalancersDetach() (err error) {
+func LoadbalancersDetach(ctx context.Context) (err error) {
 	var (
 		sess  *session.Session
 		ident ec2metadata.EC2InstanceIdentityDocument
@@ -44,11 +45,11 @@ func LoadbalancersDetach() (err error) {
 	instances := []*elb.Instance{{InstanceId: aws.String(ident.InstanceID)}}
 	for _, lb := range lbs {
 		req := &elb.DeregisterInstancesFromLoadBalancerInput{LoadBalancerName: lb.LoadBalancerName, Instances: instances}
-		if _, err = elb1.DeregisterInstancesFromLoadBalancer(req); err != nil {
+		if _, err = elb1.DeregisterInstancesFromLoadBalancerWithContext(ctx, req); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = waitForDetach(elb1, lb, ident); err != nil {
+		if err = waitForDetach(ctx, elb1, lb, ident); err != nil {
 			return err
 		}
 	}
@@ -58,7 +59,7 @@ func LoadbalancersDetach() (err error) {
 }
 
 // LoadbalancersAttach attaches the current instance to all the loadbalancers its a part of.
-func LoadbalancersAttach() (err error) {
+func LoadbalancersAttach(ctx context.Context) (err error) {
 	var (
 		sess  *session.Session
 		ident ec2metadata.EC2InstanceIdentityDocument
@@ -86,15 +87,15 @@ func LoadbalancersAttach() (err error) {
 	instances := []*elb.Instance{{InstanceId: aws.String(ident.InstanceID)}}
 	for _, lb := range lbs {
 		req := &elb.RegisterInstancesWithLoadBalancerInput{LoadBalancerName: lb.LoadBalancerName, Instances: instances}
-		if _, err = elb1.RegisterInstancesWithLoadBalancer(req); err != nil {
+		if _, err = elb1.RegisterInstancesWithLoadBalancerWithContext(ctx, req); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = waitForAttach(elb1, lb, ident); err != nil {
+		if err = waitForAttach(ctx, elb1, lb, ident); err != nil {
 			return err
 		}
 
-		if err = waitForHealth(elb1, lb, ident); err != nil {
+		if err = waitForHealth(ctx, elb1, lb, ident); err != nil {
 			return err
 		}
 	}
@@ -158,9 +159,9 @@ const (
 	errUnhealthy        = errString("instance is unhealthy")
 )
 
-func waitForHealth(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
+func waitForHealth(ctx context.Context, e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	for {
-		if err = healthyInstance(e, lbd, i); err == errUnhealthy {
+		if err = healthyInstance(ctx, e, lbd, i); err == errUnhealthy {
 			log.Println("instance unhealthy retrying")
 			time.Sleep(2 * time.Second)
 			continue
@@ -170,9 +171,9 @@ func waitForHealth(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.E
 	}
 }
 
-func waitForAttach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
+func waitForAttach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	for {
-		if err = hasInstance(elb1, lbd, ident); err == errInstanceNotFound {
+		if err = hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
 			log.Println("instance missing retrying")
 			time.Sleep(2 * time.Second)
 			continue
@@ -182,9 +183,9 @@ func waitForAttach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2met
 	}
 }
 
-func waitForDetach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
+func waitForDetach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	for {
-		if err := hasInstance(elb1, lbd, ident); err == errInstanceNotFound {
+		if err := hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
 			return nil
 		}
 		log.Println("instance found retrying")
@@ -193,7 +194,7 @@ func waitForDetach(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2met
 }
 
 // will return nil when the instance is healthy.
-func healthyInstance(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
+func healthyInstance(ctx context.Context, e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	const (
 		inService = "InService"
 	)
@@ -208,7 +209,7 @@ func healthyInstance(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata
 		Instances:        []*elb.Instance{{InstanceId: aws.String(i.InstanceID)}},
 	}
 
-	if health, err = e.DescribeInstanceHealth(&healthRequest); err != nil {
+	if health, err = e.DescribeInstanceHealthWithContext(ctx, &healthRequest); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -221,13 +222,13 @@ func healthyInstance(e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata
 	return errUnhealthy
 }
 
-func hasInstance(elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
+func hasInstance(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
 	var (
 		resp *elb.DescribeLoadBalancersOutput
 	)
 	req := &elb.DescribeLoadBalancersInput{LoadBalancerNames: []*string{lbd.LoadBalancerName}}
 
-	if resp, err = elb1.DescribeLoadBalancers(req); err != nil {
+	if resp, err = elb1.DescribeLoadBalancersWithContext(ctx, req); err != nil {
 		return errors.WithStack(err)
 	}
 

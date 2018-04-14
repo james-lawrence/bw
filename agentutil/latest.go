@@ -86,15 +86,16 @@ func LatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 		return nil, errors.Wrap(err, "latest deployment failed")
 	}
 
-	// maintain backwards compatability
-	if info.Latest != nil && info.Latest.Archive != nil {
-		log.Println("backwards compatability deploy path taken")
-		return info.Latest, nil
-	}
-
 	if len(info.Deployments) == 0 {
 		return nil, errors.WithStack(ErrNoDeployments)
 	}
 
-	return info.Deployments[0], nil
+	for _, d := range info.Deployments {
+		if d.Stage == agent.Deploy_Completed {
+			return d, nil
+		}
+	}
+
+	// no successful deploys
+	return nil, errors.WithStack(ErrNoDeployments)
 }

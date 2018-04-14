@@ -31,10 +31,10 @@ func (t PackageLoader) Build(r io.Reader) (Directive, error) {
 	}
 
 	if len(pkgs) == 0 {
-		return closure(func() error { return nil }), nil
+		return closure(func(context.Context) error { return nil }), nil
 	}
 
-	return closure(func() error {
+	return closure(func(context.Context) error {
 		var (
 			err error
 			c   packagekit.Client

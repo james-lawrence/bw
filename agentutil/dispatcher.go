@@ -8,6 +8,14 @@ import (
 	"github.com/james-lawrence/bw/x/logx"
 )
 
+// DiscardDispatcher ...
+type DiscardDispatcher struct{}
+
+// Dispatch ...
+func (t DiscardDispatcher) Dispatch(ms ...agent.Message) error {
+	return nil
+}
+
 // LogDispatcher dispatcher that just logs.
 type LogDispatcher struct{}
 

@@ -36,6 +36,10 @@ func newLogger(uid bw.RandomID, root, prefix string) (dst *os.File, _dlog dlog, 
 	return dst, dlog{uid: uid.String(), log: log.New(io.MultiWriter(os.Stderr, dst), prefix, log.Flags()^log.Lshortfile)}, nil
 }
 
+func stdErrLogger(uid bw.RandomID, prefix string) dlog {
+	return dlog{uid: uid.String(), log: log.New(os.Stderr, prefix, log.Flags()^log.Lshortfile)}
+}
+
 func logErr(err error) {
 	if err != nil {
 		log.Println(err)

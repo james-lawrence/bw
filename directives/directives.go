@@ -1,6 +1,7 @@
 package directives
 
 import (
+	"context"
 	"io"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ type Context struct {
 
 // Directive ...
 type Directive interface {
-	Run() error
+	Run(context.Context) error
 }
 
 // Load the directives from the provided directory.
@@ -71,6 +72,11 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 		return nil
 	})
 
+	// just return empty results if the directory did not exist.
+	if os.IsNotExist(err) {
+		err = nil
+	}
+
 	return results, err
 }
 
@@ -96,10 +102,10 @@ type Loader interface {
 	Build(io.Reader) (Directive, error)
 }
 
-type closure func() error
+type closure func(context.Context) error
 
-func (t closure) Run() error {
-	return t()
+func (t closure) Run(ctx context.Context) error {
+	return t(ctx)
 }
 
 // NoopLoader ...
@@ -119,6 +125,6 @@ func (t NoopLoader) Ext() []string {
 type NoopDirective struct{}
 
 // Run - implements Directive interface.
-func (t NoopDirective) Run() error {
+func (t NoopDirective) Run(ctx context.Context) error {
 	return nil
 }

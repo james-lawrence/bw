@@ -150,7 +150,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, _, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
@@ -230,6 +230,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	var (
 		client agent.Client
 		config agent.ConfigClient
+		d      agent.Dialer
 		c      clustering.Cluster
 	)
 	defer t.global.shutdown()
@@ -263,11 +264,10 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 	logx.MaybeLog(c.Shutdown())
-
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
@@ -275,6 +275,14 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 			log.Println("failed to close client", err)
 		}
 	}()
+
+	cx := cluster.New(local, c)
+
+	peers := agentutil.PeerSet(deployment.ApplyFilter(deployment.AlwaysMatch, cx.Peers()...))
+
+	if err = agentutil.Cancel(peers, d); err != nil {
+		return err
+	}
 
 	cmd := agent.DeployCommand{
 		Command: agent.DeployCommand_Cancel,
@@ -332,7 +340,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Location: dst.Name(),
 	}
 
-	if dctx, err = deployment.NewDeployContext(root, local, archive); err != nil {
+	if dctx, err = deployment.NewDeployContext(root, local, agent.DeployOptions{}, archive); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

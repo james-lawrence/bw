@@ -8,3 +8,11 @@ func Every(d time.Duration, do func()) {
 		do()
 	}
 }
+
+// DurationOrDefault ...
+func DurationOrDefault(a, b time.Duration) time.Duration {
+	if a == 0 {
+		return b
+	}
+	return a
+}

@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -29,9 +30,9 @@ var _ = ginkgo.Describe("Shell", func() {
 		}
 		DescribeTable("Execute functions", func(ctx Context, err error, c Exec) {
 			if err != nil {
-				Expect(c.execute(ctx)).To(MatchError(err.Error()))
+				Expect(c.execute(context.Background(), ctx)).To(MatchError(err.Error()))
 			} else {
-				Expect(c.execute(ctx)).ToNot(HaveOccurred())
+				Expect(c.execute(context.Background(), ctx)).ToNot(HaveOccurred())
 			}
 		},
 			Entry("times out", ctx1, errors.New("signal: killed"), Exec{Command: "sleep 0.5", Timeout: 200 * time.Millisecond}),

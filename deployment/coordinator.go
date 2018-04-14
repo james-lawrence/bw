@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,8 +33,9 @@ func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator
 	coord := Coordinator{
 		local:    local,
 		deployer: d,
-		Mutex:    &sync.Mutex{},
+		m:        &sync.Mutex{},
 		dlreg:    storage.New(),
+		ds:       newDeployState(),
 	}
 
 	// default options.
@@ -114,16 +114,15 @@ type Coordinator struct {
 	dlreg             storage.DownloadFactory
 	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	completedObserver chan DeployResult
-	currentDeploy     agent.Deploy
-	deploying         uint32
+	ds                DeployState
 	silenceLogging    bool
-	*sync.Mutex
+	m                 *sync.Mutex
 }
 
-func (t *Coordinator) background(completed chan DeployResult) {
-	defer close(completed)
+func (t *Coordinator) background(dctx DeployContext) {
+	defer close(dctx.completed)
 
-	done := <-completed
+	done := <-dctx.completed
 	d := done.complete()
 
 	if err := writeDeployMetadata(done.Root, d); err != nil {
@@ -133,23 +132,22 @@ func (t *Coordinator) background(completed chan DeployResult) {
 	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
 	switch d.Stage {
 	case agent.Deploy_Completed:
-		t.update(d, agentutil.KeepNewestN(t.keepN))
+		t.update(dctx, d, agentutil.KeepNewestN(t.keepN))
 	default:
-		t.update(d, agentutil.KeepOldestN(t.keepN))
+		t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 	}
 
 	if t.completedObserver != nil {
 		t.completedObserver <- done
 	}
 
-	atomic.SwapUint32(&t.deploying, coordinaterWaiting)
-
+	atomic.SwapUint32(t.ds.state, coordinaterWaiting)
 }
 
 // Deployments about the state of the agent.
 func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
-	t.Mutex.Lock()
-	defer t.Mutex.Unlock()
+	t.m.Lock()
+	defer t.m.Unlock()
 
 	if deployments, err = readAllDeployMetadata(t.deploysRoot); err != nil {
 		return deployments, err
@@ -157,6 +155,14 @@ func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
 
 	sort.Slice(deployments, func(i int, j int) bool {
 		a, b := deployments[i], deployments[j]
+		if a.Archive == nil {
+			return true
+		}
+
+		if b.Archive == nil {
+			return false
+		}
+
 		return a.Archive.Ts > b.Archive.Ts
 	})
 
@@ -169,8 +175,6 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		ok   bool
 		dctx DeployContext
 	)
-
-	d = agent.Deploy{Archive: &archive, Stage: agent.Deploy_Deploying}
 
 	// cleanup workspace directory prior to deployment. this leaves the last deployment
 	// is available until the next run for debugging.
@@ -186,29 +190,32 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 
 	dcopts := []DeployContextOption{
 		DeployContextOptionDispatcher(t.dispatcher),
-		DeployContextOptionDeadline(time.Now().Add(time.Duration(opts.Timeout))),
+		DeployContextOptionDeadline(time.Duration(opts.Timeout)),
 		DeployContextOptionQuiet(t.silenceLogging),
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, t.local, archive, dcopts...); err != nil {
+	if dctx, err = NewDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
 		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
-		return d, err
+		return t.ds.current, err
 	}
-	go t.background(dctx.completed)
+	go t.background(dctx)
+
+	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
+		err = errors.Errorf("already deploying - unknown deployment - %s", t.ds.current.Stage)
+		if t.ds.current.Archive != nil {
+			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Archive.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
+		}
+
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		return t.ds.current, dctx.Done(err)
+	}
+
+	d = agent.Deploy{Archive: &archive, Options: &opts, Stage: agent.Deploy_Deploying}
+	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
 		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
 		return d, dctx.Done(errors.WithStack(err))
-	}
-
-	if ok = atomic.CompareAndSwapUint32(&t.deploying, coordinaterWaiting, coordinatorDeploying); !ok {
-		err = errors.Errorf("already deploying - unknown deployment - %s", t.currentDeploy.Stage)
-		if t.currentDeploy.Archive != nil {
-			err = errors.Errorf("%s is already deploying: %s - %s", t.currentDeploy.Archive.Initiator, bw.RandomID(t.currentDeploy.Archive.DeploymentID).String(), t.currentDeploy.Stage)
-		}
-
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
-		return d, dctx.Done(err)
 	}
 
 	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
@@ -222,11 +229,25 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	return d, nil
 }
 
-func (t *Coordinator) update(d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
-	t.Mutex.Lock()
-	defer t.Mutex.Unlock()
+// Cancel ...
+func (t *Coordinator) Cancel() {
+	t.m.Lock()
+	defer t.m.Unlock()
+	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
+	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
+		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
+		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, "cancelled deploy"))
+	} else {
+		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
+	}
+}
 
-	t.currentDeploy = d
+func (t *Coordinator) update(dctx DeployContext, d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	t.ds.current = d
+	t.ds.currentContext = dctx
 	t.cleanup = c
 
 	return d
@@ -237,9 +258,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) error {
 	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
-	timeout, done := context.WithDeadline(context.Background(), dctx.deadline)
-	defer done()
-	if err := archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(timeout, dctx.Archive)); err != nil {
+	if err := archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(dctx.deadline, dctx.Archive)); err != nil {
 		return errors.Wrapf(err, "retrieve archive")
 	}
 

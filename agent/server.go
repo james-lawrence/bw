@@ -11,6 +11,8 @@ import (
 type deployer interface {
 	// Deploy trigger a deploy
 	Deploy(DeployOptions, Archive) (Deploy, error)
+	// Cancel current deploy
+	Cancel()
 	Deployments() ([]Deploy, error)
 }
 
@@ -19,6 +21,8 @@ type noopDeployer struct{}
 func (t noopDeployer) Deploy(DeployOptions, Archive) (d Deploy, err error) {
 	return d, err
 }
+
+func (t noopDeployer) Cancel() {}
 
 func (t noopDeployer) Deployments() ([]Deploy, error) {
 	return []Deploy{}, nil
@@ -100,6 +104,13 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 	}
 
 	return &DeployResponse{Deploy: &d}, nil
+}
+
+// Cancel ...
+func (t Server) Cancel(ctx context.Context, req *CancelRequest) (_ *CancelResponse, err error) {
+	debugx.Println("cancel initiated")
+	t.Deployer.Cancel()
+	return &CancelResponse{}, nil
 }
 
 // Info ...

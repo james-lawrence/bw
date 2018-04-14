@@ -73,6 +73,16 @@ func (t Conn) Close() error {
 	return t.conn.Close()
 }
 
+// Cancel causes the current deploy (if any) to be cancelled.
+func (t Conn) Cancel() (err error) {
+	rpc := NewAgentClient(t.conn)
+	if _, err = rpc.Cancel(context.Background(), &CancelRequest{}); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return nil
+}
+
 // Shutdown causes the agent to shut down. generally the agent process
 // should be configured to automatically restart.
 func (t Conn) Shutdown() (err error) {

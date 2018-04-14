@@ -1,6 +1,7 @@
 package directives
 
 import (
+	"context"
 	"io"
 
 	"github.com/james-lawrence/bw/directives/shell"
@@ -27,7 +28,7 @@ func (t ShellLoader) Build(r io.Reader) (Directive, error) {
 		return nil, err
 	}
 
-	return closure(func() error {
-		return shell.Execute(t.Context, cmds...)
+	return closure(func(ctx context.Context) error {
+		return shell.Execute(ctx, t.Context, cmds...)
 	}), nil
 }

@@ -91,13 +91,16 @@ func (t Directive) deploy(dctx DeployContext) {
 	}
 
 	if d, err = directives.Load(dctx.Log, filepath.Join(dctx.ArchiveRoot, ".remote"), loaders...); err != nil {
+		dctx.Dispatch()
 		dctx.Done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}
 
 	dctx.Log.Println("loaded", len(d), "directive(s)")
 	for _, l := range d {
-		if err = l.Run(); err != nil {
+		dctx.Log.Println("running directive")
+		if err = l.Run(dctx.deadline); err != nil {
+			dctx.Log.Println("directive failed", err)
 			dctx.Done(err)
 			return
 		}

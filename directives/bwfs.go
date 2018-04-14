@@ -1,6 +1,7 @@
 package directives
 
 import (
+	"context"
 	"io"
 
 	"github.com/james-lawrence/bw/directives/bwfs"
@@ -27,7 +28,7 @@ func (t ArchiveLoader) Build(r io.Reader) (Directive, error) {
 		return nil, err
 	}
 
-	return closure(func() error {
+	return closure(func(ctx context.Context) error {
 		return bwfs.New(t.Context.Log, t.Context.RootDirectory).Execute(archives...)
 	}), nil
 }

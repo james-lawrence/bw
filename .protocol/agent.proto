@@ -122,8 +122,6 @@ message ConnectResponse {
 message StatusRequest {}
 message StatusResponse {
   Peer peer = 1;
-  Deploy latest = 2;
-  repeated Archive archives = 3;
   repeated Deploy deployments = 4;
 }
 
@@ -138,9 +136,13 @@ message DeployResponse {
 message ShutdownRequest{}
 message ShutdownResponse{}
 
+message CancelRequest{}
+message CancelResponse{}
+
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectResponse) {}
   rpc Info(StatusRequest) returns (StatusResponse) {}
   rpc Deploy(DeployRequest) returns (DeployResponse) {}
+  rpc Cancel(CancelRequest) returns (CancelResponse) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
 }

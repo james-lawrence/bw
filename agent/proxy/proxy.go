@@ -23,11 +23,6 @@ func check(d agent.Dialer) func(n agent.Peer) (agent.Deploy, error) {
 			return _d, err
 		}
 
-		// TODO DEPRECATED: Remove latest in next version. use deployments going forward.
-		if info.Latest != nil {
-			return *info.Latest, nil
-		}
-
 		if len(info.Deployments) > 0 {
 			return *info.Deployments[0], nil
 		}

@@ -99,7 +99,18 @@ func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, 
 	}
 
 	log.Println("bootstrapping with", spew.Sdump(latest))
-	if _, err = coord.Deploy(agent.DeployOptions{}, *latest.Archive); err != nil {
+	// default opts, temporary until next version fixes the storage of opts as part of
+	// the deploy metadata.
+	opts := agent.DeployOptions{Timeout: int64(time.Hour)}
+	if latest.Options != nil {
+		opts = *latest.Options
+		if opts.Timeout == 0 {
+			log.Println("--------------------- USING TIMEOUT FROM LATEST", spew.Sdump(latest.Options))
+			opts.Timeout = int64(time.Hour)
+		}
+	}
+
+	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 
