@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/x/systemx"
@@ -45,7 +46,7 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 		Address:       systemx.HostnameOrLocalhost(),
 	}
 
-	ConfigClientTLS(DefaultTLSCredentialsRoot)(&config)
+	ConfigClientTLS(certificatecache.DefaultTLSCredentialsRoot)(&config)
 
 	return NewConfigClient(config, options...)
 }
@@ -182,7 +183,7 @@ func NewConfig(options ...ConfigOption) Config {
 		},
 	}
 
-	newTLSAgent(DefaultTLSCredentialsRoot, "")(&c)
+	newTLSAgent(certificatecache.DefaultTLSCredentialsRoot, "")(&c)
 
 	for _, opt := range options {
 		opt(&c)
@@ -266,10 +267,9 @@ type Config struct {
 	RaftBind               *net.TCPAddr
 	SWIMBind               *net.TCPAddr
 	Secret                 string
-	Key                    string
-	Cert                   string
-	CA                     string
 	ServerName             string
+	CA                     string
+	CredentialsDir         string `yaml:"credentialsDir"`
 	TorrentBind            *net.TCPAddr
 	DNSBind                dnsBind  `yaml:"dnsBind"`
 	DNSBootstrap           []string `yaml:"dnsBootstrap"`

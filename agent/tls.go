@@ -7,35 +7,19 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/x/systemx"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
 
-const (
-	// DefaultTLSCredentialsRoot default name of the parent directory for the credentials
-	DefaultTLSCredentialsRoot = bw.DefaultEnvironmentName
-	// DefaultTLSKeyCA default name for the certificate authority key.
-	DefaultTLSKeyCA = "tlsca.key"
-	// DefaultTLSCertCA default name for the certificate authority certificate.
-	DefaultTLSCertCA = "tlsca.cert"
-	// DefaultTLSKeyClient ...
-	DefaultTLSKeyClient = "tlsclient.key"
-	// DefaultTLSCertClient ...
-	DefaultTLSCertClient = "tlsclient.cert"
-	// DefaultTLSKeyServer ...
-	DefaultTLSKeyServer = "tlsserver.key"
-	// DefaultTLSCertServer ...
-	DefaultTLSCertServer = "tlsserver.cert"
-)
-
 // ConfigClientTLS ...
 func ConfigClientTLS(credentials string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.Key = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyClient), "")
-		c.Cert = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertClient), "")
-		c.CA = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), "")
+		c.Key = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSKeyClient), "")
+		c.Cert = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertClient), "")
+		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
 		c.ServerName = systemx.HostnameOrLocalhost()
 	}
 }
@@ -43,9 +27,8 @@ func ConfigClientTLS(credentials string) ConfigClientOption {
 // NewTLSAgent ...
 func newTLSAgent(credentials, override string) ConfigOption {
 	return func(c *Config) {
-		c.Key = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSKeyServer), override)
-		c.Cert = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertServer), override)
-		c.CA = bw.DefaultLocation(filepath.Join(credentials, DefaultTLSCertCA), override)
+		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), override)
+		c.CredentialsDir = bw.DefaultLocation(credentials, override)
 		c.ServerName = systemx.HostnameOrLocalhost()
 	}
 }
@@ -53,15 +36,11 @@ func newTLSAgent(credentials, override string) ConfigOption {
 // BuildServer ...
 func (t Config) BuildServer() (creds *tls.Config, err error) {
 	var (
-		cert tls.Certificate
-		ca   []byte
+		ca []byte
 	)
-
-	if cert, err = tls.LoadX509KeyPair(t.Cert, t.Key); err != nil {
-		return creds, errors.WithStack(err)
-	}
-
+	m := certificatecache.NewDirectory(t.ServerName, t.CredentialsDir)
 	pool := x509.NewCertPool()
+
 	if ca, err = ioutil.ReadFile(t.CA); err != nil {
 		return creds, errors.WithStack(err)
 	}
@@ -70,15 +49,14 @@ func (t Config) BuildServer() (creds *tls.Config, err error) {
 		return creds, errors.New("failed to append client certs")
 	}
 
-	creds = &tls.Config{
-		ServerName:   t.ServerName,
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		Certificates: []tls.Certificate{cert},
-		ClientCAs:    pool,
-		RootCAs:      pool,
-	}
-
-	return creds, nil
+	return &tls.Config{
+		ServerName:           t.ServerName,
+		ClientAuth:           tls.RequireAndVerifyClientCert,
+		GetCertificate:       m.GetCertificate,
+		GetClientCertificate: m.GetClientCertificate,
+		ClientCAs:            pool,
+		RootCAs:              pool,
+	}, nil
 }
 
 // GRPCCredentials creates grpc transport credentials from the TLS configuration.

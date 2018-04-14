@@ -10,7 +10,7 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/vault/api"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/agent"
+	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/pkg/errors"
@@ -64,12 +64,12 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 		}
 	}
 
-	capath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertCA)
-	keypath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSKeyClient)
-	certpath := filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertClient)
+	capath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertCA)
+	keypath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSKeyClient)
+	certpath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertClient)
 	if t.agentCredentials {
-		keypath = filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSKeyServer)
-		certpath = filepath.Join(bw.DefaultLocation(t.environment, ""), agent.DefaultTLSCertServer)
+		keypath = filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSKeyServer)
+		certpath = filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertServer)
 	}
 
 	log.Println("writing private key", keypath)

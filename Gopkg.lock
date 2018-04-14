@@ -116,6 +116,12 @@
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
+
+[[projects]]
   name = "github.com/gizak/termui"
   packages = ["."]
   revision = "bfde399a8caee62789593f2cbbda70feee4d5553"
@@ -459,6 +465,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "89da8f504a9e5416a27994ac81f0ce045eee74c8af7e844f83cbb3560631cd31"
+  inputs-digest = "a2950599a889b3dd13bd8264a94013958d3c86fa4eb50ef638b7a2416a390b7c"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -67,6 +67,18 @@ func DefaultLocation(name, override string) string {
 	return locateFile(name, override, envconfig, home, system)
 }
 
+// LocateFirstInDir locates the first file in the given directory by name.
+func LocateFirstInDir(dir string, names ...string) (result string) {
+	for _, name := range names {
+		result = filepath.Join(dir, name)
+		if _, err := os.Stat(result); err == nil {
+			break
+		}
+	}
+
+	return result
+}
+
 // DefaultUserDirLocation returns the user directory location.
 func DefaultUserDirLocation(name, override string) string {
 	user := systemx.CurrentUserOrDefault(fallbackUser)

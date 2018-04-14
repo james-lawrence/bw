@@ -10,7 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/agent"
+	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/x/tlsx"
 	"github.com/pkg/errors"
@@ -108,15 +108,15 @@ func (t *selfSigned) generate(ctx *kingpin.ParseContext) (err error) {
 		}
 	}
 
-	if capriv, err = write(agent.DefaultTLSKeyCA, agent.DefaultTLSCertCA)(tlsx.SelfSignedRSAGen(t.bits, authority)); err != nil {
+	if capriv, err = write(cc.DefaultTLSKeyCA, cc.DefaultTLSCertCA)(tlsx.SelfSignedRSAGen(t.bits, authority)); err != nil {
 		return err
 	}
 
-	if _, err = write(agent.DefaultTLSKeyServer, agent.DefaultTLSCertServer)(tlsx.SignedRSAGen(t.bits, server, authority, capriv)); err != nil {
+	if _, err = write(cc.DefaultTLSKeyServer, cc.DefaultTLSCertServer)(tlsx.SignedRSAGen(t.bits, server, authority, capriv)); err != nil {
 		return err
 	}
 
-	if _, err = write(agent.DefaultTLSKeyClient, agent.DefaultTLSCertClient)(tlsx.SignedRSAGen(t.bits, client, authority, capriv)); err != nil {
+	if _, err = write(cc.DefaultTLSKeyClient, cc.DefaultTLSCertClient)(tlsx.SignedRSAGen(t.bits, client, authority, capriv)); err != nil {
 		return err
 	}
 
