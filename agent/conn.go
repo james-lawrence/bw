@@ -11,12 +11,12 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/pkg/errors"
 )
 
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
-
 	if conn, err = Dial(proxy, options...); err != nil {
 		return conn, err
 	}
@@ -247,7 +247,7 @@ func (t Conn) Dispatch(messages ...Message) (err error) {
 	}
 
 done:
-	return errors.WithStack(dst.CloseSend())
+	return errorsx.Compact(err, errors.WithStack(dst.CloseSend()))
 }
 
 func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {

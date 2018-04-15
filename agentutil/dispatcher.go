@@ -6,6 +6,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/logx"
+	"github.com/pkg/errors"
 )
 
 // DiscardDispatcher ...
@@ -27,27 +28,6 @@ func (t LogDispatcher) Dispatch(ms ...agent.Message) error {
 	return nil
 }
 
-// NewBusDispatcher creates a in memory bus for messages.
-func NewBusDispatcher(c chan agent.Message) BusDispatcher {
-	return BusDispatcher{
-		buff: c,
-	}
-}
-
-// BusDispatcher ...
-type BusDispatcher struct {
-	buff chan agent.Message
-}
-
-// Dispatch ...
-func (t BusDispatcher) Dispatch(msgs ...agent.Message) error {
-	for _, msg := range msgs {
-		t.buff <- msg
-	}
-
-	return nil
-}
-
 // NewDispatcher create a message dispatcher from the cluster and credentials.
 func NewDispatcher(c cluster, d agent.QuorumDialer) *Dispatcher {
 	return &Dispatcher{
@@ -66,10 +46,9 @@ type Dispatcher struct {
 }
 
 // Dispatch dispatches messages
-func (t *Dispatcher) Dispatch(m ...agent.Message) error {
+func (t *Dispatcher) Dispatch(m ...agent.Message) (err error) {
 	var (
-		err error
-		c   agent.Client
+		c agent.Client
 	)
 
 	if c, err = t.getClient(); err != nil {
@@ -77,7 +56,7 @@ func (t *Dispatcher) Dispatch(m ...agent.Message) error {
 		return err
 	}
 
-	return logx.MaybeLog(c.Dispatch(m...))
+	return logx.MaybeLog(t.dropClient(c.Dispatch(m...)))
 }
 
 func (t *Dispatcher) getClient() (c agent.Client, err error) {
@@ -92,4 +71,16 @@ func (t *Dispatcher) getClient() (c agent.Client, err error) {
 	}
 
 	return t.c, nil
+}
+
+func (t *Dispatcher) dropClient(err error) error {
+	if err == nil {
+		return err
+	}
+
+	t.m.Lock()
+	t.c = nil
+	t.m.Unlock()
+
+	return errors.Wrap(err, "dropped client due to error")
 }
