@@ -129,33 +129,31 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	}
 
 	cx := cluster.New(local, c)
-	if upload = storage.LoadUploadProtocol(t.config.Root); upload == nil {
-		var (
-			tc  storage.TorrentConfig
-			tcu storage.TorrentUtil
-			tdr = make(chan deployment.DeployResult)
-		)
+	var (
+		tc  storage.TorrentConfig
+		tcu storage.TorrentUtil
+		tdr = make(chan deployment.DeployResult)
+	)
 
-		opts := []storage.TorrentOption{
-			storage.TorrentOptionBind(t.config.TorrentBind),
-			storage.TorrentOptionDHTPeers(cx),
-			storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirTorrents)),
-		}
-
-		if tc, err = storage.NewTorrent(opts...); err != nil {
-			return err
-		}
-
-		go func() {
-			for range tdr {
-				tcu.ClearTorrents(tc)
-				tcu.PrintTorrentInfo(tc)
-			}
-		}()
-
-		deployResults = append(deployResults, tdr)
-		upload, download = tc.Uploader(), tc.Downloader()
+	opts := []storage.TorrentOption{
+		storage.TorrentOptionBind(t.config.TorrentBind),
+		storage.TorrentOptionDHTPeers(cx),
+		storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirTorrents)),
 	}
+
+	if tc, err = storage.NewTorrent(opts...); err != nil {
+		return err
+	}
+
+	go func() {
+		for range tdr {
+			tcu.ClearTorrents(tc)
+			tcu.PrintTorrentInfo(tc)
+		}
+	}()
+
+	deployResults = append(deployResults, tdr)
+	upload, download = tc.Uploader(), tc.Downloader()
 
 	dialer := agent.NewDialer(grpc.WithTransportCredentials(tlscreds))
 	qdialer := agent.NewQuorumDialer(dialer)

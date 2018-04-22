@@ -5,8 +5,6 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
-	"log"
-	"path/filepath"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -31,22 +29,6 @@ type Uploader interface {
 	// Info returns the result of the upload. this includes the overall checksum of the
 	// file, the string uri of its location or an error.
 	Info() (hash.Hash, string, error)
-}
-
-// LoadUploadProtocol loads protocols based on well known files
-// in the provided directory. if none are found it returns nil.
-func LoadUploadProtocol(dir string) (p UploadProtocol) {
-	var (
-		err error
-	)
-
-	if p, err = uploadFromFile(filepath.Join(dir, "s3.storage"), defaultS3Config); err != nil {
-		log.Println("failed to load s3 configuration", err)
-	} else {
-		return p
-	}
-
-	return nil
 }
 
 func uploadFromFile(path string, p uploadConfig) (_ UploadProtocol, err error) {

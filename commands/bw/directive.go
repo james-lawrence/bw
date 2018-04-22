@@ -36,7 +36,7 @@ func (t *directive) attach(ctx *kingpin.ParseContext) (err error) {
 	return t.agentCmd.bind(
 		func(actx agentContext, dl storage.DownloadProtocol) deployment.Coordinator {
 			var (
-				dlreg = storage.New(storage.OptionDefaultProtocols(actx.Config.Root, dl))
+				dlreg = storage.New(storage.OptionProtocols(dl))
 			)
 
 			deploy := deployment.NewDirective(

@@ -7,9 +7,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -64,24 +62,6 @@ func OptionProtocols(protocols ...DownloadProtocol) Option {
 	return func(r *Registry) {
 		r.protocols = pp
 	}
-}
-
-// OptionDefaultProtocols checks for well known configuration files in the given directory.
-// well known files:
-// s3.storage
-func OptionDefaultProtocols(dir string, protocols ...DownloadProtocol) Option {
-	var (
-		err error
-		p   DownloadProtocol
-	)
-
-	if p, err = loadDownloadFromFile(filepath.Join(dir, "s3.storage"), defaultS3Config); err != nil {
-		log.Println("failed to load s3 download configuration", err)
-	} else {
-		protocols = append(protocols, p)
-	}
-
-	return OptionProtocols(protocols...)
 }
 
 func loadDownloadFromFile(path string, p downloadConfig) (_ DownloadProtocol, err error) {
