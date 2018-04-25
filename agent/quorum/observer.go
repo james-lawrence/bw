@@ -13,13 +13,23 @@ type pbObserver struct {
 	done context.CancelFunc
 }
 
-func (t pbObserver) Receive(messages ...agent.Message) (err error) {
+func (t pbObserver) send(ctx context.Context, m agent.Message) error {
+	done := make(chan error, 1)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case done <- t.dst.Send(&m):
+		return <-done
+	}
+}
+
+func (t pbObserver) Receive(ctx context.Context, messages ...agent.Message) (err error) {
 	var (
 		cause error
 	)
 
 	for _, m := range messages {
-		if err = t.dst.Send(&m); err != nil {
+		if err = t.send(ctx, m); err != nil {
 			if cause = errors.Cause(err); cause == context.Canceled {
 				return nil
 			}

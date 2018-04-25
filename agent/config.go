@@ -91,8 +91,9 @@ func (t ConfigClient) connect() (c Client, d Dialer, details ConnectResponse, er
 		return c, d, details, err
 	}
 
-	d = NewDialer(grpc.WithTransportCredentials(creds))
-	if c, err = AddressProxyDialQuorum(t.Address, grpc.WithTransportCredentials(creds)); err != nil {
+	opts := DefaultDialerOptions(grpc.WithTransportCredentials(creds))
+	d = NewDialer(opts...)
+	if c, err = AddressProxyDialQuorum(t.Address, opts...); err != nil {
 		return c, d, details, err
 	}
 

@@ -155,7 +155,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	deployResults = append(deployResults, tdr)
 	upload, download = tc.Uploader(), tc.Downloader()
 
-	dialer := agent.NewDialer(grpc.WithTransportCredentials(tlscreds))
+	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(tlscreds))...)
 	qdialer := agent.NewQuorumDialer(dialer)
 	dispatcher := agentutil.NewDispatcher(cx, qdialer)
 	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}

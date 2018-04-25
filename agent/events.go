@@ -1,9 +1,11 @@
 package agent
 
 import (
+	"context"
 	"log"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -31,7 +33,7 @@ func NewEventBus(c chan []Message) EventBus {
 
 // Observer ...
 type Observer interface {
-	Receive(...Message) error
+	Receive(context.Context, ...Message) error
 }
 
 // EventBusObserver used to unregister an observer.
@@ -50,24 +52,38 @@ type EventBus struct {
 func (t EventBus) background() {
 	for m := range t.buffer {
 		t.m.RLock()
-		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(t.observers))
-		for id, o := range t.observers {
-			if err := o.Receive(m...); err != nil {
-				log.Printf("failed to receive messages %d - %T %+v\n", id, errors.Cause(err), err)
-				continue
-			}
-
-			debugx.Println("delivered messages", id)
+		cpy := make([]Observer, 0, len(t.observers))
+		for _, obs := range t.observers {
+			cpy = append(cpy, obs)
 		}
 		t.m.RUnlock()
+
+		debugx.Printf("receiving messages(%d), observers(%d)\n", len(m), len(t.observers))
+		for _, o := range cpy {
+			c, cf := context.WithTimeout(context.Background(), time.Minute)
+			if err := o.Receive(c, m...); err != nil {
+				cf()
+				log.Printf("failed to receive messages - %T %+v\n", errors.Cause(err), err)
+				continue
+			}
+			cf()
+			debugx.Println("delivered messages")
+		}
 	}
 }
 
 // Dispatch ...
-func (t EventBus) Dispatch(messages ...Message) {
-	debugx.Println("dispatching messages", len(messages))
-	t.buffer <- messages
-	debugx.Println("dispatched messages", len(messages))
+func (t EventBus) Dispatch(ctx context.Context, messages ...Message) error {
+	log.Println("dispatching messages", len(messages))
+	select {
+	case <-ctx.Done():
+		log.Println("done")
+		return ctx.Err()
+	case t.buffer <- messages:
+		log.Println("dispatched messages", len(messages))
+	}
+
+	return nil
 }
 
 // Register ...

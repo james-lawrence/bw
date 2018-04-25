@@ -71,7 +71,7 @@ func New(c cluster, d deployer, upload storage.UploadProtocol, options ...Option
 		bus:      make(chan agent.Message, 100),
 		sm:       &DisabledMachine{},
 		uploads:  upload,
-		dialer:   agent.NewDialer(grpc.WithInsecure()),
+		dialer:   agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
 		m:        &sync.Mutex{},
 		deploy:   d,
 		c:        c,
@@ -100,9 +100,12 @@ type Quorum struct {
 func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	go func() {
 		for m := range t.bus {
-			t.EventBus.Dispatch(m)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			logx.MaybeLog(errors.Wrap(t.EventBus.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
+			cancel()
 		}
 	}()
+
 	go rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
