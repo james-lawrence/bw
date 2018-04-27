@@ -102,6 +102,7 @@ func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
 		future  raft.ApplyFuture
+		ok      bool
 	)
 
 	if encoded, err = proto.Marshal(&m); err != nil {
@@ -109,8 +110,14 @@ func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	}
 
 	// write the event to the WAL.
-	if future = t.state.Apply(encoded, 10*time.Second); future.Error() != nil {
+	future = t.state.Apply(encoded, 10*time.Second)
+
+	if err = future.Error(); err != nil {
 		return errors.WithStack(future.Error())
+	}
+
+	if err, ok = future.Response().(error); ok {
+		return errors.WithStack(err)
 	}
 
 	return nil

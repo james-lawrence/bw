@@ -4,6 +4,7 @@ import (
 	"context"
 	"hash"
 	"io"
+	"net"
 	"time"
 
 	"github.com/james-lawrence/bw/clustering"
@@ -20,7 +21,7 @@ type Dispatcher interface {
 // ConnectableDispatcher ...
 type ConnectableDispatcher interface {
 	Dispatcher
-	Connect(chan Message) (*grpc.Server, error)
+	Connect(chan Message) (net.Listener, *grpc.Server, error)
 }
 
 // Client - client facade interface.

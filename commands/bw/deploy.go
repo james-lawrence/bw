@@ -283,17 +283,17 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 
 	cx := cluster.New(local, c)
 
-	peers := agentutil.PeerSet(deployment.ApplyFilter(deployment.AlwaysMatch, cx.Peers()...))
-
-	if err = agentutil.Cancel(peers, d); err != nil {
-		return err
-	}
-
 	cmd := agent.DeployCommand{
 		Command: agent.DeployCommand_Cancel,
 	}
 
 	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
+		return err
+	}
+
+	peers := agentutil.PeerSet(deployment.ApplyFilter(deployment.AlwaysMatch, cx.Peers()...))
+
+	if err = agentutil.Cancel(peers, d); err != nil {
 		return err
 	}
 

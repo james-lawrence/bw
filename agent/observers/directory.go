@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -29,6 +30,18 @@ func NewDirectory(dir string) (cache Directory, err error) {
 	}
 
 	if err = w.Add(dir); err != nil {
+		return cache, err
+	}
+
+	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if path == dir {
+			return nil
+		}
+
+		return os.RemoveAll(path)
+	})
+
+	if err != nil {
 		return cache, err
 	}
 
@@ -62,25 +75,24 @@ func (t Directory) Observers() int {
 }
 
 // Connect ...
-func (t Directory) Connect(b chan agent.Message) (s *grpc.Server, err error) {
+func (t Directory) Connect(b chan agent.Message) (l net.Listener, s *grpc.Server, err error) {
 	var (
-		l  net.Listener
 		id bw.RandomID
 	)
 
 	if id, err = bw.SimpleGenerateID(); err != nil {
-		return s, err
+		return l, s, err
 	}
 
 	addr := filepath.Join(t.dir, fmt.Sprintf("%s.sock", id.String()))
 	if l, err = net.Listen("unix", addr); err != nil {
-		return s, err
+		return l, s, err
 	}
 
 	s = New(b)
 	go s.Serve(l)
 
-	return s, nil
+	return l, s, nil
 }
 
 // Dispatch messages to the observers.
@@ -94,8 +106,7 @@ func (t Directory) Dispatch(ctx context.Context, messages ...agent.Message) erro
 
 	for _, conn := range cpy {
 		if err := conn.Dispatch(ctx, messages...); err != nil {
-			log.Printf("failed to dispatch message: %+v\n", err)
-			// logx.MaybeLog(errors.Wrap(err, "failed to deliver messages"))
+			log.Println(errors.Wrap(err, "failed to deliver messages"))
 		}
 	}
 

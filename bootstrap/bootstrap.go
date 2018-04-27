@@ -98,7 +98,6 @@ func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, 
 		return nil
 	}
 
-	log.Println("bootstrapping with", spew.Sdump(latest))
 	// default opts, temporary until next version fixes the storage of opts as part of
 	// the deploy metadata.
 	opts := agent.DeployOptions{Timeout: int64(time.Hour)}
@@ -110,6 +109,7 @@ func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, 
 		}
 	}
 
+	log.Println("bootstrapping with options", spew.Sdump(opts))
 	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}

@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 	"log"
+	"net"
 	"sync"
 	"time"
 
@@ -75,6 +76,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.U
 		m:       &sync.Mutex{},
 		deploy:  d,
 		c:       c,
+		lost:    make(chan struct{}),
 	}
 
 	for _, opt := range options {
@@ -94,6 +96,7 @@ type Quorum struct {
 	c       cluster
 	dialer  agent.Dialer
 	deploy  deployer
+	lost    chan struct{}
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -133,12 +136,18 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 				continue
 			}
 
-			t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
-			if o.Raft.State() == raft.Leader {
+			switch o.Raft.State() {
+			case raft.Leader:
 				t.sm = func() stateMachine {
 					sm := NewStateMachine(t.c, o.Raft, t.dialer, t.deploy)
 					return &sm
 				}()
+			case raft.Follower, raft.Candidate:
+				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
+			default:
+				log.Println("state, shutting down watchers", o.Raft.State())
+				close(t.lost)
+				t.lost = make(chan struct{})
 			}
 		}
 	}
@@ -219,6 +228,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	var (
 		s *grpc.Server
+		l net.Listener
 	)
 
 	t.m.Lock()
@@ -235,18 +245,22 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	}
 
 	events := make(chan agent.Message)
-	if s, err = t.ConnectableDispatcher.Connect(events); err != nil {
+	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
 		return logx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
 	}
+	defer l.Close()
 	defer s.GracefulStop()
 
-	for m := range events {
-		if err = out.Send(&m); err != nil {
-			return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
+	for {
+		select {
+		case _ = <-t.lost:
+			return nil
+		case m := <-events:
+			if err = out.Send(&m); err != nil {
+				return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
+			}
 		}
 	}
-
-	return nil
 }
 
 // Dispatch record deployment events.

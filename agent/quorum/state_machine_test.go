@@ -130,6 +130,7 @@ func qCommand(d agent.DeployCommand_Command) agent.DeployCommand {
 
 var _ = Describe("StateMachine", func() {
 	local := mockLocal{}
+
 	It("should write to WAL on dispatch", func() {
 		protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
@@ -210,6 +211,24 @@ var _ = Describe("StateMachine", func() {
 			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
 		),
 	)
+
+	It("should return an error when dispatch failed", func() {
+		cmd := agent.DeployCommand{
+			Command: agent.DeployCommand_Begin,
+			Options: &agent.DeployOptions{},
+			Archive: &agent.Archive{},
+		}
+
+		protocols, _, err := newCluster(nil, "server1", "server2", "server3")
+		Expect(err).ToNot(HaveOccurred())
+		leader := awaitLeader(protocols...)
+		lp := agent.NewPeer("node")
+		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
+		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+
+		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).ToNot(HaveOccurred())
+		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
+	})
 
 	It("should write message to the observer", func() {
 		messages := []agent.Message{
