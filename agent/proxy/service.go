@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"context"
+
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -38,7 +40,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		Archive: &archive,
 	}
 
-	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
+	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
 		return err
 	}
 
@@ -60,7 +62,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		dresult = agent.DeployCommand_Done
 	}
 
-	if err = d.Dispatch(agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})); err != nil {
+	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})); err != nil {
 		return err
 	}
 

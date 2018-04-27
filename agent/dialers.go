@@ -9,6 +9,50 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+// AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
+func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
+	if conn, err = Dial(proxy, options...); err != nil {
+		return conn, err
+	}
+	defer conn.Close()
+
+	return ProxyDialQuorum(conn, options...)
+}
+
+// ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
+func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error) {
+	var (
+		cinfo ConnectResponse
+	)
+
+	if cinfo, err = c.Connect(); err != nil {
+		return conn, err
+	}
+
+	for _, q := range PtrToPeers(cinfo.Quorum...) {
+		if conn, err = Dial(RPCAddress(q), options...); err != nil {
+			log.Println("failed to dial", RPCAddress(q), err)
+			continue
+		}
+		return conn, nil
+	}
+
+	return conn, errors.New("failed to bootstrap from the provided peer")
+}
+
+// Dial connects to a node at the given address.
+func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error) {
+	var (
+		conn *grpc.ClientConn
+	)
+
+	if conn, err = grpc.Dial(address, options...); err != nil {
+		return _ignored, errors.Wrap(err, "failed to connect to peer")
+	}
+
+	return Conn{conn: conn}, nil
+}
+
 // DefaultDialerOptions sets reasonable defaults for dialing the agent.
 func DefaultDialerOptions(options ...grpc.DialOption) (results []grpc.DialOption) {
 	results = make([]grpc.DialOption, 0, len(options)+2)

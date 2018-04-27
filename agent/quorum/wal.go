@@ -26,9 +26,10 @@ func commandToMessage(cmd []byte) (m agent.Message, err error) {
 }
 
 // NewWAL ...
-func NewWAL() WAL {
+func NewWAL(obs chan agent.Message) WAL {
 	return WAL{
-		m: &sync.RWMutex{},
+		m:        &sync.RWMutex{},
+		observer: obs,
 	}
 }
 
@@ -36,6 +37,7 @@ func NewWAL() WAL {
 type WAL struct {
 	logs      []agent.Message
 	deploying int32
+	observer  chan agent.Message
 	m         *sync.RWMutex
 }
 
@@ -79,6 +81,10 @@ func (t *WAL) decode(buf []byte) error {
 	t.m.Lock()
 	t.logs = append(t.logs, m)
 	t.m.Unlock()
+
+	if t.observer != nil {
+		t.observer <- m
+	}
 
 	return nil
 }

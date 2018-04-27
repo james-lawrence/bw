@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
@@ -96,13 +97,6 @@ func CoordinatorOptionStorage(reg storage.DownloadFactory) CoordinatorOption {
 	}
 }
 
-// CoordinatorOptionQuiet disables the deployment logging.
-func CoordinatorOptionQuiet() CoordinatorOption {
-	return func(d *Coordinator) {
-		d.silenceLogging = true
-	}
-}
-
 // Coordinator for a deploy
 type Coordinator struct {
 	keepN             int // never set manually. always set by CoordinatorOptionKeepN
@@ -115,7 +109,6 @@ type Coordinator struct {
 	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	completedObserver chan DeployResult
 	ds                DeployState
-	silenceLogging    bool
 	m                 *sync.Mutex
 }
 
@@ -184,18 +177,18 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
 		soft = errors.Wrap(soft, "failed to clear workspace directory")
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, soft.Error()))
+		t.dispatcher.Dispatch(context.Background(), agentutil.LogEvent(t.local, soft.Error()))
 		log.Println(soft)
 	}
 
 	dcopts := []DeployContextOption{
 		DeployContextOptionDispatcher(t.dispatcher),
 		DeployContextOptionDeadline(time.Duration(opts.Timeout)),
-		DeployContextOptionQuiet(t.silenceLogging),
+		DeployContextOptionQuiet(opts.SilenceDeployLogs),
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
 		return t.ds.current, err
 	}
 	go t.background(dctx)
@@ -206,7 +199,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Archive.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
 		}
 
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
 		return t.ds.current, dctx.Done(err)
 	}
 
@@ -214,7 +207,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, err.Error()))
+		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
@@ -236,7 +229,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		t.dispatcher.Dispatch(agentutil.LogEvent(t.local, "cancelled deploy"))
+		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, "cancelled deploy")))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}
@@ -273,4 +266,11 @@ func ResultBus(in chan DeployResult, out ...chan DeployResult) {
 			dst <- result
 		}
 	}
+}
+
+func dispatch(d dispatcher, timeout time.Duration, m ...agent.Message) error {
+	ctx, done := context.WithTimeout(context.Background(), timeout)
+	defer done()
+
+	return d.Dispatch(ctx, m...)
 }

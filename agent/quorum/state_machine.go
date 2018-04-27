@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"context"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -18,14 +19,6 @@ const (
 
 // StateMachineOption options for the state machine.
 type StateMachineOption func(*StateMachine)
-
-// STOObserver state machine observer, when not nil the state machine will block
-// to write the message to the observer.
-func STOObserver(m chan agent.Message) StateMachineOption {
-	return func(sm *StateMachine) {
-		sm.observer = m
-	}
-}
 
 // NewStateMachine stores the state of the cluster.
 func NewStateMachine(l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, options ...StateMachineOption) StateMachine {
@@ -47,11 +40,9 @@ func NewStateMachine(l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, o
 // to the underlying state machine.
 type StateMachine struct {
 	deployer
-	local    cluster
-	state    *raft.Raft
-	dialer   agent.Dialer
-	internal raft.FSM
-	observer chan agent.Message
+	local  cluster
+	state  *raft.Raft
+	dialer agent.Dialer
 }
 
 // State returns the state of the raft cluster.
@@ -84,7 +75,7 @@ func (t *StateMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 }
 
 // Dispatch a message to the WAL.
-func (t *StateMachine) Dispatch(messages ...agent.Message) (err error) {
+func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) (err error) {
 	for _, m := range messages {
 		if err = t.writeWAL(m, 10*time.Second); err != nil {
 			return err
@@ -111,6 +102,7 @@ func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
 		future  raft.ApplyFuture
+		ok      bool
 	)
 
 	if encoded, err = proto.Marshal(&m); err != nil {
@@ -118,12 +110,14 @@ func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	}
 
 	// write the event to the WAL.
-	if future = t.state.Apply(encoded, 10*time.Second); future.Error() != nil {
-		return errors.WithStack(future.Error())
+	future = t.state.Apply(encoded, 10*time.Second)
+
+	if err = future.Error(); err != nil {
+		return errors.WithStack(err)
 	}
 
-	if t.observer != nil {
-		t.observer <- m
+	if err, ok = future.Response().(error); ok {
+		return errors.WithStack(err)
 	}
 
 	return nil

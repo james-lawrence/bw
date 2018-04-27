@@ -1,7 +1,9 @@
 package quorum
 
 import (
+	"context"
 	"errors"
+	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
@@ -57,7 +59,7 @@ func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 }
 
 // Dispatch a message to the WAL.
-func (t *ProxyMachine) Dispatch(m ...agent.Message) (err error) {
+func (t *ProxyMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
 	return t.writeWAL(m...)
 }
 
@@ -91,5 +93,8 @@ func (t *ProxyMachine) writeWAL(m ...agent.Message) (err error) {
 	}
 
 	defer c.Close()
-	return c.Dispatch(m...)
+	ctx, done := context.WithTimeout(context.Background(), 10*time.Second)
+	defer done()
+
+	return c.Dispatch(ctx, m...)
 }

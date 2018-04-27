@@ -63,7 +63,7 @@ func (t fakeClient) Watch(out chan<- agent.Message) error {
 	return t.errResult
 }
 
-func (t fakeClient) Dispatch(messages ...agent.Message) error {
+func (t fakeClient) Dispatch(_ context.Context, messages ...agent.Message) error {
 	return t.errResult
 }
 
@@ -96,6 +96,9 @@ var _ = Describe("Bootstrap", func() {
 							Ts:           time.Now().Unix(),
 							DeploymentID: bw.MustGenerateID(),
 						},
+						Options: &agent.DeployOptions{
+							SilenceDeployLogs: true,
+						},
 					},
 				},
 			},
@@ -107,7 +110,6 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		Expect(Bootstrap(context.Background(), p, mc, fd, dc)).ToNot(HaveOccurred())
 	})
@@ -127,7 +129,8 @@ var _ = Describe("Bootstrap", func() {
 							DeploymentID: bw.MustGenerateID(),
 						},
 						Options: &agent.DeployOptions{
-							Timeout: int64(time.Hour),
+							Timeout:           int64(time.Hour),
+							SilenceDeployLogs: true,
 						},
 					},
 					{
@@ -138,7 +141,8 @@ var _ = Describe("Bootstrap", func() {
 							DeploymentID: bw.MustGenerateID(),
 						},
 						Options: &agent.DeployOptions{
-							Timeout: int64(time.Hour),
+							Timeout:           int64(time.Hour),
+							SilenceDeployLogs: true,
 						},
 					},
 				},
@@ -151,7 +155,6 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		Expect(errors.Cause(Bootstrap(context.Background(), p, mc, fd, dc))).To(MatchError("download failed"))
 	})
@@ -171,7 +174,8 @@ var _ = Describe("Bootstrap", func() {
 							DeploymentID: bw.MustGenerateID(),
 						},
 						Options: &agent.DeployOptions{
-							Timeout: int64(time.Hour),
+							Timeout:           int64(time.Hour),
+							SilenceDeployLogs: true,
 						},
 					},
 					{
@@ -180,6 +184,10 @@ var _ = Describe("Bootstrap", func() {
 							Peer:         &p,
 							Ts:           time.Now().Unix(),
 							DeploymentID: bw.MustGenerateID(),
+						},
+						Options: &agent.DeployOptions{
+							Timeout:           int64(time.Hour),
+							SilenceDeployLogs: true,
 						},
 					},
 				},
@@ -192,7 +200,6 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: errors.New("deployment failed")},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		Expect(errors.Cause(Bootstrap(context.Background(), p, mc, fd, dc))).To(MatchError("deployment failed"))
 	})

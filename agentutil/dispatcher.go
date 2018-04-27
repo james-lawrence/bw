@@ -1,6 +1,7 @@
 package agentutil
 
 import (
+	"context"
 	"log"
 	"sync"
 
@@ -13,7 +14,7 @@ import (
 type DiscardDispatcher struct{}
 
 // Dispatch ...
-func (t DiscardDispatcher) Dispatch(ms ...agent.Message) error {
+func (t DiscardDispatcher) Dispatch(_ context.Context, ms ...agent.Message) error {
 	return nil
 }
 
@@ -21,7 +22,7 @@ func (t DiscardDispatcher) Dispatch(ms ...agent.Message) error {
 type LogDispatcher struct{}
 
 // Dispatch ....
-func (t LogDispatcher) Dispatch(ms ...agent.Message) error {
+func (t LogDispatcher) Dispatch(_ context.Context, ms ...agent.Message) error {
 	for _, m := range ms {
 		log.Printf("dispatched %#v\n", m)
 	}
@@ -46,7 +47,7 @@ type Dispatcher struct {
 }
 
 // Dispatch dispatches messages
-func (t *Dispatcher) Dispatch(m ...agent.Message) (err error) {
+func (t *Dispatcher) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
 	var (
 		c agent.Client
 	)
@@ -56,7 +57,7 @@ func (t *Dispatcher) Dispatch(m ...agent.Message) (err error) {
 		return err
 	}
 
-	return logx.MaybeLog(t.dropClient(c.Dispatch(m...)))
+	return logx.MaybeLog(t.dropClient(c.Dispatch(ctx, m...)))
 }
 
 func (t *Dispatcher) getClient() (c agent.Client, err error) {

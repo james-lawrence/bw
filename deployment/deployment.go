@@ -17,6 +17,10 @@ import (
 	"github.com/james-lawrence/bw/x/logx"
 )
 
+const (
+	dispatchTimeout = 10 * time.Second
+)
+
 type deployer interface {
 	Deploy(dctx DeployContext)
 }
@@ -119,7 +123,7 @@ type DeployContext struct {
 
 // Dispatch an event to the cluster
 func (t DeployContext) Dispatch(m ...agent.Message) error {
-	return t.dispatcher.Dispatch(m...)
+	return logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, m...))
 }
 
 // Cancel cancel the deploy.
@@ -212,5 +216,5 @@ func (t DeployResult) complete() agent.Deploy {
 }
 
 type dispatcher interface {
-	Dispatch(...agent.Message) error
+	Dispatch(context.Context, ...agent.Message) error
 }
