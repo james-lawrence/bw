@@ -26,6 +26,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/james-lawrence/bw/x/systemx"
@@ -105,14 +106,14 @@ func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {
 		filters = append(filters, deployment.IP(n))
 	}
 
-	return t._deploy(deployment.Or(filters...))
+	return t._deploy(deployment.Or(filters...), false)
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
-	return t._deploy(deployment.NeverMatch)
+	return t._deploy(deployment.NeverMatch, true)
 }
 
-func (t *deployCmd) _deploy(filter deployment.Filter) error {
+func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	var (
 		err     error
 		dst     *os.File
@@ -221,6 +222,12 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 		Timeout:           int64(config.DeployTimeout),
 		IgnoreFailures:    t.ignoreFailures,
 		SilenceDeployLogs: t.silenceLogs,
+	}
+
+	if len(peers) == 0 && !allowEmpty {
+		cause := errorsx.String("deployment failed, filter did not match any servers")
+		events <- agentutil.LogError(local.Peer, cause)
+		return cause
 	}
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
