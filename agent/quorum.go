@@ -8,7 +8,7 @@ type quorum interface {
 	Deploy(opts DeployOptions, a Archive, peers ...Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
-	Dispatch(in Quorum_DispatchServer) error
+	Dispatch(context.Context, ...Message) error
 }
 
 // NewQuorum ...
@@ -42,6 +42,6 @@ func (t Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
 }
 
 // Dispatch record deployment events.
-func (t Quorum) Dispatch(in Quorum_DispatchServer) error {
-	return t.q.Dispatch(in)
+func (t Quorum) Dispatch(ctx context.Context, req *DispatchRequest) (*DispatchResponse, error) {
+	return &DispatchResponse{}, t.q.Dispatch(ctx, MessagesFromPtr(req.Messages...)...)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -44,9 +45,15 @@ type deployCmd struct {
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
 	ignoreFailures bool
+	silenceLogs    bool
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
+	deployOptions := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
+		cmd.Flag("silenceLogs", "prevents the logs from being written for a deploy").Default("false").BoolVar(&t.silenceLogs)
+		return cmd
+	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeLog).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
 		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
@@ -54,9 +61,9 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.deployCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
+	t.deployCmd(deployOptions(common(parent.Command("all", "deploy to all nodes within the cluster").Default())))
+	t.filteredCmd(deployOptions(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters"))))
 	t.localCmd(common(parent.Command("local", "deploy to the local system"))).Hidden()
-	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
@@ -79,14 +86,12 @@ func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 	return parent.Action(t.deploy)
 }
 
 func (t *deployCmd) filteredCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
-	parent.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 	return parent.Action(t.filtered)
 }
 
@@ -163,7 +168,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	}()
 
 	go func() {
-		if watcherr := client.Watch(events); watcherr != nil {
+		// TODO: reconnect when events connection is lost.
+		if watcherr := client.Watch(events); err != nil {
 			events <- agentutil.LogError(local.Peer, errors.Wrap(watcherr, "events connection lost"))
 		}
 		<-t.global.ctx.Done()
@@ -211,17 +217,16 @@ func (t *deployCmd) _deploy(filter deployment.Filter) error {
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	dopts := agent.DeployOptions{
-		Concurrency:    int64(config.Partitioner().Partition(len(cx.Members()))),
-		Timeout:        int64(config.DeployTimeout),
-		IgnoreFailures: t.ignoreFailures,
+		Concurrency:       int64(config.Partitioner().Partition(len(cx.Members()))),
+		Timeout:           int64(config.DeployTimeout),
+		IgnoreFailures:    t.ignoreFailures,
+		SilenceDeployLogs: t.silenceLogs,
 	}
-	go func() {
-		events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 
-		if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
-			events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
-		}
-	}()
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
+	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
+		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
+	}
 
 	return err
 }
@@ -288,12 +293,13 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		Command: agent.DeployCommand_Cancel,
 	}
 
-	if err = client.Dispatch(agentutil.DeployCommand(local.Peer, cmd)); err != nil {
+	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
 		return err
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "deploy cancelled")
-	time.Sleep(5 * time.Second)
+
+	time.Sleep(2 * time.Second)
 	return nil
 }
 

@@ -6,58 +6,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"log"
 
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/pkg/errors"
 )
-
-// AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
-func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
-	if conn, err = Dial(proxy, options...); err != nil {
-		return conn, err
-	}
-	defer conn.Close()
-
-	return ProxyDialQuorum(conn, options...)
-}
-
-// ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
-func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error) {
-	var (
-		cinfo ConnectResponse
-	)
-
-	if cinfo, err = c.Connect(); err != nil {
-		return conn, err
-	}
-
-	for _, q := range PtrToPeers(cinfo.Quorum...) {
-		if conn, err = Dial(RPCAddress(q), options...); err != nil {
-			log.Println("failed to dial", RPCAddress(q), err)
-			continue
-		}
-		return conn, nil
-	}
-
-	return conn, errors.New("failed to bootstrap from the provided peer")
-}
-
-// Dial connects to a node at the given address.
-func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error) {
-	var (
-		conn *grpc.ClientConn
-	)
-
-	if conn, err = grpc.Dial(address, options...); err != nil {
-		return _ignored, errors.Wrap(err, "failed to connect to peer")
-	}
-
-	return Conn{conn: conn}, nil
-}
 
 // Conn a connection to the cluster. implements the Client interface.
 type Conn struct {
@@ -227,27 +181,20 @@ func (t Conn) Watch(out chan<- Message) (err error) {
 }
 
 // Dispatch messages to the leader.
-func (t Conn) Dispatch(messages ...Message) (err error) {
+func (t Conn) Dispatch(ctx context.Context, messages ...Message) (err error) {
 	var (
-		dst Quorum_DispatchClient
+		out = DispatchRequest{
+			Messages: MessagesToPtr(messages...),
+		}
 	)
 
 	c := NewQuorumClient(t.conn)
 
-	ctx := context.Background()
-	if dst, err = c.Dispatch(ctx); err != nil {
+	if _, err = c.Dispatch(ctx, &out); err != nil {
 		return errors.WithStack(err)
 	}
 
-	for _, m := range messages {
-		if err = errors.WithStack(dst.Send(&m)); err != nil {
-			log.Println("failed to send message", err)
-			goto done
-		}
-	}
-
-done:
-	return errorsx.Compact(err, errors.WithStack(dst.CloseSend()))
+	return nil
 }
 
 func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {

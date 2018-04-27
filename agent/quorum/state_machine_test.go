@@ -1,6 +1,7 @@
 package quorum_test
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"net"
@@ -39,10 +40,9 @@ func (t *mockdeploy) Deploy(_ agent.Dialer, _ agent.Dispatcher, opts agent.Deplo
 	return nil
 }
 
-func newCluster(names ...string) (peers []*raft.Raft, err error) {
+func newCluster(obs chan agent.Message, names ...string) (peers []*raft.Raft, transports []*raft.InmemTransport, err error) {
 	var (
-		servers    []raft.Server
-		transports []*raft.InmemTransport
+		servers []raft.Server
 	)
 
 	for _, n := range names {
@@ -52,10 +52,11 @@ func newCluster(names ...string) (peers []*raft.Raft, err error) {
 			protocol  *raft.Raft
 		)
 
-		if server, transport, protocol, err = newPeer(n, false); err != nil {
-			return peers, err
+		if server, transport, protocol, err = newPeer(obs, n, false); err != nil {
+			return peers, transports, err
 		}
-
+		// don't add the observer to any other nodes.
+		obs = nil
 		peers = append(peers, protocol)
 		servers = append(servers, server)
 		transports = append(transports, transport)
@@ -66,25 +67,26 @@ func newCluster(names ...string) (peers []*raft.Raft, err error) {
 		connect(t, transports...)
 		config := raft.Configuration{Servers: servers}
 		if err = p.BootstrapCluster(config).Error(); err != nil {
-			return peers, err
+			return peers, transports, err
 		}
 	}
 
-	return peers, nil
+	return peers, transports, nil
 }
 
-func newPeer(name string, leader bool) (raft.Server, *raft.InmemTransport, *raft.Raft, error) {
+func newPeer(obs chan agent.Message, name string, leader bool) (raft.Server, *raft.InmemTransport, *raft.Raft, error) {
 	var (
 		addr      raft.ServerAddress
 		transport *raft.InmemTransport
 	)
 	config := raft.DefaultConfig()
+	config.LogOutput = ioutil.Discard
 	config.StartAsLeader = leader
 	config.LocalID = raft.ServerID(name)
 	storage := raft.NewInmemStore()
 	snapshot := raft.NewInmemSnapshotStore()
 	addr, transport = raft.NewInmemTransport("")
-	fsm := NewWAL()
+	fsm := NewWAL(obs)
 	protocol, err := raft.NewRaft(config, &fsm, storage, storage, snapshot, transport)
 	return raft.Server{Address: addr, ID: config.LocalID, Suffrage: raft.Voter}, transport, protocol, err
 }
@@ -92,6 +94,7 @@ func newPeer(name string, leader bool) (raft.Server, *raft.InmemTransport, *raft
 func connect(local *raft.InmemTransport, peers ...*raft.InmemTransport) {
 	for _, p := range peers {
 		local.Connect(p.LocalAddr(), p)
+		p.Connect(local.LocalAddr(), local)
 	}
 }
 
@@ -99,6 +102,17 @@ func awaitLeader(protocols ...*raft.Raft) *raft.Raft {
 	for {
 		for _, p := range protocols {
 			if p.State() == raft.Leader {
+				return p
+			}
+		}
+		runtime.Gosched()
+	}
+}
+
+func awaitFollower(protocols ...*raft.Raft) *raft.Raft {
+	for {
+		for _, p := range protocols {
+			if p.State() == raft.Follower {
 				return p
 			}
 		}
@@ -117,7 +131,7 @@ func qCommand(d agent.DeployCommand_Command) agent.DeployCommand {
 var _ = Describe("StateMachine", func() {
 	local := mockLocal{}
 	It("should write to WAL on dispatch", func() {
-		protocols, err := newCluster("server1", "server2", "server3")
+		protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
 		log.Println("awaiting leader")
 		leader := awaitLeader(protocols...)
@@ -128,31 +142,7 @@ var _ = Describe("StateMachine", func() {
 		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 		cmd := qCommand(agent.DeployCommand_Begin)
 
-		Expect((&sm).Dispatch(agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
-	})
-
-	It("should write message to the observer", func() {
-		protocols, err := newCluster("server1", "server2", "server3")
-		Expect(err).ToNot(HaveOccurred())
-		leader := awaitLeader(protocols...)
-		messages := []agent.Message{
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
-			agentutil.LogEvent(local.Local(), "message 3"),
-			agentutil.LogEvent(local.Local(), "message 4"),
-		}
-		obs := make(chan agent.Message, len(messages))
-		lp := agent.NewPeer("node")
-		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, STOObserver(obs))
-
-		Expect((&sm).Dispatch(messages...)).ToNot(HaveOccurred())
-
-		for _, m := range messages {
-			var expected agent.Message
-			Eventually(obs).Should(Receive(&expected))
-			Expect(expected).To(Equal(m))
-		}
+		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
 	})
 
 	DescribeTable("persisting state",
@@ -167,14 +157,14 @@ var _ = Describe("StateMachine", func() {
 				}
 				return out
 			}
-			protocols, err := newCluster("server1", "server2", "server3")
+			protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 			Expect(err).ToNot(HaveOccurred())
 			leader := awaitLeader(protocols...)
 			lp := agent.NewPeer("node")
 			mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
 			sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 
-			Expect((&sm).Dispatch(messages...)).ToNot(HaveOccurred())
+			Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 			snapshotfuture := leader.Snapshot()
 			Expect(snapshotfuture.Error()).ToNot(HaveOccurred())
 			_, ior, err := snapshotfuture.Open()
@@ -220,4 +210,28 @@ var _ = Describe("StateMachine", func() {
 			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
 		),
 	)
+
+	It("should write message to the observer", func() {
+		messages := []agent.Message{
+			agentutil.LogEvent(local.Local(), "message 1"),
+			agentutil.LogEvent(local.Local(), "message 2"),
+			agentutil.LogEvent(local.Local(), "message 3"),
+			agentutil.LogEvent(local.Local(), "message 4"),
+		}
+		obs := make(chan agent.Message, len(messages))
+		protocols, _, err := newCluster(obs, "server1", "server2", "server3")
+		Expect(err).ToNot(HaveOccurred())
+		leader := awaitLeader(protocols...)
+		lp := agent.NewPeer("node")
+		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
+		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+
+		Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
+
+		for _, m := range messages {
+			var expected agent.Message
+			Eventually(obs).Should(Receive(&expected))
+			Expect(expected).To(Equal(m))
+		}
+	})
 })

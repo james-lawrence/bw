@@ -63,7 +63,7 @@ func (t fakeClient) Watch(out chan<- agent.Message) error {
 	return t.errResult
 }
 
-func (t fakeClient) Dispatch(messages ...agent.Message) error {
+func (t fakeClient) Dispatch(_ context.Context, messages ...agent.Message) error {
 	return t.errResult
 }
 

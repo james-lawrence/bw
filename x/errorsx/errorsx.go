@@ -10,3 +10,10 @@ func Compact(errs ...error) error {
 
 	return nil
 }
+
+// String useful wrapper for string constants as errors.
+type String string
+
+func (t String) Error() string {
+	return string(t)
+}

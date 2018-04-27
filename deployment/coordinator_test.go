@@ -34,7 +34,6 @@ var _ = Describe("Coordinator", func() {
 			deployment.NewDirective(),
 			deployment.CoordinatorOptionRoot(workdir),
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
@@ -45,9 +44,10 @@ var _ = Describe("Coordinator", func() {
 			Peer:         &p,
 		}
 		dopts := agent.DeployOptions{
-			Concurrency:    1,
-			IgnoreFailures: true,
-			Timeout:        int64(time.Minute),
+			Concurrency:       1,
+			IgnoreFailures:    true,
+			SilenceDeployLogs: true,
+			Timeout:           int64(time.Minute),
 		}
 
 		_, err = c.Deploy(dopts, a)
@@ -69,7 +69,6 @@ var _ = Describe("Coordinator", func() {
 			deployment.NewDirective(),
 			deployment.CoordinatorOptionRoot(workdir),
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
@@ -80,9 +79,10 @@ var _ = Describe("Coordinator", func() {
 			Peer:         &p,
 		}
 		dopts := agent.DeployOptions{
-			Concurrency:    1,
-			IgnoreFailures: false,
-			Timeout:        int64(time.Minute),
+			Concurrency:       1,
+			IgnoreFailures:    false,
+			SilenceDeployLogs: true,
+			Timeout:           int64(time.Minute),
 		}
 
 		_, err = c.Deploy(dopts, a)
@@ -114,7 +114,6 @@ var _ = Describe("Coordinator", func() {
 			deployment.NewDirective(),
 			deployment.CoordinatorOptionRoot(workdir),
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
@@ -125,9 +124,10 @@ var _ = Describe("Coordinator", func() {
 			Peer:         &p,
 		}
 		dopts := agent.DeployOptions{
-			Concurrency:    1,
-			IgnoreFailures: false,
-			Timeout:        int64(time.Minute),
+			Concurrency:       1,
+			IgnoreFailures:    false,
+			SilenceDeployLogs: true,
+			Timeout:           int64(time.Minute),
 		}
 
 		_, err = c.Deploy(dopts, a)
@@ -155,7 +155,6 @@ var _ = Describe("Coordinator", func() {
 			deployment.NewDirective(),
 			deployment.CoordinatorOptionRoot(workdir),
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
-			deployment.CoordinatorOptionQuiet(),
 		)
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
@@ -166,9 +165,10 @@ var _ = Describe("Coordinator", func() {
 			Peer:         &p,
 		}
 		dopts := agent.DeployOptions{
-			Concurrency:    1,
-			IgnoreFailures: false,
-			Timeout:        int64(time.Minute),
+			Concurrency:       1,
+			IgnoreFailures:    false,
+			SilenceDeployLogs: true,
+			Timeout:           int64(time.Minute),
 		}
 
 		_, err = c.Deploy(dopts, a)

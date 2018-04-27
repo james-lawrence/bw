@@ -9,11 +9,18 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 // Dispatcher - interface for dispatching messages.
 type Dispatcher interface {
-	Dispatch(...Message) error
+	Dispatch(context.Context, ...Message) error
+}
+
+// ConnectableDispatcher ...
+type ConnectableDispatcher interface {
+	Dispatcher
+	Connect(chan Message) (*grpc.Server, error)
 }
 
 // Client - client facade interface.
@@ -27,7 +34,7 @@ type Client interface {
 	Cancel() error
 	Info() (StatusResponse, error)
 	Watch(out chan<- Message) error
-	Dispatch(messages ...Message) error
+	Dispatch(ctx context.Context, messages ...Message) error
 }
 
 // ConnectOption - options for connecting to the cluster.

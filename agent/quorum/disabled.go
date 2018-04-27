@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"context"
 	"errors"
 
 	"github.com/hashicorp/raft"
@@ -32,7 +33,7 @@ func (t DisabledMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) 
 }
 
 // Dispatch a message to the WAL.
-func (t DisabledMachine) Dispatch(m ...agent.Message) (err error) {
+func (t DisabledMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
 	return ErrDisabledMachine
 }
 

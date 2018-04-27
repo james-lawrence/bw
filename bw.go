@@ -16,6 +16,8 @@ import (
 const (
 	// DirDeploys the name of the deploys directory.
 	DirDeploys = "deploys"
+	// DirObservers name of the observer directory.
+	DirObservers = "observers"
 	// DirRaft the name of the directory dealing with the raft state.
 	DirRaft = "raft"
 	// DirPlugins the name of the directory dealing with plugins for the agent.

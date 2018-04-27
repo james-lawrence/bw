@@ -136,7 +136,7 @@ func (t worker) work() {
 		// Stop deployment when a single node fails.
 		// TODO: make number of failures allowed configurable.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 			continue
 		}
 
@@ -154,7 +154,7 @@ func (t worker) Complete() (int64, bool) {
 func (t worker) DeployTo(peer agent.Peer) {
 	t.c <- func() {
 		if _, err := t.deploy.Visit(peer); err != nil {
-			t.dispatcher.Dispatch(agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error())))
+			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error()))))
 			atomic.AddInt64(t.failed, 1)
 			return
 		}
@@ -163,7 +163,7 @@ func (t worker) DeployTo(peer agent.Peer) {
 			atomic.AddInt64(t.failed, 1)
 		}
 
-		t.dispatcher.Dispatch(agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 	}
 }
 
@@ -178,8 +178,7 @@ type Deploy struct {
 // failed nodes and if it was considered a success.
 func (t Deploy) Deploy(c cluster) (int64, bool) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
-
-	t.Dispatch(agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
+	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes)))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
@@ -187,20 +186,15 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		go t.worker.work()
 	}
 
-	t.Dispatch(agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
-	awaitCompletion(t, t.worker.check, nodes...)
-	t.Dispatch(agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
+	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready")))
+	awaitCompletion(t.dispatcher, t.worker.check, nodes...)
+	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying")))
 
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)
 	}
 
 	return t.worker.Complete()
-}
-
-// Dispatch - implements dispatcher interface.
-func (t Deploy) Dispatch(m ...agent.Message) error {
-	return logx.MaybeLog(t.worker.dispatcher.Dispatch(m...))
 }
 
 // ApplyFilter applies the filter to the set of peers.

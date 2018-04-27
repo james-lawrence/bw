@@ -57,6 +57,7 @@ message DeployOptions {
   int64 concurrency = 2;    // sets the number of simultaneously instance deploys to run.
   int64 timeout = 3;        // how long to wait before a single deploy is considered a failure.
   bool ignoreFailures = 4;  // ignore failures during the deploy.
+  bool silenceDeployLogs = 5; // silence the deploy logging.
 }
 
 message DeployCommand {
@@ -109,7 +110,7 @@ message DispatchResponse {}
 service Quorum {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
-  rpc Dispatch(stream Message) returns (DispatchResponse) {}
+  rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
   rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
 }
 
@@ -145,4 +146,12 @@ service Agent {
   rpc Deploy(DeployRequest) returns (DeployResponse) {}
   rpc Cancel(CancelRequest) returns (CancelResponse) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
+}
+
+message DispatchRequest {
+  repeated Message messages = 1;
+}
+
+service Observer {
+  rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
 }

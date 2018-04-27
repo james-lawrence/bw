@@ -11,6 +11,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
@@ -53,6 +54,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtocol) deployment.Coordinator) error {
 	var (
 		err           error
+		observersdir  observers.Directory
 		rpcBind       net.Listener
 		server        *grpc.Server
 		c             clustering.Cluster
@@ -85,6 +87,10 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	}
 
 	if creds, err = t.config.BuildServer(); err != nil {
+		return err
+	}
+
+	if observersdir, err = observers.NewDirectory(filepath.Join(t.config.Root, "observers")); err != nil {
 		return err
 	}
 
@@ -160,7 +166,9 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	dispatcher := agentutil.NewDispatcher(cx, qdialer)
 	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}
 	coordinator := newCoordinator(actx, download)
+
 	q := quorum.New(
+		observersdir,
 		cx,
 		proxy.NewProxy(cx),
 		upload,

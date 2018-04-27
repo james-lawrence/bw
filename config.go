@@ -160,6 +160,10 @@ func InitializeDeploymentDirectory(root string) (err error) {
 		return errors.WithStack(err)
 	}
 
+	if err = os.MkdirAll(filepath.Join(root, DirObservers), 0700); err != nil {
+		return errors.WithStack(err)
+	}
+
 	// TODO when we start persisting raft state to disk.
 	// log.Println("creating raft directory", filepath.Join(root, DirRaft))
 	// if err = os.MkdirAll(filepath.Join(root, DirRaft), 0755); err != nil {

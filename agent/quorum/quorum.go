@@ -29,7 +29,7 @@ type stateMachine interface {
 	Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) error
 	// Cancel a deploy.
 	Cancel() error
-	Dispatch(...agent.Message) error
+	Dispatch(context.Context, ...agent.Message) error
 	State() raft.RaftState
 }
 
@@ -65,16 +65,16 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 }
 
 // New new quorum instance based on the options.
-func New(c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
+func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
 	r := Quorum{
-		EventBus: agent.NewEventBusDefault(),
-		bus:      make(chan agent.Message, 100),
-		sm:       &DisabledMachine{},
-		uploads:  upload,
-		dialer:   agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
-		m:        &sync.Mutex{},
-		deploy:   d,
-		c:        c,
+		ConnectableDispatcher: cd,
+		bus:     make(chan agent.Message, 100),
+		sm:      &DisabledMachine{},
+		uploads: upload,
+		dialer:  agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
+		m:       &sync.Mutex{},
+		deploy:  d,
+		c:       c,
 	}
 
 	for _, opt := range options {
@@ -86,7 +86,7 @@ func New(c cluster, d deployer, upload storage.UploadProtocol, options ...Option
 
 // Quorum implements quorum functionality.
 type Quorum struct {
-	agent.EventBus
+	agent.ConnectableDispatcher
 	bus     chan agent.Message
 	sm      stateMachine
 	uploads storage.UploadProtocol
@@ -101,7 +101,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	go func() {
 		for m := range t.bus {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			logx.MaybeLog(errors.Wrap(t.EventBus.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
+			logx.MaybeLog(errors.Wrap(t.ConnectableDispatcher.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
 			cancel()
 		}
 	}()
@@ -109,7 +109,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	go rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
-			wal := NewWAL()
+			wal := NewWAL(t.bus)
 			return &wal
 		}),
 		raftutil.ProtocolOptionObservers(
@@ -136,7 +136,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
 			if o.Raft.State() == raft.Leader {
 				t.sm = func() stateMachine {
-					sm := NewStateMachine(t.c, o.Raft, t.dialer, t.deploy, STOObserver(t.bus))
+					sm := NewStateMachine(t.c, o.Raft, t.dialer, t.deploy)
 					return &sm
 				}()
 			}
@@ -217,12 +217,16 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 
 // Watch watch for events.
 func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
+	var (
+		s *grpc.Server
+	)
+
 	t.m.Lock()
 	p := t.sm
 	t.m.Unlock()
 
-	debugx.Println("watch invoked")
-	defer debugx.Println("watch completed")
+	log.Println("watch invoked")
+	defer log.Println("watch completed")
 
 	switch s := p.State(); s {
 	case raft.Leader, raft.Follower, raft.Candidate:
@@ -230,35 +234,29 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		return errors.Errorf("watch must be run on a member of quorum: %s", s)
 	}
 
-	ctx, done := context.WithCancel(context.Background())
+	events := make(chan agent.Message)
+	if s, err = t.ConnectableDispatcher.Connect(events); err != nil {
+		return logx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
+	}
+	defer s.GracefulStop()
 
-	debugx.Println("event observer: registering")
-	o := t.Register(pbObserver{dst: out, done: done})
-	debugx.Println("event observer: registered")
-	defer t.Remove(o)
-
-	<-ctx.Done()
+	for m := range events {
+		if err = out.Send(&m); err != nil {
+			return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
+		}
+	}
 
 	return nil
 }
 
 // Dispatch record deployment events.
-func (t *Quorum) Dispatch(in agent.Quorum_DispatchServer) (err error) {
-	var (
-		m *agent.Message
-	)
+func (t *Quorum) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
 	debugx.Println("dispatch initiated")
 	defer debugx.Println("dispatch completed")
 
-	for m, err = in.Recv(); err == nil; m, err = in.Recv() {
-		t.m.Lock()
-		p := t.sm
-		t.m.Unlock()
+	t.m.Lock()
+	p := t.sm
+	t.m.Unlock()
 
-		if err = p.Dispatch(*m); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return logx.MaybeLog(errors.Wrap(p.Dispatch(ctx, m...), "failed to dispatch"))
 }
