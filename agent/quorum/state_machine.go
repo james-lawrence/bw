@@ -113,7 +113,7 @@ func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
 	future = t.state.Apply(encoded, 10*time.Second)
 
 	if err = future.Error(); err != nil {
-		return errors.WithStack(future.Error())
+		return errors.WithStack(err)
 	}
 
 	if err, ok = future.Response().(error); ok {

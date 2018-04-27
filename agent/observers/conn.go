@@ -27,22 +27,6 @@ func NewDialer(ctx context.Context, uds string, options ...grpc.DialOption) (c C
 	return Conn{conn: conn}, nil
 }
 
-// func NewClient(uds string, options ...grpc.DialOption) Client {
-// 	return Client{
-// 		uds:     uds,
-// 		options: options,
-// 	}
-// }
-//
-// type Client struct {
-// 	uds     string
-// 	options []grpc.DialOption
-// }
-//
-// func (t Conn) Dispatch(messages ...agent.Message) (err error) {
-//
-// }
-
 // Conn connection to the observer
 type Conn struct {
 	conn *grpc.ClientConn

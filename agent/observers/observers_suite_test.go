@@ -1,6 +1,9 @@
 package observers_test
 
 import (
+	"io/ioutil"
+	"log"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -13,5 +16,5 @@ func TestQuorum(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	// log.SetOutput(ioutil.Discard)
+	log.SetOutput(ioutil.Discard)
 })
