@@ -6,7 +6,6 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 )
 
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
@@ -55,15 +54,11 @@ func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error)
 
 // DefaultDialerOptions sets reasonable defaults for dialing the agent.
 func DefaultDialerOptions(options ...grpc.DialOption) (results []grpc.DialOption) {
-	results = make([]grpc.DialOption, 0, len(options)+2)
-	results = append(results, grpc.WithKeepaliveParams(
-		keepalive.ClientParameters{
-			Time:                5 * time.Second,
-			Timeout:             15 * time.Second,
-			PermitWithoutStream: true,
-		},
-	))
-	results = append(results, grpc.WithBackoffMaxDelay(5*time.Second))
+	results = make([]grpc.DialOption, 0, len(options)+1)
+	results = append(
+		results,
+		grpc.WithBackoffMaxDelay(5*time.Second),
+	)
 
 	return append(results, options...)
 }

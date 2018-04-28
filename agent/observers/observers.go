@@ -10,6 +10,7 @@ import (
 // New observer
 func New(b chan agent.Message) (s *grpc.Server) {
 	s = grpc.NewServer()
+
 	o := Observer{
 		bus: b,
 	}

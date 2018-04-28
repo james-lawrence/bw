@@ -7,8 +7,10 @@ LDFLAGS ?= "-X github.com/james-lawrence/bw/commands.Version=$(RELEASE)"
 generate:
 	go generate ./...
 
-install: generate
+install:
 	go install -ldflags=$(LDFLAGS) $(PACKAGE)/...
+
+build: generate install
 
 install-debug:
 	go install -tags="debug.enabled" -ldflags=$(LDFLAGS) $(PACKAGE)/...

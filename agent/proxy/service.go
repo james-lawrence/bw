@@ -7,6 +7,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/x/logx"
 )
 
 type clusterx interface {
@@ -29,6 +30,9 @@ type Proxy struct {
 }
 
 // Deploy the given archive to the specified peers.
+// The deploy itself is run asychronously as they take awhile, letting callers
+// continue on. But it will error out if there are issues initiating the deploy.
+// such as another deploy is currently running.
 func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
@@ -57,14 +61,15 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
 	}
 
-	dresult := agent.DeployCommand_Failed
-	if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
-		dresult = agent.DeployCommand_Done
-	}
+	// At this point the deploy could take awhile, so we shunt it into the background.
+	go func() {
+		dresult := agent.DeployCommand_Failed
+		if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
+			dresult = agent.DeployCommand_Done
+		}
 
-	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})); err != nil {
-		return err
-	}
+		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})))
+	}()
 
 	return nil
 }
