@@ -97,8 +97,9 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	local := cluster.NewLocal(t.config.Peer())
 	tlscreds := credentials.NewTLS(creds)
 	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
-		Time:    10 * time.Second,
-		Timeout: 3 * time.Second,
+		MaxConnectionIdle: 1 * time.Hour,
+		Time:              1 * time.Minute,
+		Timeout:           2 * time.Minute,
 	})
 	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
 	cdialer := commandutils.NewClusterDialer(
