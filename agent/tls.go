@@ -37,6 +37,7 @@ func (t Config) BuildServer() (creds *tls.Config, err error) {
 	var (
 		ca []byte
 	)
+
 	m := certificatecache.NewDirectory(t.ServerName, t.CredentialsDir)
 	pool := x509.NewCertPool()
 
@@ -45,7 +46,7 @@ func (t Config) BuildServer() (creds *tls.Config, err error) {
 	}
 
 	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return creds, errors.New("failed to append client certs")
+		return creds, errors.New("failed to append client ca")
 	}
 
 	return &tls.Config{

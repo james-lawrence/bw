@@ -18,3 +18,15 @@ const (
 	// DefaultTLSCertServer ...
 	DefaultTLSCertServer = "tlsserver.cert"
 )
+
+// used to refresh credentials.
+type refresher interface {
+	Refresh() error
+}
+
+// // AutomaticRefresh will automatically refresh credentials in the background.
+// // error is returned if something goes wrong prior to starting the goroutine.
+// // once the goroutine is started it will return nil.
+// func AutomaticRefresh(dir string, r refresher) error {
+// 	return nil
+// }

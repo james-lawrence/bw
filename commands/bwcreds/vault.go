@@ -1,18 +1,13 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
-	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/hashicorp/vault/api"
 	"github.com/james-lawrence/bw"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/commands/commandutils"
-	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/pkg/errors"
 )
 
@@ -32,30 +27,6 @@ func (t *vaultCreds) configure(parent *kingpin.CmdClause) {
 }
 
 func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
-	var (
-		client      *api.Client
-		credentials *api.Secret
-		config      *api.Config
-	)
-
-	if config = api.DefaultConfig(); config.Error != nil {
-		return errors.WithStack(config.Error)
-	}
-
-	if client, err = api.NewClient(config); err != nil {
-		return errors.WithStack(err)
-	}
-	client.SetToken(stringsx.DefaultIfBlank(client.Token(), t.readTokenFile()))
-
-	payload := map[string]interface{}{
-		"common_name": t.commonName,
-	}
-
-	if credentials, err = client.Logical().Write(t.path, payload); err != nil {
-		return errors.WithStack(err)
-	}
-
-	log.Println("credentials fingerprint", credentials.Data["serial_number"])
 	if os.Geteuid() > 0 {
 		path := bw.DefaultUserDirLocation(t.environment, "")
 		log.Println("creating workspace configuration directory:", path)
@@ -64,48 +35,12 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 		}
 	}
 
-	capath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertCA)
-	keypath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSKeyClient)
-	certpath := filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertClient)
-	if t.agentCredentials {
-		keypath = filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSKeyServer)
-		certpath = filepath.Join(bw.DefaultLocation(t.environment, ""), cc.DefaultTLSCertServer)
+	vcreds := cc.Vault{
+		DefaultTokenFile: cc.VaultDefaultTokenPath(),
+		CertificateDir:   bw.DefaultLocation(t.environment, ""),
+		CommonName:       t.commonName,
+		Path:             t.path,
 	}
 
-	log.Println("writing private key", keypath)
-	if err = ioutil.WriteFile(keypath, []byte(credentials.Data["private_key"].(string)), 0600); err != nil {
-		return errors.Wrapf(err, "failed to write private key to %s", keypath)
-	}
-
-	log.Println("writing certificate", certpath)
-	if err = ioutil.WriteFile(certpath, []byte(credentials.Data["certificate"].(string)), 0600); err != nil {
-		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
-	}
-
-	log.Println("writing authority certificate", capath)
-	if err = ioutil.WriteFile(capath, []byte(credentials.Data["issuing_ca"].(string)), 0600); err != nil {
-		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
-	}
-
-	return nil
-}
-
-func (t vaultCreds) readTokenFile() string {
-	var (
-		err error
-		u   *user.User
-		raw []byte
-	)
-
-	if u, err = user.Current(); err != nil {
-		commandutils.Verbose.Println("failed to lookup user, vault token not loaded from file", err)
-		return ""
-	}
-
-	if raw, err = ioutil.ReadFile(filepath.Join(u.HomeDir, ".vault-token")); err != nil {
-		commandutils.Verbose.Println("failed to read vault token from file", err)
-		return ""
-	}
-
-	return string(raw)
+	return vcreds.Refresh()
 }
