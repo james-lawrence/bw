@@ -1,8 +1,7 @@
 ordering of tasks in priority order. (minus cleanup those should be done as convient)
 
 #### cleanup/bugfixes
-- properly wait for instance to be reattached to ELBv2.
-- bootstrap process: allow for concurrent bootstraps to occur.
+- add modules for bootstrapping clients seemlessly without the need for bwcreds.
 - update vault credentials to use signing endpoint instead of issue, prevents private key from being
 sent over the wire.
 

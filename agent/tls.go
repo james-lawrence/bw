@@ -17,8 +17,7 @@ import (
 // ConfigClientTLS ...
 func ConfigClientTLS(credentials string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.Key = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSKeyClient), "")
-		c.Cert = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertClient), "")
+		c.CredentialsDir = bw.DefaultLocation(credentials, "")
 		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
 		c.ServerName = systemx.HostnameOrLocalhost()
 	}
@@ -76,14 +75,10 @@ func (t Config) GRPCCredentials() (credentials.TransportCredentials, error) {
 // BuildClient ...
 func (t ConfigClient) BuildClient() (creds *tls.Config, err error) {
 	var (
-		cert tls.Certificate
-		ca   []byte
+		ca []byte
 	)
 
-	if cert, err = tls.LoadX509KeyPair(t.Cert, t.Key); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
+	m := certificatecache.NewDirectory(t.ServerName, t.CredentialsDir)
 	pool := x509.NewCertPool()
 	if ca, err = ioutil.ReadFile(t.CA); err != nil {
 		return nil, errors.WithStack(err)
@@ -94,9 +89,10 @@ func (t ConfigClient) BuildClient() (creds *tls.Config, err error) {
 	}
 
 	creds = &tls.Config{
-		ServerName:   t.ServerName,
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      pool,
+		ServerName:           t.ServerName,
+		RootCAs:              pool,
+		GetCertificate:       m.GetCertificate,
+		GetClientCertificate: m.GetClientCertificate,
 	}
 
 	return creds, nil

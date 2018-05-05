@@ -106,6 +106,7 @@ func (t Directory) refresh() (err error) {
 
 	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSCertClient)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer, DefaultTLSKeyClient)
+
 	log.Println("loading", certpath, keypath)
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {

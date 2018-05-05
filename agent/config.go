@@ -53,14 +53,13 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	Address       string
-	Concurrency   float64
-	DeployTimeout time.Duration `yaml:"deployTimeout"`
-	Key           string
-	Cert          string
-	CA            string
-	ServerName    string
-	Environment   string
+	Address        string
+	Concurrency    float64
+	DeployTimeout  time.Duration `yaml:"deployTimeout"`
+	CredentialsDir string        `yaml:"credentialsDir"`
+	CA             string
+	ServerName     string
+	Environment    string
 }
 
 // Connect to the address in the config client.

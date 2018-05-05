@@ -9,10 +9,6 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 )
 
-type dispatcher interface {
-	Dispatch(msgs ...agent.Message) error
-}
-
 // NewClusterEventHandler ...
 func NewClusterEventHandler(bus chan agent.Message) ClusterEventHandler {
 	return ClusterEventHandler{
