@@ -27,8 +27,10 @@ func (t *vaultCreds) configure(parent *kingpin.CmdClause) {
 }
 
 func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
+	path := bw.DefaultLocation(t.environment, "")
+
 	if os.Geteuid() > 0 {
-		path := bw.DefaultUserDirLocation(t.environment, "")
+		path = bw.DefaultUserDirLocation(t.environment, "")
 		log.Println("creating workspace configuration directory:", path)
 		if err = os.MkdirAll(path, 0700); err != nil {
 			return errors.WithStack(err)
@@ -37,10 +39,10 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 
 	vcreds := cc.Vault{
 		DefaultTokenFile: cc.VaultDefaultTokenPath(),
-		CertificateDir:   bw.DefaultLocation(t.environment, ""),
+		CertificateDir:   path,
 		CommonName:       t.commonName,
 		Path:             t.path,
 	}
 
-	return vcreds.Refresh()
+	return cc.RefreshNow(path, vcreds)
 }
