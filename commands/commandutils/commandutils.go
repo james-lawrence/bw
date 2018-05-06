@@ -8,6 +8,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/x/systemx"
@@ -27,10 +28,19 @@ func NewClientPeer(options ...agent.PeerOption) (p agent.Peer) {
 }
 
 // LoadConfiguration loads the configuration for the given environment.
-func LoadConfiguration(environment string) (agent.ConfigClient, error) {
+func LoadConfiguration(environment string) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
 	log.Println("loading configuration", path)
-	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
+	if config, err = agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path); err != nil {
+		return config, err
+	}
+
+	// load or create credentials.
+	if err = certificatecache.FromConfig(config.CredentialsDir, config.CredentialsMode, path); err != nil {
+		return config, err
+	}
+
+	return config, err
 }
 
 func NewClusterDialer(conf agent.Config, options ...clustering.Option) clustering.Dialer {

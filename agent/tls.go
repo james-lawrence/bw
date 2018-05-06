@@ -17,8 +17,8 @@ import (
 // ConfigClientTLS ...
 func ConfigClientTLS(credentials string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.CredentialsDir = bw.DefaultLocation(credentials, "")
-		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
+		c.CredentialsDir = bw.DefaultUserDirLocation(credentials, "")
+		c.CA = bw.DefaultUserDirLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
 		c.ServerName = systemx.HostnameOrLocalhost()
 	}
 }

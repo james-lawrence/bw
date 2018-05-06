@@ -16,6 +16,7 @@ import (
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/bootstrap"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -75,6 +76,10 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	log.Println("configuration:", spew.Sdump(t.config))
 
 	if err = bw.InitializeDeploymentDirectory(t.config.Root); err != nil {
+		return err
+	}
+
+	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile); err != nil {
 		return err
 	}
 

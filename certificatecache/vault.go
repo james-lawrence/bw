@@ -26,11 +26,15 @@ func VaultDefaultTokenPath() string {
 	return filepath.Join(u.HomeDir, ".vault-token")
 }
 
-// Vault refresh credentials from vault.
+// Vault refresh credentials from vault. To use vault the following values need
+// to be specified in the configuration file.
+// credentialsSource = "vault"
+// vaultPKIPath = "path/to/pki/issue"
+// servername = "example.com"
 type Vault struct {
 	CertificateDir   string
-	Path             string // path to the vault PKI to use for credentials.
-	CommonName       string // common name for certificate, usually a domain name.
+	Path             string `yaml:"vaultPKIPath"` // path to the vault PKI to use for credentials.
+	CommonName       string `yaml:"servername"`   // common name for certificate, usually a domain name. pulls from the servername of the configuration.
 	DefaultTokenFile string // path to the fallback token file.
 }
 

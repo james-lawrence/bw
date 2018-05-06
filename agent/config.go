@@ -40,6 +40,7 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 }
 
 // DefaultConfigClient creates a default client configuration.
+//
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
 		DeployTimeout: 20 * time.Minute,
@@ -53,13 +54,14 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	Address        string
-	Concurrency    float64
-	DeployTimeout  time.Duration `yaml:"deployTimeout"`
-	CredentialsDir string        `yaml:"credentialsDir"`
-	CA             string
-	ServerName     string
-	Environment    string
+	Address         string
+	Concurrency     float64
+	DeployTimeout   time.Duration `yaml:"deployTimeout"`
+	CredentialsMode string        `yaml:"credentialsSource"`
+	CredentialsDir  string        `yaml:"credentialsDir"`
+	CA              string
+	ServerName      string
+	Environment     string
 }
 
 // Connect to the address in the config client.
@@ -269,6 +271,7 @@ type Config struct {
 	Secret                 string
 	ServerName             string
 	CA                     string
+	CredentialsMode        string `yaml:"credentialsSource"`
 	CredentialsDir         string `yaml:"credentialsDir"`
 	TorrentBind            *net.TCPAddr
 	DNSBind                dnsBind  `yaml:"dnsBind"`
