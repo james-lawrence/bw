@@ -40,11 +40,11 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 }
 
 // DefaultConfigClient creates a default client configuration.
-//
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
 		DeployTimeout: 20 * time.Minute,
 		Address:       systemx.HostnameOrLocalhost(),
+		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
 	}
 
 	ConfigClientTLS(certificatecache.DefaultTLSCredentialsRoot)(&config)
@@ -56,6 +56,7 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 type ConfigClient struct {
 	Address         string
 	Concurrency     float64
+	DeployDataDir   string        `yaml:"deployDataDir"`
 	DeployTimeout   time.Duration `yaml:"deployTimeout"`
 	CredentialsMode string        `yaml:"credentialsSource"`
 	CredentialsDir  string        `yaml:"credentialsDir"`

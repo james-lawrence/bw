@@ -27,6 +27,13 @@ func NewClientPeer(options ...agent.PeerOption) (p agent.Peer) {
 	)
 }
 
+// ReadConfiguration reads the configuration for the given environment.
+func ReadConfiguration(environment string) (config agent.ConfigClient, err error) {
+	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	log.Println("loading configuration", path)
+	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
+}
+
 // LoadConfiguration loads the configuration for the given environment.
 func LoadConfiguration(environment string) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)

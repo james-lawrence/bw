@@ -42,9 +42,9 @@ type deployCmd struct {
 	global         *global
 	uxmode         string
 	environment    string
-	deployspace    string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
+	debug          bool
 	ignoreFailures bool
 	silenceLogs    bool
 }
@@ -57,14 +57,13 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeLog).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
-		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deployspace)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
 
 	t.deployCmd(deployOptions(common(parent.Command("all", "deploy to all nodes within the cluster").Default())))
 	t.filteredCmd(deployOptions(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters"))))
-	t.localCmd(common(parent.Command("local", "deploy to the local system"))).Hidden()
+	t.localCmd(common(parent.Command("local", "deploy to the local system")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
@@ -79,6 +78,7 @@ func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
 }
 
 func (t *deployCmd) localCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("debug", "leaves artifacts on the filesystem for debugging").BoolVar(&t.debug)
 	return parent.Action(t.local)
 }
 
@@ -177,7 +177,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		close(events)
 	}()
 
-	if err = ioutil.WriteFile(filepath.Join(t.deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 	events <- agentutil.LogEvent(local.Peer, "archive upload initiated")
@@ -190,7 +190,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = packer.Pack(dst, t.deployspace); err != nil {
+	if err = packer.Pack(dst, config.DeployDataDir); err != nil {
 		return err
 	}
 
@@ -319,7 +319,14 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		dctx    deployment.DeployContext
 		root    string
 		archive agent.Archive
+		config  agent.ConfigClient
 	)
+
+	if config, err = commandutils.ReadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	log.Println("configuration:", spew.Sdump(config))
 
 	local := commandutils.NewClientPeer()
 
@@ -330,7 +337,10 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	if root, err = ioutil.TempDir("", "bwlocal"); err != nil {
 		return err
 	}
-	defer os.RemoveAll(root)
+	log.Println("DEBUG", t.debug, config.DeployDataDir)
+	if !t.debug {
+		defer os.RemoveAll(root)
+	}
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
 		return errors.Wrap(err, "archive creation failed")
@@ -339,12 +349,16 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = packer.Pack(dst, t.deployspace); err != nil {
+	if err = packer.Pack(dst, config.DeployDataDir); err != nil {
 		return errors.Wrap(err, "failed to pack archive")
 	}
 
 	if _, err = dst.Seek(0, io.SeekStart); err != nil {
 		return errors.WithStack(err)
+	}
+
+	if err = os.MkdirAll(filepath.Join(root, "archive"), 0700); err != nil {
+		return errors.Wrap(err, "failed to create archive directory")
 	}
 
 	if err = packer.Unpack(filepath.Join(root, "archive"), dst); err != nil {
