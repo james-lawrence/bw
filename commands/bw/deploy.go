@@ -337,6 +337,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	if root, err = ioutil.TempDir("", "bwlocal"); err != nil {
 		return err
 	}
+
 	log.Println("DEBUG", t.debug, config.DeployDataDir)
 	if !t.debug {
 		defer os.RemoveAll(root)
