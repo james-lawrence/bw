@@ -30,6 +30,13 @@ func CCOptionTLSConfig(name string) ConfigClientOption {
 	return ConfigClientTLS(name)
 }
 
+// CCOptionDeployDataDir set the deployment data directory.
+func CCOptionDeployDataDir(dir string) ConfigClientOption {
+	return func(cc *ConfigClient) {
+		cc.DeployDataDir = dir
+	}
+}
+
 // NewConfigClient ...
 func NewConfigClient(template ConfigClient, options ...ConfigClientOption) ConfigClient {
 	for _, opt := range options {

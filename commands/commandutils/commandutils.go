@@ -35,10 +35,10 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 }
 
 // LoadConfiguration loads the configuration for the given environment.
-func LoadConfiguration(environment string) (config agent.ConfigClient, err error) {
+func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
 	log.Println("loading configuration", path)
-	if config, err = agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path); err != nil {
+	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
 		return config, err
 	}
 

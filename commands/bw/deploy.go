@@ -39,14 +39,15 @@ const (
 )
 
 type deployCmd struct {
-	global         *global
-	uxmode         string
-	environment    string
-	filteredIP     []net.IP
-	filteredRegex  []*regexp.Regexp
-	debug          bool
-	ignoreFailures bool
-	silenceLogs    bool
+	global                *global
+	uxmode                string
+	environment           string
+	deprecatedDeployspace string
+	filteredIP            []net.IP
+	filteredRegex         []*regexp.Regexp
+	debug                 bool
+	ignoreFailures        bool
+	silenceLogs           bool
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
@@ -57,6 +58,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeLog).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
+		cmd.Flag("deployspace", "root directory of the deployspace being deployed").Hidden().Default(bw.LocateDeployspace(bw.DefaultDeployspaceDir)).StringVar(&t.deprecatedDeployspace)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
@@ -124,7 +126,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		archive agent.Archive
 	)
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionDeployDataDir(t.deprecatedDeployspace)); err != nil {
 		return err
 	}
 
