@@ -192,7 +192,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
-	t.runServer(server, c, rpcBind)
+	t.runServer(server, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
 	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
@@ -207,7 +207,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	return nil
 }
 
-func (t *agentCmd) runServer(server *grpc.Server, c clustering.Cluster, listeners ...net.Listener) {
+func (t *agentCmd) runServer(server *grpc.Server, listeners ...net.Listener) {
 	for _, l := range listeners {
 		go server.Serve(l)
 	}

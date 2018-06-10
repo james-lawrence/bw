@@ -35,12 +35,22 @@ const (
 const (
 	// ModeVault refresh certificates using vault's PKI
 	ModeVault = "vault"
+	// ModeACME2 acme v2 protocol.
+	ModeACME2 = "ACMEv2"
 )
 
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configname string) (err error) {
 	switch mode {
+	case ModeACME2:
+		v := ACME{}
+
+		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
+			return err
+		}
+
+		return RefreshAutomatic(dir, nopRefresh{})
 	case ModeVault:
 		v := Vault{
 			DefaultTokenFile: VaultDefaultTokenPath(),

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,10 +31,32 @@ func CCOptionTLSConfig(name string) ConfigClientOption {
 	return ConfigClientTLS(name)
 }
 
-// CCOptionDeployDataDir set the deployment data directory.
-func CCOptionDeployDataDir(dir string) ConfigClientOption {
-	return func(cc *ConfigClient) {
-		cc.DeployDataDir = dir
+// CCOptionAddress set address for the configuration.
+func CCOptionAddress(s string) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.Address = net.JoinHostPort(s, strconv.Itoa(DefaultPortRPC))
+		c.ServerName = s
+	}
+}
+
+// CCOptionDeployDataDir set the deployment configuration directory for the configuration.
+func CCOptionDeployDataDir(s string) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.DeployDataDir = s
+	}
+}
+
+// CCOptionConcurrency set the deployment configuration directory for the configuration.
+func CCOptionConcurrency(d float64) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.Concurrency = d
+	}
+}
+
+// CCOptionEnvironment set the environment string for the configuration.
+func CCOptionEnvironment(s string) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.Environment = s
 	}
 }
 

@@ -8,6 +8,14 @@ import (
 	"github.com/james-lawrence/bw/x/systemx"
 )
 
+// Default ports for the agent
+const (
+	DefaultPortRPC     = 2000
+	DefaultPortSWIM    = 2001
+	DefaultPortRaft    = 2002
+	DefaultPortTorrent = 2003
+)
+
 // RPCAddress for peer.
 func RPCAddress(p Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
@@ -84,10 +92,10 @@ func NewPeer(id string, opts ...PeerOption) Peer {
 	p := Peer{
 		Name:        id,
 		Ip:          systemx.HostIP(hn).String(),
-		RPCPort:     2000,
-		SWIMPort:    2001,
-		RaftPort:    2002,
-		TorrentPort: 2003,
+		RPCPort:     DefaultPortRPC,
+		SWIMPort:    DefaultPortSWIM,
+		RaftPort:    DefaultPortRaft,
+		TorrentPort: DefaultPortTorrent,
 		Status:      Peer_Node,
 	}
 

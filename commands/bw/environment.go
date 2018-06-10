@@ -1,13 +1,15 @@
 package main
 
 import (
-	"html/template"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
+	yaml "gopkg.in/yaml.v2"
 
 	"github.com/james-lawrence/bw"
 )
@@ -38,30 +40,29 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 	type context struct {
 		Address string
 	}
-	const (
-		skeletonEnvironment = `address: "{{.Address}}:2000"
-servername: "{{.Address}}"
-deployTimeout: "3m"
-concurrency: 0.2
-environment: |
-	BEARDED_WOOKIE_EXAMPLE=ENVIRONMENT_VARIABLE
-`
-	)
+
 	var (
-		dst *os.File
+		encoded []byte
+		cc      agent.ConfigClient
 	)
 
 	if err = errors.WithStack(os.MkdirAll(t.path, 0755)); err != nil {
 		return err
 	}
 
-	if dst, err = os.Create(filepath.Join(t.path, t.name)); err != nil {
-		return errors.WithStack(err)
-	}
-	defer dst.Close()
+	cc = agent.DefaultConfigClient(
+		agent.CCOptionAddress(t.dialAddress),
+		agent.CCOptionConcurrency(1),
+		agent.CCOptionTLSConfig(t.name),
+		agent.CCOptionEnvironment("BEARDED_WOOKIE_EXAMPLE=ENVIRONMENT_VARIABLE\nFOO=BAR\n"),
+	)
 
-	if err = template.Must(template.New("").Parse(skeletonEnvironment)).Execute(dst, context{Address: t.dialAddress}); err != nil {
-		return errors.WithStack(err)
+	if encoded, err = yaml.Marshal(cc); err != nil {
+		return errors.Wrap(err, "failed to encode configuration, try updating to a newer bearded wookie version")
+	}
+
+	if err = ioutil.WriteFile(filepath.Join(t.path, t.name), encoded, 0600); err != nil {
+		return errors.Wrap(err, "failed to write configuration")
 	}
 
 	environmentCredentialsDir := bw.DefaultLocation(t.name, "")

@@ -8,6 +8,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/james-lawrence/bw/x/systemx"
 	"google.golang.org/grpc/credentials"
 
@@ -19,7 +20,7 @@ func ConfigClientTLS(credentials string) ConfigClientOption {
 	return func(c *ConfigClient) {
 		c.CredentialsDir = bw.DefaultUserDirLocation(credentials, "")
 		c.CA = bw.DefaultUserDirLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
-		c.ServerName = systemx.HostnameOrLocalhost()
+		c.ServerName = stringsx.DefaultIfBlank(c.ServerName, systemx.HostnameOrLocalhost())
 	}
 }
 
@@ -28,7 +29,7 @@ func newTLSAgent(credentials, override string) ConfigOption {
 	return func(c *Config) {
 		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), override)
 		c.CredentialsDir = bw.DefaultLocation(credentials, override)
-		c.ServerName = systemx.HostnameOrLocalhost()
+		c.ServerName = stringsx.DefaultIfBlank(c.ServerName, systemx.HostnameOrLocalhost())
 	}
 }
 

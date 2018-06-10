@@ -11,6 +11,14 @@ bearded-wookie uses SSL/TLS to encrypt all data transfered between agents and cl
 - no centralized server.
 - ease of use. mainly around deployment and initial setup.
 
+### quick start
+```bash
+# create the deployment configuration.
+bw environment create app-staging app.deploy.example.com
+# bootstrap the configuration directory
+bw workspace bootstrap
+```
+
 #### workspace
 workspace are the top level namespace that describes a deployment.
 generally projects only have a single workspace. But multiple workspace may be
@@ -29,10 +37,9 @@ come in three types: package installation (.bwpkg), commands (.bwcmd), file arch
 
 example commands:  
  - `bw credentials create {common-name} {hosts...}` generates ssl/tls certificates for use with bw.  
- - `bw workspace create` creates a deployment workspace. this is a directory + skeleton.  
- - `bw environment create {address}`  
+ - `bw environment create {name} {address}`  
+ - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.  
  - `bw agent` runs a bearded-wookie agent.  
  - `bw deploy {environment}` deploy to the production environment  
- - `bw deploy --workspace=".bw" {environment}`  
  - `bw deploy filtered --name='node1' --name='us-east.*' production` to the servers that match the given filters, in this case agents have the name `node1` or match the regex `us-east.*`.  
  - `bw info {environment}` display information and receive events about the environment.  
