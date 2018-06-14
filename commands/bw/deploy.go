@@ -330,6 +330,10 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println("configuration:", spew.Sdump(config))
 
+	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+		return err
+	}
+
 	local := commandutils.NewClientPeer()
 
 	if sctx, err = shell.DefaultContext(); err != nil {
