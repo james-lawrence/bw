@@ -376,14 +376,17 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Location: dst.Name(),
 	}
 
-	if dctx, err = deployment.NewDeployContext(root, local, agent.DeployOptions{}, archive); err != nil {
+	dopts := agent.DeployOptions{
+		Timeout: int64(config.DeployTimeout),
+	}
+
+	if dctx, err = deployment.NewDeployContext(root, local, dopts, archive); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 
 	deploy := deployment.NewDirective(
 		deployment.DirectiveOptionShellContext(sctx),
 	)
-
 	deploy.Deploy(dctx)
 
 	result := deployment.AwaitDeployResult(dctx)
