@@ -43,7 +43,7 @@ func (t *agentInfo) _info() (err error) {
 	var (
 		c      clustering.Cluster
 		client agent.Client
-		dialer agent.Dialer
+		d      agent.Dialer
 		config agent.ConfigClient
 	)
 	defer t.global.shutdown()
@@ -67,9 +67,11 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if client, dialer, c, err = config.Connect(coptions...); err != nil {
+	if client, d, c, err = config.Connect(coptions...); err != nil {
 		return err
 	}
+
+	logx.MaybeLog(errors.Wrap(client.Close(), "failed to close unused client"))
 
 	cx := cluster.New(local, c)
 	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
@@ -88,7 +90,7 @@ func (t *agentInfo) _info() (err error) {
 		}
 
 		return nil
-	}))(cx, dialer)
+	}))(cx, d)
 	logx.MaybeLog(err)
 
 	events := make(chan agent.Message, 100)
@@ -97,5 +99,6 @@ func (t *agentInfo) _info() (err error) {
 	go ux.Logging(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("awaiting events")
-	return client.Watch(events)
+	WatchEvents(d, cx, events)
+	return nil
 }
