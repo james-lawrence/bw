@@ -31,6 +31,7 @@ import (
 	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -120,6 +121,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		err     error
 		dst     *os.File
 		dstinfo os.FileInfo
+		d       agent.Dialer
 		client  agent.Client
 		config  agent.ConfigClient
 		c       clustering.Cluster
@@ -158,7 +160,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, _, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
@@ -170,14 +172,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	go func() {
-		// TODO: reconnect when events connection is lost.
-		if watcherr := client.Watch(events); err != nil {
-			events <- agentutil.LogError(local.Peer, errors.Wrap(watcherr, "events connection lost"))
-		}
-		<-t.global.ctx.Done()
-		close(events)
-	}()
+	cx := cluster.New(local, c)
+	go t.eventsWatcher(d, cx, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -216,7 +212,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: location(%s)", archive.Location))
 
-	cx := cluster.New(local, c)
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)
 	dopts := agent.DeployOptions{
@@ -391,4 +386,30 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 
 	result := deployment.AwaitDeployResult(dctx)
 	return result.Error
+}
+
+func (t *deployCmd) eventsWatcher(d agent.Dialer, c cluster.Cluster, events chan agent.Message) {
+	rl := rate.NewLimiter(rate.Every(time.Second), 1)
+	for {
+		var (
+			err   error
+			qc    agent.Client
+			local = c.Local()
+		)
+
+		if err = rl.Wait(context.Background()); err != nil {
+			events <- agentutil.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			continue
+		}
+
+		if qc, err = agent.NewQuorumDialer(d).Dial(c); err != nil {
+			events <- agentutil.LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+			continue
+		}
+
+		if err = qc.Watch(events); err != nil {
+			events <- agentutil.LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			continue
+		}
+	}
 }

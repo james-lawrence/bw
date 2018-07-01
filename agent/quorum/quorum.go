@@ -248,13 +248,19 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
 		return logx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
 	}
+
 	defer l.Close()
 	defer s.GracefulStop()
 
 	for {
 		select {
+		// useful code for testing clients for timeouts.
+		// case _ = <-time.After(5 * time.Second):
+		// 	return logx.MaybeLog(errors.New("timed out"))
+		case _ = <-out.Context().Done():
+			return logx.MaybeLog(errors.WithStack(out.Context().Err()))
 		case _ = <-t.lost:
-			return nil
+			return logx.MaybeLog(errors.New("leadership lost, failed to deliver message"))
 		case m := <-events:
 			if err = out.Send(&m); err != nil {
 				return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
