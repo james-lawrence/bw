@@ -149,7 +149,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(deployclient.AliveHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 			clustering.OptionLogOutput(ioutil.Discard),
 		),
 	}
@@ -264,7 +264,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(deployclient.AliveHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 			clustering.OptionLogOutput(ioutil.Discard),
 		),
 	}
