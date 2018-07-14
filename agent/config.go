@@ -72,7 +72,7 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		DeployTimeout: 20 * time.Minute,
+		DeployTimeout: bw.DefaultDeployTimeout,
 		Address:       systemx.HostnameOrLocalhost(),
 		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
 	}
@@ -203,13 +203,12 @@ func BootstrapPeers(peers ...*Peer) peering.Static {
 // NewConfig creates a default configuration.
 func NewConfig(options ...ConfigOption) Config {
 	c := Config{
-		Name:                   systemx.HostnameOrLocalhost(),
-		Root:                   filepath.Join("/", "var", "cache", bw.DefaultDir),
-		KeepN:                  3,
-		SnapshotFrequency:      time.Hour,
-		MinimumNodes:           3,
-		BootstrapAttempts:      math.MaxInt32,
-		BootstrapDeployTimeout: 5 * time.Minute,
+		Name:              systemx.HostnameOrLocalhost(),
+		Root:              filepath.Join("/", "var", "cache", bw.DefaultDir),
+		KeepN:             3,
+		SnapshotFrequency: time.Hour,
+		MinimumNodes:      3,
+		BootstrapAttempts: math.MaxInt32,
 		DNSBind: dnsBind{
 			TTL:       60,
 			Frequency: time.Hour,
@@ -289,25 +288,24 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 
 // Config - configuration for agent processes.
 type Config struct {
-	Name                   string
-	Root                   string        // root directory to store long term data.
-	KeepN                  int           `yaml:"keepN"`
-	MinimumNodes           int           `yaml:"minimumNodes"`
-	BootstrapAttempts      int           `yaml:"bootstrapAttempts"`
-	SnapshotFrequency      time.Duration `yaml:"snapshotFrequency"`
-	BootstrapDeployTimeout time.Duration `yaml:"bootstrapDeployTimeout"`
-	RPCBind                *net.TCPAddr
-	RaftBind               *net.TCPAddr
-	SWIMBind               *net.TCPAddr
-	Secret                 string
-	ServerName             string
-	CA                     string
-	CredentialsMode        string `yaml:"credentialsSource"`
-	CredentialsDir         string `yaml:"credentialsDir"`
-	TorrentBind            *net.TCPAddr
-	DNSBind                dnsBind  `yaml:"dnsBind"`
-	DNSBootstrap           []string `yaml:"dnsBootstrap"`
-	AWSBootstrap           struct {
+	Name              string
+	Root              string        // root directory to store long term data.
+	KeepN             int           `yaml:"keepN"`
+	MinimumNodes      int           `yaml:"minimumNodes"`
+	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
+	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
+	RPCBind           *net.TCPAddr
+	RaftBind          *net.TCPAddr
+	SWIMBind          *net.TCPAddr
+	Secret            string
+	ServerName        string
+	CA                string
+	CredentialsMode   string `yaml:"credentialsSource"`
+	CredentialsDir    string `yaml:"credentialsDir"`
+	TorrentBind       *net.TCPAddr
+	DNSBind           dnsBind  `yaml:"dnsBind"`
+	DNSBootstrap      []string `yaml:"dnsBootstrap"`
+	AWSBootstrap      struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
 }

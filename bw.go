@@ -26,6 +26,9 @@ const (
 	DirTorrents = "torrents"
 	// EnvFile environment file name.
 	EnvFile = "bw.env"
+
+	// DefaultDeployTimeout default timeout for a deployment.
+	DefaultDeployTimeout = time.Hour
 )
 
 // RandomID a random identifier.

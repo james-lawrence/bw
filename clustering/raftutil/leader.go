@@ -2,8 +2,10 @@ package raftutil
 
 import (
 	"log"
+	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 )
@@ -73,11 +75,15 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	for _, peer := range candidates {
 		if rs, err = t.protocol.RaftAddr(peer); err != nil {
 			log.Println("failed to lookup peer", err)
-
 			return true
 		}
 
 		peers = removePeer(rs.ID, peers...)
+
+		if len(strings.TrimSpace(string(rs.Address))) == 0 {
+			log.Println("skipping, detected empty address", spew.Sdump(peer), spew.Sdump(rs))
+			continue
+		}
 
 		if err = t.r.AddVoter(rs.ID, rs.Address, t.r.GetConfiguration().Index(), commitTimeout).Error(); err != nil {
 			log.Println("failed to add peer", err)

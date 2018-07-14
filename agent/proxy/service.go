@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -59,6 +60,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
+		deployment.DeployOptionTimeout(time.Duration(dopts.Timeout)),
 	}
 
 	// At this point the deploy could take awhile, so we shunt it into the background.

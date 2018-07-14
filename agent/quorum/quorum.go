@@ -238,7 +238,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	log.Println("watch invoked")
 	defer log.Println("watch completed")
 
-	switch s := p.State(); s {
+	switch state := p.State(); state {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
 		return errors.Errorf("watch must be run on a member of quorum: %s", s)
