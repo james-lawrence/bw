@@ -10,9 +10,14 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/backoff"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/x/timex"
 	"github.com/pkg/errors"
 )
+
+const deployGracePeriod = time.Minute
 
 // partitioner determines the number of nodes to simultaneously deploy to
 // based on the total number of nodes.
@@ -83,6 +88,14 @@ func DeployOptionIgnoreFailures(ignore bool) Option {
 	}
 }
 
+// DeployOptionTimeout set the timeout for each deployment. if it takes longer than
+// the provided timeout + a small grace period then give up and consider it failed.
+func DeployOptionTimeout(t time.Duration) Option {
+	return func(d *Deploy) {
+		d.worker.timeout = t + deployGracePeriod
+	}
+}
+
 // NewDeploy by default deploys operate in one-at-a-time mode.
 func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
@@ -96,6 +109,7 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 			local:      p,
 			completed:  new(int64),
 			failed:     new(int64),
+			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
 		},
 		partitioner: bw.ConstantPartitioner(1),
 	}
@@ -128,6 +142,7 @@ type worker struct {
 	completed      *int64
 	failed         *int64
 	ignoreFailures bool
+	timeout        time.Duration
 }
 
 func (t worker) work() {
@@ -159,8 +174,13 @@ func (t worker) DeployTo(peer agent.Peer) {
 			return
 		}
 
-		if success := awaitCompletion(t.dispatcher, t.check, peer); !success {
+		if failure := awaitCompletion(t.timeout, t.dispatcher, t.check, peer); failure != nil {
 			atomic.AddInt64(t.failed, 1)
+			switch errors.Cause(failure).(type) {
+			case errorsx.Timeout:
+				logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, failure))))
+			default:
+			}
 		}
 
 		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
@@ -187,7 +207,15 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 
 	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready")))
-	awaitCompletion(t.dispatcher, t.worker.check, nodes...)
+	if failure := awaitCompletion(t.worker.timeout, t.dispatcher, t.worker.check, nodes...); failure != nil {
+		switch errors.Cause(failure).(type) {
+		case errorsx.Timeout:
+			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy")))
+			return 0, false
+		default:
+		}
+	}
+
 	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying")))
 
 	for _, peer := range nodes {
@@ -209,12 +237,22 @@ func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	return subset
 }
 
-func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
+func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers ...agent.Peer) error {
 	remaining := make([]agent.Peer, 0, len(peers))
-	success := true
-	for len(peers) > 0 {
+	failed := error(nil)
+
+	b := backoff.Maximum(timex.DurationMin(time.Minute, timeout/4), backoff.Exponential(time.Second))
+	deadline := time.Now().Add(timeout)
+
+	for attempt := 0; len(peers) > 0; attempt++ {
 		remaining = remaining[:0]
 		for _, peer := range peers {
+			// if deadline has passed, give up.
+			if time.Now().After(deadline) {
+				failed = errorsx.Compact(failed, errorsx.Timedout(errors.Errorf("%s: deadline passed for deploy", peer.Name), timeout))
+				continue
+			}
+
 			deploy, err := check.Visit(peer)
 			if err != nil {
 				log.Printf("failed to check: %s - %T, %s\n", peer.Name, errors.Cause(err), err)
@@ -223,17 +261,17 @@ func awaitCompletion(d dispatcher, check operation, peers ...agent.Peer) bool {
 				case agent.Deploy_Completed:
 					continue
 				case agent.Deploy_Failed:
-					success = false
+					failed = errorsx.Compact(failed, errors.Errorf("%s: deployment has failed"))
 					continue
 				}
 			}
 
 			remaining = append(remaining, peer)
-			time.Sleep(time.Second)
+			time.Sleep(b.Backoff(attempt))
 		}
 
 		peers = remaining
 	}
 
-	return success
+	return failed
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"log"
 	"net"
@@ -195,10 +194,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	t.runServer(server, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
-	deadline, done := context.WithTimeout(context.Background(), t.config.BootstrapDeployTimeout)
-	defer done()
-
-	if !bootstrap.UntilSuccess(deadline, local.Peer, cx, dialer, coordinator) {
+	if !bootstrap.UntilSuccess(t.config.BootstrapAttempts, local.Peer, cx, dialer, coordinator) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

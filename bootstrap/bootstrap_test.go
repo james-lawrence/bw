@@ -111,7 +111,7 @@ var _ = Describe("Bootstrap", func() {
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
 		)
-		Expect(Bootstrap(context.Background(), p, mc, fd, dc)).ToNot(HaveOccurred())
+		Expect(Bootstrap(p, mc, fd, dc)).ToNot(HaveOccurred())
 	})
 
 	It("should fail when it fails to download the archive", func() {
@@ -156,7 +156,7 @@ var _ = Describe("Bootstrap", func() {
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
 		)
-		Expect(errors.Cause(Bootstrap(context.Background(), p, mc, fd, dc))).To(MatchError("download failed"))
+		Expect(errors.Cause(Bootstrap(p, mc, fd, dc))).To(MatchError("download failed"))
 	})
 
 	It("should fail when the deployment fails", func() {
@@ -201,6 +201,6 @@ var _ = Describe("Bootstrap", func() {
 			noopDeployer{err: errors.New("deployment failed")},
 			deployment.CoordinatorOptionStorage(reg),
 		)
-		Expect(errors.Cause(Bootstrap(context.Background(), p, mc, fd, dc))).To(MatchError("deployment failed"))
+		Expect(errors.Cause(Bootstrap(p, mc, fd, dc))).To(MatchError("deployment failed"))
 	})
 })

@@ -26,22 +26,16 @@ type cluster interface {
 	Connect() agent.ConnectResponse
 }
 
-// UntilSuccess continuously bootstraps until it succeeds.
-func UntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
+// UntilSuccess continuously bootstraps until it succeeds or hits maximum attempts.
+func UntilSuccess(maxAttempts int, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
 	var (
 		err error
 	)
 
 	bs := backoff.Maximum(10*time.Second, backoff.Exponential(2*time.Second))
 
-	for i := 0; ; i++ {
-		select {
-		case <-ctx.Done():
-			return false
-		default:
-		}
-
-		if err = Bootstrap(ctx, local, c, dialer, coord); err != nil {
+	for i := 0; i < maxAttempts; i++ {
+		if err = Bootstrap(local, c, dialer, coord); err != nil {
 			log.Println("failed bootstrap", err)
 			time.Sleep(bs.Backoff(i))
 			log.Println("REATTEMPT BOOTSTRAP")
@@ -50,10 +44,12 @@ func UntilSuccess(ctx context.Context, local agent.Peer, c cluster, dialer diale
 
 		return true
 	}
+
+	return false
 }
 
 // Bootstrap a server with the latest deploy.
-func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
+func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
 	var (
 		status agent.StatusResponse
 		latest agent.Deploy
@@ -98,25 +94,18 @@ func Bootstrap(ctx context.Context, local agent.Peer, c cluster, dialer dialer, 
 		return nil
 	}
 
-	// default opts, temporary until next version fixes the storage of opts as part of
-	// the deploy metadata.
-	opts := agent.DeployOptions{Timeout: int64(time.Hour)}
-	if latest.Options != nil {
-		opts = *latest.Options
-		if opts.Timeout == 0 {
-			log.Println("--------------------- USING TIMEOUT FROM LATEST", spew.Sdump(latest.Options))
-			opts.Timeout = int64(time.Hour)
-		}
-	}
+	opts := *latest.Options
 
+	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
+	defer cancel()
 	log.Println("bootstrapping with options", spew.Sdump(opts))
 	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 
 	select {
-	case <-ctx.Done():
-		return errors.Wrap(ctx.Err(), "failed to bootstrap timeout")
+	case <-deadline.Done():
+		return errors.Wrap(deadline.Err(), "failed to bootstrap timeout")
 	case deploy := <-deployResults:
 		return errors.Wrap(deploy.Error, "deployment failed")
 	}

@@ -183,8 +183,6 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 
 	dcopts := []DeployContextOption{
 		DeployContextOptionDispatcher(t.dispatcher),
-		DeployContextOptionDeadline(time.Duration(opts.Timeout)),
-		DeployContextOptionQuiet(opts.SilenceDeployLogs),
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {

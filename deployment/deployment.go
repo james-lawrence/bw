@@ -35,22 +35,6 @@ func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
 	}
 }
 
-// DeployContextOptionDeadline ...
-func DeployContextOptionDeadline(d time.Duration) DeployContextOption {
-	return func(dctx *DeployContext) {
-		dctx.maxDuration = d
-	}
-}
-
-// DeployContextOptionQuiet disable logging, only used in tests.
-func DeployContextOptionQuiet(quiet bool) DeployContextOption {
-	return func(dctx *DeployContext) {
-		if quiet {
-			dctx.Log = dlog{log: log.New(ioutil.Discard, "", 0)}
-		}
-	}
-}
-
 // AwaitDeployResult waits for the deployment result of the context
 func AwaitDeployResult(dctx DeployContext) DeployResult {
 	defer close(dctx.completed)
@@ -76,8 +60,11 @@ func NewDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a
 		return _did, errors.WithMessage(err, "failed to create archive directory")
 	}
 
-	if logfile, logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
-		return _did, err
+	logger = dlog{log: log.New(ioutil.Discard, "", 0)}
+	if !dopts.SilenceDeployLogs {
+		if logfile, logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
+			return _did, err
+		}
 	}
 
 	dctx := DeployContext{
@@ -90,7 +77,6 @@ func NewDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a
 		DeployOptions: dopts,
 		logfile:       logfile,
 		dispatcher:    agentutil.LogDispatcher{},
-		maxDuration:   5 * time.Minute,
 		completed:     make(chan DeployResult),
 		done:          &sync.Once{},
 	}
@@ -98,8 +84,9 @@ func NewDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a
 	for _, opt := range options {
 		opt(&dctx)
 	}
-	log.Println("---------------------- DURATION", dctx.maxDuration, "----------------------")
-	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.maxDuration)
+
+	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")
+	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
 	return dctx, nil
 }
 
@@ -115,10 +102,13 @@ type DeployContext struct {
 	Archive       agent.Archive
 	DeployOptions agent.DeployOptions
 	dispatcher    dispatcher
-	maxDuration   time.Duration
 	deadline      context.Context
 	cancel        context.CancelFunc
 	done          *sync.Once
+}
+
+func (t DeployContext) timeout() time.Duration {
+	return time.Duration(t.DeployOptions.Timeout)
 }
 
 // Dispatch an event to the cluster
@@ -157,10 +147,10 @@ type logger interface {
 
 func newCancelDeployContext() DeployContext {
 	return DeployContext{
-		dispatcher:  agentutil.DiscardDispatcher{},
-		maxDuration: 5 * time.Minute,
-		completed:   make(chan DeployResult),
-		cancel:      func() {},
+		dispatcher:    agentutil.DiscardDispatcher{},
+		DeployOptions: agent.DeployOptions{Timeout: int64(bw.DefaultDeployTimeout)},
+		completed:     make(chan DeployResult),
+		cancel:        func() {},
 	}
 }
 
