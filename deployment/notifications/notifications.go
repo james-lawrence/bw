@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	envDeployID     = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID"
-	envDeployResult = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT"
+	envDeployID        = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID"
+	envDeployResult    = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT"
+	envDeployInitiator = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR"
 )
 
 // Creator ...
@@ -67,6 +68,11 @@ func ExpandEnv(s string, dc agent.DeployCommand) string {
 			return bw.RandomID(dc.Archive.DeploymentID).String()
 		case envDeployResult:
 			return dc.Command.String()
+		case envDeployInitiator:
+			if dc.Archive == nil {
+				return ""
+			}
+			return dc.Archive.GetInitiator()
 		default:
 			return os.Getenv(key)
 		}

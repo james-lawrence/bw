@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/james-lawrence/bw/agent"
@@ -9,7 +10,7 @@ import (
 // New ...
 func New() *Stderr {
 	return &Stderr{
-		Message: "deploy ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT}",
+		Message: fmt.Sprintf("deploy ${%s} - ${%s} - ${%s}", envDeployInitiator, envDeployID, envDeployResult),
 	}
 }
 

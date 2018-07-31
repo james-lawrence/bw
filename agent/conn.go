@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -159,7 +160,7 @@ func (t Conn) Info() (_zeroInfo StatusResponse, err error) {
 	return *info, nil
 }
 
-// Watch watch for messages sent to the leader. blocks.
+// Watch for messages sent to the leader. blocks.
 func (t Conn) Watch(out chan<- Message) (err error) {
 	var (
 		src Quorum_WatchClient
@@ -177,7 +178,7 @@ func (t Conn) Watch(out chan<- Message) (err error) {
 		out <- *msg
 	}
 
-	return errors.WithStack(err)
+	return errorsx.Compact(errors.WithStack(err), src.CloseSend())
 }
 
 // Dispatch messages to the leader.

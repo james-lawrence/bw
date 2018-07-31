@@ -9,18 +9,22 @@ import (
 	"google.golang.org/grpc"
 )
 
+type dialer interface {
+	Dial(p Peer) (Client, error)
+}
+
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
-func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Conn, err error) {
+func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Client, err error) {
 	if conn, err = Dial(proxy, options...); err != nil {
 		return conn, err
 	}
 	defer conn.Close()
 
-	return ProxyDialQuorum(conn, options...)
+	return ProxyDialQuorum(conn, NewDialer(options...))
 }
 
 // ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
-func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error) {
+func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 	var (
 		cinfo ConnectResponse
 	)
@@ -30,7 +34,7 @@ func ProxyDialQuorum(c Client, options ...grpc.DialOption) (conn Conn, err error
 	}
 
 	for _, q := range PtrToPeers(cinfo.Quorum...) {
-		if conn, err = Dial(RPCAddress(q), options...); err != nil {
+		if conn, err = d.Dial(q); err != nil {
 			log.Println("failed to dial", RPCAddress(q), err)
 			continue
 		}
@@ -71,8 +75,15 @@ func NewDialer(options ...grpc.DialOption) Dialer {
 	}
 }
 
+// NewProxyDialer creates a new dialer that connects to a member of the quorum via a proxy agent.
+func NewProxyDialer(d dialer) ProxyQuorumDialer {
+	return ProxyQuorumDialer{
+		d: d,
+	}
+}
+
 // NewQuorumDialer creates a new dialer that connects to a member of the quorum.
-func NewQuorumDialer(d Dialer) QuorumDialer {
+func NewQuorumDialer(d dialer) QuorumDialer {
 	return QuorumDialer{
 		dialer: d,
 	}
@@ -96,9 +107,24 @@ func (t Dialer) Dial(p Peer) (zeroc Client, err error) {
 	return Dial(addr, t.options...)
 }
 
+// ProxyQuorumDialer connects to the quorum using an agent as a proxy.
+type ProxyQuorumDialer struct {
+	d dialer
+}
+
+// Dial a member of quorum using the provided peer as the proxy.
+func (t ProxyQuorumDialer) Dial(p Peer) (conn Client, err error) {
+	if conn, err = t.d.Dial(p); err != nil {
+		return conn, err
+	}
+	defer conn.Close()
+
+	return ProxyDialQuorum(conn, t.d)
+}
+
 // QuorumDialer connects to a member of the quorum.
 type QuorumDialer struct {
-	dialer Dialer
+	dialer dialer
 }
 
 // Dial connects to a member of the quorum based on the cluster.

@@ -99,6 +99,6 @@ func (t *agentInfo) _info() (err error) {
 	go ux.Logging(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("awaiting events")
-	WatchEvents(d, cx, events)
+	agentutil.WatchClusterEvents(d, cx, events)
 	return nil
 }

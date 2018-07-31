@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"path/filepath"
-	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -30,8 +29,7 @@ func (t *agentNotify) configure(parent *kingpin.CmdClause) {
 
 func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
-		client agent.Client
-		creds  credentials.TransportCredentials
+		creds credentials.TransportCredentials
 	)
 	defer t.global.shutdown()
 
@@ -45,18 +43,6 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if client, err = agent.AddressProxyDialQuorum(t.config.RPCBind.String(), grpc.WithTransportCredentials(creds)); err != nil {
-		return err
-	}
-
-	t.global.cleanup.Add(1)
-	go func() {
-		defer t.global.cleanup.Done()
-		<-t.global.ctx.Done()
-		client.Close()
-		time.Sleep(5 * time.Second)
-	}()
-
 	n, err := notifications.DecodeConfig(filepath.Join(t.config.Root, "notifications.toml"), map[string]notifications.Creator{
 		"default": func() notifications.Notifier { return notifications.New() },
 		"slack":   func() notifications.Notifier { return slack.New() },
@@ -66,5 +52,8 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	log.Println(spew.Sdump(n))
-	return notifier.New(n...).Start(client)
+
+	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), agent.NewDialer(grpc.WithTransportCredentials(creds)))
+
+	return nil
 }

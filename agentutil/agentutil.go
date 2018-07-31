@@ -3,13 +3,16 @@
 package agentutil
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	clusterx "github.com/james-lawrence/bw/cluster"
+	"golang.org/x/time/rate"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -130,4 +133,58 @@ func KeepNewestN(n int) Cleaner {
 // NodeToPeer ...
 func NodeToPeer(n *memberlist.Node) (agent.Peer, error) {
 	return clusterx.NodeToPeer(n)
+}
+
+// WatchEvents connects to the event stream of the cluster using the provided
+// peer as a proxy.
+func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
+	rl := rate.NewLimiter(rate.Every(time.Second), 1)
+	for {
+		var (
+			err error
+			qc  agent.Client
+		)
+
+		if err = rl.Wait(context.Background()); err != nil {
+			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			continue
+		}
+
+		if qc, err = agent.NewProxyDialer(d).Dial(proxy); err != nil {
+			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+			continue
+		}
+
+		if err = qc.Watch(events); err != nil {
+			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			continue
+		}
+	}
+}
+
+// WatchClusterEvents pushes events into the provided channel for the given cluster.
+func WatchClusterEvents(d agent.Dialer, c cluster, events chan agent.Message) {
+	rl := rate.NewLimiter(rate.Every(time.Second), 1)
+	for {
+		var (
+			err   error
+			qc    agent.Client
+			local = c.Local()
+		)
+
+		if err = rl.Wait(context.Background()); err != nil {
+			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			continue
+		}
+
+		if qc, err = agent.NewQuorumDialer(d).Dial(c); err != nil {
+			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+			continue
+		}
+
+		if err = qc.Watch(events); err != nil {
+			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			continue
+		}
+	}
 }
