@@ -172,7 +172,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}()
 
 	cx := cluster.New(local, c)
-	go agentutil.WatchClusterEvents(d, cx, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
