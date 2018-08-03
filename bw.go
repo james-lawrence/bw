@@ -40,7 +40,7 @@ func (t RandomID) String() string {
 
 // SimpleGenerateID ...
 func SimpleGenerateID() (_ignored RandomID, err error) {
-	return GenerateID(rand.New(rand.NewSource(time.Now().Unix())))
+	return GenerateID(globalSrc)
 }
 
 // GenerateID generates a random ID.

@@ -33,6 +33,9 @@ message Message {
     PeersCompletedEvent = 5;
   }
 
+  string id = 9;
+  bool replay = 999;
+
   // Identifies which field is filled in.
   Type type = 1;
   Peer peer = 2;

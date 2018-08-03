@@ -3,6 +3,7 @@ package agentutil
 import (
 	"time"
 
+	"github.com/gofrs/uuid"
 	"github.com/james-lawrence/bw/agent"
 )
 
@@ -19,6 +20,7 @@ func PeersCompletedEvent(p agent.Peer, n int64) agent.Message {
 // LogEvent create a log event message.
 func LogEvent(p agent.Peer, s string) agent.Message {
 	return agent.Message{
+		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_LogEvent,
 		Peer: &p,
 		Ts:   time.Now().Unix(),
@@ -33,6 +35,7 @@ func LogEvent(p agent.Peer, s string) agent.Message {
 // LogError create a log event message from an error.
 func LogError(p agent.Peer, s error) agent.Message {
 	return agent.Message{
+		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_LogEvent,
 		Peer: &p,
 		Ts:   time.Now().Unix(),
@@ -47,6 +50,7 @@ func LogError(p agent.Peer, s error) agent.Message {
 // PeerEvent ...
 func PeerEvent(p agent.Peer) agent.Message {
 	return agent.Message{
+		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_PeerEvent,
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
@@ -89,6 +93,7 @@ func DeployEvent(p agent.Peer, d agent.Deploy) agent.Message {
 
 func deployEvent(t agent.Deploy_Stage, p agent.Peer, di agent.DeployOptions, a agent.Archive) agent.Message {
 	return agent.Message{
+		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_DeployEvent,
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
@@ -98,6 +103,7 @@ func deployEvent(t agent.Deploy_Stage, p agent.Peer, di agent.DeployOptions, a a
 
 func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
 	return agent.Message{
+		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: t,
 		Peer: &p,
 		Ts:   time.Now().Unix(),

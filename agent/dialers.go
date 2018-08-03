@@ -2,6 +2,7 @@ package agent
 
 import (
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -32,6 +33,10 @@ func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 	if cinfo, err = c.Connect(); err != nil {
 		return conn, err
 	}
+
+	rand.Shuffle(len(cinfo.Quorum), func(i int, j int) {
+		cinfo.Quorum[i], cinfo.Quorum[j] = cinfo.Quorum[j], cinfo.Quorum[i]
+	})
 
 	for _, q := range PtrToPeers(cinfo.Quorum...) {
 		if conn, err = d.Dial(q); err != nil {
