@@ -34,7 +34,7 @@ type Client interface {
 	Connect() (ConnectResponse, error)
 	Cancel() error
 	Info() (StatusResponse, error)
-	Watch(out chan<- Message) error
+	Watch(ctx context.Context, out chan<- Message) error
 	Dispatch(ctx context.Context, messages ...Message) error
 }
 

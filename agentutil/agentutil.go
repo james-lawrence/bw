@@ -155,7 +155,7 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 			continue
 		}
 
-		if err = qc.Watch(events); err != nil {
+		if err = qc.Watch(context.Background(), events); err != nil {
 			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}
@@ -163,7 +163,7 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 }
 
 // WatchClusterEvents pushes events into the provided channel for the given cluster.
-func WatchClusterEvents(d agent.Dialer, c cluster, events chan agent.Message) {
+func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 1)
 	for {
 		var (
@@ -172,7 +172,13 @@ func WatchClusterEvents(d agent.Dialer, c cluster, events chan agent.Message) {
 			local = c.Local()
 		)
 
-		if err = rl.Wait(context.Background()); err != nil {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		if err = rl.Wait(ctx); err != nil {
 			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
 			continue
 		}
@@ -182,7 +188,7 @@ func WatchClusterEvents(d agent.Dialer, c cluster, events chan agent.Message) {
 			continue
 		}
 
-		if err = qc.Watch(events); err != nil {
+		if err = qc.Watch(ctx, events); err != nil {
 			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}

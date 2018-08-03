@@ -91,6 +91,7 @@ func (t *agentInfo) _info() (err error) {
 
 		return nil
 	}))(cx, d)
+
 	logx.MaybeLog(err)
 
 	events := make(chan agent.Message, 100)
@@ -99,6 +100,7 @@ func (t *agentInfo) _info() (err error) {
 	go ux.Logging(t.global.ctx, t.global.cleanup, events)
 
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(d, cx, events)
+	agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
+
 	return nil
 }

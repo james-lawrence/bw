@@ -161,7 +161,7 @@ func (t Conn) Info() (_zeroInfo StatusResponse, err error) {
 }
 
 // Watch for messages sent to the leader. blocks.
-func (t Conn) Watch(out chan<- Message) (err error) {
+func (t Conn) Watch(ctx context.Context, out chan<- Message) (err error) {
 	var (
 		src Quorum_WatchClient
 		msg *Message
@@ -170,7 +170,7 @@ func (t Conn) Watch(out chan<- Message) (err error) {
 	defer debugx.Println("watch finished")
 
 	c := NewQuorumClient(t.conn)
-	if src, err = c.Watch(context.Background(), &WatchRequest{}); err != nil {
+	if src, err = c.Watch(ctx, &WatchRequest{}); err != nil {
 		return errors.WithStack(err)
 	}
 
