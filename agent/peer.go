@@ -2,10 +2,14 @@ package agent
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strconv"
 
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/pkg/errors"
 )
 
 // Default ports for the agent
@@ -137,4 +141,61 @@ func PtrToPeers(peers ...*Peer) []Peer {
 	}
 
 	return r
+}
+
+// NodesToPeers ...
+func NodesToPeers(nodes ...*memberlist.Node) []Peer {
+	peers := make([]Peer, 0, len(nodes))
+	for _, n := range nodes {
+		var (
+			err  error
+			peer Peer
+		)
+
+		if peer, err = NodeToPeer(n); err != nil {
+			log.Println("skipping node", n.Name, "invalid metadata", err)
+		}
+
+		peers = append(peers, peer)
+	}
+
+	return peers
+}
+
+// PeerToNode - partial implementation, doesn't convert metadata.
+// do not use, except for tests.
+func PeerToNode(p Peer) memberlist.Node {
+	return memberlist.Node{
+		Name: p.Name,
+		Addr: net.ParseIP(p.Ip),
+	}
+}
+
+// NodeToPeer converts a node to a peer
+func NodeToPeer(n *memberlist.Node) (_zerop Peer, err error) {
+	var (
+		m PeerMetadata
+	)
+
+	if err = proto.Unmarshal(n.Meta, &m); err != nil {
+		return _zerop, errors.WithStack(err)
+	}
+
+	return Peer{
+		Status:      Peer_State(m.Status),
+		Name:        n.Name,
+		Ip:          n.Addr.String(),
+		RPCPort:     m.RPCPort,
+		SWIMPort:    m.SWIMPort,
+		RaftPort:    m.RaftPort,
+		TorrentPort: m.TorrentPort,
+	}, nil
+}
+
+func MustPeer(p Peer, err error) Peer {
+	if err != nil {
+		panic(err)
+	}
+
+	return p
 }

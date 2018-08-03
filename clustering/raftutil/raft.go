@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/x/contextx"
 	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/james-lawrence/bw/x/logx"
@@ -56,6 +58,7 @@ type clusterObserver interface {
 // Event ...
 type Event struct {
 	Type clusterEventType
+	Node agent.Peer
 	Peer raft.Server
 	Raft *raft.Raft
 }
@@ -352,23 +355,12 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 		return
 	}
 
-	config := e.Raft.GetConfiguration()
-	if err := config.Error(); err != nil {
-		log.Println("failed to retrieve configuration", err)
-		return
-	}
-
 	switch e.Type {
 	case EventJoined:
-		future := e.Raft.AddVoter(e.Peer.ID, e.Peer.Address, config.Index(), time.Second)
-		if err := future.Error(); err != nil {
-			log.Println("failed to add peer", err)
+		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Joined), 10*time.Second); err != nil {
+			log.Println("failed apply peer", err)
 		}
 	case EventLeft:
-		future := e.Raft.RemoveServer(e.Peer.ID, config.Index(), time.Second)
-		if err := future.Error(); err != nil {
-			log.Println("failed to remove peer", err)
-		}
 	}
 
 	for _, o := range obs {
@@ -398,11 +390,12 @@ func (t BacklogQueueWorker) Background(backlog BacklogQueue) {
 	for n := range backlog.Backlog {
 		if rs, err = t.Provider.RaftAddr(n.Node); err != nil {
 			log.Println("ignoring join due to error decoding meta data", err)
-			return
+			continue
 		}
 
 		t.Queue <- Event{
 			Type: n.Event,
+			Node: agent.MustPeer(agent.NodeToPeer(n.Node)),
 			Peer: rs,
 		}
 	}

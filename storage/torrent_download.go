@@ -32,14 +32,15 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 
 	ni := krpc.NodeInfo{Addr: &net.UDPAddr{IP: net.ParseIP(archive.Peer.Ip), Port: int(archive.Peer.TorrentPort)}}
 
-	if stats, err = t.client.DHT().Bootstrap(); err != nil {
-		return newErrReader(errors.WithStack(err))
-	}
-
-	log.Println("adding peer to DHT", ni.Addr.String(), spew.Sdump(stats))
+	log.Println("adding peer to DHT", ni.Addr.String())
 	if err = t.client.DHT().AddNode(ni); err != nil {
 		return newErrReader(errors.WithStack(err))
 	}
+
+	if stats, err = t.client.DHT().Bootstrap(); err != nil {
+		return newErrReader(errors.WithStack(err))
+	}
+	log.Println("dht bootstrap stats", spew.Sdump(stats))
 
 	if m, err = metainfo.ParseMagnetURI(archive.Location); err != nil {
 		return newErrReader(errors.WithStack(err))

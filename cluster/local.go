@@ -32,7 +32,7 @@ func NewLocal(p agent.Peer, options ...localOption) Local {
 		opt(&l)
 	}
 
-	m := Metadata{
+	m := agent.PeerMetadata{
 		Status:      int32(l.Peer.Status),
 		Capability:  l.Capability,
 		RPCPort:     l.Peer.RPCPort,

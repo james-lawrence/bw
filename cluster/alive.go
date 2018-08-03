@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
 )
 
@@ -16,7 +17,7 @@ type AliveDefault struct{}
 // NotifyAlive implements the memberlist.AliveDelegate
 func (AliveDefault) NotifyAlive(peer *memberlist.Node) (err error) {
 	var (
-		m Metadata
+		m agent.PeerMetadata
 	)
 
 	if err = proto.Unmarshal(peer.Meta, &m); err != nil {

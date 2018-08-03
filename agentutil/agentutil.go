@@ -11,10 +11,8 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	clusterx "github.com/james-lawrence/bw/cluster"
 	"golang.org/x/time/rate"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 )
 
@@ -128,11 +126,6 @@ func KeepNewestN(n int) Cleaner {
 	return _cleanerFunc(n, func(i, j FileInfo) bool {
 		return !i.Info.ModTime().Before(j.Info.ModTime())
 	})
-}
-
-// NodeToPeer ...
-func NodeToPeer(n *memberlist.Node) (agent.Peer, error) {
-	return clusterx.NodeToPeer(n)
 }
 
 // WatchEvents connects to the event stream of the cluster using the provided

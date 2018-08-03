@@ -42,7 +42,7 @@ func (t ClusterEventHandler) update(peer *memberlist.Node, options ...agent.Peer
 		p   agent.Peer
 	)
 
-	if p, err = agentutil.NodeToPeer(peer); err != nil {
+	if p, err = agent.NodeToPeer(peer); err != nil {
 		log.Println("failed to convert memberlist.Node to peer", err)
 		return
 	}

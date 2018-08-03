@@ -92,7 +92,7 @@ func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers 
 	return t.deployer.Deploy(t.dialer, t, dopts, a, peers...)
 }
 
-// Cancel cancel a ongoing deploy.
+// Cancel a ongoing deploy.
 func (t *StateMachine) Cancel() error {
 	dc := agent.DeployCommand{Command: agent.DeployCommand_Cancel}
 	return t.writeWAL(agentutil.DeployCommand(t.local.Local(), dc), 10*time.Second)

@@ -10,6 +10,15 @@ message Archive {
   string initiator = 6;
 }
 
+message PeerMetadata {
+  bytes capability = 1;
+  uint32 RPCPort = 2;
+  uint32 RaftPort = 3;
+  uint32 SWIMPort = 4;
+  uint32 TorrentPort = 5;
+  int32 Status = 6;
+}
+
 message Peer {
   enum State { Node = 0; Client = 2; Gone = 3; }
   State Status = 1;
@@ -24,6 +33,7 @@ message Peer {
 // Represents every message sent between nodes. effectively describes all possible events we may want
 // to act upon.
 message Message {
+  enum NodeEvent { Joined = 0; Departed = 1; }
   enum Type {
     PeerEvent = 0;
     LogEvent = 1;
@@ -42,12 +52,12 @@ message Message {
   int64 ts = 3; // unix timestamp.
 
   oneof Event {
-    // One of the following will be filled in.
     bool none = 4;
     int64 int = 5;
     Log log = 6;
     DeployCommand deployCommand = 7;
     Deploy deploy = 8;
+    NodeEvent membership = 10;
   }
 }
 

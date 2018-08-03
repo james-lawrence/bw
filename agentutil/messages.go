@@ -4,7 +4,10 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
+	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/pkg/errors"
 )
 
 // PeersFoundEvent ...
@@ -55,6 +58,17 @@ func PeerEvent(p agent.Peer) agent.Message {
 		Peer:  &p,
 		Ts:    time.Now().Unix(),
 		Event: &agent.Message_None{},
+	}
+}
+
+// NodeEvent ...
+func NodeEvent(p agent.Peer, event agent.Message_NodeEvent) agent.Message {
+	return agent.Message{
+		Id:    uuid.Must(uuid.NewV4()).String(),
+		Type:  agent.Message_PeerEvent,
+		Peer:  &p,
+		Ts:    time.Now().Unix(),
+		Event: &agent.Message_Membership{Membership: event},
 	}
 }
 
@@ -111,4 +125,29 @@ func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
 			Int: n,
 		},
 	}
+}
+
+func ApplyToStateMachine(r *raft.Raft, m agent.Message, d time.Duration) (err error) {
+	var (
+		encoded []byte
+		future  raft.ApplyFuture
+		ok      bool
+	)
+
+	if encoded, err = proto.Marshal(&m); err != nil {
+		return errors.WithStack(err)
+	}
+
+	// write the event to the WAL.
+	future = r.Apply(encoded, d)
+
+	if err = future.Error(); err != nil {
+		return errors.WithStack(err)
+	}
+
+	if err, ok = future.Response().(error); ok {
+		return errors.WithStack(err)
+	}
+
+	return nil
 }
