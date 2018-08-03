@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/davecgh/go-spew/spew"
-	clusterp "github.com/james-lawrence/bw/cluster"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
 )
@@ -70,7 +70,7 @@ func (t Route53) Sample(c cluster) (err error) {
 		r *route53.ChangeResourceRecordSetsOutput
 	)
 
-	sample := clusterp.NodesToPeers(c.GetN(t.MaximumNodes, []byte(t.config.FQDN))...)
+	sample := agent.NodesToPeers(c.GetN(t.MaximumNodes, []byte(t.config.FQDN))...)
 	rrset := t.convertBindToRR(t.config.peersToBind(sample...)...)
 
 	cb := route53.ChangeBatch{
