@@ -151,13 +151,7 @@ var _ = Describe("StateMachine", func() {
 			var (
 				decoded agent.WAL
 			)
-			convert := func(in ...agent.Message) (out []*agent.Message) {
-				for _, m := range in {
-					tmp := m
-					out = append(out, &tmp)
-				}
-				return out
-			}
+
 			protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 			Expect(err).ToNot(HaveOccurred())
 			leader := awaitLeader(protocols...)
@@ -173,7 +167,7 @@ var _ = Describe("StateMachine", func() {
 			raw, err := ioutil.ReadAll(ior)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(proto.Unmarshal(raw, &decoded)).ToNot(HaveOccurred())
-			Expect(decoded.Messages).To(ConsistOf(convert(messages...)[n:]))
+			Expect(decoded.Messages).To(ConsistOf(agent.MessagesToPtr(messages...)[n:]))
 		},
 		Entry(
 			"example 1",

@@ -117,8 +117,5 @@ func (t *MockTransport) StreamCh() <-chan net.Conn {
 
 // See Transport.
 func (t *MockTransport) Shutdown() error {
-	if _, ok := t.net.transports[t.addr.addr]; ok {
-		delete(t.net.transports, t.addr.addr)
-	}
 	return nil
 }

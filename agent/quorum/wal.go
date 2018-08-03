@@ -36,9 +36,11 @@ func NewWAL(obs chan agent.Message) WAL {
 // WAL for the quorum.
 type WAL struct {
 	logs      []agent.Message
-	deploying int32
 	observer  chan agent.Message
 	m         *sync.RWMutex
+	deploying int32 // is a deploy process in progress.
+	// lastSuccessfulDeploy // used for bootstrapping and recovering when a deploy proxy fails.
+	// currentDeploy // currently active deploy.
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -82,7 +84,9 @@ func (t *WAL) decode(buf []byte) error {
 	t.logs = append(t.logs, m)
 	t.m.Unlock()
 
-	if t.observer != nil {
+	// TODO consider moving observer into the state machine, would resolve this issue.
+	// ignore replayed messages.
+	if !m.Replay && t.observer != nil {
 		t.observer <- m
 	}
 
@@ -165,7 +169,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		state   agent.WAL
 		i       int
 	)
-	log.Println("persist invoked", len(t.wal.logs))
+	log.Println("persist invoked")
 	defer log.Println("persist completed")
 	for i, msg = range t.wal.logs[:t.max] {
 		switch msg.GetType() {
@@ -177,6 +181,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		}
 
 		tmp := msg
+		tmp.Replay = true
 		state.Messages = append(state.Messages, &tmp)
 	}
 

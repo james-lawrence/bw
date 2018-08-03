@@ -274,8 +274,10 @@ func defaultRaftConfig() *raft.Config {
 
 	conf.HeartbeatTimeout = 5 * time.Second
 	conf.ElectionTimeout = 10 * time.Second
+	conf.SnapshotInterval = 10 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
+	conf.SnapshotThreshold = 300
 
 	return conf
 }
