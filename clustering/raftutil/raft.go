@@ -155,6 +155,7 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 		Context:        ctx,
 		StabilityQueue: q,
 		Snapshots:      raft.NewInmemSnapshotStore(),
+		store:          raft.NewInmemStore(),
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
 		},
@@ -193,6 +194,7 @@ type Protocol struct {
 	StabilityQueue   BacklogQueueWorker
 	ClusterChange    *sync.Cond
 	Snapshots        raft.SnapshotStore
+	store            *raft.InmemStore
 	PassiveCheckin   time.Duration
 	getStateMachine  func() raft.FSM
 	getTransport     func() (raft.Transport, error)
@@ -275,6 +277,7 @@ func (t Protocol) unstable(d time.Duration) {
 func defaultRaftConfig() *raft.Config {
 	conf := raft.DefaultConfig()
 
+	conf.LeaderLeaseTimeout = 2 * time.Second
 	conf.HeartbeatTimeout = 5 * time.Second
 	conf.ElectionTimeout = 10 * time.Second
 	conf.SnapshotInterval = 10 * time.Second
@@ -298,8 +301,7 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	conf = *t.config
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 
-	store := raft.NewInmemStore()
-	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, t.Snapshots, network); err != nil {
+	if r, err = raft.NewRaft(&conf, t.getStateMachine(), t.store, t.store, t.Snapshots, network); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
 

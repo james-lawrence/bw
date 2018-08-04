@@ -30,7 +30,6 @@ func (t passive) Update(c cluster) state {
 	}
 
 	if !isMember(c) {
-		// log.Println(c.LocalNode().Name, "is not a member of", quorumPeers(c), c.Members())
 		return delayedTransition{
 			next:     t,
 			Duration: t.protocol.PassiveCheckin,
@@ -44,10 +43,13 @@ func (t passive) Update(c cluster) state {
 		return maintainState
 	}
 
-	if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
-		log.Println("raft bootstrap failed", err)
-		t.protocol.maybeShutdown(c, r, network)
-		return maintainState
+	log.Println("LAST INDEX PRIOR TO BOOTSTRAP", r.LastIndex())
+	if r.LastIndex() == 0 {
+		if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
+			log.Println("raft bootstrap failed", r.LastIndex(), err)
+			t.protocol.maybeShutdown(c, r, network)
+			return maintainState
+		}
 	}
 
 	sm := stateMeta{

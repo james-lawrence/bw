@@ -18,7 +18,7 @@ func (t leader) Update(c cluster) state {
 	var (
 		maintainState state = delayedTransition{
 			next:     t,
-			Duration: time.Minute,
+			Duration: t.protocol.PassiveCheckin,
 		}
 	)
 
@@ -85,7 +85,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 			continue
 		}
 
-		if err = t.r.AddVoter(rs.ID, rs.Address, t.r.GetConfiguration().Index(), commitTimeout).Error(); err != nil {
+		if err = t.r.AddVoter(rs.ID, rs.Address, 0, commitTimeout).Error(); err != nil {
 			log.Println("failed to add peer", err)
 			return true
 		}
