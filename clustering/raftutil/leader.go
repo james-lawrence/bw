@@ -16,9 +16,9 @@ type leader struct {
 
 func (t leader) Update(c cluster) state {
 	var (
-		maintainState state = conditionTransition{
-			next: t,
-			cond: t.protocol.ClusterChange,
+		maintainState state = delayedTransition{
+			next:     t,
+			Duration: time.Minute,
 		}
 	)
 
