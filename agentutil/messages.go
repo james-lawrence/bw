@@ -91,6 +91,7 @@ func deployToArchive(d agent.Deploy) (a agent.Archive) {
 // DeployCommand send a deploy command message
 func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
 	return agent.Message{
+		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_DeployCommandEvent,
 		Peer: &p,
 		Ts:   time.Now().Unix(),
