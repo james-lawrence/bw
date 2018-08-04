@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -21,8 +22,9 @@ const (
 type StateMachineOption func(*StateMachine)
 
 // NewStateMachine stores the state of the cluster.
-func NewStateMachine(l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, options ...StateMachineOption) StateMachine {
+func NewStateMachine(w *WAL, l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, options ...StateMachineOption) StateMachine {
 	sm := StateMachine{
+		wal:      w,
 		local:    l,
 		state:    r,
 		dialer:   d,
@@ -41,6 +43,7 @@ func NewStateMachine(l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, o
 type StateMachine struct {
 	deployer
 	local  cluster
+	wal    *WAL
 	state  *raft.Raft
 	dialer agent.Dialer
 }
@@ -87,9 +90,22 @@ func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) 
 
 // Deploy trigger a deploy.
 func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
-	debugx.Println("deploy command initiated")
-	defer debugx.Println("deploy command completed")
+	debugx.Println("deploy command initiated", t.state.State())
+	defer debugx.Println("deploy command completed", t.state.State())
 	return t.deployer.Deploy(t.dialer, t, dopts, a, peers...)
+}
+
+func (t *StateMachine) restartActiveDeploy() error {
+	var (
+		dc *agent.DeployCommand
+	)
+
+	if dc = t.wal.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
+		m := agentutil.LogEvent(t.local.Local(), "detected new leader, restarting deploy")
+		return errorsx.Compact(t.writeWAL(m, 10*time.Second), t.Cancel(), t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive))
+	}
+
+	return nil
 }
 
 // Cancel a ongoing deploy.

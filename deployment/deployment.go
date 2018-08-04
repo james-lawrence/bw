@@ -125,8 +125,10 @@ func (t DeployContext) Cancel(reason error) {
 // Done is responsible for closing out the deployment context.
 func (t DeployContext) Done(result error) error {
 	t.done.Do(func() {
-		logErr(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
-		logErr(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
+		if t.logfile != nil {
+			logx.MaybeLog(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
+			logx.MaybeLog(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
+		}
 
 		if t.completed != nil {
 			t.completed <- DeployResult{

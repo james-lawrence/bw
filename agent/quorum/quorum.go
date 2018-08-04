@@ -67,9 +67,10 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 
 // New new quorum instance based on the options.
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
+	wal := NewWAL(make(chan agent.Message, 100))
 	r := Quorum{
 		ConnectableDispatcher: cd,
-		bus:     make(chan agent.Message, 100),
+		wal:     &wal,
 		sm:      &DisabledMachine{},
 		uploads: upload,
 		dialer:  agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
@@ -89,7 +90,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.U
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
-	bus     chan agent.Message
+	wal     *WAL
 	sm      stateMachine
 	uploads storage.UploadProtocol
 	m       *sync.Mutex
@@ -102,7 +103,7 @@ type Quorum struct {
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	go func() {
-		for m := range t.bus {
+		for m := range t.wal.observer {
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			logx.MaybeLog(errors.Wrap(t.ConnectableDispatcher.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
 			cancel()
@@ -112,8 +113,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 	go rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
-			wal := NewWAL(t.bus)
-			return &wal
+			return t.wal
 		}),
 		raftutil.ProtocolOptionObservers(
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
@@ -139,7 +139,8 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			switch o.Raft.State() {
 			case raft.Leader:
 				t.sm = func() stateMachine {
-					sm := NewStateMachine(t.c, o.Raft, t.dialer, t.deploy)
+					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy)
+					logx.MaybeLog(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
 					return &sm
 				}()
 			case raft.Follower, raft.Candidate:
@@ -241,7 +242,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	switch state := p.State(); state {
 	case raft.Leader, raft.Follower, raft.Candidate:
 	default:
-		return errors.Errorf("watch must be run on a member of quorum: %s", s)
+		return errors.Errorf("watch must be run on a member of quorum: %s", state)
 	}
 
 	events := make(chan agent.Message)

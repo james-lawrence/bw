@@ -14,6 +14,13 @@ type dialer interface {
 	Dial(p Peer) (Client, error)
 }
 
+func shuffleQuorum(q []Peer) []Peer {
+	rand.Shuffle(len(q), func(i int, j int) {
+		q[i], q[j] = q[j], q[i]
+	})
+	return q
+}
+
 // AddressProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Client, err error) {
 	if conn, err = Dial(proxy, options...); err != nil {
@@ -34,11 +41,7 @@ func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 		return conn, err
 	}
 
-	rand.Shuffle(len(cinfo.Quorum), func(i int, j int) {
-		cinfo.Quorum[i], cinfo.Quorum[j] = cinfo.Quorum[j], cinfo.Quorum[i]
-	})
-
-	for _, q := range PtrToPeers(cinfo.Quorum...) {
+	for _, q := range shuffleQuorum(PtrToPeers(cinfo.Quorum...)) {
 		if conn, err = d.Dial(q); err != nil {
 			log.Println("failed to dial", RPCAddress(q), err)
 			continue
@@ -134,7 +137,7 @@ type QuorumDialer struct {
 
 // Dial connects to a member of the quorum based on the cluster.
 func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
-	for _, p := range c.Quorum() {
+	for _, p := range shuffleQuorum(c.Quorum()) {
 		log.Println("dialing", spew.Sdump(p))
 		if client, err = t.dialer.Dial(p); err == nil {
 			break

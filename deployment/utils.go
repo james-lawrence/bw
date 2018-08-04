@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/x/logx"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
@@ -70,8 +71,8 @@ func writeDeployMetadata(dir string, d agent.Deploy) error {
 	if dst, err = os.OpenFile(filepath.Join(dir, deployMetadataName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return errors.WithStack(err)
 	}
-	defer func() { logErr(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
-	defer func() { logErr(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
+	defer func() { logx.MaybeLog(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
+	defer func() { logx.MaybeLog(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
 
 	if raw, err = proto.Marshal(&d); err != nil {
 		return errors.WithStack(err)

@@ -159,7 +159,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	go func() {
 		for range tdr {
 			tcu.ClearTorrents(tc)
-			tcu.PrintTorrentInfo(tc)
+			// tcu.PrintTorrentInfo(tc)
 		}
 	}()
 
