@@ -315,10 +315,11 @@
   revision = "2288bf30e9c8d7b5f6549bf62e07120d72fd4b6c"
 
 [[projects]]
-  branch = "master"
+  branch = "misc-fixes"
   name = "github.com/hashicorp/raft"
   packages = ["."]
-  revision = "a3fb4581fb07b16ecf1c3361580d4bdb17de9d98"
+  revision = "1251a424f2fbb73fd7c192ef5f0e60e94da3c66e"
+  source = "github.com/james-lawrence/raft"
 
 [[projects]]
   name = "github.com/hashicorp/vault"
@@ -680,6 +681,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "db4859522a71055dd75ca5f8016b6a6fd4ce8f62a34d8b4371ba5646373409e6"
+  inputs-digest = "911dcb28a5b1bca36ad62ba31306a06275225c8d6b123b2aabc36a73f01ad5a4"
   solver-name = "gps-cdcl"
   solver-version = 1

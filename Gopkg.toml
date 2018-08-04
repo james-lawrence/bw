@@ -53,7 +53,8 @@
 
 [[constraint]]
   name = "github.com/hashicorp/raft"
-  branch = "master"
+  source = "github.com/james-lawrence/raft"
+  branch = "misc-fixes"
 
 [[constraint]]
   name = "github.com/huin/goupnp"
