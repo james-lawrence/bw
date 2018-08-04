@@ -59,7 +59,7 @@ func (t fakeClient) Info() (agent.StatusResponse, error) {
 	return t.status, t.errResult
 }
 
-func (t fakeClient) Watch(out chan<- agent.Message) error {
+func (t fakeClient) Watch(_ context.Context, out chan<- agent.Message) error {
 	return t.errResult
 }
 

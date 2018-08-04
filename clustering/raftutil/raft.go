@@ -280,7 +280,7 @@ func defaultRaftConfig() *raft.Config {
 	conf.SnapshotInterval = 10 * time.Second
 	conf.MaxAppendEntries = 64
 	conf.TrailingLogs = 128
-	conf.SnapshotThreshold = 300
+	conf.SnapshotThreshold = 256
 
 	return conf
 }
@@ -361,6 +361,9 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 			log.Println("failed apply peer", err)
 		}
 	case EventLeft:
+		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Departed), 10*time.Second); err != nil {
+			log.Println("failed apply peer", err)
+		}
 	}
 
 	for _, o := range obs {

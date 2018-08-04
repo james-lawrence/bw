@@ -1,6 +1,7 @@
 package raftutil
 
 import (
+	"log"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -38,11 +39,11 @@ func (t peer) Update(c cluster) state {
 			stateMeta: t.stateMeta,
 		}.Update(c)
 	default:
-		// log.Println(c.LocalNode().Name, "peer current state", s)
+		log.Println(c.LocalNode().Name, "peer current state", s)
 		if maybeLeave(c) || t.protocol.deadlockedLeadership(c.LocalNode(), t.r, t.lastContact()) {
 			return leave(t, t.stateMeta)
 		}
-		// log.Println(c.LocalNode().Name, "peer state updated")
+		log.Println(c.LocalNode().Name, "peer state updated", s)
 	}
 
 	return maintain

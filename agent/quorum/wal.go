@@ -33,14 +33,18 @@ func NewWAL(obs chan agent.Message) WAL {
 	}
 }
 
+type innerstate struct {
+	logs                 []agent.Message
+	deploying            int32                // is a deploy process in progress.
+	runningDeploy        *agent.DeployCommand // currently active deployment.
+	lastSuccessfulDeploy *agent.DeployCommand // used for bootstrapping and recovering when a deploy proxy fails.
+}
+
 // WAL for the quorum.
 type WAL struct {
-	logs      []agent.Message
-	observer  chan agent.Message
-	m         *sync.RWMutex
-	deploying int32 // is a deploy process in progress.
-	// lastSuccessfulDeploy // used for bootstrapping and recovering when a deploy proxy fails.
-	// currentDeploy // currently active deploy.
+	innerstate
+	observer chan agent.Message
+	m        *sync.RWMutex
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -84,7 +88,8 @@ func (t *WAL) decode(buf []byte) error {
 	t.logs = append(t.logs, m)
 	t.m.Unlock()
 
-	// TODO consider moving observer into the state machine, would resolve this issue.
+	// TODO consider moving observer into the state machine, would resolve needing
+	// to mark messages as replays when restoring state.
 	// ignore replayed messages.
 	if !m.Replay && t.observer != nil {
 		t.observer <- m
@@ -102,11 +107,32 @@ func (t *WAL) deployCommand(dc *agent.DeployCommand) error {
 		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
 			return errors.New(fmt.Sprint("deploy already in progress"))
 		}
+		t.m.Lock()
+		t.runningDeploy = dc
+		t.m.Unlock()
+	case agent.DeployCommand_Done:
+		atomic.SwapInt32(&t.deploying, none)
+		t.m.Lock()
+		t.lastSuccessfulDeploy = dc
+		t.runningDeploy = nil
+		t.m.Unlock()
 	default:
 		atomic.SwapInt32(&t.deploying, none)
 	}
 
 	return nil
+}
+
+func (t *WAL) getLastSuccessfulDeploy() *agent.DeployCommand {
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return t.lastSuccessfulDeploy
+}
+
+func (t *WAL) getRunningDeploy() *agent.DeployCommand {
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return t.runningDeploy
 }
 
 // Snapshot is used to support log compaction. This call should
@@ -139,11 +165,20 @@ func (t *WAL) Restore(r io.ReadCloser) (err error) {
 		return errors.WithStack(err)
 	}
 
-	t.logs = make([]agent.Message, 0, len(decoded.Messages))
-	t.deploying = none
+	// reset the internal state of the write ahead log.
+	t.innerstate = innerstate{
+		logs:      make([]agent.Message, 0, len(decoded.Messages)),
+		deploying: none,
+	}
+
 	for _, m := range decoded.Messages {
-		tmp := *m
-		t.logs = append(t.logs, tmp)
+		if encoded, err = proto.Marshal(m); err != nil {
+			return errors.WithStack(err)
+		}
+
+		if err = t.decode(encoded); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	return nil
@@ -169,6 +204,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		state   agent.WAL
 		i       int
 	)
+
 	log.Println("persist invoked")
 	defer log.Println("persist completed")
 	for i, msg = range t.wal.logs[:t.max] {

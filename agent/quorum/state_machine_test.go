@@ -139,8 +139,8 @@ var _ = Describe("StateMachine", func() {
 		log.Println("leader elected")
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-
-		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		wal := NewWAL(make(chan agent.Message))
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 		cmd := qCommand(agent.DeployCommand_Begin)
 
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
@@ -151,13 +151,21 @@ var _ = Describe("StateMachine", func() {
 			var (
 				decoded agent.WAL
 			)
-
+			convert := func(c []*agent.Message) []interface{} {
+				r := make([]interface{}, 0, len(c))
+				for _, v := range c {
+					v.Replay = true
+					r = append(r, v)
+				}
+				return r
+			}
 			protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 			Expect(err).ToNot(HaveOccurred())
 			leader := awaitLeader(protocols...)
 			lp := agent.NewPeer("node")
 			mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-			sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+			wal := NewWAL(make(chan agent.Message))
+			sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 
 			Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 			snapshotfuture := leader.Snapshot()
@@ -167,7 +175,7 @@ var _ = Describe("StateMachine", func() {
 			raw, err := ioutil.ReadAll(ior)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(proto.Unmarshal(raw, &decoded)).ToNot(HaveOccurred())
-			Expect(decoded.Messages).To(ConsistOf(agent.MessagesToPtr(messages...)[n:]))
+			Expect(decoded.Messages).To(ConsistOf(convert(agent.MessagesToPtr(messages[n:]...))...))
 		},
 		Entry(
 			"example 1",
@@ -204,6 +212,18 @@ var _ = Describe("StateMachine", func() {
 			0,
 			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
 		),
+		Entry(
+			"example 5",
+			7,
+			agentutil.LogEvent(local.Local(), "message 1"),
+			agentutil.LogEvent(local.Local(), "message 2"),
+			agentutil.LogEvent(local.Local(), "message 3"),
+			agentutil.LogEvent(local.Local(), "message 4"),
+			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agentutil.LogEvent(local.Local(), "message 5"),
+			agentutil.LogEvent(local.Local(), "message 6"),
+			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
+		),
 	)
 
 	It("should return an error when dispatch failed", func() {
@@ -218,7 +238,8 @@ var _ = Describe("StateMachine", func() {
 		leader := awaitLeader(protocols...)
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		wal := NewWAL(make(chan agent.Message))
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).ToNot(HaveOccurred())
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
@@ -237,7 +258,8 @@ var _ = Describe("StateMachine", func() {
 		leader := awaitLeader(protocols...)
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		sm := NewStateMachine(cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		wal := NewWAL(make(chan agent.Message))
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
 
 		Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 
