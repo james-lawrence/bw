@@ -4,11 +4,54 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
+
+const (
+	dispatchTimeout = 10 * time.Second
+)
+
+type dispatcher interface {
+	Dispatch(context.Context, ...agent.Message) error
+}
+
+// Dispatch messages using the provided dispatcher will log and return the error,
+// if any, that occurs.
+func Dispatch(d dispatcher, m ...agent.Message) error {
+	return logx.MaybeLog(_dispatch(context.Background(), d, dispatchTimeout, m...))
+}
+
+// ReliableDispatch repeatedly attempts to deliver messages using the provided
+// context and dispatcher until the context is cancelled.
+func ReliableDispatch(ctx context.Context, d dispatcher, m ...agent.Message) (err error) {
+	bs := backoff.Maximum(10*time.Second, backoff.Exponential(200*time.Millisecond))
+	for i := 0; ; i++ {
+		if err = _dispatch(ctx, d, dispatchTimeout, m...); err == nil {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			s := bs.Backoff(i)
+			log.Printf("dispatch attempt %d failed, retrying in %v: %s\n", i, s, err)
+			time.Sleep(s)
+		}
+	}
+}
+
+func _dispatch(ctx context.Context, d dispatcher, timeout time.Duration, m ...agent.Message) error {
+	ctx, done := context.WithTimeout(ctx, timeout)
+	defer done()
+
+	return d.Dispatch(ctx, m...)
+}
 
 // DiscardDispatcher ...
 type DiscardDispatcher struct{}

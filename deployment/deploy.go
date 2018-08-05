@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"sync"
@@ -12,7 +13,6 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/x/errorsx"
-	"github.com/james-lawrence/bw/x/logx"
 	"github.com/james-lawrence/bw/x/timex"
 	"github.com/pkg/errors"
 )
@@ -151,7 +151,7 @@ func (t worker) work() {
 		// Stop deployment when a single node fails.
 		// TODO: make number of failures allowed configurable.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+			agentutil.Dispatch(t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 			continue
 		}
 
@@ -168,8 +168,11 @@ func (t worker) Complete() (int64, bool) {
 
 func (t worker) DeployTo(peer agent.Peer) {
 	t.c <- func() {
+		deadline, done := context.WithTimeout(context.Background(), t.timeout)
+		defer done()
+
 		if _, err := t.deploy.Visit(peer); err != nil {
-			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error()))))
+			agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error())))
 			atomic.AddInt64(t.failed, 1)
 			return
 		}
@@ -178,12 +181,12 @@ func (t worker) DeployTo(peer agent.Peer) {
 			atomic.AddInt64(t.failed, 1)
 			switch errors.Cause(failure).(type) {
 			case errorsx.Timeout:
-				logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, failure))))
+				agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, failure)))
 			default:
 			}
 		}
 
-		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+		agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 	}
 }
 
@@ -198,7 +201,7 @@ type Deploy struct {
 // failed nodes and if it was considered a success.
 func (t Deploy) Deploy(c cluster) (int64, bool) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
-	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes)))))
+	agentutil.Dispatch(t.dispatcher, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
@@ -206,17 +209,17 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		go t.worker.work()
 	}
 
-	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready")))
+	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
 	if failure := awaitCompletion(t.worker.timeout, t.dispatcher, t.worker.check, nodes...); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy")))
+			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
 			return 0, false
 		default:
 		}
 	}
 
-	logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying")))
+	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
 	for _, peer := range nodes {
 		t.worker.DeployTo(peer)

@@ -113,7 +113,7 @@ func (t DeployContext) timeout() time.Duration {
 
 // Dispatch an event to the cluster
 func (t DeployContext) Dispatch(m ...agent.Message) error {
-	return logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, m...))
+	return logx.MaybeLog(agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...))
 }
 
 // Cancel cancel the deploy.
@@ -181,7 +181,7 @@ func (t DeployResult) deployComplete() agent.Deploy {
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
 	d := agent.Deploy{Stage: agent.Deploy_Completed, Archive: &tmpa, Options: &tmpo}
-	logx.MaybeLog(t.Dispatch(agentutil.DeployEvent(t.Local, d)))
+	t.Dispatch(agentutil.DeployEvent(t.Local, d))
 	return d
 }
 
@@ -192,10 +192,10 @@ func (t DeployResult) deployFailed(err error) agent.Deploy {
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
 	d := agent.Deploy{Stage: agent.Deploy_Failed, Archive: &tmpa, Options: &tmpo}
-	logx.MaybeLog(t.Dispatch(
-		agentutil.LogEvent(t.Local, err.Error()),
+	t.Dispatch(
+		agentutil.LogError(t.Local, err),
 		agentutil.DeployEvent(t.Local, d),
-	))
+	)
 	return d
 }
 

@@ -1,14 +1,12 @@
 package deployment
 
 import (
-	"context"
 	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -176,9 +174,8 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	// without this behaviour the torrent can be removed while nodes are still trying to deploy.
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-		soft = errors.Wrap(soft, "failed to clear workspace directory")
-		t.dispatcher.Dispatch(context.Background(), agentutil.LogEvent(t.local, soft.Error()))
-		log.Println(soft)
+		soft = logx.MaybeLog(errors.Wrap(soft, "failed to clear workspace directory"))
+		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, soft))
 	}
 
 	dcopts := []DeployContextOption{
@@ -186,9 +183,10 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	}
 
 	if dctx, err = NewDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
-		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
+		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, err))
 		return t.ds.current, err
 	}
+
 	go t.background(dctx)
 
 	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
@@ -197,7 +195,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Archive.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
 		}
 
-		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
+		dctx.Dispatch(agentutil.LogError(t.local, err))
 		return t.ds.current, dctx.Done(err)
 	}
 
@@ -205,11 +203,11 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
-		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, err.Error())))
+		dctx.Dispatch(agentutil.LogError(t.local, err))
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
-	logx.MaybeLog(dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d)))
+	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
 		return d, dctx.Done(err)
@@ -227,7 +225,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		logx.MaybeLog(dispatch(t.dispatcher, dispatchTimeout, agentutil.LogEvent(t.local, "cancelled deploy")))
+		agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.local, "cancelled deploy"))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}
@@ -264,11 +262,4 @@ func ResultBus(in chan DeployResult, out ...chan DeployResult) {
 			dst <- result
 		}
 	}
-}
-
-func dispatch(d dispatcher, timeout time.Duration, m ...agent.Message) error {
-	ctx, done := context.WithTimeout(context.Background(), timeout)
-	defer done()
-
-	return d.Dispatch(ctx, m...)
 }

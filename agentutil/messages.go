@@ -128,6 +128,8 @@ func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
 	}
 }
 
+// ApplyToStateMachine utility function that applies an event to the provided
+// state machine handling the encoding and error handling logic.
 func ApplyToStateMachine(r *raft.Raft, m agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
