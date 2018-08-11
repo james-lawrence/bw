@@ -3,6 +3,7 @@ package dns
 import (
 	"net/http"
 
+	"cloud.google.com/go/compute/metadata"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -25,12 +26,23 @@ func (t GoogleCloudDNS) Sample(c cluster) (err error) {
 	const (
 		scope = "https://www.googleapis.com/auth/ndev.clouddns.readwrite"
 	)
+
 	var (
-		client *http.Client
-		s      *dns.Service
+		client      *http.Client
+		s           *dns.Service
+		projectID   string
+		localZoneID string
 	)
 
-	if client, err = google.DefaultClient(oauth2.NoContext); err != nil {
+	if projectID, err = metadata.ProjectID(); err != nil {
+		return errors.Wrap(err, "failed to lookup project ID")
+	}
+
+	if localZoneID, err = metadata.Zone(); err != nil {
+		return errors.Wrap(err, "failed to lookup local zone ID")
+	}
+
+	if client, err = google.DefaultClient(oauth2.NoContext, scope); err != nil {
 		return errors.Wrap(err, "failed to build google cloud http client")
 	}
 
@@ -38,7 +50,12 @@ func (t GoogleCloudDNS) Sample(c cluster) (err error) {
 		return errors.Wrap(err, "failed to build google dns service")
 	}
 
-	_ = s.ChangesService.Create()
+	change := dns.Change{}
+
+	// TODO: update records in dns.
+	if _, err = s.Changes.Create(projectID, localZoneID, &change).Do(); err != nil {
+		return errors.Wrap(err, "failed to apply dns changes")
+	}
 
 	return nil
 }
