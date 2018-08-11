@@ -16,14 +16,16 @@ import (
 )
 
 type agentNotify struct {
-	global     *global
-	configPath string
-	config     agent.Config
+	global      *global
+	configPath  string
+	nconfigPath string
+	config      agent.Config
 }
 
 func (t *agentNotify) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-config", "configuration file to use").Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configPath)
 	parent.Flag("agent-address", "address of the RPC server to use").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
+	parent.Flag("notification-config", "name of the notification configuration file in the same directory as the agent config").Default("notifications.toml").StringVar(&t.nconfigPath)
 	parent.Action(t.exec)
 }
 
@@ -43,7 +45,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	n, err := notifications.DecodeConfig(filepath.Join(t.config.Root, "notifications.toml"), map[string]notifications.Creator{
+	n, err := notifications.DecodeConfig(filepath.Join(filepath.Dir(t.configPath), t.nconfigPath), map[string]notifications.Creator{
 		"default": func() notifications.Notifier { return notifications.New() },
 		"slack":   func() notifications.Notifier { return slack.New() },
 	})
