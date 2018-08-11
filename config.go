@@ -48,6 +48,11 @@ func LocateDeployspace(name string) string {
 	return name
 }
 
+// DefaultConfigFile returns the default configuration file location.
+func DefaultConfigFile() string {
+	return DefaultLocation(filepath.Join(DefaultEnvironmentName, DefaultAgentConfig), "")
+}
+
 // DefaultLocation returns the location of file path to be read based using
 // the given name and potentially an override path.
 // File locations are checked in the following order:

@@ -50,6 +50,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	return config, err
 }
 
+// NewClusterDialer dial a cluster based on the configuration.
 func NewClusterDialer(conf agent.Config, options ...clustering.Option) clustering.Dialer {
 	options = append(
 		[]clustering.Option{
