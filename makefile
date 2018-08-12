@@ -30,4 +30,4 @@ endif
 
 release: generate release-check
 	GOBIN=$(CURDIR)/.dist/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
-	tar -C .dist/ -czvf .dist/bearded-wookie-linux-amd64-$(RELEASE).tar.gz ../RELEASE-NOTES.md bearded-wookie-linux-amd64-$(RELEASE)
+	tar -C .dist/ -czvf .dist/bearded-wookie-linux-amd64-$(RELEASE).tar.gz ../RELEASE-NOTES.md ../.dist-systemd bearded-wookie-linux-amd64-$(RELEASE)

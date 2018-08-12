@@ -1,0 +1,15 @@
+[Unit]
+Description=bearded-wookie agent
+After=network.target
+Requires=bearded-wookie-init.service
+After=bearded-wookie-init.service
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+Environment=SHELL=/bin/bash
+ExecStart=/usr/local/bin/bw agent --cluster-dns-enable
+
+[Install]
+WantedBy=default.target
