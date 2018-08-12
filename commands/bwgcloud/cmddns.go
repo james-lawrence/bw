@@ -42,8 +42,8 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("bootstrap", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.SWIMBind.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("agent-config", "file containing the agent configuration").Default(t.configLocation).StringVar(&t.configLocation)
-	parent.Flag("projectID", "gcloud project id usually pulled from metadata automatically").Envar("BWGCLOUD_PROJECT_ID").PlaceHolder(t.projectID).Default(t.projectID).StringVar(&t.projectID)
-	parent.Flag("zone", "dns zone where changes will be applied").Envar("BWGCLOUD_DNS_ZONE").StringVar(&t.zoneID)
+	parent.Flag("projectID", "gcloud project id usually pulled from metadata automatically").Envar("BEARDED_WOOKIE_GCLOUD_PROJECT_ID").PlaceHolder(t.projectID).Default(t.projectID).StringVar(&t.projectID)
+	parent.Flag("zone", "dns zone where changes will be applied").Envar("BEARDED_WOOKIE_GCLOUD_DNS_ZONE").StringVar(&t.zoneID)
 
 	parent.Action(t.exec)
 }
