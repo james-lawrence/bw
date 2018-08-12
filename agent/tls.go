@@ -25,10 +25,10 @@ func ConfigClientTLS(credentials string) ConfigClientOption {
 }
 
 // NewTLSAgent ...
-func newTLSAgent(credentials, override string) ConfigOption {
+func newTLSAgent(environment, override string) ConfigOption {
 	return func(c *Config) {
-		c.CA = bw.DefaultLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), override)
-		c.CredentialsDir = bw.DefaultLocation(credentials, override)
+		c.CA = bw.DefaultLocation(filepath.Join(environment, certificatecache.DefaultTLSCertCA), override)
+		c.CredentialsDir = bw.DefaultLocation(environment, override)
 		c.ServerName = stringsx.DefaultIfBlank(c.ServerName, systemx.HostnameOrLocalhost())
 	}
 }

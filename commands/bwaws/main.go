@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
@@ -40,7 +41,7 @@ func main() {
 		cdns = &cmdDNS{
 			global:         global,
 			config:         agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
-			configLocation: bw.DefaultLocation(bw.DefaultAgentConfig, ""),
+			configLocation: bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
 		}
 	)
 

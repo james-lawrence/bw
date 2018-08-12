@@ -23,7 +23,7 @@ type agentNotify struct {
 }
 
 func (t *agentNotify) configure(parent *kingpin.CmdClause) {
-	parent.Flag("agent-config", "configuration file to use").Default(bw.DefaultLocation(bw.DefaultAgentConfig, "")).StringVar(&t.configPath)
+	parent.Flag("agent-config", "configuration file to use").Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configPath)
 	parent.Flag("agent-address", "address of the RPC server to use").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
 	parent.Flag("notification-config", "name of the notification configuration file in the same directory as the agent config").Default("notifications.toml").StringVar(&t.nconfigPath)
 	parent.Action(t.exec)
