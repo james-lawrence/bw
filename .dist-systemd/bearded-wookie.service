@@ -1,8 +1,6 @@
 [Unit]
 Description=bearded-wookie agent
 After=network.target
-Requires=bearded-wookie-init.service
-After=bearded-wookie-init.service
 
 [Service]
 Type=simple

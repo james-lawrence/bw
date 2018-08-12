@@ -1,6 +1,7 @@
 [Unit]
 Description=bearded-wookie agent credentials initialization from vault.
 After=network.target
+Before=bearded-wookie.service
 
 [Service]
 Type=oneshot
