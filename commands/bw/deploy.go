@@ -130,6 +130,11 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	log.Println("configuration:", spew.Sdump(config))
+
+	if err = commandutils.RunLocalDirectives(config); err != nil {
+		return errors.Wrap(err, "failed to run local directives")
+	}
+
 	events := make(chan agent.Message, 100)
 	t.initializeUX(t.uxmode, events)
 
@@ -248,6 +253,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	log.Println("configuration:", spew.Sdump(config))
+
 	events := make(chan agent.Message, 100)
 	t.initializeUX(t.uxmode, events)
 
@@ -372,7 +378,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Timeout: int64(config.DeployTimeout),
 	}
 
-	if dctx, err = deployment.NewDeployContext(root, local, dopts, archive); err != nil {
+	if dctx, err = deployment.NewRemoteDeployContext(root, local, dopts, archive); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

@@ -19,10 +19,19 @@ func DirectiveOptionShellContext(ctx shell.Context) DirectiveOption {
 	}
 }
 
+// DirectiveOptionDir specify what subdirect directory to load directives from within
+// the archive.
+func DirectiveOptionDir(dir string) DirectiveOption {
+	return func(d *Directive) {
+		d.directory = dir
+	}
+}
+
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
-		options: options,
+		directory: ".remote",
+		options:   options,
 	}
 
 	return d
@@ -30,8 +39,9 @@ func NewDirective(options ...DirectiveOption) Directive {
 
 // Directive ...
 type Directive struct {
-	sctx    shell.Context
-	options []DirectiveOption
+	sctx      shell.Context
+	directory string
+	options   []DirectiveOption
 }
 
 // Deploy ...
@@ -90,7 +100,8 @@ func (t Directive) deploy(dctx DeployContext) {
 		directives.NewAWSELB2Detach(),
 	}
 
-	if d, err = directives.Load(dctx.Log, filepath.Join(dctx.ArchiveRoot, ".remote"), loaders...); err != nil {
+	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")
+	if d, err = directives.Load(dctx.Log, filepath.Join(dctx.ArchiveRoot, t.directory), loaders...); err != nil {
 		dctx.Dispatch()
 		dctx.Done(errors.Wrapf(err, "failed to load directives"))
 		return

@@ -35,23 +35,62 @@ func DeployContextOptionDispatcher(d dispatcher) DeployContextOption {
 	}
 }
 
+// DeployContextOptionLog set the logger for the deployment.
+func DeployContextOptionLog(l logger) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.Log = l
+	}
+}
+
+// DeployContextOptionArchiveRoot set the root directory of the archive.
+func DeployContextOptionArchiveRoot(ar string) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.ArchiveRoot = ar
+	}
+}
+
 // AwaitDeployResult waits for the deployment result of the context
 func AwaitDeployResult(dctx DeployContext) DeployResult {
 	defer close(dctx.completed)
 	return <-dctx.completed
 }
 
-// NewDeployContext create new deployment context containing configuration information
+// NewDeployContext create a deployment context from the provided settings.
+func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+	id := bw.RandomID(a.DeploymentID)
+
+	dctx := DeployContext{
+		Local:         p,
+		ID:            id,
+		Root:          root,
+		ArchiveRoot:   root,
+		Log:           dlog{log: log.New(ioutil.Discard, "", 0)},
+		Archive:       a,
+		DeployOptions: dopts,
+		dispatcher:    agentutil.LogDispatcher{},
+		completed:     make(chan DeployResult),
+		done:          &sync.Once{},
+	}
+
+	for _, opt := range options {
+		opt(&dctx)
+	}
+
+	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
+	return dctx, nil
+}
+
+// NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
-func NewDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
-		logfile *os.File
-		logger  dlog
+		logger dlog
 	)
 
 	id := bw.RandomID(a.DeploymentID)
 	root := filepath.Join(workdir, id.String())
 	archiveDir := filepath.Join(root, "archive")
+
 	if err = os.MkdirAll(root, 0755); err != nil {
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
@@ -62,32 +101,15 @@ func NewDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a
 
 	logger = dlog{log: log.New(ioutil.Discard, "", 0)}
 	if !dopts.SilenceDeployLogs {
-		if logfile, logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
+		if logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
 			return _did, err
 		}
 	}
 
-	dctx := DeployContext{
-		Local:         p,
-		ID:            id,
-		Root:          root,
-		ArchiveRoot:   archiveDir,
-		Log:           logger,
-		Archive:       a,
-		DeployOptions: dopts,
-		logfile:       logfile,
-		dispatcher:    agentutil.LogDispatcher{},
-		completed:     make(chan DeployResult),
-		done:          &sync.Once{},
-	}
-
-	for _, opt := range options {
-		opt(&dctx)
-	}
-
-	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")
-	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
-	return dctx, nil
+	return NewDeployContext(root, p, dopts, a, append([]DeployContextOption{
+		DeployContextOptionLog(logger),
+		DeployContextOptionArchiveRoot(archiveDir),
+	}, options...)...)
 }
 
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
@@ -98,7 +120,6 @@ type DeployContext struct {
 	Root          string
 	ArchiveRoot   string
 	Log           logger
-	logfile       *os.File
 	Archive       agent.Archive
 	DeployOptions agent.DeployOptions
 	dispatcher    dispatcher
@@ -125,10 +146,7 @@ func (t DeployContext) Cancel(reason error) {
 // Done is responsible for closing out the deployment context.
 func (t DeployContext) Done(result error) error {
 	t.done.Do(func() {
-		if t.logfile != nil {
-			logx.MaybeLog(errors.Wrap(t.logfile.Sync(), "failed to sync deployment log"))
-			logx.MaybeLog(errors.Wrap(t.logfile.Close(), "failed to close deployment log"))
-		}
+		logx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
 
 		if t.completed != nil {
 			t.completed <- DeployResult{
@@ -145,6 +163,7 @@ type logger interface {
 	Print(...interface{})
 	Printf(string, ...interface{})
 	Println(...interface{})
+	Close() error
 }
 
 func newCancelDeployContext() DeployContext {

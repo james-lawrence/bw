@@ -182,7 +182,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		DeployContextOptionDispatcher(t.dispatcher),
 	}
 
-	if dctx, err = NewDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
+	if dctx, err = NewRemoteDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
 		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, err))
 		return t.ds.current, err
 	}
