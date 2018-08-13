@@ -135,7 +135,8 @@ func _fqdn(hostname string) (string, error) {
 			}
 			hosts, err := net.LookupAddr(string(ip))
 			if err != nil {
-				return "", errors.Wrap(err, "failed to lookup hosts for addr")
+				return "", nil
+				// return "", errors.Wrap(err, "failed to lookup hosts for addr")
 			}
 
 			for _, fqdn := range hosts {
