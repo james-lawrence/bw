@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -138,7 +139,7 @@ type QuorumDialer struct {
 // Dial connects to a member of the quorum based on the cluster.
 func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
 	for _, p := range shuffleQuorum(c.Quorum()) {
-		log.Println("dialing", spew.Sdump(p))
+		debugx.Println("dialing", spew.Sdump(p))
 		if client, err = t.dialer.Dial(p); err == nil {
 			break
 		}
