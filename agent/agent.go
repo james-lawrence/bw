@@ -88,6 +88,9 @@ func ConnectClientUntilSuccess(
 
 		// when an error occurs, cleanup any resources.
 		logx.MaybeLog(errors.WithMessage(c.Shutdown(), "failed to cleanup cluster"))
+		if client != nil {
+			logx.MaybeLog(errors.WithMessage(client.Close(), "failed to cleanup client"))
+		}
 
 		select {
 		case <-ctx.Done():

@@ -13,6 +13,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/x/logx"
 	"golang.org/x/time/rate"
 
 	"github.com/pkg/errors"
@@ -156,13 +157,17 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 
 // WatchClusterEvents pushes events into the provided channel for the given cluster.
 func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events chan agent.Message) {
-	rl := rate.NewLimiter(rate.Every(time.Second), 1)
+	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	for {
 		var (
 			err   error
 			qc    agent.Client
 			local = c.Local()
 		)
+
+		if qc != nil {
+			logx.MaybeLog(qc.Close())
+		}
 
 		select {
 		case <-ctx.Done():
