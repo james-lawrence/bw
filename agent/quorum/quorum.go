@@ -133,13 +133,15 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 
 	for o := range events {
 		switch o.Data.(type) {
-		case raft.LeaderObservation:
-			if o.Raft.Leader() == "" {
-				debugx.Println("leader lost disabling quorum locally")
-				t.sm = DisabledMachine{}
-				continue
+		case raft.RaftState:
+			switch o.Raft.State() {
+			case raft.Shutdown:
+				log.Println("shutting down watchers", o.Raft.State())
+				close(t.lost)
+				t.lost = make(chan struct{})
 			}
-
+		case raft.LeaderObservation:
+			log.Println("leadership observation", o.Raft.State())
 			switch o.Raft.State() {
 			case raft.Leader:
 				t.sm = func() stateMachine {
@@ -150,10 +152,9 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 				}()
 			case raft.Follower, raft.Candidate:
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
-			default:
-				log.Println("state, shutting down watchers", o.Raft.State())
-				close(t.lost)
-				t.lost = make(chan struct{})
+			case raft.Shutdown:
+				log.Println("shutdown disabling quorum locally")
+				t.sm = DisabledMachine{}
 			}
 		}
 	}
@@ -274,7 +275,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		case _ = <-out.Context().Done():
 			return logx.MaybeLog(errors.WithStack(out.Context().Err()))
 		case _ = <-t.lost:
-			return logx.MaybeLog(errors.New("leadership lost, failed to deliver message"))
+			return logx.MaybeLog(errors.New("quorum membership lost"))
 		case m := <-events:
 			if err = out.Send(&m); err != nil {
 				return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))

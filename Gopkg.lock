@@ -324,7 +324,7 @@
   branch = "misc-fixes"
   name = "github.com/hashicorp/raft"
   packages = ["."]
-  revision = "1251a424f2fbb73fd7c192ef5f0e60e94da3c66e"
+  revision = "773eb2e4c6f0ae8eb77693f6d05b82fccf9e8590"
   source = "github.com/james-lawrence/raft"
 
 [[projects]]
@@ -728,6 +728,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "63232f914d9bdc81686e74fcb29a9a5b63757fd24d217f8fca7343fdab5d0b69"
+  inputs-digest = "31d9f31371968cf65bf8556a11aca07e26f68352af37542379df057a65adf4ee"
   solver-name = "gps-cdcl"
   solver-version = 1

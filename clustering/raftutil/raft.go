@@ -268,12 +268,6 @@ func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, las
 	return false
 }
 
-func (t Protocol) unstable(d time.Duration) {
-	log.Println("peers unstable, will refresh in", d)
-	time.Sleep(d)
-	t.ClusterChange.Broadcast()
-}
-
 func defaultRaftConfig() *raft.Config {
 	conf := raft.DefaultConfig()
 

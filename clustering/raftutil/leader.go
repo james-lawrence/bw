@@ -29,7 +29,12 @@ func (t leader) Update(c cluster) state {
 		// are fairly disruptive, but this means the raft cluster can potentially
 		// be a single node larger than expected.
 		if t.cleanupPeers(c.LocalNode(), quorumPeers(c)...) {
-			go t.protocol.unstable(time.Second)
+			refresh := time.Second
+			log.Println("peers unstable, will refresh in", refresh)
+			return delayedTransition{
+				next:     t,
+				Duration: refresh,
+			}
 		}
 
 		return maintainState
@@ -61,10 +66,12 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		return true
 	}
 
+	peers := config.Configuration().Servers
+	voterCount := t.voterCount(peers)
+	allowRemoval := voterCount >= 3
+
 	// remove self from peer set.
-	peers := removePeer(raft.ServerID(local.Name), config.Configuration().Servers...)
-	// log.Println(local.Name, "candidates", spew.Sdump(candidates))
-	// log.Println(local.Name, "peers", peers)
+	peers = removePeer(raft.ServerID(local.Name), peers...)
 
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
@@ -87,14 +94,35 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		}
 	}
 
-	for _, peer := range peers {
-		if err := t.r.RemoveServer(peer.ID, 0, commitTimeout).Error(); err != nil {
-			log.Println("failed to remove peer", err)
+	// prevent peer removal if minimum number of voters are not allowed.
+	if allowRemoval {
+		for _, peer := range peers {
 			unstable = true
+			switch peer.Suffrage {
+			case raft.Voter:
+				if err := t.r.DemoteVoter(peer.ID, 0, commitTimeout).Error(); err != nil {
+					log.Println("failed to demote peer", err)
+				}
+			case raft.Nonvoter:
+				if err := t.r.RemoveServer(peer.ID, 0, commitTimeout).Error(); err != nil {
+					log.Println("failed to demote peer", err)
+				}
+			}
 		}
 	}
 
 	return unstable
+}
+
+func (t leader) voterCount(peers []raft.Server) (c int) {
+	for _, p := range peers {
+		if p.Suffrage == raft.Voter {
+			log.Println("increasing voter count to", c+1)
+			c++
+		}
+	}
+
+	return c
 }
 
 func removePeer(id raft.ServerID, peers ...raft.Server) []raft.Server {
