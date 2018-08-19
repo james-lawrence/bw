@@ -77,6 +77,11 @@ func (t *StateMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 	return d.Dial(leader)
 }
 
+// Info high level information about the state of the machine.
+func (t *StateMachine) Info() (agent.InfoResponse, error) {
+	return t.wal.getInfo(), nil
+}
+
 // Dispatch a message to the WAL.
 func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) (err error) {
 	for _, m := range messages {

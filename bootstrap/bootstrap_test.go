@@ -25,6 +25,7 @@ type fakeClient struct {
 	deploy    agent.Deploy
 	connect   agent.ConnectResponse
 	status    agent.StatusResponse
+	qinfo     agent.InfoResponse
 }
 
 func (t fakeClient) Shutdown() error {
@@ -57,6 +58,10 @@ func (t fakeClient) Connect() (agent.ConnectResponse, error) {
 
 func (t fakeClient) Info() (agent.StatusResponse, error) {
 	return t.status, t.errResult
+}
+
+func (t fakeClient) QuorumInfo() (agent.InfoResponse, error) {
+	return t.qinfo, t.errResult
 }
 
 func (t fakeClient) Watch(_ context.Context, out chan<- agent.Message) error {

@@ -27,9 +27,13 @@ import (
 )
 
 type stateMachine interface {
+	// Info high level information about deployment status.
+	Info() (agent.InfoResponse, error)
+	// Deploy initiate a deploy.
 	Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) error
-	// Cancel a deploy.
+	// Cancel current deploy.
 	Cancel() error
+	// Dispatch a message to the raft cluster.
 	Dispatch(context.Context, ...agent.Message) error
 	State() raft.RaftState
 }
@@ -152,6 +156,14 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			}
 		}
 	}
+}
+
+// Info return current info from the leader.
+func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
+	log.Println("info invoked")
+	defer log.Println("info completed")
+
+	return t.sm.Info()
 }
 
 // Deploy ...

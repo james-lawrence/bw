@@ -33,6 +33,7 @@ type Client interface {
 	Deploy(DeployOptions, Archive) (Deploy, error)
 	Connect() (ConnectResponse, error)
 	Cancel() error
+	QuorumInfo() (InfoResponse, error)
 	Info() (StatusResponse, error)
 	Watch(ctx context.Context, out chan<- Message) error
 	Dispatch(ctx context.Context, messages ...Message) error

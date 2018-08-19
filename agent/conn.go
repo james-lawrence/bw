@@ -50,6 +50,20 @@ func (t Conn) Shutdown() (err error) {
 	return nil
 }
 
+// QuorumInfo returns high level details about the state of the cluster.
+func (t Conn) QuorumInfo() (z InfoResponse, err error) {
+	var (
+		resp *InfoResponse
+	)
+
+	rpc := NewQuorumClient(t.conn)
+	if resp, err = rpc.Info(context.Background(), &InfoRequest{}); err != nil {
+		return z, errors.WithStack(err)
+	}
+
+	return *resp, nil
+}
+
 // Upload ...
 func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archive, err error) {
 	var (

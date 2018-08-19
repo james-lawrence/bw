@@ -9,6 +9,7 @@ type quorum interface {
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
 	Dispatch(context.Context, ...Message) error
+	Info(context.Context) (InfoResponse, error)
 }
 
 // NewQuorum ...
@@ -23,11 +24,23 @@ type Quorum struct {
 	q quorum
 }
 
+// Info ...
+func (t Quorum) Info(ctx context.Context, _ *InfoRequest) (_ *InfoResponse, err error) {
+	var (
+		resp InfoResponse
+	)
+
+	resp, err = t.q.Info(ctx)
+
+	return &resp, err
+}
+
 // Deploy ...
 func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *DeployCommandResult, err error) {
 	var (
 		_zero DeployCommandResult
 	)
+
 	return &_zero, t.q.Deploy(*req.Options, *req.Archive, PtrToPeers(req.Peers...)...)
 }
 

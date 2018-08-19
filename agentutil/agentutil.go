@@ -3,6 +3,7 @@
 package agentutil
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"os"
@@ -11,22 +12,21 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/x/errorsx"
 	"golang.org/x/time/rate"
 
 	"github.com/pkg/errors"
 )
 
-type errString string
-
-func (t errString) Error() string {
-	return string(t)
-}
-
 const (
 	// ErrNoDeployments ...
-	ErrNoDeployments = errString("no deployments found")
+	ErrNoDeployments = errorsx.String("no deployments found")
 	// ErrFailedDeploymentQuorum ...
-	ErrFailedDeploymentQuorum = errString("unable to achieve latest deployment quorum")
+	ErrFailedDeploymentQuorum = errorsx.String("unable to achieve latest deployment quorum")
+	// ErrActiveDeployment ...
+	ErrActiveDeployment = errorsx.String("deployment in progress")
+	// ErrDifferentDeployment when two deployments have different IDs.
+	ErrDifferentDeployment = errorsx.String("deployments are different")
 )
 
 type dialer interface {
@@ -186,4 +186,20 @@ func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events c
 			continue
 		}
 	}
+}
+
+// SameArchive checks if two archives have the same deployment ID.
+// if both are nil, they are considered the same deployment.
+// if one is nil, they are considered different.
+// otherwise DeploymentID must match to be considered the same deployment.
+func SameArchive(a, b *agent.Archive) bool {
+	if a == nil && b == nil {
+		return true
+	}
+
+	if a == nil || b == nil {
+		return false
+	}
+
+	return bytes.Compare(a.DeploymentID, b.DeploymentID) == 0
 }

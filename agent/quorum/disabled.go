@@ -15,6 +15,11 @@ var ErrDisabledMachine = errors.New("this node is not a member of the quorum")
 // returns reasonable results on every method.
 type DisabledMachine struct{}
 
+// Info ...
+func (t DisabledMachine) Info() (agent.InfoResponse, error) {
+	return agent.InfoResponse{}, ErrDisabledMachine
+}
+
 // State returns the state of the raft cluster.
 func (t DisabledMachine) State() raft.RaftState {
 	return raft.Shutdown

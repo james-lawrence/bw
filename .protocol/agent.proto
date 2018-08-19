@@ -120,11 +120,20 @@ message UploadResponse {
 message WatchRequest {}
 message DispatchResponse {}
 
+message InfoRequest{}
+message InfoResponse{
+  enum Mode { None = 0; Deploying = 1; }
+  Mode mode = 1;
+  DeployCommand deploying = 2;
+  DeployCommand deployed = 3;
+}
+
 service Quorum {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
   rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
+  rpc Info(InfoRequest) returns (InfoResponse) {}
 }
 
 message ConnectRequest {}

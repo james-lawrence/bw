@@ -1,7 +1,6 @@
 package bootstrap
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"time"
@@ -36,7 +35,7 @@ func UntilSuccess(maxAttempts int, local agent.Peer, c cluster, dialer dialer, c
 
 	for i := 0; i < maxAttempts; i++ {
 		if err = Bootstrap(local, c, dialer, coord); err != nil {
-			log.Println("failed bootstrap", err)
+			log.Println("---------------------- bootstrap failed ----------------------\n", err)
 			time.Sleep(bs.Backoff(i))
 			log.Println("REATTEMPT BOOTSTRAP")
 			continue
@@ -51,9 +50,10 @@ func UntilSuccess(maxAttempts int, local agent.Peer, c cluster, dialer dialer, c
 // Bootstrap a server with the latest deploy.
 func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
 	var (
-		status agent.StatusResponse
-		latest agent.Deploy
-		client agent.Client
+		latestLocal   agent.Deploy
+		latestCluster agent.Deploy
+		latestQuorum  agent.Deploy
+		deploy        deployment.DeployResult
 	)
 
 	// Here we clone the coordinator to override some behaviours around dispatching and observations.
@@ -67,7 +67,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
 
-	if latest, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
+	if latestCluster, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case agentutil.ErrNoDeployments:
 			log.Println(cause)
@@ -77,37 +77,54 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 		}
 	}
 
-	if client, err = dialer.Dial(local); err != nil {
-		return errors.Wrap(err, "failed to connect to local server")
+	// TODO: to maintain backwards compatibility if we have an error when retrieving
+	// the latest deploy from quorum, then we'll just log and assign it to the latest
+	// from the cluster. this leaves us with edge cases, but they can be addressed
+	// in the next version.
+	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
+		log.Println(errors.Wrap(err, "failed to retrieve latest from quorum, fallback to latest from agents"))
+		latestQuorum = latestCluster
 	}
 
-	if status, err = client.Info(); err != nil {
-		return errors.Wrap(err, "failed to retrieve local")
+	if latestLocal, err = agentutil.LocalLatestDeployment(local, dialer); err != nil {
+		return err
 	}
 
-	if err = client.Close(); err != nil {
-		return errors.WithStack(err)
-	}
-
-	if len(status.Deployments) > 0 && status.Deployments[0].Stage == agent.Deploy_Completed && bytes.Compare(latest.Archive.DeploymentID, status.Deployments[0].Archive.DeploymentID) == 0 {
+	if agentutil.SameArchive(latestQuorum.Archive, latestLocal.Archive) {
 		log.Println("latest already deployed")
 		return nil
 	}
 
-	opts := *latest.Options
+	opts := *latestCluster.Options
 
 	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
 	defer cancel()
 
 	log.Println("bootstrapping with options", spew.Sdump(opts))
-	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
+	if _, err = coord.Deploy(opts, *latestCluster.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 
 	select {
 	case <-deadline.Done():
 		return errors.Wrap(deadline.Err(), "failed to bootstrap timeout")
-	case deploy := <-deployResults:
-		return errors.Wrap(deploy.Error, "deployment failed")
+	case deploy = <-deployResults:
 	}
+
+	if err = deploy.Error; err != nil {
+		return errors.Wrap(err, "deployment failed")
+	}
+
+	// again retrieve the latest deployment information from the cluster.
+	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
+	// we want to consider the bootstrap a failure and retry.
+	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
+		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
+	}
+
+	if agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
+		return errors.WithStack(agentutil.ErrDifferentDeployment)
+	}
+
+	return nil
 }

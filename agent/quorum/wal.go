@@ -123,6 +123,22 @@ func (t *WAL) deployCommand(dc *agent.DeployCommand) error {
 	return nil
 }
 
+func (t *WAL) getInfo() agent.InfoResponse {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	m := agent.InfoResponse_None
+	if atomic.LoadInt32(&t.deploying) == deploying {
+		m = agent.InfoResponse_Deploying
+	}
+
+	return agent.InfoResponse{
+		Mode:      m,
+		Deploying: t.runningDeploy,
+		Deployed:  t.lastSuccessfulDeploy,
+	}
+}
+
 func (t *WAL) getLastSuccessfulDeploy() *agent.DeployCommand {
 	t.m.RLock()
 	defer t.m.RUnlock()

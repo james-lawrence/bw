@@ -58,6 +58,21 @@ func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 	return d.Dial(leader)
 }
 
+// Info ...
+func (t *ProxyMachine) Info() (z agent.InfoResponse, err error) {
+	var (
+		c agent.Client
+	)
+
+	if c, err = t.DialLeader(t.dialer); err != nil {
+		return z, err
+	}
+
+	defer c.Close()
+
+	return c.QuorumInfo()
+}
+
 // Dispatch a message to the WAL.
 func (t *ProxyMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
 	return t.writeWAL(m...)
