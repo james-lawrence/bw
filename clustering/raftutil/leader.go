@@ -117,7 +117,6 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 func (t leader) voterCount(peers []raft.Server) (c int) {
 	for _, p := range peers {
 		if p.Suffrage == raft.Voter {
-			log.Println("increasing voter count to", c+1)
 			c++
 		}
 	}
