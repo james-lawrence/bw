@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -131,12 +132,14 @@ func _fqdn(hostname string) (string, error) {
 		if ipv4 := addr.To4(); ipv4 != nil {
 			ip, err := ipv4.MarshalText()
 			if err != nil {
-				return "", errors.Wrap(err, "failed to marshal ip for fqdn")
+				logx.MaybeLog(errors.Wrapf(err, "failed to marshal ip for fqdn: %s", ipv4.String()))
+				continue
 			}
+
 			hosts, err := net.LookupAddr(string(ip))
 			if err != nil {
-				return "", nil
-				// return "", errors.Wrap(err, "failed to lookup hosts for addr")
+				logx.MaybeLog(errors.Wrapf(err, "failed to lookup hosts for addr: %s", ipv4.String()))
+				continue
 			}
 
 			for _, fqdn := range hosts {
