@@ -37,7 +37,6 @@ type cluster interface {
 	Local() agent.Peer
 	Peers() []agent.Peer
 	Quorum() []agent.Peer
-	Connect() agent.ConnectResponse
 }
 
 // Cleaner interface for cleaning workspace directories.

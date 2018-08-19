@@ -117,7 +117,6 @@ type cluster interface {
 	Local() Peer
 	Peers() []Peer
 	Quorum() []Peer
-	Connect() ConnectResponse
 }
 
 // downloader ...

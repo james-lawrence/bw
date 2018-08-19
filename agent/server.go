@@ -7,6 +7,11 @@ import (
 	"github.com/james-lawrence/bw/x/debugx"
 )
 
+type connector interface {
+	Local() Peer
+	Connect() ConnectResponse
+}
+
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
 	// Deploy trigger a deploy
@@ -48,9 +53,9 @@ func ServerOptionDeployer(d deployer) ServerOption {
 }
 
 // ServerOptionCluster ...
-func ServerOptionCluster(c cluster) ServerOption {
+func ServerOptionCluster(c connector) ServerOption {
 	return func(s *Server) {
-		s.cluster = c
+		s.connector = c
 	}
 }
 
@@ -62,13 +67,13 @@ func ServerOptionShutdown(cf context.CancelFunc) ServerOption {
 }
 
 // NewServer ...
-func NewServer(c cluster, options ...ServerOption) Server {
+func NewServer(c connector, options ...ServerOption) Server {
 	s := Server{
 		shutdown: context.CancelFunc(func() {
 			log.Println("shutdown isn't implemented")
 		}),
-		cluster:  c,
-		Deployer: noopDeployer{},
+		connector: c,
+		Deployer:  noopDeployer{},
 	}
 
 	for _, opt := range options {
@@ -80,9 +85,9 @@ func NewServer(c cluster, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
-	shutdown context.CancelFunc
-	Deployer deployer
-	cluster  cluster
+	shutdown  context.CancelFunc
+	Deployer  deployer
+	connector connector
 }
 
 // Shutdown when invoked the agent will self shutdown.
@@ -120,7 +125,7 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 		d   []Deploy
 	)
 
-	tmp := t.cluster.Local()
+	tmp := t.connector.Local()
 
 	if d, err = t.Deployer.Deployments(); err != nil {
 		d = []Deploy{}
@@ -135,6 +140,6 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 
 // Connect ...
 func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *ConnectResponse, err error) {
-	details := t.cluster.Connect()
+	details := t.connector.Connect()
 	return &details, nil
 }

@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -100,6 +101,30 @@ func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers 
 	return t.deployer.Deploy(t.dialer, t, dopts, a, peers...)
 }
 
+func (t *StateMachine) determineLatestDeploy(c cluster, d agent.Dialer) (err error) {
+	var (
+		deploy agent.Deploy
+	)
+
+	last := t.wal.getLastSuccessfulDeploy()
+	if last != nil {
+		return nil
+	}
+
+	log.Println("leadership change detected missing successful deploy, attempting to recover")
+	if deploy, err = agentutil.DetermineLatestDeployment(c, d); err != nil {
+		return err
+	}
+
+	// TODO: we actually probably want to restart the deploy entirely to make sure
+	// all servers recover properly....
+	return t.writeWAL(agentutil.DeployCommand(c.Local(), agent.DeployCommand{
+		Command: agent.DeployCommand_Done,
+		Archive: deploy.Archive,
+		Options: deploy.Options,
+	}), 10*time.Second)
+}
+
 func (t *StateMachine) restartActiveDeploy() error {
 	var (
 		dc *agent.DeployCommand
@@ -107,7 +132,11 @@ func (t *StateMachine) restartActiveDeploy() error {
 
 	if dc = t.wal.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
 		m := agentutil.LogEvent(t.local.Local(), "detected new leader, restarting deploy")
-		return errorsx.Compact(t.writeWAL(m, 10*time.Second), t.Cancel(), t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive))
+		failure := errorsx.CompactMonad{}
+		failure = failure.Compact(t.writeWAL(m, 10*time.Second))
+		failure = failure.Compact(errors.Wrap(t.Cancel(), "failed to cancel previous deploy"))
+		failure = failure.Compact(t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive))
+		return failure.Cause()
 	}
 
 	return nil

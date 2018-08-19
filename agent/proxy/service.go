@@ -70,7 +70,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 			dresult = agent.DeployCommand_Done
 		}
 
-		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive})))
+		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive, Options: &dopts})))
 	}()
 
 	return nil

@@ -145,6 +145,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 				t.sm = func() stateMachine {
 					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy)
 					logx.MaybeLog(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
+					logx.MaybeLog(sm.determineLatestDeploy(t.c, t.dialer))
 					return &sm
 				}()
 			case raft.Follower, raft.Candidate:
@@ -160,8 +161,8 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 
 // Info return current info from the leader.
 func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
-	log.Println("info invoked")
-	defer log.Println("info completed")
+	debugx.Println("info invoked")
+	defer debugx.Println("info completed")
 
 	return t.sm.Info()
 }
