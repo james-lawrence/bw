@@ -231,9 +231,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
-		// TODO: fix the timeouts and remote deploy code to not error out.
-		events <- agentutil.LogError(local.Peer, errors.Wrap(cause, "remote deploy (transport closing is safe to ignore)"))
-		// events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
+		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 	}
 
 	return err
