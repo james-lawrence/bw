@@ -98,6 +98,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 
 	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
 	defer cancel()
+
 	log.Println("bootstrapping with options", spew.Sdump(opts))
 	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
 		return errors.WithStack(err)

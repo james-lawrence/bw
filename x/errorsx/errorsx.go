@@ -1,6 +1,8 @@
 package errorsx
 
-import "time"
+import (
+	"time"
+)
 
 // Compact returns the first error in the set, if any.
 func Compact(errs ...error) error {
@@ -11,6 +13,26 @@ func Compact(errs ...error) error {
 	}
 
 	return nil
+}
+
+// CompactMonad an error that collects and returns the first error encountered.
+type CompactMonad struct {
+	cause error
+}
+
+func (t CompactMonad) Error() string { return t.cause.Error() }
+
+// Cause implement errors.Cause interface.
+func (t CompactMonad) Cause() error { return t.cause }
+
+// Compact returns a monad holding the first error
+// encountered.
+func (t CompactMonad) Compact(errs ...error) CompactMonad {
+	if t.cause != nil {
+		return t
+	}
+
+	return CompactMonad{cause: Compact(errs...)}
 }
 
 // String useful wrapper for string constants as errors.

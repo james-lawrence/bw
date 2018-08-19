@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/x/errorsx"
 )
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
@@ -17,7 +18,7 @@ func DetermineLatestDeployment(c cluster, d dialer) (latest agent.Deploy, err er
 	}
 
 	var (
-		quorum int
+		votes int
 	)
 
 	counts := make(map[string]result)
@@ -49,31 +50,38 @@ func DetermineLatestDeployment(c cluster, d dialer) (latest agent.Deploy, err er
 		return latest, err
 	}
 
-	if len(counts) == 0 {
-		return latest, ErrNoDeployments
+	for _, v := range counts {
+		if v.count > votes {
+			latest = *v.deploy
+			votes = v.count
+		}
 	}
 
-	for _, v := range counts {
-		if v.count > quorum {
-			latest = *v.deploy
-			quorum = v.count
-		}
+	failure := errorsx.CompactMonad{}
+
+	if len(counts) == 0 {
+		failure = failure.Compact(ErrNoDeployments)
 	}
 
 	// should never happen, but if it does, guard against it.
 	if latest.Archive == nil {
-		return latest, errors.Wrap(ErrNoDeployments, "archive missing in deploy")
+		failure = failure.Compact(errors.Wrap(ErrNoDeployments, "archive missing in deploy"))
 	}
 
-	peers := c.Peers()
-
-	// check for quorum
-	log.Printf("quorum(%f) < members(%d) / 2.0: min(%f)\n", float64(quorum), len(peers)-1, float64((len(peers)-1))/2.0)
-	if float64(quorum) < float64((len(peers)-1))/2.0 {
-		return latest, ErrFailedDeploymentQuorum
+	if !quorum(c, votes) {
+		failure = failure.Compact(ErrFailedDeploymentQuorum)
 	}
 
-	return latest, err
+	// TODO check archive for a deployment if failure is not nil.
+	return latest, failure.Cause()
+}
+
+func quorum(c cluster, votes int) bool {
+	// subtract one as to not count the current node as part of the quorum.
+	peers := len(c.Peers()) - 1
+	minRatio := float64(peers) / 2.0
+	log.Printf("quorum(%f) < members(%d) / 2.0: min(%f)\n", float64(votes), peers, minRatio)
+	return float64(votes) >= minRatio
 }
 
 // LatestDeployment ...
