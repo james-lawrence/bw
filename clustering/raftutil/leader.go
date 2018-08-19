@@ -25,17 +25,13 @@ func (t leader) Update(c cluster) state {
 	log.Println("leader update invoked")
 	switch t.r.State() {
 	case raft.Leader:
+		// IMPORTANT: an active leader should never leave the raft cluster. changes in leadership
+		// are fairly disruptive, but this means the raft cluster can potentially
+		// be a single node larger than expected.
 		if t.cleanupPeers(c.LocalNode(), quorumPeers(c)...) {
 			go t.protocol.unstable(time.Second)
 		}
 
-		if maybeLeave(c) {
-			if err := t.r.Barrier(5 * time.Second).Error(); err != nil {
-				log.Println("barrier write failed", err)
-				return maintainState
-			}
-			return leave(t, t.stateMeta)
-		}
 		return maintainState
 	default:
 		log.Println("lost leadership: leaving")
@@ -92,7 +88,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	}
 
 	for _, peer := range peers {
-		if err := t.r.RemoveServer(peer.ID, t.r.GetConfiguration().Index(), commitTimeout).Error(); err != nil {
+		if err := t.r.RemoveServer(peer.ID, 0, commitTimeout).Error(); err != nil {
 			log.Println("failed to remove peer", err)
 			unstable = true
 		}
