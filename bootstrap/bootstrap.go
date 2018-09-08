@@ -49,6 +49,23 @@ func UntilSuccess(maxAttempts int, local agent.Peer, c cluster, dialer dialer, c
 
 // Bootstrap a server with the latest deploy.
 func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
+	ignore := func(err error) error {
+		cause := errors.Cause(err)
+
+		switch cause {
+		case agentutil.ErrActiveDeployment:
+			// ignore active deployments when initialling bootstrapping,
+			// we'll catch it at the end when we validate the version.
+			return nil
+		case agentutil.ErrNoDeployments:
+			// ignore no deployment, we'll fallback to retrieving the latest
+			// from the agents themselves.
+			return nil
+		}
+
+		return err
+	}
+
 	var (
 		latest       agent.Deploy
 		latestLocal  agent.Deploy
@@ -66,40 +83,24 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 
 	log.Println("--------------- bootstrap -------------")
 	defer log.Println("--------------- bootstrap -------------")
-	if latestLocal, err = agentutil.LocalLatestDeployment(local, dialer); err != nil {
-		return err
+	if latestLocal, err = agentutil.LocalLatestDeployment(local, dialer); ignore(err) != nil {
+		return errors.Wrap(err, "latest local failed")
 	}
 
 	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
-		ignore := func(err error) error {
-			cause := errors.Cause(err)
-
-			switch cause {
-			case agentutil.ErrActiveDeployment:
-				// ignore active deployments when initialling bootstrapping,
-				// we'll catch it at the end when we validate the version.
-				return nil
-			case agentutil.ErrNoDeployments:
-				// ignore no deployment, we'll fallback to retrieving the latest
-				// from the agents themselves.
-				return nil
-			}
-
-			return err
-		}
-
 		if ignore(err) != nil {
-			return err
+			log.Println("failed to retrieve latest from quorum, falling back to discovery")
+			err = agentutil.ErrNoDeployments
+			// return errors.Wrap(err, "latest quorum failed")
 		}
 	}
 
-	latest = latestQuorum
 	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments || cause == agentutil.ErrActiveDeployment {
 		log.Println(errors.Wrap(err, "no valid deployments available from quorum, fallback to latest from agents"))
-		if latest, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
+		if latestQuorum, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
 			switch cause := errors.Cause(err); cause {
 			case agentutil.ErrNoDeployments:
-				log.Println(cause)
+				log.Println(errors.Wrap(cause, "latest deployment discovery found no deployments"))
 				return nil
 			default:
 				return errors.Wrap(cause, "failed to determine latest archive to bootstrapping")
@@ -107,8 +108,10 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 		}
 	}
 
-	if agentutil.SameArchive(latestQuorum.Archive, latestLocal.Archive) {
-		log.Println("latest already deployed")
+	latest = latestQuorum
+
+	if agentutil.SameArchive(latest.Archive, latestLocal.Archive) {
+		log.Println("latest already deployed -", spew.Sdump(latestLocal))
 		return nil
 	}
 
@@ -136,7 +139,8 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
 	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
-		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
+		log.Println(errors.Wrap(err, "failed to determine latest deployment from quorum, ignoring for now"))
+		// return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 
 	if agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
