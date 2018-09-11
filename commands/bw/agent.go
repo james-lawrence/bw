@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -106,15 +105,17 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		Timeout:           2 * time.Minute,
 	})
 	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
+
 	cdialer := commandutils.NewClusterDialer(
 		t.config,
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
-		clustering.OptionLogOutput(os.Stderr),
 		clustering.OptionSecret(secret),
 		clustering.OptionEventDelegate(bq),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+		clustering.OptionLogger(commandutils.DebugLog(t.global.debug)),
 	)
+
 	fssnapshot := peering.File{
 		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
 	}

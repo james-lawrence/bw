@@ -22,6 +22,7 @@ type global struct {
 	ctx      context.Context
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
+	debug    bool
 }
 
 func main() {
@@ -64,6 +65,8 @@ func main() {
 		log.Println("waiting for systems to shutdown")
 	})
 	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
+	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
+
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))

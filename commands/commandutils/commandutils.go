@@ -3,7 +3,9 @@ package commandutils
 
 import (
 	"context"
+	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
@@ -88,4 +90,13 @@ func ClusterJoin(ctx context.Context, conf agent.Config, dialer clustering.Diale
 	}
 
 	return c, nil
+}
+
+// DebugLog return a logger that is either enabled or disabled for debugging purposes.
+func DebugLog(debug bool) *log.Logger {
+	if debug {
+		return log.New(os.Stderr, log.Prefix(), log.Flags())
+	}
+
+	return log.New(ioutil.Discard, log.Prefix(), log.Flags())
 }
