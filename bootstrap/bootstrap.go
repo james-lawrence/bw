@@ -89,9 +89,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 
 	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
 		if ignore(err) != nil {
-			log.Println("failed to retrieve latest from quorum, falling back to discovery")
-			err = agentutil.ErrNoDeployments
-			// return errors.Wrap(err, "latest quorum failed")
+			return errors.Wrap(err, "latest quorum failed")
 		}
 	}
 
@@ -139,8 +137,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
 	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
-		log.Println(errors.Wrap(err, "failed to determine latest deployment from quorum, ignoring for now"))
-		// return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
+		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 
 	if agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
