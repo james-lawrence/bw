@@ -192,6 +192,7 @@ func NodeToPeer(n *memberlist.Node) (_zerop Peer, err error) {
 	}, nil
 }
 
+// MustPeer if err is not nil panics.
 func MustPeer(p Peer, err error) Peer {
 	if err != nil {
 		panic(err)

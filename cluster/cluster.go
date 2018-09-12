@@ -65,7 +65,7 @@ func (t Cluster) Connect() agent.ConnectResponse {
 	)
 
 	if c := t.cluster.Config(); c != nil {
-		secret = c.SecretKey
+		secret = c.Keyring.GetPrimaryKey()
 	}
 
 	return agent.ConnectResponse{

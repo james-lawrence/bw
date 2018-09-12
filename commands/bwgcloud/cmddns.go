@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cluster"
@@ -50,9 +51,9 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 
 func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 	var (
-		err    error
-		c      clustering.Cluster
-		secret []byte
+		err     error
+		c       clustering.Cluster
+		keyring *memberlist.Keyring
 	)
 
 	defer t.global.shutdown()
@@ -67,7 +68,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		return err
 	}
 
-	if secret, err = t.config.Hash(); err != nil {
+	if keyring, err = t.config.Keyring(); err != nil {
 		return err
 	}
 
@@ -87,7 +88,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		clustering.OptionBindAddress(local.Peer.Ip),
 		clustering.OptionBindPort(0),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		clustering.OptionSecret(secret),
+		clustering.OptionKeyring(keyring),
 	)
 
 	if c, err = commandutils.ClusterJoin(t.global.ctx, t.config, cdialer, fssnapshot, peering.NewStaticTCP(t.bootstrap...)); err != nil {

@@ -111,10 +111,10 @@ func OptionDelegate(delegate memberlist.Delegate) Option {
 	}
 }
 
-// OptionSecret set the secret for the cluster to encrypt communications.
-func OptionSecret(s []byte) Option {
+// OptionKeyring set the keyring for the cluster to encrypt communications.
+func OptionKeyring(r *memberlist.Keyring) Option {
 	return func(opts *Options) {
-		opts.Config.SecretKey = s
+		opts.Config.Keyring = r
 	}
 }
 

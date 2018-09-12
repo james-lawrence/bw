@@ -29,6 +29,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
@@ -58,7 +59,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		server        *grpc.Server
 		c             clustering.Cluster
 		creds         *tls.Config
-		secret        []byte
+		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
 		upload        storage.UploadProtocol
 		download      storage.DownloadProtocol
@@ -85,7 +86,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
 	}
 
-	if secret, err = t.config.Hash(); err != nil {
+	if keyring, err = t.config.Keyring(); err != nil {
 		return err
 	}
 
@@ -110,7 +111,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		t.config,
 		clustering.OptionNodeID(local.Peer.Name),
 		clustering.OptionDelegate(local),
-		clustering.OptionSecret(secret),
+		clustering.OptionKeyring(keyring),
 		clustering.OptionEventDelegate(bq),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		clustering.OptionLogger(commandutils.DebugLog(t.global.debug)),

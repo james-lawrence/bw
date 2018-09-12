@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 
 	"google.golang.org/grpc"
@@ -152,10 +153,14 @@ func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 }
 
 func clusterConnect(details ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+	keyring, err := memberlist.NewKeyring([][]byte{}, details.Secret)
+	if err != nil {
+		return c, errors.Wrap(err, "failed to create keyring")
+	}
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
 		clustering.OptionLogOutput(os.Stderr),
-		clustering.OptionSecret(details.Secret),
+		clustering.OptionKeyring(keyring),
 	}, copts...)
 
 	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
@@ -297,7 +302,7 @@ type Config struct {
 	RPCBind           *net.TCPAddr
 	RaftBind          *net.TCPAddr
 	SWIMBind          *net.TCPAddr
-	Secret            string
+	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
 	CA                string
 	CredentialsMode   string `yaml:"credentialsSource"`
@@ -317,7 +322,6 @@ type dnsBind struct {
 
 // Peer - builds the Peer information from the configuration.
 func (t Config) Peer() Peer {
-	// TODO: have a separate advertise address for the IP field.
 	return Peer{
 		Status:      Peer_Node,
 		Name:        t.Name,
@@ -329,13 +333,24 @@ func (t Config) Peer() Peer {
 	}
 }
 
-// Hash - returns the hash of the Secret.
-func (t Config) Hash() (raw []byte, err error) {
-	compute := sha256.New()
+// Keyring - returns the hash of the Secret.
+func (t Config) Keyring() (ring *memberlist.Keyring, err error) {
+	var (
+		tokens [][]byte
+	)
 
-	if _, err = compute.Write([]byte(t.Secret)); err != nil {
-		return raw, errors.WithStack(err)
+	for _, token := range t.ClusterTokens {
+		hashed := sha256.Sum256([]byte(token))
+		tokens = append(tokens, hashed[:])
 	}
 
-	return compute.Sum(nil), nil
+	switch len(tokens) {
+	case 0:
+		hashed := sha256.Sum256([]byte(t.ServerName))
+		return memberlist.NewKeyring([][]byte{}, hashed[:])
+	case 1:
+		return memberlist.NewKeyring([][]byte{}, tokens[0])
+	default:
+		return memberlist.NewKeyring(tokens[1:], tokens[0])
+	}
 }
