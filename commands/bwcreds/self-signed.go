@@ -38,7 +38,6 @@ func (t *selfSigned) generate(ctx *kingpin.ParseContext) (err error) {
 		capriv    *rsa.PrivateKey
 		authority x509.Certificate
 		server    x509.Certificate
-		client    x509.Certificate
 		rootdir   = bw.DefaultDirLocation(t.credentials)
 	)
 
@@ -58,24 +57,11 @@ func (t *selfSigned) generate(ctx *kingpin.ParseContext) (err error) {
 		}),
 	}
 
-	clientoptions := []tlsx.X509Option{
-		tlsx.X509OptionUsage(x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement),
-		tlsx.X509OptionUsageExt(x509.ExtKeyUsageClientAuth),
-		tlsx.X509OptionHosts(t.hosts...),
-		tlsx.X509OptionSubject(pkix.Name{
-			CommonName: "client",
-		}),
-	}
-
 	if authority, err = tlsx.X509Template(t.duration, caoptions...); err != nil {
 		return err
 	}
 
 	if server, err = tlsx.X509Template(t.duration, servoptions...); err != nil {
-		return err
-	}
-
-	if client, err = tlsx.X509Template(t.duration, clientoptions...); err != nil {
 		return err
 	}
 
@@ -113,10 +99,6 @@ func (t *selfSigned) generate(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	if _, err = write(cc.DefaultTLSKeyServer, cc.DefaultTLSCertServer)(tlsx.SignedRSAGen(t.bits, server, authority, capriv)); err != nil {
-		return err
-	}
-
-	if _, err = write(cc.DefaultTLSKeyClient, cc.DefaultTLSCertClient)(tlsx.SignedRSAGen(t.bits, client, authority, capriv)); err != nil {
 		return err
 	}
 
