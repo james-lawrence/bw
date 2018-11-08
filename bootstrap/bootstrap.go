@@ -101,7 +101,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 				log.Println(errors.Wrap(cause, "latest deployment discovery found no deployments"))
 				return nil
 			default:
-				return errors.Wrap(cause, "failed to determine latest archive to bootstrapping")
+				return errors.Wrap(cause, "failed to determine latest archive to bootstrap")
 			}
 		}
 	}

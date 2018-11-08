@@ -237,3 +237,39 @@ func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err erro
 		}
 	}
 }
+
+// Logs return the logs for the given deployment.
+func (t Conn) Logs(did []byte) io.ReadCloser {
+	var (
+		err error
+		c   Agent_LogsClient
+	)
+
+	r, w := io.Pipe()
+	rpc := NewAgentClient(t.conn)
+	if c, err = rpc.Logs(context.Background(), &LogRequest{DeploymentID: did}); err != nil {
+		w.CloseWithError(err)
+		return r
+	}
+
+	go func() {
+		for {
+			var (
+				werr error
+				resp *LogResponse
+			)
+
+			if resp, werr = c.Recv(); werr != nil {
+				w.CloseWithError(werr)
+				return
+			}
+
+			if _, werr = w.Write(resp.Content); werr != nil {
+				w.CloseWithError(werr)
+				return
+			}
+		}
+	}()
+
+	return r
+}

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"io"
 	"log"
+	"os"
 	"time"
 
 	"github.com/alecthomas/kingpin"
@@ -13,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/x/iox"
 	"github.com/james-lawrence/bw/x/logx"
 	"github.com/pkg/errors"
 )
@@ -29,10 +32,60 @@ func (t *agentInfo) configure(parent *kingpin.CmdClause) {
 	}
 
 	t.infoCmd(common(parent.Command("all", "retrieve info from all nodes within the cluster").Default()))
+	t.logCmd(common(parent.Command("logs", "log retrieval for the latest deployment")))
 }
 
 func (t *agentInfo) infoCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return parent.Action(t.info)
+}
+
+func (t *agentInfo) logCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.logs)
+}
+
+func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
+	var (
+		c      clustering.Cluster
+		client agent.Client
+		d      agent.Dialer
+		config agent.ConfigClient
+		latest agent.Deploy
+	)
+	defer t.global.shutdown()
+
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	log.Println("configuration", spew.Sdump(config))
+	local := cluster.NewLocal(
+		commandutils.NewClientPeer(),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	)
+
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionClustering(
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
+			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+		),
+	}
+
+	if client, d, c, err = config.Connect(coptions...); err != nil {
+		return err
+	}
+
+	logx.MaybeLog(errors.Wrap(client.Close(), "failed to close unused client"))
+
+	cx := cluster.New(local, c)
+	if latest, err = agentutil.DetermineLatestDeployment(cx, d); err != nil {
+		return err
+	}
+
+	logs := agentutil.DeploymentLogs(cx, d, latest.Archive.DeploymentID)
+	return iox.Error(io.Copy(os.Stderr, logs))
 }
 
 func (t *agentInfo) info(ctx *kingpin.ParseContext) error {

@@ -1,10 +1,18 @@
 package agent
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/x/iox"
+	"github.com/james-lawrence/bw/x/logx"
 )
 
 type connector interface {
@@ -19,6 +27,7 @@ type deployer interface {
 	// Cancel current deploy
 	Cancel()
 	Deployments() ([]Deploy, error)
+	Logs([]byte) io.ReadCloser
 }
 
 type noopDeployer struct{}
@@ -31,6 +40,10 @@ func (t noopDeployer) Cancel() {}
 
 func (t noopDeployer) Deployments() ([]Deploy, error) {
 	return []Deploy{}, nil
+}
+
+func (t noopDeployer) Logs(deploymentID []byte) io.ReadCloser {
+	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(deploymentID))))
 }
 
 // ServerOption ...
@@ -142,4 +155,21 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *ConnectResponse, err error) {
 	details := t.connector.Connect()
 	return &details, nil
+}
+
+// Logs retrieve logs for the given deploy.
+func (t Server) Logs(req *LogRequest, out Agent_LogsServer) (err error) {
+	const KB16 = 16384
+	logs := t.Deployer.Logs(req.DeploymentID)
+
+	buf := bytes.NewBuffer(make([]byte, 0, KB16))
+	for err == nil {
+		err = errorsx.Compact(
+			iox.Error(io.CopyN(buf, logs, KB16)),
+			out.Send(&LogResponse{Content: buf.Bytes()}),
+		)
+		buf.Reset()
+	}
+
+	return logx.MaybeLog(errorsx.Compact(iox.IgnoreEOF(err), logs.Close()))
 }

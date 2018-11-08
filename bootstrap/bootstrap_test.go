@@ -2,8 +2,11 @@ package bootstrap_test
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -40,6 +43,10 @@ func (t fakeClient) Cancel() error {
 	return t.errResult
 }
 
+func (t fakeClient) Logs(did []byte) io.ReadCloser {
+	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(did))))
+}
+
 func (t fakeClient) Upload(initiator string, srcbytes uint64, src io.Reader) (agent.Archive, error) {
 	return t.archive, t.errResult
 }
@@ -73,10 +80,14 @@ func (t fakeClient) Dispatch(_ context.Context, messages ...agent.Message) error
 }
 
 type fakeDialer struct {
-	c fakeClient
+	c     fakeClient
+	local fakeClient
 }
 
 func (t fakeDialer) Dial(p agent.Peer) (agent.Client, error) {
+	if p.Name == "local" {
+		return t.local, nil
+	}
 	return t.c, nil
 }
 

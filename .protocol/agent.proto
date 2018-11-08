@@ -162,12 +162,21 @@ message ShutdownResponse{}
 message CancelRequest{}
 message CancelResponse{}
 
+message LogRequest {
+  bytes deploymentID = 1;
+}
+
+message LogResponse {
+  bytes content = 1;
+}
+
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectResponse) {}
   rpc Info(StatusRequest) returns (StatusResponse) {}
   rpc Deploy(DeployRequest) returns (DeployResponse) {}
   rpc Cancel(CancelRequest) returns (CancelResponse) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
+  rpc Logs(LogRequest) returns (stream LogResponse) {}
 }
 
 message DispatchRequest {

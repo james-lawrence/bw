@@ -43,7 +43,7 @@ func newLogger(uid bw.RandomID, root, prefix string) (_dlog dlog, err error) {
 		dst *os.File
 	)
 
-	if dst, err = os.OpenFile(filepath.Join(root, "deploy.log"), os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0600); err != nil {
+	if dst, err = os.OpenFile(filepath.Join(root, bw.DeployLog), os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0600); err != nil {
 		return _dlog, errors.WithStack(err)
 	}
 

@@ -264,7 +264,11 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers
 				case agent.Deploy_Completed:
 					continue
 				case agent.Deploy_Failed:
-					failed = errorsx.Compact(failed, errors.Errorf("%s: deployment has failed"))
+					did := bw.RandomID("unknown deployment")
+					if deploy.Archive != nil {
+						did = bw.RandomID(deploy.Archive.DeploymentID)
+					}
+					failed = errorsx.Compact(failed, errors.Errorf("%s: deployment has failed", did))
 					continue
 				}
 			}

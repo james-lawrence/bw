@@ -1,6 +1,7 @@
 package clustering
 
 import (
+	"crypto/sha256"
 	"net"
 	"time"
 
@@ -11,10 +12,13 @@ import (
 
 // NewMock a fake cluster made up of a set of peers and a local node.
 func NewMock(local *memberlist.Node, peers ...*memberlist.Node) Mock {
+	c := memberlist.DefaultLocalConfig()
+	key := sha256.Sum256([]byte("mock"))
+	c.Keyring, _ = memberlist.NewKeyring([][]byte{}, key[:])
 	return Mock{
 		local:  local,
 		peers:  append(peers, local),
-		config: memberlist.DefaultLocalConfig(),
+		config: c,
 	}
 }
 

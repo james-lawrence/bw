@@ -29,6 +29,9 @@ const (
 
 	// DefaultDeployTimeout default timeout for a deployment.
 	DefaultDeployTimeout = time.Hour
+
+	// DeployLog filename for the logs of a given deployment.
+	DeployLog = "deploy.log"
 )
 
 // RandomID a random identifier.

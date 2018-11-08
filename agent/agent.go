@@ -37,6 +37,7 @@ type Client interface {
 	Info() (StatusResponse, error)
 	Watch(ctx context.Context, out chan<- Message) error
 	Dispatch(ctx context.Context, messages ...Message) error
+	Logs([]byte) io.ReadCloser
 }
 
 // ConnectOption - options for connecting to the cluster.

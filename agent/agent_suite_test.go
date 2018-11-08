@@ -13,13 +13,10 @@ import (
 )
 
 func TestAgent(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Agent Suite")
 }
-
-var _ = BeforeSuite(func() {
-	log.SetOutput(ioutil.Discard)
-})
 
 type countingEventObserver struct {
 	seen []agent.Message

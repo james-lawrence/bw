@@ -10,10 +10,7 @@ import (
 )
 
 func TestBootstrap(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bootstrap Suite")
 }
-
-var _ = BeforeSuite(func() {
-	log.SetOutput(ioutil.Discard)
-})

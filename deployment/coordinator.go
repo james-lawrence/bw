@@ -1,6 +1,8 @@
 package deployment
 
 import (
+	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/storage"
+	"github.com/james-lawrence/bw/x/iox"
 	"github.com/james-lawrence/bw/x/logx"
 )
 
@@ -216,6 +219,20 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 	t.deployer.Deploy(dctx)
 
 	return d, nil
+}
+
+// Logs return the logs for the given deployment ID.
+func (t *Coordinator) Logs(did []byte) (logs io.ReadCloser) {
+	var (
+		err error
+	)
+
+	p := filepath.Join(t.deploysRoot, bw.RandomID(did).String(), bw.DeployLog)
+	if logs, err = os.Open(p); err != nil {
+		return ioutil.NopCloser(iox.ErrReader(errors.Wrapf(err, "unable to open logfile %s", p)))
+	}
+
+	return logs
 }
 
 // Cancel ...
