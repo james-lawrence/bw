@@ -10,7 +10,7 @@ go install github.com/james-lawrence/bw/commands/...; NETWORK=127.0.0.4; ./bin/b
 
 ### client commands
 ```bash
-./bin/bw deploy
+go install github.com/james-lawrence/bw/commands/...; ./bin/bw deploy
 NETWORK=127.0.0.1; ./bin/bw notify --agent-address=$NETWORK:2000
 ```
 

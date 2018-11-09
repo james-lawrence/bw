@@ -33,14 +33,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	uxmodeTerm = "term"
-	uxmodeLog  = "log"
-)
-
 type deployCmd struct {
 	global         *global
-	uxmode         string
 	environment    string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
@@ -56,7 +50,6 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-		cmd.Flag("ux-mode", "choose the user interface").Default(uxmodeLog).EnumVar(&t.uxmode, uxmodeTerm, uxmodeLog)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
@@ -67,14 +60,12 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
-func (t *deployCmd) initializeUX(mode string, events chan agent.Message) {
+func (t *deployCmd) initializeUX(d agent.Dialer, events chan agent.Message) {
 	t.global.cleanup.Add(1)
-	switch mode {
-	case uxmodeTerm:
-		go ux.NewTermui(t.global.ctx, t.global.shutdown, t.global.cleanup, events)
-	default:
-		go ux.Logging(t.global.ctx, t.global.cleanup, events)
-	}
+	go func() {
+		ux.Deploy(t.global.ctx, t.global.cleanup, d, events)
+		t.global.shutdown()
+	}()
 }
 
 func (t *deployCmd) localCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -136,7 +127,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events := make(chan agent.Message, 100)
-	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
@@ -166,6 +156,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
+	t.initializeUX(d, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
@@ -253,7 +244,6 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	log.Println("configuration:", spew.Sdump(config))
 
 	events := make(chan agent.Message, 100)
-	t.initializeUX(t.uxmode, events)
 
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(),
@@ -279,7 +269,10 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
+
+	t.initializeUX(d, events)
 	logx.MaybeLog(c.Shutdown())
+
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()

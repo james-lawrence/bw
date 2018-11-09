@@ -120,3 +120,7 @@
 [[constraint]]
   name = "cloud.google.com/go"
   version = "0.26.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/logrusorgru/aurora"

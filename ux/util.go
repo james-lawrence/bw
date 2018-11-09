@@ -7,6 +7,14 @@ import (
 	"github.com/james-lawrence/bw/agent"
 )
 
+func messagePrefixShort(m agent.Message) string {
+	return fmt.Sprintf(
+		"%s:%s",
+		m.Peer.Name,
+		m.Peer.Ip,
+	)
+}
+
 func messagePrefix(m agent.Message) string {
 	return fmt.Sprintf(
 		"%s %s:%s",

@@ -7,7 +7,8 @@ import (
 	"github.com/james-lawrence/bw/x/iox"
 )
 
-func logs(did []byte, dst *io.PipeWriter) Operation {
+// PrintLogs for the given deployment ID.
+func PrintLogs(did []byte, dst io.Writer) Operation {
 	return func(c agent.Client) error {
 		return iox.Error(io.Copy(dst, c.Logs(did)))
 	}
@@ -17,7 +18,7 @@ func logs(did []byte, dst *io.PipeWriter) Operation {
 func DeploymentLogs(c cluster, d dialer, deploymentID []byte) io.ReadCloser {
 	r, w := io.Pipe()
 	go func() {
-		w.CloseWithError(NewClusterOperation(logs(deploymentID, w))(c, d))
+		w.CloseWithError(NewClusterOperation(PrintLogs(deploymentID, w))(c, d))
 	}()
 	return r
 }
