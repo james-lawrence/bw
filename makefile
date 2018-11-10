@@ -4,6 +4,9 @@ VERSION = $(shell git describe --always --tags --long $(COMMIT))
 RELEASE ?= 0.1.$(shell git show -s --format=%ct-%h $(COMMIT))
 LDFLAGS ?= "-X github.com/james-lawrence/bw/commands.Version=$(RELEASE)"
 
+dev-setup:
+	docker build -t debian-build -f .dist/deb/Dockerfile .
+
 generate:
 	go generate ./...
 
@@ -20,7 +23,7 @@ test:
 
 release-push: release
 	git tag --force $(RELEASE)
-	hub release create -a .dist/bearded-wookie-linux-amd64-$(RELEASE).tar.gz $(RELEASE) -m "linux-amd64-$(RELEASE)"
+	hub release create -a .dist/build/bearded-wookie-linux-amd64-$(RELEASE).tar.gz $(RELEASE) -m "linux-amd64-$(RELEASE)"
 	echo "released version: $(RELEASE) completed successfully"
 
 release-check:
@@ -29,5 +32,20 @@ ifeq ($(origin ALLOW_DIRTY), undefined)
 endif
 
 release: generate release-check
-	GOBIN=$(CURDIR)/.dist/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
-	tar -C .dist/ -czvf .dist/bearded-wookie-linux-amd64-$(RELEASE).tar.gz ../RELEASE-NOTES.md ../.dist-systemd bearded-wookie-linux-amd64-$(RELEASE)
+	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
+	GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
+	tar -C .dist --xform 's:^\./::' -czvf .dist/build/bearded-wookie-linux-amd64-$(RELEASE).tar.gz \
+		RELEASE-NOTES.md \
+		systemd \
+		-C build/bearded-wookie-linux-amd64-$(RELEASE) .
+	docker run \
+		-e BUILD_VERSION=$(RELEASE) \
+		-e DEBEMAIL="$(shell git config user.email)" \
+		-e DEBFULLNAME="$(shell git config user.name)" \
+		-v $(CURDIR):/opt/bw \
+		-v $(HOME)/.gnupg:/root/.gnupg \
+		-it debian-build:latest
+	dput -f -c .dist/deb/dput.config bw .dist/build/bearded-wookie_$(RELEASE)_source.changes
+
+release-clean:
+	rm -rf .dist/build

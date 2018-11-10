@@ -1,0 +1,9 @@
+[Unit]
+Description=bearded-wookie utility for automatically updating dns.
+After=network.target
+Requires=bearded-wookie.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+ExecStart=/opt/bin/bwgcloud dns --zone=${DOMAIN}

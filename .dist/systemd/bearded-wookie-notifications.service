@@ -1,0 +1,13 @@
+[Unit]
+Description=bearded-wookie deployment notifications
+After=network.target
+Requires=bearded-wookie.service
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+ExecStart=/usr/local/bin/bw notify
+
+[Install]
+WantedBy=bearded-wookie.service
