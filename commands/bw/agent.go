@@ -196,7 +196,11 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	t.runServer(server, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
-	if !bootstrap.UntilSuccess(t.config.BootstrapAttempts, local.Peer, cx, dialer, coordinator) {
+	bus := bootstrap.NewUntilSuccess(
+		bootstrap.OptionMaxAttempts(t.config.BootstrapAttempts),
+	)
+
+	if !bus.Run(local.Peer, cx, dialer, coordinator) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

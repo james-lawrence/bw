@@ -207,3 +207,8 @@ func SameArchive(a, b *agent.Archive) bool {
 
 	return bytes.Compare(a.DeploymentID, b.DeploymentID) == 0
 }
+
+// IsActiveDeployment checks if the error is an active deployment.
+func IsActiveDeployment(err error) bool {
+	return errors.Cause(err) == ErrActiveDeployment
+}

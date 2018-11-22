@@ -109,7 +109,11 @@ func QuorumLatestDeployment(c cluster, d dialer) (z agent.Deploy, err error) {
 	}
 
 	if i.Mode == agent.InfoResponse_Deploying {
-		return z, errors.WithStack(ErrActiveDeployment)
+		return agent.Deploy{
+			Stage:   agent.Deploy_Deploying,
+			Archive: i.Deploying.Archive,
+			Options: i.Deploying.Options,
+		}, errors.WithStack(ErrActiveDeployment)
 	}
 
 	return agent.Deploy{

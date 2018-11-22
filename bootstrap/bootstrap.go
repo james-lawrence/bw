@@ -3,11 +3,13 @@ package bootstrap
 import (
 	"context"
 	"log"
+	"math"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
@@ -25,25 +27,56 @@ type cluster interface {
 	Connect() agent.ConnectResponse
 }
 
-// UntilSuccess continuously bootstraps until it succeeds or hits maximum attempts.
-func UntilSuccess(maxAttempts int, local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
-	var (
-		err error
-	)
+type option func(*UntilSuccess2)
 
-	bs := backoff.Maximum(10*time.Second, backoff.Exponential(2*time.Second))
+// OptionMaxAttempts set maximum number of attempts.
+func OptionMaxAttempts(n int) func(*UntilSuccess2) {
+	return func(us *UntilSuccess2) {
+		us.maxAttempts = n
+	}
+}
 
-	for i := 0; i < maxAttempts; i++ {
-		if err = Bootstrap(local, c, dialer, coord); err != nil {
-			log.Println("---------------------- bootstrap failed ----------------------\n", err)
-			time.Sleep(bs.Backoff(i))
-			log.Println("REATTEMPT BOOTSTRAP")
+// OptionBackoff set strategy for backing off.
+func OptionBackoff(bs backoff.Strategy) func(*UntilSuccess2) {
+	return func(us *UntilSuccess2) {
+		us.bs = bs
+	}
+}
+
+// NewUntilSuccess continuously bootstraps until it succeeds or hits maximum attempts.
+func NewUntilSuccess(options ...option) UntilSuccess2 {
+	us := UntilSuccess2{
+		maxAttempts: math.MaxInt64, // effectively forever.
+		bs:          backoff.Maximum(time.Minute, backoff.Exponential(2*time.Second)),
+	}
+
+	for _, opt := range options {
+		opt(&us)
+	}
+
+	return us
+}
+
+// UntilSuccess2 attempts to bootstrap until max attempts or success.
+type UntilSuccess2 struct {
+	maxAttempts int
+	bs          backoff.Strategy
+}
+
+// Run bootstrapping process until it succeeds
+func (t UntilSuccess2) Run(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
+	for i := 0; i < t.maxAttempts; i++ {
+		if err := Bootstrap(local, c, dialer, coord); err != nil {
+			log.Println(errors.Wrap(err, "bootstrap attempt failed"))
+			time.Sleep(t.bs.Backoff(i))
 			continue
 		}
 
+		log.Println("--------------- bootstrap complete ---------------")
 		return true
 	}
 
+	log.Println("--------------- bootstrap failure ---------------")
 	return false
 }
 
@@ -54,7 +87,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 
 		switch cause {
 		case agentutil.ErrActiveDeployment:
-			// ignore active deployments when initialling bootstrapping,
+			// ignore active deployments when initially bootstrapping,
 			// we'll catch it at the end when we validate the version.
 			return nil
 		case agentutil.ErrNoDeployments:
@@ -81,19 +114,21 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 		deployment.CoordinatorOptionDeployResults(deployResults),
 	)
 
-	log.Println("--------------- bootstrap -------------")
-	defer log.Println("--------------- bootstrap -------------")
+	log.Println("--------------- bootstrap attempt initiated -------------")
+	defer log.Println("--------------- bootstrap attempt completed -------------")
 	if latestLocal, err = agentutil.LocalLatestDeployment(local, dialer); ignore(err) != nil {
 		return errors.Wrap(err, "latest local failed")
 	}
 
-	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
-		if ignore(err) != nil {
-			return errors.Wrap(err, "latest quorum failed")
-		}
+	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); ignore(err) != nil {
+		return errors.Wrap(err, "latest quorum failed")
 	}
 
-	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments || cause == agentutil.ErrActiveDeployment {
+	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(latestQuorum.Archive, latestLocal.Archive) {
+		return errors.Wrap(err, "active deploy matches the local deployment, waiting for deployment to complete")
+	}
+
+	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments {
 		log.Println(errors.Wrap(err, "no valid deployments available from quorum, fallback to latest from agents"))
 		if latestQuorum, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
 			switch cause := errors.Cause(err); cause {
@@ -118,7 +153,7 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
 	defer cancel()
 
-	log.Println("bootstrapping with options", spew.Sdump(opts))
+	log.Println("bootstrapping", bw.RandomID(latest.Archive.DeploymentID), "with options", spew.Sdump(opts))
 	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
@@ -137,10 +172,10 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
 	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
-		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
+		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying 2")
 	}
 
-	if agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
+	if !agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
 		return errors.WithStack(agentutil.ErrDifferentDeployment)
 	}
 

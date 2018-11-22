@@ -5,6 +5,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/james-lawrence/bw/x/testingx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -14,3 +15,7 @@ func TestBootstrap(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bootstrap Suite")
 }
+
+var _ = SynchronizedAfterSuite(func() {}, func() {
+	testingx.Cleanup()
+})
