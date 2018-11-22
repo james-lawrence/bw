@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 Environment=SHELL=/bin/bash
-ExecStart=/usr/local/bin/bw agent --cluster-dns-enable
+ExecStart=/usr/bin/bw agent --cluster-dns-enable
 
 [Install]
 WantedBy=multi-user.target

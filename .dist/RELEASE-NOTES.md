@@ -1,8 +1,20 @@
-commit ce0b8e9daa2a48c5b84c179d67597205ef29fef9
+commit 2ad88703398569809a4f8eac9075efa0c261b731
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Nov 22 08:49:08 2018 -0500
+
+    adjustments to deb build
+
+commit 0ccc568ddae2cf06747eac1effc023730d194ef4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Nov 22 07:23:50 2018 -0500
+
+    bootstrap handling improvements
+
+commit 02989db5e9dcbd2033485673b670fd4bf9b3ebd3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Nov 10 07:20:36 2018 -0500
 
-    release updates
+    setup integration with a launchpad ppa
 
 commit 1b237389baac6924f42aaa5ab22a456f2e35f5c1
 Author: James Lawrence <jljatone@gmail.com>

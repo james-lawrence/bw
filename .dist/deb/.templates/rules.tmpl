@@ -14,3 +14,19 @@ DH_VERBOSE = 1
 
 %:
 	dh $@
+
+override_dh_auto_build:
+	echo "DH AUTO BUILD OVERRIDE"
+	echo "$(CURDIR)"
+	GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) go env
+	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) go install github.com/james-lawrence/bw/commands/...
+
+	ls -lha
+	ls -lha bin
+	ls -lha debian
+
+override_dh_auto_test:
+	echo "DH AUTO TEST OVERRIDE"
+
+override_dh_auto_install:
+	echo "DH AUTO INSTALL OVERRIDE"

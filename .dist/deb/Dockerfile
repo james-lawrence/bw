@@ -5,6 +5,6 @@ FROM ubuntu:18.10
 WORKDIR /opt/bw/.dist/deb
 
 RUN apt-get update
-RUN apt-get -y install dput devscripts dh-make
+RUN apt-get -y install dput devscripts dh-make golang
 
 CMD bash build.sh
