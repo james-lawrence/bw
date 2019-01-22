@@ -328,6 +328,10 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
+	if err = commandutils.RunLocalDirectives(config); err != nil {
+		return errors.Wrap(err, "failed to run local directives")
+	}
+
 	local := commandutils.NewClientPeer()
 
 	if sctx, err = shell.DefaultContext(); err != nil {
