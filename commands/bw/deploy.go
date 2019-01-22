@@ -126,6 +126,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 
+	if !commandutils.RemoteTasksAvailable(config) {
+		return nil
+	}
+
 	events := make(chan agent.Message, 100)
 
 	local := cluster.NewLocal(

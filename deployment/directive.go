@@ -9,6 +9,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Well known directory names.
+const (
+	LocalDirName  = ".local"
+	RemoteDirName = ".remote"
+)
+
 // DirectiveOption ...
 type DirectiveOption func(*Directive)
 
@@ -30,7 +36,7 @@ func DirectiveOptionDir(dir string) DirectiveOption {
 // NewDirective builds a coordinator
 func NewDirective(options ...DirectiveOption) Directive {
 	d := Directive{
-		directory: ".remote",
+		directory: RemoteDirName,
 		options:   options,
 	}
 

@@ -2,6 +2,7 @@ package commandutils
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
@@ -10,6 +11,12 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/pkg/errors"
 )
+
+// determine if we need to run any remote tasks.
+func RemoteTasksAvailable(config agent.ConfigClient) bool {
+	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.LocalDirName))
+	return os.IsExist(err)
+}
 
 // RunLocalDirectives runs local directives, used to build archives prior to deploying.
 func RunLocalDirectives(config agent.ConfigClient) (err error) {
@@ -45,7 +52,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 
 	deploy := deployment.NewDirective(
 		deployment.DirectiveOptionShellContext(sctx),
-		deployment.DirectiveOptionDir(".local"),
+		deployment.DirectiveOptionDir(deployment.LocalDirName),
 	)
 	deploy.Deploy(dctx)
 
