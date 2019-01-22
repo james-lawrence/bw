@@ -122,22 +122,23 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	log.Println("configuration:", spew.Sdump(config))
 
-	if err = commandutils.RunLocalDirectives(config); err != nil {
-		return errors.Wrap(err, "failed to run local directives")
-	}
-
-	if !commandutils.RemoteTasksAvailable(config) {
-		return nil
-	}
-
 	events := make(chan agent.Message, 100)
-
+	t.initializeUX(d, events)
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
 			agent.PeerOptionName("local"),
 		),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
+
+	if err = commandutils.RunLocalDirectives(config); err != nil {
+		return errors.Wrap(err, "failed to run local directives")
+	}
+
+	if !commandutils.RemoteTasksAvailable(config) {
+		events <- agentutil.LogEvent(local.Peer, "deployment complete")
+		return nil
+	}
 
 	u := systemx.CurrentUserOrDefault(user.User{Username: stringsx.DefaultIfBlank(os.Getenv("BEARDED_WOOKIE_DEPLOY_INITIATER"), "unknown")})
 	coptions := []agent.ConnectOption{
@@ -160,7 +161,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
-	t.initializeUX(d, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
