@@ -342,7 +342,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	log.Println("DEBUG", t.debug, config.DeployDataDir)
 	if !t.debug {
 		defer os.RemoveAll(root)
 	}

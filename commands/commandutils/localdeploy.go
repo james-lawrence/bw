@@ -2,6 +2,7 @@ package commandutils
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -12,10 +13,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// determine if we need to run any remote tasks.
+// RemoteTasksAvailable determine if we need to run any remote tasks.
 func RemoteTasksAvailable(config agent.ConfigClient) bool {
-	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.LocalDirName))
-	return os.IsExist(err)
+	log.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
+	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
+	return os.IsExist(err) || err == nil
 }
 
 // RunLocalDirectives runs local directives, used to build archives prior to deploying.
