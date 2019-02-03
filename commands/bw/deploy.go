@@ -140,7 +140,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	u := systemx.CurrentUserOrDefault(user.User{Username: stringsx.DefaultIfBlank(os.Getenv("BEARDED_WOOKIE_DEPLOY_INITIATER"), "unknown")})
+	u := systemx.CurrentUserOrDefault(user.User{Username: stringsx.DefaultIfBlank(os.Getenv("BEARDED_WOOKIE_DEPLOYER"), "unknown")})
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),

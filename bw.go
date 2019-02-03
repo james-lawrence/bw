@@ -2,9 +2,9 @@ package bw
 
 import (
 	"crypto/md5"
+	"crypto/rand"
 	"encoding/base32"
 	"io"
-	"math/rand"
 	"time"
 
 	"github.com/pkg/errors"
@@ -43,25 +43,31 @@ func (t RandomID) String() string {
 
 // SimpleGenerateID ...
 func SimpleGenerateID() (_ignored RandomID, err error) {
-	return GenerateID(globalSrc)
+	return GenerateID(rand.Reader)
 }
 
 // GenerateID generates a random ID.
-func GenerateID(src *rand.Rand) (_ignored RandomID, err error) {
+func GenerateID(src io.Reader) (_ignored RandomID, err error) {
 	const n = 1024
+	var (
+		written int64
+	)
+
 	randIDHash := md5.New()
-	if _, err = io.CopyN(randIDHash, src, n); err != nil {
+	if written, err = io.CopyN(randIDHash, src, n); err != nil {
 		return _ignored, errors.Wrap(err, "failed generating data for deploymentID")
+	}
+
+	if written != n {
+		return _ignored, errors.Errorf("didn't read enough data: wanted %d, read %d", n, written)
 	}
 
 	return randIDHash.Sum(nil), nil
 }
 
-var globalSrc = rand.New(rand.NewSource(time.Now().Unix()))
-
 // MustGenerateID generates a random ID, or panics.
 func MustGenerateID() RandomID {
-	id, err := GenerateID(globalSrc)
+	id, err := GenerateID(rand.Reader)
 	if err != nil {
 		panic(err)
 	}
