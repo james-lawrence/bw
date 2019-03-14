@@ -1,4 +1,40 @@
-commit 2ad88703398569809a4f8eac9075efa0c261b731
+commit 0343a1d12c2b72f8b822a7aeb85a16e1f8bd85d3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 3 09:51:32 2019 -0500
+
+    update id generation
+
+commit bdcc29601c697b7337a07cd71ffd70fb1a884598
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 23 15:19:02 2019 -0500
+
+    fix remote deploy
+
+commit aebc2b579482a209ffae6eba27e85cc66f9d9367
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 22 06:05:03 2019 -0500
+
+    add local directives to local deploys
+
+commit aed4549d5a5c4ffdd19bda93ed09bc998b23fa0b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 22 06:00:29 2019 -0500
+
+    rollback some changes
+
+commit 561eac9a8b57886a6172ae00138985830522195f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 22 05:55:51 2019 -0500
+
+    improve local directives logging
+
+commit c9e7b0f730c6eefbfb4e09b20747de4ddab4d68d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 22 05:53:01 2019 -0500
+
+    allow local only directives
+
+commit aaeeeace916d600099b729c1deaa40501af72382
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Nov 22 08:49:08 2018 -0500
 

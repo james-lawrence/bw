@@ -342,7 +342,9 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if !t.debug {
+	if t.debug {
+		log.Println("building in, directory will remain after exit", root)
+	} else {
 		defer os.RemoveAll(root)
 	}
 
