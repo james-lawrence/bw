@@ -11,7 +11,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
-	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -302,9 +301,12 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
+	if err = client.QuorumCancel(); err != nil {
+		return err
+	}
+
 	events <- agentutil.LogEvent(local.Peer, "deploy cancelled")
 
-	time.Sleep(2 * time.Second)
 	return nil
 }
 

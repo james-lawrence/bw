@@ -32,6 +32,7 @@ type Client interface {
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
 	Deploy(DeployOptions, Archive) (Deploy, error)
 	Connect() (ConnectResponse, error)
+	QuorumCancel() error // cancel should be merged into quorum cancel.
 	Cancel() error
 	QuorumInfo() (InfoResponse, error)
 	Info() (StatusResponse, error)

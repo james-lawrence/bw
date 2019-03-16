@@ -50,6 +50,12 @@ func (t Conn) Shutdown() (err error) {
 	return nil
 }
 
+// QuorumCancel cancel the active deploy
+func (t Conn) QuorumCancel() error {
+	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), &CancelRequest{})
+	return errors.WithStack(err)
+}
+
 // QuorumInfo returns high level details about the state of the cluster.
 func (t Conn) QuorumInfo() (z InfoResponse, err error) {
 	var (

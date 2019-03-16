@@ -115,6 +115,12 @@ func (t cState) printDeployCommand(m agent.Message) {
 		t.Logger.Println(
 			t.au.Red(fmt.Sprintf("%s - INFO - deployment failed", messagePrefix(m))),
 		)
+	case agent.DeployCommand_Cancel:
+		t.Logger.Println(
+			t.au.Red(fmt.Sprintf("%s - INFO - deployment cancelled", messagePrefix(m))),
+		)
+	default:
+		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
 	}
 }
 
@@ -140,7 +146,9 @@ func (t deploying) Consume(m agent.Message) consumer {
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
-		case agent.DeployCommand_Done:
+		case
+		agent.DeployCommand_Done,
+		agent.DeployCommand_Cancel:
 			return nil
 		}
 	case agent.Message_DeployEvent:

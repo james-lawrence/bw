@@ -134,6 +134,7 @@ service Quorum {
   rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
   rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
   rpc Info(InfoRequest) returns (InfoResponse) {}
+  rpc Cancel(CancelRequest) returns (CancelResponse) {}
 }
 
 message ConnectRequest {}

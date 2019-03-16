@@ -74,14 +74,14 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.U
 	wal := NewWAL(make(chan agent.Message, 100))
 	r := Quorum{
 		ConnectableDispatcher: cd,
-		wal:     &wal,
-		sm:      &DisabledMachine{},
-		uploads: upload,
-		dialer:  agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
-		m:       &sync.Mutex{},
-		deploy:  d,
-		c:       c,
-		lost:    make(chan struct{}),
+		wal:                   &wal,
+		sm:                    &DisabledMachine{},
+		uploads:               upload,
+		dialer:                agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
+		m:                     &sync.Mutex{},
+		deploy:                d,
+		c:                     c,
+		lost:                  make(chan struct{}),
 	}
 
 	for _, opt := range options {
@@ -166,6 +166,11 @@ func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
 	defer debugx.Println("info completed")
 
 	return t.sm.Info()
+}
+
+// Cancel any active deploys
+func (t *Quorum) Cancel(ctx context.Context) (err error) {
+	return t.sm.Cancel()
 }
 
 // Deploy ...
