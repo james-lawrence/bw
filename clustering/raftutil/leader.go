@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
+	"github.com/james-lawrence/bw/x/debugx"
 )
 
 type leader struct {
@@ -22,7 +23,7 @@ func (t leader) Update(c cluster) state {
 		}
 	)
 
-	log.Println("leader update invoked")
+	debugx.Println("leader update invoked")
 	switch t.r.State() {
 	case raft.Leader:
 		// IMPORTANT: an active leader should never leave the raft cluster. changes in leadership

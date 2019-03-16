@@ -8,6 +8,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/x/debugx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
@@ -107,7 +108,7 @@ func (t Directory) refresh() (err error) {
 	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSCertClient)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer, DefaultTLSKeyClient)
 
-	log.Println("loading", certpath, keypath)
+	debugx.Println("loading", certpath, keypath)
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {
 		return errors.WithStack(err)
