@@ -1,6 +1,7 @@
 package agent_test
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 
@@ -90,7 +91,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 
-			pipe := h.client.Logs([]byte("fake"))
+			pipe := h.client.Logs(context.Background(), []byte("fake"))
 			raw, err := ioutil.ReadAll(pipe)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(raw)).To(Equal("INFO: fake"))

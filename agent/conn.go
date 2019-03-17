@@ -28,8 +28,8 @@ func (t Conn) Close() error {
 	return t.conn.Close()
 }
 
-// Cancel causes the current deploy (if any) to be cancelled.
-func (t Conn) Cancel() (err error) {
+// NodeCancel causes the current deploy (if any) to be cancelled.
+func (t Conn) NodeCancel() (err error) {
 	rpc := NewAgentClient(t.conn)
 	if _, err = rpc.Cancel(context.Background(), &CancelRequest{}); err != nil {
 		return errors.WithStack(err)
@@ -50,9 +50,9 @@ func (t Conn) Shutdown() (err error) {
 	return nil
 }
 
-// QuorumCancel proxy the cancellation through the quorum nodes.
+// Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
-func (t Conn) QuorumCancel() error {
+func (t Conn) Cancel() error {
 	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), &CancelRequest{})
 	return errors.WithStack(err)
 }

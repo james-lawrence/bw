@@ -46,7 +46,11 @@ func (t fakeClient) Cancel() error {
 	return t.errResult
 }
 
-func (t fakeClient) Logs(did []byte) io.ReadCloser {
+func (t fakeClient) NodeCancel() error {
+	return t.errResult
+}
+
+func (t fakeClient) Logs(ctx context.Context, did []byte) io.ReadCloser {
 	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(did))))
 }
 
