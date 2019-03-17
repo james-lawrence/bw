@@ -281,12 +281,12 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		}
 	}()
 
-	cmd := agentutil.DeployCommandCancel(DisplayName())
-	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
+	if err = client.Cancel(); err != nil {
 		return err
 	}
 
-	if err = client.QuorumCancel(); err != nil {
+	cmd := agentutil.DeployCommandCancel(DisplayName())
+	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
 		return err
 	}
 
