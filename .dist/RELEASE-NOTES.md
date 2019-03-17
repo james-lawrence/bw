@@ -1,3 +1,30 @@
+commit f4139694ae29d6ae879139fa674c7675b22c90ba
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 17 09:35:13 2019 -0400
+
+    improve cancellation
+
+commit a6e8fab01328270d0413ba4399787871bcef125a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 16 08:40:32 2019 -0400
+
+    improve deploy cancel
+    
+    - cli should properly respond to cancel events by shutting down.
+    - raft state managing the deploy is now cancelled and cleared up.
+
+commit a66f23424b5c464c1743a5ac30674e9515def8bc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 16 08:02:10 2019 -0400
+
+    minor log cleanup
+
+commit c9e8b0e3a996f47e280a56cac0bac07158f29a4e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Mar 13 21:05:15 2019 -0400
+
+    add some debugging information to local deploy
+
 commit 0343a1d12c2b72f8b822a7aeb85a16e1f8bd85d3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Feb 3 09:51:32 2019 -0500
