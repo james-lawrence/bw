@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/x/debugx"
@@ -170,6 +171,10 @@ func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
 
 // Cancel any active deploys
 func (t *Quorum) Cancel(ctx context.Context) (err error) {
+	if err = agentutil.Cancel(t.c, t.dialer); err != nil {
+		return err
+	}
+
 	return t.sm.Cancel()
 }
 

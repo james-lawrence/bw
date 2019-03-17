@@ -139,6 +139,11 @@ func (t DeployContext) Dispatch(m ...agent.Message) error {
 
 // Cancel cancel the deploy.
 func (t DeployContext) Cancel(reason error) {
+	if t.deadline == nil || t.cancel == nil {
+		log.Println("unable to cancel, invalid deploy state seems invalid")
+		return
+	}
+
 	t.Dispatch(agentutil.LogError(t.Local, errors.Wrap(reason, "cancelled deploy")))
 	t.cancel()
 }

@@ -8,7 +8,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/user"
 	"path/filepath"
 	"regexp"
 
@@ -27,8 +26,6 @@ import (
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/james-lawrence/bw/x/logx"
-	"github.com/james-lawrence/bw/x/stringsx"
-	"github.com/james-lawrence/bw/x/systemx"
 	"github.com/pkg/errors"
 )
 
@@ -139,7 +136,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	u := systemx.CurrentUserOrDefault(user.User{Username: stringsx.DefaultIfBlank(os.Getenv("BEARDED_WOOKIE_DEPLOYER"), "unknown")})
 	coptions := []agent.ConnectOption{
 		agent.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
@@ -201,7 +197,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}
 
-	if archive, err = client.Upload(stringsx.DefaultIfBlank(u.Name, u.Username), uint64(dstinfo.Size()), dst); err != nil {
+	if archive, err = client.Upload(DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
@@ -285,19 +281,8 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		}
 	}()
 
-	cx := cluster.New(local, c)
-
-	cmd := agent.DeployCommand{
-		Command: agent.DeployCommand_Cancel,
-	}
-
+	cmd := agentutil.DeployCommandCancel(DisplayName())
 	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
-		return err
-	}
-
-	peers := agentutil.PeerSet(deployment.ApplyFilter(deployment.AlwaysMatch, cx.Peers()...))
-
-	if err = agentutil.Cancel(peers, d); err != nil {
 		return err
 	}
 

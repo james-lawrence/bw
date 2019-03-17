@@ -77,6 +77,7 @@ message DeployCommand {
   enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3; }
   Command command = 1;
   Archive archive = 2;
+  string initiator = 3;
   DeployOptions options = 5;
 }
 

@@ -50,7 +50,8 @@ func (t Conn) Shutdown() (err error) {
 	return nil
 }
 
-// QuorumCancel cancel the active deploy
+// QuorumCancel proxy the cancellation through the quorum nodes.
+// this cleans up the raft state in addition to the individual nodes.
 func (t Conn) QuorumCancel() error {
 	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), &CancelRequest{})
 	return errors.WithStack(err)
@@ -245,7 +246,7 @@ func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err erro
 }
 
 // Logs return the logs for the given deployment.
-func (t Conn) Logs(did []byte) io.ReadCloser {
+func (t Conn) Logs(ctx context.Context, did []byte) io.ReadCloser {
 	var (
 		err error
 		c   Agent_LogsClient
@@ -253,7 +254,7 @@ func (t Conn) Logs(did []byte) io.ReadCloser {
 
 	r, w := io.Pipe()
 	rpc := NewAgentClient(t.conn)
-	if c, err = rpc.Logs(context.Background(), &LogRequest{DeploymentID: did}); err != nil {
+	if c, err = rpc.Logs(ctx, &LogRequest{DeploymentID: did}); err != nil {
 		w.CloseWithError(err)
 		return r
 	}

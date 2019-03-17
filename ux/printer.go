@@ -2,10 +2,13 @@ package ux
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -13,10 +16,12 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/x/errorsx"
 	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/x/stringsx"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
 
+// Deploy monitor a deploy.
 func Deploy(ctx context.Context, wg *sync.WaitGroup, d agent.Dialer, events chan agent.Message) {
 	defer wg.Done()
 	var (
@@ -102,7 +107,8 @@ func (t cState) print(m agent.Message) {
 }
 
 func (t cState) printDeployCommand(m agent.Message) {
-	switch m.GetDeployCommand().Command {
+	d := m.GetDeployCommand()
+	switch d.Command {
 	case agent.DeployCommand_Begin:
 		t.Logger.Println(
 			t.au.Green(fmt.Sprintf("%s - INFO - deployment initiated", messagePrefix(m))),
@@ -117,7 +123,7 @@ func (t cState) printDeployCommand(m agent.Message) {
 		)
 	case agent.DeployCommand_Cancel:
 		t.Logger.Println(
-			t.au.Red(fmt.Sprintf("%s - INFO - deployment cancelled", messagePrefix(m))),
+			t.au.Red(fmt.Sprintf("%s - INFO - deployment cancelled by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
 		)
 	default:
 		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
@@ -147,15 +153,21 @@ func (t deploying) Consume(m agent.Message) consumer {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
 		case
-		agent.DeployCommand_Done,
-		agent.DeployCommand_Cancel:
+			agent.DeployCommand_Done,
+			agent.DeployCommand_Cancel:
 			return nil
 		}
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()
 		switch d.Stage {
 		case agent.Deploy_Failed:
-			return failure{failures: []agent.Message{m}, cState: t.cState}
+			digest := md5.Sum([]byte(d.Error))
+			return failure{
+				cState: t.cState,
+				failures: map[string]agent.Message{
+					hex.EncodeToString(digest[:]): m,
+				},
+			}
 		}
 	}
 
@@ -165,7 +177,7 @@ func (t deploying) Consume(m agent.Message) consumer {
 
 // gathers up failures
 type failure struct {
-	failures []agent.Message
+	failures map[string]agent.Message
 	cState
 }
 
@@ -179,7 +191,9 @@ func (t failure) Consume(m agent.Message) consumer {
 		d := m.GetDeploy()
 		switch d.Stage {
 		case agent.Deploy_Failed:
-			return failure{failures: append(t.failures, m), cState: t.cState}
+			digest := md5.Sum([]byte(d.Error))
+			t.failures[hex.EncodeToString(digest[:])] = m
+			return failure{failures: t.failures, cState: t.cState}
 		}
 	}
 
@@ -187,7 +201,9 @@ func (t failure) Consume(m agent.Message) consumer {
 }
 
 func (t failure) logs() {
-	for i, m := range t.failures {
+	i := 0
+
+	for _, m := range t.failures {
 		var (
 			err error
 			c   agent.Client
@@ -207,12 +223,16 @@ func (t failure) logs() {
 		}
 
 		t.cState.Logger.Println(t.cState.au.Brown(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
+		b, done := context.WithTimeout(context.Background(), 20*time.Second)
 		logx.MaybeLog(
 			errorsx.Compact(
-				agentutil.PrintLogs(m.GetDeploy().Archive.DeploymentID, os.Stderr)(c),
+				agentutil.PrintLogs(b, m.GetDeploy().Archive.DeploymentID, os.Stderr)(c),
 				c.Close(),
 			),
 		)
+		done()
 		t.cState.Logger.Println(t.cState.au.Brown(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
+
+		i++
 	}
 }

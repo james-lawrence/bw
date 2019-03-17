@@ -88,6 +88,14 @@ func deployToArchive(d agent.Deploy) (a agent.Archive) {
 	return a
 }
 
+// DeployCommandCancel create a cancellation command.
+func DeployCommandCancel(by string) agent.DeployCommand {
+	return agent.DeployCommand{
+		Command:   agent.DeployCommand_Cancel,
+		Initiator: by,
+	}
+}
+
 // DeployCommand send a deploy command message
 func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
 	return agent.Message{
