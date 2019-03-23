@@ -8,7 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 )
 
 type leader struct {

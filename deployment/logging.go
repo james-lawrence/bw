@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
 

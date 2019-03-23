@@ -11,7 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/pkg/errors"
 )
 

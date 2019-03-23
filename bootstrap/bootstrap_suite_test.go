@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/james-lawrence/bw/x/testingx"
+	"github.com/james-lawrence/bw/internal/x/testingx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

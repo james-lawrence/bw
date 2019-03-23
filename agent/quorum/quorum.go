@@ -22,8 +22,8 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/storage"
-	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 

@@ -16,7 +16,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/dns"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 

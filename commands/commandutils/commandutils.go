@@ -13,7 +13,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
 )
 

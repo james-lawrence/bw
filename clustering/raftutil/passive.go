@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/james-lawrence/bw/x/contextx"
+	"github.com/james-lawrence/bw/internal/x/contextx"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"

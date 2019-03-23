@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
 

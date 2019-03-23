@@ -8,7 +8,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )

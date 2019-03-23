@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/user"
 
-	"github.com/james-lawrence/bw/x/stringsx"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
 // DisplayName for the user

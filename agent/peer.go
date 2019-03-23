@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
 )
 

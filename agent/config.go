@@ -21,7 +21,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
 // ConfigClientOption options for the client configuration.

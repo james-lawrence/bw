@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )

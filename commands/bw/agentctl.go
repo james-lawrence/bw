@@ -14,9 +14,9 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/logx"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
 )
 

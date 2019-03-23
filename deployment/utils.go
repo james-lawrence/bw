@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"

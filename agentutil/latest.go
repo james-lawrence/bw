@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.

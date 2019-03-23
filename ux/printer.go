@@ -14,9 +14,9 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/x/errorsx"
-	"github.com/james-lawrence/bw/x/logx"
-	"github.com/james-lawrence/bw/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )

@@ -8,7 +8,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
 type clusterx interface {

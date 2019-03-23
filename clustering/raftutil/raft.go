@@ -13,10 +13,10 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/x/contextx"
-	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/logx"
-	"github.com/james-lawrence/bw/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/contextx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"

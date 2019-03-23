@@ -17,8 +17,8 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/storage"
-	"github.com/james-lawrence/bw/x/iox"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/iox"
+	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
 const (

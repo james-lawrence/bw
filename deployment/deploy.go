@@ -12,8 +12,8 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
-	"github.com/james-lawrence/bw/x/errorsx"
-	"github.com/james-lawrence/bw/x/timex"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/pkg/errors"
 )
 

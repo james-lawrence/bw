@@ -9,7 +9,7 @@ import (
 	"os/user"
 	"strings"
 
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 

@@ -21,7 +21,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
-	"github.com/james-lawrence/bw/x/testingx"
+	"github.com/james-lawrence/bw/internal/x/testingx"
 	"github.com/pkg/errors"
 )
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gutengo/fil"
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/pkg/errors"
 )
 

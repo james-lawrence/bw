@@ -14,8 +14,8 @@ import (
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/x/debugx"
-	"github.com/james-lawrence/bw/x/logx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 

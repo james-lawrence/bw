@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/james-lawrence/bw/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 )
 
 type conditionTransition struct {

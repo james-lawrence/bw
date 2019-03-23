@@ -20,7 +20,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/james-lawrence/bw/x/timex"
+	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )

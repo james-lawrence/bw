@@ -8,8 +8,8 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/x/stringsx"
-	"github.com/james-lawrence/bw/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
