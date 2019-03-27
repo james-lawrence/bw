@@ -5,16 +5,19 @@ package raftutil
 import (
 	"context"
 	"crypto/tls"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/contextx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 
@@ -270,6 +273,11 @@ func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, las
 
 func defaultRaftConfig() *raft.Config {
 	conf := raft.DefaultConfig()
+
+	conf.LogOutput = ioutil.Discard
+	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+		conf.LogOutput = os.Stderr
+	}
 
 	conf.LeaderLeaseTimeout = 2 * time.Second
 	conf.HeartbeatTimeout = 5 * time.Second

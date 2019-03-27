@@ -98,7 +98,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		),
 	}
 
-	if client, dialer, c, err = config.Connect(coptions...); err != nil {
+	if client, dialer, c, err = agent.Connect(config, coptions...); err != nil {
 		return err
 	}
 

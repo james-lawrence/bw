@@ -2,7 +2,6 @@ package commandutils
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -10,14 +9,15 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 
 // RemoteTasksAvailable determine if we need to run any remote tasks.
 func RemoteTasksAvailable(config agent.ConfigClient) bool {
-	log.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
-	defer log.Println("done checking")
+	debugx.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
+	defer debugx.Println("done checking")
 	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
 	logx.MaybeLog(errors.Wrap(err, "stat failed"))
 	return os.IsExist(err) || err == nil

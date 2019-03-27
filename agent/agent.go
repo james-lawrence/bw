@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Dispatcher - interface for dispatching messages.
@@ -42,25 +43,25 @@ type Client interface {
 }
 
 // ConnectOption - options for connecting to the cluster.
-type ConnectOption func(*connect)
+type ConnectOption func(*connection)
 
 // ConnectOptionClustering set clustering options for connect.
 func ConnectOptionClustering(options ...clustering.Option) ConnectOption {
-	return func(c *connect) {
+	return func(c *connection) {
 		c.clustering.Options = options
 	}
 }
 
 // ConnectOptionBootstrap set clustering options for bootstrap.
 func ConnectOptionBootstrap(options ...clustering.BootstrapOption) ConnectOption {
-	return func(c *connect) {
+	return func(c *connection) {
 		c.clustering.Bootstrap = options
 	}
 }
 
-func newConnect(options ...ConnectOption) connect {
+func newConnect(options ...ConnectOption) connection {
 	var (
-		conn connect
+		conn connection
 	)
 
 	for _, opt := range options {
@@ -70,7 +71,7 @@ func newConnect(options ...ConnectOption) connect {
 	return conn
 }
 
-type connect struct {
+type connection struct {
 	clustering struct {
 		Options   []clustering.Option
 		Bootstrap []clustering.BootstrapOption
@@ -83,8 +84,17 @@ func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config ConfigClient, onRetry func(error), options ...ConnectOption,
 ) (client Client, d Dialer, c clustering.Cluster, err error) {
-	for i := 0; true; i++ {
-		if client, d, c, err = Connect(config, options...); err == nil {
+
+	var (
+		creds credentials.TransportCredentials
+	)
+
+	if creds, err = config.creds(); err != nil {
+		return client, d, c, err
+	}
+
+	for i := 0; ; i++ {
+		if client, d, c, err = connect(config, creds, options...); err == nil {
 			break
 		}
 
@@ -109,8 +119,22 @@ func ConnectClientUntilSuccess(
 
 // Connect returning just a single client to the caller.
 func Connect(config ConfigClient, options ...ConnectOption) (cl Client, d Dialer, c clustering.Cluster, err error) {
+	var (
+		creds credentials.TransportCredentials
+	)
+
+	if creds, err = config.creds(); err != nil {
+		return cl, d, c, err
+	}
+
+	return connect(config, creds, options...)
+}
+
+func connect(config ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (cl Client, d Dialer, c clustering.Cluster, err error) {
 	conn := newConnect(options...)
+
 	cl, d, c, err = config.Connect(
+		creds,
 		ConnectOptionClustering(conn.clustering.Options...),
 		ConnectOptionBootstrap(conn.clustering.Bootstrap...),
 	)

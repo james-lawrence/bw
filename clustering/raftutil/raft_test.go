@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 	. "github.com/james-lawrence/bw/clustering/raftutil"
+	"github.com/james-lawrence/bw/internal/x/testingx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -182,6 +183,8 @@ var _ = Describe("Raft", func() {
 				rafts   []*raft.Raft
 				peers   []peer
 			)
+
+			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
 			provider := UnixAddressProvider{Dir: tmpdir}
@@ -213,6 +216,7 @@ var _ = Describe("Raft", func() {
 				peers   []peer
 			)
 
+			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
 			provider := UnixAddressProvider{Dir: tmpdir}
@@ -247,6 +251,7 @@ var _ = Describe("Raft", func() {
 				peers   []peer
 			)
 
+			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
 			provider := UnixAddressProvider{Dir: tmpdir}

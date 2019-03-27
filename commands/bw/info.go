@@ -14,9 +14,9 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/commands/commandutils"
-	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
 )
 
@@ -73,7 +73,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		),
 	}
 
-	if client, d, c, err = config.Connect(coptions...); err != nil {
+	if client, d, c, err = agent.Connect(config, coptions...); err != nil {
 		return err
 	}
 
@@ -120,7 +120,7 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if client, d, c, err = config.Connect(coptions...); err != nil {
+	if client, d, c, err = agent.Connect(config, coptions...); err != nil {
 		return err
 	}
 

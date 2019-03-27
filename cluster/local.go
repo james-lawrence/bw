@@ -3,7 +3,9 @@ package cluster
 import (
 	"log"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/envx"
 
 	"github.com/golang/protobuf/proto"
 )
@@ -78,10 +80,14 @@ func (t Local) GetBroadcasts(overhead, limit int) [][]byte {
 
 // MergeRemoteState ...
 func (t Local) MergeRemoteState(buf []byte, join bool) {
-	log.Println("MergeRemoteState join:", join, "len(buf):", len(buf))
+	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+		log.Println("MergeRemoteState join:", join, "len(buf):", len(buf))
+	}
 }
 
 // NotifyMsg ...
 func (t Local) NotifyMsg(buf []byte) {
-	log.Println("NotifyMsg string(buf):", string(buf))
+	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+		log.Println("NotifyMsg string(buf):", string(buf))
+	}
 }

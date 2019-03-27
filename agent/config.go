@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/tls"
+	"io/ioutil"
 	"math"
 	"net"
-	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -97,14 +97,14 @@ type ConfigClient struct {
 }
 
 // Connect to the address in the config client.
-func (t ConfigClient) Connect(options ...ConnectOption) (client Client, d Dialer, c clustering.Cluster, err error) {
+func (t ConfigClient) Connect(creds credentials.TransportCredentials, options ...ConnectOption) (client Client, d Dialer, c clustering.Cluster, err error) {
 	var (
 		details ConnectResponse
 	)
 
 	conn := newConnect(options...)
 
-	if client, d, details, err = t.connect(); err != nil {
+	if client, d, details, err = t.connect(creds); err != nil {
 		return client, d, c, err
 	}
 
@@ -115,15 +115,7 @@ func (t ConfigClient) Connect(options ...ConnectOption) (client Client, d Dialer
 	return client, d, c, nil
 }
 
-func (t ConfigClient) connect() (c Client, d Dialer, details ConnectResponse, err error) {
-	var (
-		creds credentials.TransportCredentials
-	)
-
-	if creds, err = t.creds(); err != nil {
-		return c, d, details, err
-	}
-
+func (t ConfigClient) connect(creds credentials.TransportCredentials) (c Client, d Dialer, details ConnectResponse, err error) {
 	opts := DefaultDialerOptions(grpc.WithTransportCredentials(creds))
 	d = NewDialer(opts...)
 	if c, err = AddressProxyDialQuorum(t.Address, opts...); err != nil {
@@ -157,9 +149,10 @@ func clusterConnect(details ConnectResponse, copts []clustering.Option, bopts []
 	if err != nil {
 		return c, errors.Wrap(err, "failed to create keyring")
 	}
+
 	copts = append([]clustering.Option{
 		clustering.OptionBindPort(0),
-		clustering.OptionLogOutput(os.Stderr),
+		clustering.OptionLogOutput(ioutil.Discard),
 		clustering.OptionKeyring(keyring),
 	}, copts...)
 

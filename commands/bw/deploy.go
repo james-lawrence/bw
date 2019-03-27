@@ -23,9 +23,9 @@ import (
 	"github.com/james-lawrence/bw/commands/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
 )
 
@@ -116,6 +116,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
+	log.Println("pid", os.Getpid())
 	log.Println("configuration:", spew.Sdump(config))
 
 	if err = commandutils.RunLocalDirectives(config); err != nil {
@@ -126,7 +127,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		log.Println("no directives to run by the cluster")
 		return nil
 	}
-	log.Println("done checking")
+
 	events := make(chan agent.Message, 100)
 
 	local := cluster.NewLocal(
