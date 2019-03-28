@@ -65,12 +65,12 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 
 	// At this point the deploy could take awhile, so we shunt it into the background.
 	go func() {
-		dresult := agent.DeployCommand_Failed
+		dcmd := agent.DeployCommand{Command: agent.DeployCommand_Failed, Archive: &archive, Options: &dopts}
 		if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
-			dresult = agent.DeployCommand_Done
+			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive, Options: &dopts}
 		}
 
-		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{Command: dresult, Archive: &archive, Options: &dopts})))
+		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), dcmd)))
 	}()
 
 	return nil

@@ -8,29 +8,39 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/logrusorgru/aurora"
-	"github.com/pkg/errors"
 )
 
+type dialer interface {
+	Dial(p agent.Peer) (agent.Client, error)
+}
+
+// Option ...
+type Option func(*cState)
+
+// OptionFailureDisplay ...
+func OptionFailureDisplay(fd failureDisplay) Option {
+	return func(c *cState) {
+		c.FailureDisplay = fd
+	}
+}
+
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, wg *sync.WaitGroup, d agent.Dialer, events chan agent.Message) {
+func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message, options ...Option) {
 	defer wg.Done()
+
 	var (
 		s consumer = deploying{
 			cState: cState{
-				au:     aurora.NewAurora(true),
-				Dialer: d,
-				Logger: log.New(os.Stderr, "[CLIENT] ", 0),
-			},
+				FailureDisplay: FailureDisplayNoop{},
+				au:             aurora.NewAurora(true),
+				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
+			}.merge(options...),
 		}
 	)
 
@@ -38,15 +48,16 @@ func Deploy(ctx context.Context, wg *sync.WaitGroup, d agent.Dialer, events chan
 }
 
 // Logging based ux
-func Logging(ctx context.Context, wg *sync.WaitGroup, d agent.Dialer, events chan agent.Message) {
+func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message, options ...Option) {
 	defer wg.Done()
+
 	var (
 		s consumer = tail{
 			cState: cState{
-				au:     aurora.NewAurora(true),
-				Dialer: d,
-				Logger: log.New(os.Stderr, "[CLIENT] ", 0),
-			},
+				FailureDisplay: FailureDisplayNoop{},
+				au:             aurora.NewAurora(true),
+				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
+			}.merge(options...),
 		}
 	)
 
@@ -68,9 +79,19 @@ func run(ctx context.Context, events chan agent.Message, s consumer) {
 }
 
 type cState struct {
-	Dialer agent.Dialer
-	Logger *log.Logger
-	au     aurora.Aurora
+	FailureDisplay failureDisplay
+	Logger         *log.Logger
+	au             aurora.Aurora
+}
+
+func (t cState) merge(options ...Option) cState {
+	dup := t
+
+	for _, opt := range options {
+		opt(&dup)
+	}
+
+	return dup
 }
 
 func (t cState) print(m agent.Message) {
@@ -149,9 +170,12 @@ type deploying struct {
 
 func (t deploying) Consume(m agent.Message) consumer {
 	t.cState.print(m)
+
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
+		case agent.DeployCommand_Restart:
+			return restart{cState: t.cState}
 		case
 			agent.DeployCommand_Done,
 			agent.DeployCommand_Cancel:
@@ -173,66 +197,4 @@ func (t deploying) Consume(m agent.Message) consumer {
 
 	// await next message by default
 	return t
-}
-
-// gathers up failures
-type failure struct {
-	failures map[string]agent.Message
-	cState
-}
-
-func (t failure) Consume(m agent.Message) consumer {
-	switch m.Type {
-	case agent.Message_DeployCommandEvent:
-		t.logs()
-		t.cState.printDeployCommand(m)
-		return nil // done.
-	case agent.Message_DeployEvent:
-		d := m.GetDeploy()
-		switch d.Stage {
-		case agent.Deploy_Failed:
-			digest := md5.Sum([]byte(d.Error))
-			t.failures[hex.EncodeToString(digest[:])] = m
-			return failure{failures: t.failures, cState: t.cState}
-		}
-	}
-
-	return t
-}
-
-func (t failure) logs() {
-	i := 0
-
-	for _, m := range t.failures {
-		var (
-			err error
-			c   agent.Client
-		)
-
-		if m.Peer == nil {
-			log.Println("unexpected nil peer skipping", spew.Sdump(m))
-			continue
-		}
-
-		if c, err = t.cState.Dialer.Dial(*m.Peer); err != nil {
-			log.Println(errors.Wrapf(err, "failed to dial peer: %s", spew.Sdump(m.Peer)))
-		}
-
-		if i > 0 {
-			os.Stderr.WriteString("\n\n")
-		}
-
-		t.cState.Logger.Println(t.cState.au.Brown(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
-		b, done := context.WithTimeout(context.Background(), 20*time.Second)
-		logx.MaybeLog(
-			errorsx.Compact(
-				agentutil.PrintLogs(b, m.GetDeploy().Archive.DeploymentID, os.Stderr)(c),
-				c.Close(),
-			),
-		)
-		done()
-		t.cState.Logger.Println(t.cState.au.Brown(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
-
-		i++
-	}
 }

@@ -59,7 +59,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 func (t *deployCmd) initializeUX(d agent.Dialer, events chan agent.Message) {
 	t.global.cleanup.Add(1)
 	go func() {
-		ux.Deploy(t.global.ctx, t.global.cleanup, d, events)
+		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
 		t.global.shutdown()
 	}()
 }

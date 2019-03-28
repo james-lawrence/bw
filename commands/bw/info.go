@@ -150,7 +150,7 @@ func (t *agentInfo) _info() (err error) {
 	events := make(chan agent.Message, 100)
 
 	t.global.cleanup.Add(1)
-	go ux.Logging(t.global.ctx, t.global.cleanup, d, events)
+	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
 	log.Println("awaiting events")
 	agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
 
