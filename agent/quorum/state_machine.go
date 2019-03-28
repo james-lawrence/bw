@@ -10,7 +10,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -125,18 +124,27 @@ func (t *StateMachine) determineLatestDeploy(c cluster, d agent.Dialer) (err err
 	}), 10*time.Second)
 }
 
-func (t *StateMachine) restartActiveDeploy() error {
+func (t *StateMachine) restartActiveDeploy() (err error) {
 	var (
 		dc *agent.DeployCommand
 	)
 
 	if dc = t.wal.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
-		m := agentutil.LogEvent(t.local.Local(), "detected new leader, restarting deploy")
-		failure := errorsx.CompactMonad{}
-		failure = failure.Compact(t.writeWAL(m, 10*time.Second))
-		failure = failure.Compact(errors.Wrap(t.Cancel(), "failed to cancel previous deploy"))
-		failure = failure.Compact(t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive))
-		return failure.Cause()
+		if err = t.writeWAL(agentutil.LogEvent(t.local.Local(), "detected new leader, restarting deploy"), 10*time.Second); err != nil {
+			return err
+		}
+
+		if err = t.writeWAL(agentutil.DeployCommand(t.local.Local(), agentutil.DeployCommandRestart()), 10*time.Second); err != nil {
+			return err
+		}
+
+		if err = errors.Wrap(t.Cancel(), "failed to cancel previous deploy"); err != nil {
+			return err
+		}
+
+		if err = t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive); err != nil {
+			return err
+		}
 	}
 
 	return nil

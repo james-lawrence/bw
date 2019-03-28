@@ -74,7 +74,7 @@ message DeployOptions {
 }
 
 message DeployCommand {
-  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3; }
+  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3; Restart = 4; }
   Command command = 1;
   Archive archive = 2;
   string initiator = 3;

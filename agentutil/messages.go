@@ -96,6 +96,13 @@ func DeployCommandCancel(by string) agent.DeployCommand {
 	}
 }
 
+// DeployCommandRestart delivered when a deploy is automatically restarting.
+func DeployCommandRestart() agent.DeployCommand {
+	return agent.DeployCommand{
+		Command: agent.DeployCommand_Restart,
+	}
+}
+
 // DeployCommand send a deploy command message
 func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
 	return agent.Message{
