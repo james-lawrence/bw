@@ -23,7 +23,7 @@ test:
 
 release-push: release
 	git tag --force $(RELEASE)
-	dput -f -c .dist/deb/dput.config bw .dist/build/bearded-wookie_$(BW_VERSION)_source.changes
+	# dput -f -c .dist/deb/dput.config bw .dist/build/bearded-wookie_$(BW_VERSION)_source.changes
 	# hub release create -a .dist/build/bearded-wookie-linux-amd64-$(RELEASE).tar.gz $(RELEASE) -m "linux-amd64-$(RELEASE)"
 	echo "released version: $(RELEASE) completed successfully"
 
@@ -34,6 +34,7 @@ endif
 
 release: generate release-check
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
+	git add .dist/RELEASE-NOTES.md; git commit -m "release $(RELEASE)";
 
 	GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
 
@@ -54,6 +55,8 @@ release: generate release-check
 		-v $(CURDIR):/opt/bw \
 		-v $(HOME)/.gnupg:/root/.gnupg \
 		-it debian-build:latest
+
+	dput -f -c .dist/deb/dput.config bw .dist/build/bearded-wookie_$(BW_VERSION)_source.changes
 
 release-clean:
 	rm -rf .dist/build

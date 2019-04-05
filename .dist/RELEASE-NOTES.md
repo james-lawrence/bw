@@ -1,41 +1,5 @@
-commit 370d707e2eb88ecf9a9fdcf7d029b80267dfec6b
+commit ffba45de7f1f0f1b25ef981d14d6db6bc5c5f0cd
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Fri Apr 5 17:35:06 2019 -0400
+Date:   Fri Apr 5 17:52:53 2019 -0400
 
-    release
-
-commit 2669f836e63efdae37a690cd5ca449fc643ce8f2
-Author: James Lawrence <jljatone@gmail.com>
-Date:   Fri Apr 5 17:23:47 2019 -0400
-
-    improve notifications
-
-commit dd18ba24beb1f567e27868b756e9d20fd5eb1efb
-Author: James Lawrence <jljatone@gmail.com>
-Date:   Wed Mar 27 21:56:43 2019 -0400
-
-    Improve ux - handle deployment restarts
-    
-    - update cli client to handle restarts
-
-commit 02ae0c10a6793e29bf45d01726462dc12934b3c0
-Author: James Lawrence <jljatone@gmail.com>
-Date:   Wed Mar 27 20:33:02 2019 -0400
-
-    add a restart event to deploy commands
-
-commit 4e9a7fdd2d136e56ce725cc301cc98e422b017dc
-Author: James Lawrence <jljatone@gmail.com>
-Date:   Wed Mar 27 19:51:30 2019 -0400
-
-    misc improvements to client
-    
-    - fixes file handle leak when connection to cluster fails
-    - remove some extraneous debug logging
-    - silence some noisy logs by default
-
-commit 7524bdcd1bae373203188c405efc9f603ff6acc5
-Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Mar 23 14:16:40 2019 -0400
-
-    move extension packages into internal package
+    release 0.1.1554501016-22cc9ac4
