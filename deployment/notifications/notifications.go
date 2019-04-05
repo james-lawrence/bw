@@ -27,7 +27,7 @@ type Notifier interface {
 // DecodeConfig ...
 func DecodeConfig(path string, creators map[string]Creator) (n []Notifier, err error) {
 	if _, err = os.Stat(path); os.IsNotExist(err) {
-		log.Println("failed to load config, file does not exist, falling back to default configuration")
+		log.Println("no configuration file found, falling back to default configuration")
 		n = append(n, New())
 		return n, nil
 	}

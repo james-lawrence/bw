@@ -40,7 +40,6 @@ func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) 
 		case m := <-events:
 			switch event := m.GetEvent().(type) {
 			case *agent.Message_DeployCommand:
-				log.Println("deploy command received")
 				dc := *event.DeployCommand
 				for _, n := range t.n {
 					notifyDeployCommand(n, dc)
@@ -58,7 +57,7 @@ func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) 
 
 func notifyDeployCommand(n notifications.Notifier, dc agent.DeployCommand) {
 	switch dc.Command {
-	case agent.DeployCommand_Cancel, agent.DeployCommand_Done, agent.DeployCommand_Failed:
+	case agent.DeployCommand_Begin, agent.DeployCommand_Cancel, agent.DeployCommand_Done, agent.DeployCommand_Failed:
 		if dc.Archive != nil {
 			n.Notify(dc)
 		}
