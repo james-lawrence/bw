@@ -204,7 +204,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: location(%s)", archive.Location))
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 	peers := deployment.ApplyFilter(filter, cx.Peers()...)

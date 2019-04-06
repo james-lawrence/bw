@@ -10,4 +10,4 @@ Environment=SHELL=/bin/bash
 ExecStart=/usr/local/bin/bw agent --cluster-dns-enable
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
