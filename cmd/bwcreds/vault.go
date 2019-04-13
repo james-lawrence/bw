@@ -7,7 +7,7 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw"
 	cc "github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/pkg/errors"
 )
 

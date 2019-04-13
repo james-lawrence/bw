@@ -11,7 +11,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/commands"
+	"github.com/james-lawrence/bw/cmd"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
@@ -50,7 +50,7 @@ func main() {
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
 	})
-	app := kingpin.New("bwaws", "bearded wookie utility programs for AWS").Version(commands.Version)
+	app := kingpin.New("bwaws", "bearded wookie utility programs for AWS").Version(cmd.Version)
 	cdns.Configure(app.Command("dns", "connects to the provided bearded wookie cluster"))
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {

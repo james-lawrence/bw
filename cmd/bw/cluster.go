@@ -11,7 +11,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/pkg/errors"
 )
 

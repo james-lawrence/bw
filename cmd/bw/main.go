@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/commands"
+	"github.com/james-lawrence/bw/cmd"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
@@ -64,7 +64,7 @@ func main() {
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
 	})
-	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
+	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
 	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
 
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))

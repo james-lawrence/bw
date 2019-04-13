@@ -20,7 +20,7 @@ import (
 	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"

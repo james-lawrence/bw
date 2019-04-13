@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/james-lawrence/bw/commands"
-	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/cmd"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 )
 
 // TODO:
@@ -20,7 +20,7 @@ func main() {
 		vault     = &vaultCreds{}
 	)
 
-	app := kingpin.New("bearded-wookie", "deployment system").Version(commands.Version)
+	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
 	app.Flag("verbosity", "verbosity level of errors").Short('v').Default(commandutils.VerbosityQuiet).
 		Action(func(ctx *kingpin.ParseContext) (err error) {
 			log.Println("configuring logs")

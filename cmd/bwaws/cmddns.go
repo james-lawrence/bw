@@ -5,7 +5,6 @@ import (
 	"net"
 	"path/filepath"
 
-	"cloud.google.com/go/compute/metadata"
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
@@ -14,10 +13,8 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
-	"github.com/james-lawrence/bw/commands/commandutils"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/dns"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/pkg/errors"
 )
 
 type cmdDNS struct {
@@ -25,27 +22,16 @@ type cmdDNS struct {
 	config         agent.Config
 	configLocation string
 	bootstrap      []*net.TCPAddr
-	zoneID         string
-	projectID      string
+	hostedZoneID   string
+	region         string
 }
 
 func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
-	var (
-		err error
-	)
-
-	if metadata.OnGCE() {
-		if t.projectID, err = metadata.ProjectID(); err != nil {
-			logx.MaybeLog(errors.Wrap(err, "failed to retrieve project ID from metadata service"))
-		}
-	}
-
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("bootstrap", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.SWIMBind.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("agent-config", "file containing the agent configuration").Default(t.configLocation).StringVar(&t.configLocation)
-	parent.Flag("projectID", "gcloud project id usually pulled from metadata automatically").Envar("BEARDED_WOOKIE_GCLOUD_PROJECT_ID").PlaceHolder(t.projectID).Default(t.projectID).StringVar(&t.projectID)
-	parent.Flag("zone", "dns zone where changes will be applied").Envar("BEARDED_WOOKIE_GCLOUD_DNS_ZONE").StringVar(&t.zoneID)
-
+	parent.Flag("zone", "hosted zone to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_HOSTED_ZONE").StringVar(&t.hostedZoneID)
+	parent.Flag("region", "region to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_REGION").StringVar(&t.region)
 	parent.Action(t.exec)
 }
 
@@ -55,6 +41,8 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		c       clustering.Cluster
 		keyring *memberlist.Keyring
 	)
+
+	log.SetPrefix("[BWAWS] ")
 
 	defer t.global.shutdown()
 
@@ -96,13 +84,17 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 	}
 
 	cx := cluster.New(local, c)
-	return dns.NewGoogleCloudDNS(
-		t.projectID,
-		t.zoneID,
-		dns.GCloudDNSOptionCommon(
-			dns.OptionTTL(t.config.DNSBind.TTL),
-			dns.OptionFQDN(t.config.ServerName),
-			dns.OptionMaximumNodes(t.config.MinimumNodes),
+	r53dns := dns.MaybeSample(
+		dns.NewRoute53(
+			t.hostedZoneID,
+			t.region,
+			dns.Route53OptionCommon(
+				dns.OptionTTL(t.config.DNSBind.TTL),
+				dns.OptionFQDN(t.config.ServerName),
+				dns.OptionMaximumNodes(t.config.MinimumNodes),
+			),
 		),
-	).Sample(cx)
+	)
+
+	return r53dns(cx)
 }
