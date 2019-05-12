@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
@@ -155,7 +156,10 @@ func ExpandAndDecode(raw []byte, dst interface{}) (err error) {
 
 // ExpandEnvironAndDecode ...
 func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) string) (err error) {
-	return yaml.Unmarshal([]byte(os.Expand(string(raw), mapping)), dst)
+	m := func(in string) string {
+		return normalizeEnv(mapping(in))
+	}
+	return yaml.Unmarshal([]byte(os.Expand(string(raw), m)), dst)
 }
 
 // InitializeDeploymentDirectory initializes the directory for the deployments.
@@ -182,4 +186,9 @@ func InitializeDeploymentDirectory(root string) (err error) {
 	// }
 
 	return nil
+}
+
+// fixes environment variable value for use in YAML files.
+func normalizeEnv(s string) string {
+	return strings.ReplaceAll(s, "\n", "\n\n") // ensure newlines work as expected.
 }

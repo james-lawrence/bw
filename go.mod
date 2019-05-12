@@ -71,6 +71,7 @@ require (
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sethgrid/pester v0.0.0-20180212163032-b18953f5db29 // indirect
 	github.com/spaolacci/murmur3 v0.0.0-20170819071325-9f5d223c6079 // indirect
+	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/subosito/gotenv v1.1.0
 	github.com/tinylib/msgp v1.0.2 // indirect
 	github.com/willf/bitset v1.1.3 // indirect

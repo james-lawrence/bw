@@ -14,6 +14,8 @@ func environmentSet1(k string) string {
 		return "BAR"
 	case "BIZZ":
 		return "BAZZ"
+	case "MULTILINE":
+		return "line1\nline2\nline3"
 	default:
 		return ""
 	}
@@ -40,6 +42,12 @@ field3: "YOINK"
 				Field1: "BAR",
 				Field2: "BAZZ",
 				Field3: "YOINK",
+			},
+		),
+		Entry("example 2",
+			`field1: '${MULTILINE}'`,
+			xType{
+				Field1: "line1\nline2\nline3",
 			},
 		),
 	)

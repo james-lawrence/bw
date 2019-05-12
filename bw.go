@@ -26,12 +26,20 @@ const (
 	DirTorrents = "torrents"
 	// EnvFile environment file name.
 	EnvFile = "bw.env"
-
 	// DefaultDeployTimeout default timeout for a deployment.
 	DefaultDeployTimeout = time.Hour
-
 	// DeployLog filename for the logs of a given deployment.
 	DeployLog = "deploy.log"
+	// DefaultRPCPort default port for RPC service.
+	DefaultRPCPort = 2000
+	// DefaultSWIMPort default port for peering service.
+	DefaultSWIMPort = 2001
+	// DefaultRaftPort default port for consensus service.
+	DefaultRaftPort = 2002
+	// DefaultTorrentPort default port for torrent service.
+	DefaultTorrentPort = 2003
+	// DefaultACMEPort port for ACME TLSALPN01 service.
+	DefaultACMEPort = 2004
 )
 
 // RandomID a random identifier.

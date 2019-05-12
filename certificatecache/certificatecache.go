@@ -1,3 +1,5 @@
+// Package certificatecache provides functionality for managing
+// the certificate infrastructure.
 package certificatecache
 
 import (
@@ -48,8 +50,9 @@ func FromConfig(dir, mode, configname string) (err error) {
 	case ModeACME2:
 		v := ACME{
 			CertificateDir: dir,
-			Config: cACME{
+			Config: ACMEConfig{
 				CAURL: lego.LEDirectoryProduction,
+				Port:  bw.DefaultACMEPort,
 			},
 		}
 
@@ -57,7 +60,7 @@ func FromConfig(dir, mode, configname string) (err error) {
 			return err
 		}
 
-		log.Println("ACME CONFIG", dir, configname, spew.Sdump(v))
+		log.Println(spew.Sdump(v.sanitize()))
 
 		return RefreshAutomatic(dir, v)
 	case ModeVault:

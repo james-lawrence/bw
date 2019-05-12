@@ -239,19 +239,19 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 	return ConfigOptionCompose(
 		ConfigOptionRPC(&net.TCPAddr{
 			IP:   ip,
-			Port: 2000,
+			Port: bw.DefaultRPCPort,
 		}),
 		ConfigOptionSWIM(&net.TCPAddr{
 			IP:   ip,
-			Port: 2001,
+			Port: bw.DefaultSWIMPort,
 		}),
 		ConfigOptionRaft(&net.TCPAddr{
 			IP:   ip,
-			Port: 2002,
+			Port: bw.DefaultRaftPort,
 		}),
 		ConfigOptionTorrent(&net.TCPAddr{
 			IP:   ip,
-			Port: 2003,
+			Port: bw.DefaultTorrentPort,
 		}),
 	)
 }
