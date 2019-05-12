@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+	"github.com/go-acme/lego/lego"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
@@ -44,13 +46,20 @@ const (
 func FromConfig(dir, mode, configname string) (err error) {
 	switch mode {
 	case ModeACME2:
-		v := ACME{}
+		v := ACME{
+			CertificateDir: dir,
+			Config: cACME{
+				CAURL: lego.LEDirectoryProduction,
+			},
+		}
 
 		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
 			return err
 		}
 
-		return RefreshAutomatic(dir, nopRefresh{})
+		log.Println("ACME CONFIG", dir, configname, spew.Sdump(v))
+
+		return RefreshAutomatic(dir, v)
 	case ModeVault:
 		v := Vault{
 			DefaultTokenFile: VaultDefaultTokenPath(),

@@ -24,7 +24,7 @@ type inmemPipeline struct {
 
 	shutdown     bool
 	shutdownCh   chan struct{}
-	shutdownLock sync.RWMutex
+	shutdownLock sync.Mutex
 }
 
 type inmemPipelineInflight struct {
@@ -147,10 +147,16 @@ func (i *InmemTransport) makeRPC(target ServerAddress, args interface{}, r io.Re
 
 	// Send the RPC over
 	respCh := make(chan RPCResponse)
-	peer.consumerCh <- RPC{
+	req := RPC{
 		Command:  args,
 		Reader:   r,
 		RespChan: respCh,
+	}
+	select {
+	case peer.consumerCh <- req:
+	case <-time.After(timeout):
+		err = fmt.Errorf("send timed out")
+		return
 	}
 
 	// Wait for a response
@@ -295,17 +301,6 @@ func (i *inmemPipeline) AppendEntries(args *AppendEntriesRequest, resp *AppendEn
 		Command:  args,
 		RespChan: respCh,
 	}
-
-	// Check if we have been already shutdown, otherwise the random choose
-	// made by select statement below might pick consumerCh even if
-	// shutdownCh was closed.
-	i.shutdownLock.RLock()
-	shutdown := i.shutdown
-	i.shutdownLock.RUnlock()
-	if shutdown {
-		return nil, ErrPipelineShutdown
-	}
-
 	select {
 	case i.peer.consumerCh <- rpc:
 	case <-timeout:
