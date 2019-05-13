@@ -10,6 +10,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/certificatecache"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -48,14 +49,7 @@ func (t *selfSigned) generate(ctx *kingpin.ParseContext) (err error) {
 		}),
 	}
 
-	servoptions := []tlsx.X509Option{
-		tlsx.X509OptionUsage(x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement),
-		tlsx.X509OptionUsageExt(x509.ExtKeyUsageAny),
-		tlsx.X509OptionHosts(t.hosts...),
-		tlsx.X509OptionSubject(pkix.Name{
-			CommonName: "server",
-		}),
-	}
+	servoptions := certificatecache.ServerTLSOptions(t.hosts...)
 
 	if authority, err = tlsx.X509Template(t.duration, caoptions...); err != nil {
 		return err

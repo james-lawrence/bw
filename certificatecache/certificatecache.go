@@ -4,6 +4,7 @@ package certificatecache
 
 import (
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"io/ioutil"
 	"log"
@@ -13,9 +14,9 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/go-acme/lego/lego"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/pkg/errors"
 )
 
@@ -50,10 +51,7 @@ func FromConfig(dir, mode, configname string) (err error) {
 	case ModeACME2:
 		v := ACME{
 			CertificateDir: dir,
-			Config: ACMEConfig{
-				CAURL: lego.LEDirectoryProduction,
-				Port:  bw.DefaultACMEPort,
-			},
+			Config: defaultConfig(),
 		}
 
 		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
@@ -194,4 +192,16 @@ func expiredCert(path string) (expiration time.Time, err error) {
 	log.Println("cert not valid before", cert.NotBefore)
 
 	return cert.NotAfter, nil
+}
+
+// ServerTLSOptions default options for server certificates
+func ServerTLSOptions(hosts ...string) []tlsx.X509Option {
+	return []tlsx.X509Option{
+		tlsx.X509OptionUsage(x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageKeyAgreement),
+		tlsx.X509OptionUsageExt(x509.ExtKeyUsageAny),
+		tlsx.X509OptionHosts(hosts...),
+		tlsx.X509OptionSubject(pkix.Name{
+			CommonName: "server",
+		}),
+	}
 }

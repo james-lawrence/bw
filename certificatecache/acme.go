@@ -3,21 +3,25 @@ package certificatecache
 import (
 	"crypto"
 	"crypto/md5"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/go-acme/lego/certcrypto"
-	"github.com/go-acme/lego/certificate"
 	"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/registration"
+	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
 
@@ -31,31 +35,58 @@ import (
 // 	<-make(chan struct{})
 // }
 
-type acmeUser struct {
-	Email        string
-	Registration *registration.Resource
-	key          crypto.PrivateKey
-}
-
-func (u acmeUser) GetEmail() string {
-	return u.Email
-}
-
-func (u acmeUser) GetRegistration() *registration.Resource {
-	return u.Registration
-}
-
-func (u acmeUser) GetPrivateKey() crypto.PrivateKey {
-	return u.key
+func defaultConfig() ACMEConfig {
+	return ACMEConfig{
+		CAURL: lego.LEDirectoryProduction,
+		Port:  bw.DefaultACMEPort,
+		reg:   &registration.Resource{},
+	}
 }
 
 // ACMEConfig configuration for ACME credentials
 type ACMEConfig struct {
-	CAURL      string `yaml:"caurl"`
-	Email      string `yaml:"email"`
-	PrivateKey string `yaml:"key"` // PEM encoded private key.,
-	Port       int    `yaml:"port"`
-	Network    string `yaml:"network"`
+	CAURL              string   `yaml:"caurl"`
+	Email              string   `yaml:"email"`
+	PrivateKey         string   `yaml:"key"` // PEM encoded private key.,
+	Port               int      `yaml:"port"`
+	Network            string   `yaml:"network"`
+	Country            []string `yaml:"country"`  // Country Codes for the CSR
+	Province           []string `yaml:"province"` // Provinces for the CSR
+	Locality           []string `yaml:"locality"`
+	Organization       []string `yaml:"organization"`
+	OrganizationalUnit []string `yaml:"organizationalUnit"`
+	DNSNames           []string `yaml:"dns"` // alternative dns names
+	reg                *registration.Resource
+}
+
+// GetPrivateKey implement config for acme lego.
+func (t ACMEConfig) GetPrivateKey() (priv crypto.PrivateKey) {
+	var (
+		err error
+	)
+
+	b, _ := pem.Decode([]byte(t.PrivateKey))
+	if b == nil {
+		log.Println("failed to decode private key")
+		return nil
+	}
+
+	if priv, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
+		log.Println("failed to parse private key", err)
+		return nil
+	}
+
+	return priv
+}
+
+// GetRegistration ...
+func (t ACMEConfig) GetRegistration() *registration.Resource {
+	return t.reg
+}
+
+// GetEmail ...
+func (t ACMEConfig) GetEmail() string {
+	return t.Email
 }
 
 // ACME provides the ability to generate certificates using the acme protocol.
@@ -75,16 +106,10 @@ func (t ACME) sanitize() ACME {
 func (t ACME) Refresh() (err error) {
 	var (
 		client *lego.Client
-		u      = acmeUser{
-			Email: t.Config.Email,
-		}
+		priv   *rsa.PrivateKey
 	)
 
-	if u.key, err = t.generatePrivateKey(); err != nil {
-		return errors.Wrap(err, "failed to generate or load private key")
-	}
-
-	config := lego.NewConfig(&u)
+	config := lego.NewConfig(t.Config)
 
 	config.CADirURL = t.Config.CAURL
 	config.Certificate.KeyType = certcrypto.RSA8192
@@ -95,7 +120,7 @@ func (t ACME) Refresh() (err error) {
 
 	log.Println("client created")
 
-	if u.Registration, err = t.loadRegistration(client); err != nil {
+	if *t.Config.reg, err = t.loadRegistration(client); err != nil {
 		return errors.Wrap(err, "failed to load ACME registration")
 	}
 
@@ -105,13 +130,45 @@ func (t ACME) Refresh() (err error) {
 		return errors.Wrap(err, "failed to setup tlsalpn01 provider")
 	}
 
-	request := certificate.ObtainRequest{
-		Domains: []string{"localhost"},
-		Bundle:  true,
+	if priv, err = t.generatePrivateKey(); err != nil {
+		return err
+	}
+
+	subj := pkix.Name{
+		CommonName:         t.CommonName,
+		Country:            t.Config.Country,
+		Province:           t.Config.Province,
+		Locality:           t.Config.Locality,
+		Organization:       t.Config.Organization,
+		OrganizationalUnit: t.Config.OrganizationalUnit,
+		ExtraNames: []pkix.AttributeTypeAndValue{
+			{
+				Type: asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1},
+				Value: asn1.RawValue{
+					Tag:   asn1.TagIA5String,
+					Bytes: []byte(t.Config.Email),
+				},
+			},
+		},
+	}
+
+	template := &x509.CertificateRequest{
+		Subject:            subj,
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		DNSNames:           append(t.Config.DNSNames, t.CommonName),
+	}
+
+	cert, err := x509.CreateCertificateRequest(rand.Reader, template, priv)
+	if err != nil {
+		return errors.Wrap(err, "failed to create CSR")
+	}
+
+	if template, err = x509.ParseCertificateRequest(cert); err != nil {
+		return errors.Wrap(err, "failed to decode CSR")
 	}
 
 	log.Println("obtaining certificate")
-	certificates, err := client.Certificate.Obtain(request)
+	certificates, err := client.Certificate.ObtainForCSR(*template, true)
 	if err != nil {
 		return errors.Wrap(err, "failed to obtain certificates")
 	}
@@ -119,13 +176,7 @@ func (t ACME) Refresh() (err error) {
 	log.Println("obtained certificate")
 
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
-	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
-
-	log.Println("writing private key", keypath)
-	if err = ioutil.WriteFile(keypath, certificates.PrivateKey, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write private key to %s", keypath)
-	}
 
 	log.Println("writing certificate", certpath)
 	if err = ioutil.WriteFile(certpath, certificates.Certificate, 0600); err != nil {
@@ -144,7 +195,30 @@ func (t ACME) Refresh() (err error) {
 }
 
 func (t ACME) generatePrivateKey() (priv *rsa.PrivateKey, err error) {
-	b, _ := pem.Decode([]byte(t.Config.PrivateKey))
+	var (
+		encoded []byte
+	)
+
+	keyp := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
+	if _, err = os.Stat(keyp); os.IsNotExist(err) {
+		if priv, err = rsa.GenerateKey(rand.Reader, 8192); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		if err = ioutil.WriteFile(
+			keyp,
+			pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}),
+			0600,
+		); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+
+	if encoded, err = ioutil.ReadFile(keyp); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	b, _ := pem.Decode(encoded)
 	if priv, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -152,24 +226,25 @@ func (t ACME) generatePrivateKey() (priv *rsa.PrivateKey, err error) {
 	return priv, nil
 }
 
-func (t ACME) loadRegistration(client *lego.Client) (reg *registration.Resource, err error) {
+func (t ACME) loadRegistration(client *lego.Client) (zreg registration.Resource, err error) {
 	var (
 		encoded []byte
+		reg     *registration.Resource
 	)
 
 	regp := filepath.Join(t.CertificateDir, "acme.registration.json")
 
 	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
-		return nil, err
+		return zreg, err
 	}
 
 	if encoded, err = json.Marshal(reg); err != nil {
-		return nil, err
+		return zreg, err
 	}
 
 	if err = ioutil.WriteFile(regp, encoded, 0600); err != nil {
-		return nil, err
+		return zreg, err
 	}
 
-	return reg, nil
+	return *reg, nil
 }
