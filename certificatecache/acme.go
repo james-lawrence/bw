@@ -25,8 +25,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// export LEGO_CA_CERTIFICATES="${HOME}/.golang/lib/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
-// cd ${HOME}/.golang/lib/src/github.com/letsencrypt/pebble; pebble -config ./test/config/pebble-config.json
+// export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
+// cd ${HOME}/go/src/github.com/letsencrypt/pebble; pebble -config ./test/config/pebble-config.json
 // func main() {
 // 	_, err := commandutils.LoadConfiguration(bw.DefaultEnvironmentName)
 // 	if err != nil {
@@ -67,7 +67,7 @@ func (t ACMEConfig) GetPrivateKey() (priv crypto.PrivateKey) {
 
 	b, _ := pem.Decode([]byte(t.PrivateKey))
 	if b == nil {
-		log.Println("failed to decode private key")
+		log.Println("failed to decode private key", len(t.PrivateKey))
 		return nil
 	}
 
@@ -178,14 +178,14 @@ func (t ACME) Refresh() (err error) {
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
 
-	log.Println("writing certificate", certpath)
-	if err = ioutil.WriteFile(certpath, certificates.Certificate, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
-	}
-
 	log.Println("writing authority certificate", capath)
 	if err = ioutil.WriteFile(capath, certificates.IssuerCertificate, 0600); err != nil {
 		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
+	}
+
+	log.Println("writing certificate", certpath)
+	if err = ioutil.WriteFile(certpath, certificates.Certificate, 0600); err != nil {
+		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
 	}
 
 	// TODO: do we need to do anything w/ these

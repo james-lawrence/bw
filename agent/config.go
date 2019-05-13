@@ -304,7 +304,7 @@ type Config struct {
 	SWIMBind          *net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
-	CA                string
+	CA                string `yaml:"ca"`
 	CredentialsMode   string `yaml:"credentialsSource"`
 	CredentialsDir    string `yaml:"credentialsDir"`
 	TorrentBind       *net.TCPAddr

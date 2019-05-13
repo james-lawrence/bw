@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -57,8 +56,6 @@ func FromConfig(dir, mode, configname string) (err error) {
 		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
 			return err
 		}
-
-		log.Println(spew.Sdump(v.sanitize()))
 
 		return RefreshAutomatic(dir, v)
 	case ModeVault:
