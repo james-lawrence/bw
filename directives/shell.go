@@ -2,9 +2,10 @@ package directives
 
 import (
 	"context"
-	"io"
+	"os"
 
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/pkg/errors"
 )
 
 // ShellLoader directive.
@@ -12,17 +13,21 @@ type ShellLoader struct {
 	Context shell.Context
 }
 
-// Ext extensions to succeed against.
-func (ShellLoader) Ext() []string {
-	return []string{".bwcmd"}
-}
-
-// Build builds a directive from the reader.
-func (t ShellLoader) Build(r io.Reader) (Directive, error) {
+// Load shell directive
+func (t ShellLoader) Load(path string) (dir Directive, err error) {
 	var (
-		err  error
 		cmds []shell.Exec
+		r    *os.File
 	)
+
+	if err = LoadsExtensions(path, "bwcmd"); err != nil {
+		return dir, err
+	}
+
+	if r, err = os.Open(path); err != nil {
+		return dir, errors.WithStack(err)
+	}
+	defer r.Close()
 
 	if cmds, err = shell.ParseYAML(r); err != nil {
 		return nil, err

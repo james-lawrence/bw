@@ -129,6 +129,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events := make(chan agent.Message, 100)
+	t.initializeUX(d, events)
 
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
@@ -157,7 +158,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
-	t.initializeUX(d, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()

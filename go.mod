@@ -18,7 +18,7 @@ require (
 	github.com/bradfitz/iter v0.0.0-20140124041915-454541ec3da2 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 // indirect
-	github.com/davecgh/go-spew v1.1.0
+	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4 // indirect
 	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
 	github.com/fatih/structs v1.0.0 // indirect
@@ -71,9 +71,10 @@ require (
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sethgrid/pester v0.0.0-20180212163032-b18953f5db29 // indirect
 	github.com/spaolacci/murmur3 v0.0.0-20170819071325-9f5d223c6079 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/subosito/gotenv v1.1.0
 	github.com/tinylib/msgp v1.0.2 // indirect
+	github.com/wasmerio/go-ext-wasm v0.0.0-20190531010502-b3baaf467b63
 	github.com/willf/bitset v1.1.3 // indirect
 	github.com/willf/bloom v2.0.3+incompatible // indirect
 	github.com/xenolf/lego v1.0.1 // indirect

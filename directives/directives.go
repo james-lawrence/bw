@@ -3,8 +3,10 @@ package directives
 import (
 	"context"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -32,15 +34,12 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 		err error
 	)
 
-	extmap := loaderToExts(l, loaders...)
+	log.Println("loading directives")
 	results := make([]Directive, 0, 64)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		var (
-			found     bool
-			loader    Loader
 			directive Directive
-			reader    *os.File
 		)
 
 		if err != nil {
@@ -53,18 +52,12 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 			return nil
 		}
 
-		ext := filepath.Ext(path)
-		if loader, found = extmap[ext]; !found {
-			l.Println("no directive exists for", ext, ":", path, "skipping")
-			return nil
-		}
+		if directive, err = infoToDirective(path, loaders...); err != nil {
+			if skipError(err) {
+				log.Println(err)
+				return nil
+			}
 
-		if reader, err = os.Open(path); err != nil {
-			return errors.Wrapf(err, "failed to open: %s", path)
-		}
-		defer reader.Close()
-
-		if directive, err = loader.Build(reader); err != nil {
 			return errors.Wrapf(err, "failed to build directive for: %s", path)
 		}
 
@@ -80,26 +73,78 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 	return results, err
 }
 
-func loaderToExts(logger logger, loaders ...Loader) map[string]Loader {
-	m := make(map[string]Loader, len(loaders))
+func infoToDirective(path string, loaders ...Loader) (dir Directive, err error) {
 	for _, l := range loaders {
-		for _, ext := range l.Ext() {
-			if _, found := m[ext]; found {
-				logger.Println("extension is already mapped ignoring")
-			} else {
-				m[ext] = l
-			}
+		if dir, err = l.Load(path); err == nil {
+			return dir, err
+		}
+
+		if skipError(err) {
+			continue
+		}
+
+		return dir, err
+	}
+
+	return nil, skip{error: errors.Errorf("no directive exists for %s skipping", path)}
+}
+
+// LoadsExtensions convience func for use by directive factories to load files by extension.
+func LoadsExtensions(name string, extensions ...string) error {
+	aext := strings.TrimLeft(strings.ToLower(filepath.Ext(name)), ".")
+	for _, ext := range extensions {
+		if strings.ToLower(ext) == aext {
+			return nil
 		}
 	}
 
-	return m
+	return skip{error: errors.Errorf("%s did not match any %s", aext, extensions)}
 }
 
-// Loader represents a directive to be used for the specified extensions.
+func skipError(err error) bool {
+	if _, ok := err.(invalid); ok {
+		return true
+	}
+
+	return false
+}
+
+type invalid interface {
+	invalid()
+}
+
+type skip struct {
+	error
+}
+
+func (t skip) invalid() {}
+
+// func loaderToExts(logger logger, loaders ...Loader) map[string]Loader {
+// 	m := make(map[string]Loader, len(loaders))
+// 	for _, l := range loaders {
+// 		for _, ext := range l.Ext() {
+// 			if _, found := m[ext]; found {
+// 				logger.Println("extension is already mapped ignoring")
+// 			} else {
+// 				m[ext] = l
+// 			}
+// 		}
+// 	}
+//
+// 	return m
+// }
+
+// // Loader represents a directive to be used for the specified extensions.
+// type Loader interface {
+// 	// extensions to match against.
+// 	Ext() []string
+// 	Build(io.Reader) (Directive, error)
+// }
+
+// Loader represents a directive factory which takse file information and builds
+// directives from the file, or returns an error.
 type Loader interface {
-	// extensions to match against.
-	Ext() []string
-	Build(io.Reader) (Directive, error)
+	Load(string) (Directive, error)
 }
 
 type closure func(context.Context) error

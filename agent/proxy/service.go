@@ -45,7 +45,10 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 		Archive: &archive,
 	}
 
-	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
+	ctx, done := context.WithTimeout(context.Background(), time.Duration(dopts.Timeout))
+	err = d.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), cmd))
+	done()
+	if err != nil {
 		return err
 	}
 
@@ -70,7 +73,9 @@ func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.Deplo
 			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive, Options: &dopts}
 		}
 
-		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), dcmd)))
+		ctx, done := context.WithTimeout(context.Background(), time.Duration(dopts.Timeout))
+		logx.MaybeLog(d.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), dcmd)))
+		done()
 	}()
 
 	return nil

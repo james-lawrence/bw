@@ -2,9 +2,10 @@ package directives
 
 import (
 	"context"
-	"io"
+	"os"
 
 	"github.com/james-lawrence/bw/directives/bwfs"
+	"github.com/pkg/errors"
 )
 
 // ArchiveLoader directive.
@@ -17,12 +18,21 @@ func (ArchiveLoader) Ext() []string {
 	return []string{".bwfs"}
 }
 
-// Build builds a directive from the reader.
-func (t ArchiveLoader) Build(r io.Reader) (Directive, error) {
+// Load bwfs directives from path
+func (t ArchiveLoader) Load(path string) (dir Directive, err error) {
 	var (
-		err      error
 		archives []bwfs.Archive
+		r        *os.File
 	)
+
+	if err = LoadsExtensions(path, "bwfs"); err != nil {
+		return dir, err
+	}
+
+	if r, err = os.Open(path); err != nil {
+		return dir, errors.WithStack(err)
+	}
+	defer r.Close()
 
 	if archives, err = bwfs.ParseManifest(bwfs.Archive{}, r); err != nil {
 		return nil, err

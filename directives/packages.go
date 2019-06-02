@@ -3,10 +3,11 @@ package directives
 import (
 	"context"
 	"fmt"
-	"io"
+	"os"
 
 	"github.com/james-lawrence/bw/directives/packages"
 	"github.com/james-lawrence/bw/packagekit"
+	"github.com/pkg/errors"
 )
 
 // PackageLoader reads a set of packages to install from an io.Reader
@@ -19,12 +20,21 @@ func (PackageLoader) Ext() []string {
 	return []string{".bwpkg"}
 }
 
-// Build builds a directive from the reader.
-func (t PackageLoader) Build(r io.Reader) (Directive, error) {
+// Load directive from file
+func (t PackageLoader) Load(path string) (dir Directive, err error) {
 	var (
-		err  error
+		r    *os.File
 		pkgs []packages.Package
 	)
+
+	if err = LoadsExtensions(path, "bwfs"); err != nil {
+		return dir, err
+	}
+
+	if r, err = os.Open(path); err != nil {
+		return dir, errors.WithStack(err)
+	}
+	defer r.Close()
 
 	if pkgs, err = packages.ParseYAML(r); err != nil {
 		return nil, err

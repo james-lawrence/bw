@@ -1,8 +1,6 @@
 package directives
 
 import (
-	"io"
-
 	"github.com/james-lawrence/bw/directives/awselb2"
 )
 
@@ -19,25 +17,23 @@ func NewAWSELB2Detach() AWSELB2DetachLoader {
 // AWSELB2AttachLoader directive.
 type AWSELB2AttachLoader struct{}
 
-// Ext extensions to succeed against.
-func (AWSELB2AttachLoader) Ext() []string {
-	return []string{".attach-awselb2"}
-}
+// Load elb detach directive
+func (t AWSELB2AttachLoader) Load(path string) (dir Directive, err error) {
+	if err = LoadsExtensions(path, "attach-awselb2"); err != nil {
+		return dir, err
+	}
 
-// Build builds a directive from the reader.
-func (t AWSELB2AttachLoader) Build(r io.Reader) (Directive, error) {
 	return closure(awselb2.LoadbalancersAttach), nil
 }
 
 // AWSELB2DetachLoader directive.
 type AWSELB2DetachLoader struct{}
 
-// Ext extensions to succeed against.
-func (AWSELB2DetachLoader) Ext() []string {
-	return []string{".detach-awselb2"}
-}
+// Load elb detach directive
+func (t AWSELB2DetachLoader) Load(path string) (dir Directive, err error) {
+	if err = LoadsExtensions(path, "detach-awselb2"); err != nil {
+		return dir, err
+	}
 
-// Build builds a directive from the reader.
-func (t AWSELB2DetachLoader) Build(r io.Reader) (Directive, error) {
 	return closure(awselb2.LoadbalancersDetach), nil
 }
