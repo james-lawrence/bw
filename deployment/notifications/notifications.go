@@ -70,6 +70,7 @@ func ExpandEnv(s string, dc agent.DeployCommand) string {
 			return dc.Command.String()
 		case envDeployInitiator:
 			if dc.Archive == nil {
+				log.Println("deploy command missing archive, initiator will be blank")
 				return ""
 			}
 			return dc.Archive.GetInitiator()
