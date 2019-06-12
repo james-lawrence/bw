@@ -1,3 +1,15 @@
+commit 35e29b46a3de1b710ca5a3ad848e08a510dd0ec9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 12 00:31:38 2019 -0400
+
+    docker fixes
+
+commit a532ed910f61edceb57d964b39d14396721b0426
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 12 00:22:25 2019 -0400
+
+    release 0.1.1560313317-7af44a15
+
 commit 7af44a15f9b1f9a41c592a6ca1eb9891add87b57
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jun 12 00:21:57 2019 -0400

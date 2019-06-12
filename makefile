@@ -46,7 +46,7 @@ release: generate release-check
 		RELEASE-NOTES.md \
 		systemd \
 		-C build/bearded-wookie-linux-amd64-$(RELEASE) .
-	docker run \
+	sudo docker run \
 		-e BUILD_VERSION=$(RELEASE) \
 		-e BW_VERSION=$(BW_VERSION) \
 		-e BW_LDFLAGS=$(LDFLAGS) \
