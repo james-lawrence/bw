@@ -5,7 +5,7 @@ RELEASE ?= 0.1.$(shell git show -s --format=%ct-%h $(COMMIT))
 BW_VERSION ?= 0.1.$(shell git show -s --format=%ct $(COMMIT))
 LDFLAGS ?= "-X github.com/james-lawrence/bw/cmd.Version=$(RELEASE)"
 release-dev-setup:
-	docker build -t debian-build -f .dist/deb/Dockerfile .
+	sudo docker build -t debian-build -f .dist/deb/Dockerfile .
 
 generate:
 	go generate ./...
