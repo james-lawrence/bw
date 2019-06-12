@@ -3,15 +3,17 @@ package directives
 import (
 	"context"
 
-	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/pkg/errors"
 	"github.com/wasmerio/go-ext-wasm/wasmer"
 )
 
-// WASMLoader directive.
-type WASMLoader struct {
-	Context shell.Context
+// NewWASM ...
+func NewWASM() WASMLoader {
+	return WASMLoader{}
 }
+
+// WASMLoader directive.
+type WASMLoader struct{}
 
 // Load wasm directive
 func (t WASMLoader) Load(path string) (dir Directive, err error) {
@@ -24,15 +26,17 @@ func (t WASMLoader) Load(path string) (dir Directive, err error) {
 		return dir, err
 	}
 
-	imports := wasmer.NewImports()
-	if bin, err = wasmer.ReadBytes(path); err != nil {
-		return dir, errors.WithStack(err)
-	}
-	if wasm, err = wasmer.NewInstanceWithImports(bin, imports); err != nil {
-		return dir, errors.WithStack(err)
-	}
-	defer wasm.Close()
 	return closure(func(ctx context.Context) error {
+		imports := wasmer.NewImports()
+		if bin, err = wasmer.ReadBytes(path); err != nil {
+			return errors.Wrap(err, "failed to read wasm module")
+		}
+
+		if wasm, err = wasmer.NewInstanceWithImports(bin, imports); err != nil {
+			return errors.WithStack(err)
+		}
+		defer wasm.Close()
+
 		return nil
 	}), nil
 }

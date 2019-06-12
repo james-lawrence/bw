@@ -104,6 +104,7 @@ func (t Directive) deploy(dctx DeployContext) {
 		directives.NewAWSELBDetach(),
 		directives.NewAWSELB2Attach(),
 		directives.NewAWSELB2Detach(),
+		directives.NewWASM(),
 	}
 
 	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")

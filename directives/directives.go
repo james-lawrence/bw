@@ -93,6 +93,7 @@ func infoToDirective(path string, loaders ...Loader) (dir Directive, err error) 
 func LoadsExtensions(name string, extensions ...string) error {
 	aext := strings.TrimLeft(strings.ToLower(filepath.Ext(name)), ".")
 	for _, ext := range extensions {
+		log.Println("comparing", ext, "==", aext)
 		if strings.ToLower(ext) == aext {
 			return nil
 		}
