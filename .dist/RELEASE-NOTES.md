@@ -1,3 +1,69 @@
+commit d78371d01f39ceb111fc0eba1fd8d35f3faf303a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 11 23:52:53 2019 -0400
+
+    fix up packagekit
+
+commit afb7eddfc3a2d7dedf85ea51470f590ac2b268b7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 11 23:44:25 2019 -0400
+
+    add debug logging
+
+commit a5cbf539097f61f5bc8997066aed805965ea8aee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 11 23:37:38 2019 -0400
+
+    fix minor bugs
+    
+    - special case macosx FQDN resolution, because macs do not setup their
+    hostname network properly.
+    - handle autocorrecting dead deploys when querying dpeloyments.
+
+commit 6441213010756bd7444054f2600ea0315349f4a3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 12 21:03:37 2019 -0400
+
+    working CSR for acme configuration.
+    
+    work left to do:
+    - ensure acme certificates result in an operational server.
+    - ensure only clients from the same cluster can connect.
+
+commit a239cf36d9c968c9f7e373c473b7389fd2aa1549
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 12 17:18:11 2019 -0400
+
+    updates to acme support
+    
+    - support expanding newlines in environments for use in YAML file.
+    - add documentation to certificatecache directory.
+    - allow for acme to refresh its certificates.
+
+commit dde816e8d0469ba31bff2d4438b67ce2f7babee4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 12 10:08:40 2019 -0400
+
+    work on implementing acme protocol support.
+
+commit 51b8e5a29b22a81d329b1a95f0a761280dbd366b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 13 14:08:44 2019 -0400
+
+    rename commands package
+
+commit 4668603a3fc4772a529f59ee6e824bad88626681
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 6 07:25:24 2019 -0400
+
+    minor cleanups
+
+commit 5b153204b9c95fa7889ecc7faa36b99878e401f8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 5 17:59:57 2019 -0400
+
+    release 0.1.1554501589-dbfc9357
+
 commit dbfc9357cc97ceb57d49aea526a33dda6c5138d9
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Apr 5 17:49:40 2019 -0400
