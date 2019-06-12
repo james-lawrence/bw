@@ -1,9 +1,9 @@
 COMMIT ?= HEAD
-PACKAGE ?= github.com/james-lawrence/bw/commands
+PACKAGE ?= github.com/james-lawrence/bw/cmd
 VERSION = $(shell git describe --always --tags --long $(COMMIT))
 RELEASE ?= 0.1.$(shell git show -s --format=%ct-%h $(COMMIT))
 BW_VERSION ?= 0.1.$(shell git show -s --format=%ct $(COMMIT))
-LDFLAGS ?= "-X github.com/james-lawrence/bw/commands.Version=$(RELEASE)"
+LDFLAGS ?= "-X github.com/james-lawrence/bw/cmd.Version=$(RELEASE)"
 release-dev-setup:
 	docker build -t debian-build -f .dist/deb/Dockerfile .
 
