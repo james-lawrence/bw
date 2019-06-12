@@ -1,3 +1,15 @@
+commit a5e7877c4f79f0bb69811ea2305422fc1551f4d0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 11 23:54:18 2019 -0400
+
+    fix makefile
+
+commit 81daabb8081b78246127c13af7c6507547c5c9f1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 11 23:53:03 2019 -0400
+
+    release 0.1.1560311573-d78371d0
+
 commit d78371d01f39ceb111fc0eba1fd8d35f3faf303a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Jun 11 23:52:53 2019 -0400
