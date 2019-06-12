@@ -4,6 +4,24 @@ package packagekit
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[ExitUnknown-0]
+	_ = x[ExitSuccess-1]
+	_ = x[ExitFailed-2]
+	_ = x[ExitCancelled-3]
+	_ = x[ExitKeyRequired-4]
+	_ = x[ExitEULARequired-5]
+	_ = x[ExitKilled-6]
+	_ = x[ExitMediaChangeRequired-7]
+	_ = x[ExitNeedUntrusted-8]
+	_ = x[ExitCancelledPriority-9]
+	_ = x[ExitSkipTransaction-10]
+	_ = x[ExitRepairRequired-11]
+}
+
 const _ExitEnum_name = "ExitUnknownExitSuccessExitFailedExitCancelledExitKeyRequiredExitEULARequiredExitKilledExitMediaChangeRequiredExitNeedUntrustedExitCancelledPriorityExitSkipTransactionExitRepairRequired"
 
 var _ExitEnum_index = [...]uint8{0, 11, 22, 32, 45, 60, 76, 86, 109, 126, 147, 166, 184}

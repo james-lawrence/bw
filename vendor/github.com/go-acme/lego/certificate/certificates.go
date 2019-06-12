@@ -101,17 +101,16 @@ func (c *Certifier) Obtain(request ObtainRequest) (*Resource, error) {
 
 	order, err := c.core.Orders.New(domains)
 	if err != nil {
-		log.Println("failed to build orders")
 		return nil, err
 	}
-	log.Println("get authorizations")
+
 	authz, err := c.getAuthorizations(order)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.
 		c.deactivateAuthorizations(order)
 		return nil, err
 	}
-	log.Println("solving authorizations")
+
 	err = c.resolver.Solve(authz)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.

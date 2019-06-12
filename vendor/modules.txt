@@ -104,7 +104,6 @@ github.com/gizak/termui
 github.com/glycerine/go-unsnap-stream
 # github.com/go-acme/lego v2.5.0+incompatible
 github.com/go-acme/lego/certcrypto
-github.com/go-acme/lego/certificate
 github.com/go-acme/lego/challenge/tlsalpn01
 github.com/go-acme/lego/lego
 github.com/go-acme/lego/registration
@@ -112,11 +111,12 @@ github.com/go-acme/lego/acme
 github.com/go-acme/lego/acme/api
 github.com/go-acme/lego/challenge
 github.com/go-acme/lego/log
-github.com/go-acme/lego/platform/wait
+github.com/go-acme/lego/certificate
 github.com/go-acme/lego/challenge/resolver
 github.com/go-acme/lego/acme/api/internal/nonces
 github.com/go-acme/lego/acme/api/internal/secure
 github.com/go-acme/lego/acme/api/internal/sender
+github.com/go-acme/lego/platform/wait
 github.com/go-acme/lego/challenge/dns01
 github.com/go-acme/lego/challenge/http01
 # github.com/go-ini/ini v1.32.0
@@ -270,11 +270,11 @@ golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/net/context
 golang.org/x/net/http2
 golang.org/x/net/trace
-golang.org/x/net/idna
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/http2/hpack
+golang.org/x/net/idna
 golang.org/x/net/lex/httplex
 golang.org/x/net/internal/timeseries
 golang.org/x/net/bpf
@@ -295,10 +295,10 @@ golang.org/x/sys/unix
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-golang.org/x/text/transform
 golang.org/x/text/encoding
 golang.org/x/text/encoding/charmap
 golang.org/x/text/encoding/htmlindex
+golang.org/x/text/transform
 golang.org/x/text/encoding/internal/identifier
 golang.org/x/text/encoding/internal
 golang.org/x/text/encoding/japanese

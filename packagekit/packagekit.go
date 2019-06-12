@@ -2,14 +2,15 @@ package packagekit
 
 import (
 	"context"
-	"fmt"
 	"time"
+
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 //go:generate stringer -type=ErrorEnum -type=InfoEnum -type=ExitEnum
 
 // Generic NotImplemented Error
-var errNotImplemented = fmt.Errorf("Not Implemented")
+const errNotImplemented = errorsx.String("Not Implemented")
 
 const pkDbusInterface = "org.freedesktop.PackageKit"
 const pkTransactionDbusInterface = "org.freedesktop.PackageKit.Transaction"
