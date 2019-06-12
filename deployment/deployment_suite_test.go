@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 
+	"github.com/james-lawrence/bw/internal/x/testingx"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -11,10 +12,9 @@ import (
 )
 
 func TestDeployment(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Deployment Suite")
 }
 
-var _ = BeforeSuite(func() {
-	log.SetOutput(ioutil.Discard)
-})
+var _ = SynchronizedAfterSuite(func() {}, testingx.Cleanup)

@@ -17,6 +17,4 @@ func TestRaftutil(t *testing.T) {
 	RunSpecs(t, "Raftutil Suite")
 }
 
-var _ = SynchronizedAfterSuite(func() {}, func() {
-	testingx.Cleanup()
-})
+var _ = SynchronizedAfterSuite(func() {}, testingx.Cleanup)

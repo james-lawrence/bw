@@ -3,13 +3,10 @@ package shell
 import (
 	"io"
 	"io/ioutil"
-	"log"
-	"net"
 	"os"
 	"os/user"
 	"strings"
 
-	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -18,8 +15,8 @@ func DefaultContext() (ctx Context, err error) {
 	var (
 		hostname string
 		// machineID string
-		u    *user.User
-		fqdn string
+		u     *user.User
+		_fqdn string
 	)
 
 	if u, err = user.Current(); err != nil {
@@ -30,7 +27,7 @@ func DefaultContext() (ctx Context, err error) {
 		return ctx, errors.Wrap(err, "failed to lookup hostname")
 	}
 
-	if fqdn, err = _fqdn(hostname); err != nil {
+	if _fqdn, err = fqdn(hostname); err != nil {
 		return ctx, err
 	}
 
@@ -38,9 +35,9 @@ func DefaultContext() (ctx Context, err error) {
 		Shell:     os.Getenv("SHELL"),
 		User:      *u,
 		Hostname:  hostname,
-		FQDN:      fqdn,
-		Domain:    _domain(fqdn),
-		MachineID: _machineID(),
+		FQDN:      _fqdn,
+		Domain:    _domain(_fqdn),
+		MachineID: machineID(),
 		Environ:   os.Environ(),
 		output:    ioutil.Discard,
 	}, nil
@@ -120,48 +117,4 @@ func _domain(fqdn string) string {
 	}
 
 	return fqdn[idx:]
-}
-
-func _fqdn(hostname string) (string, error) {
-	addrs, err := net.LookupIP(hostname)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to lookup ip for fqdn")
-	}
-
-	for _, addr := range addrs {
-		if ipv4 := addr.To4(); ipv4 != nil {
-			ip, err := ipv4.MarshalText()
-			if err != nil {
-				logx.MaybeLog(errors.Wrapf(err, "failed to marshal ip for fqdn: %s", ipv4.String()))
-				continue
-			}
-
-			hosts, err := net.LookupAddr(string(ip))
-			if err != nil {
-				logx.MaybeLog(errors.Wrapf(err, "failed to lookup hosts for addr: %s", ipv4.String()))
-				continue
-			}
-
-			for _, fqdn := range hosts {
-				return strings.TrimSuffix(fqdn, "."), nil // return fqdn without trailing dot
-			}
-		}
-	}
-
-	// no FQDN found
-	return "", nil
-}
-
-func _machineID() string {
-	var (
-		err error
-		raw []byte
-	)
-
-	if raw, err = ioutil.ReadFile("/etc/machine-id"); err != nil {
-		log.Println("failed to read machine id, defaulting to empty string", err)
-		return ""
-	}
-
-	return strings.TrimSpace(string(raw))
 }

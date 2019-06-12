@@ -16,6 +16,4 @@ func TestBootstrap(t *testing.T) {
 	RunSpecs(t, "Bootstrap Suite")
 }
 
-var _ = SynchronizedAfterSuite(func() {}, func() {
-	testingx.Cleanup()
-})
+var _ = SynchronizedAfterSuite(func() {}, testingx.Cleanup)

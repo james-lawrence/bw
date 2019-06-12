@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -16,9 +17,9 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
-	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/storage"
 )
 
 const (
@@ -148,19 +149,10 @@ func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
 	}
 
 	sort.Slice(deployments, func(i int, j int) bool {
-		a, b := deployments[i], deployments[j]
-		if a.Archive == nil {
-			return true
-		}
-
-		if b.Archive == nil {
-			return false
-		}
-
-		return a.Archive.Ts > b.Archive.Ts
+		return less(deployments[i], deployments[j])
 	})
 
-	return deployments, nil
+	return deployments, errors.Wrap(t.correctLatestDeploy(deployments...), "failed correcting deploy records")
 }
 
 // Deploy deploy a given archive.
@@ -257,6 +249,28 @@ func (t *Coordinator) update(dctx DeployContext, d agent.Deploy, c agentutil.Cle
 	t.cleanup = c
 
 	return d
+}
+
+func (t *Coordinator) correctLatestDeploy(deploys ...agent.Deploy) error {
+	if len(deploys) == 0 {
+		return nil
+	}
+
+	d := deploys[0]
+
+	if d.Stage != agent.Deploy_Deploying {
+		return nil
+	}
+
+	if atomic.LoadUint32(t.ds.state) == coordinatorDeploying {
+		return nil
+	}
+
+	_, root, _ := deployDirs(t.deploysRoot, *d.Archive)
+	d.Stage = agent.Deploy_Failed
+	d.Error = fmt.Sprintf("dead deploy detected")
+
+	return writeDeployMetadata(root, d)
 }
 
 func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) error {

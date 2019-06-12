@@ -20,6 +20,4 @@ func TestUx(t *testing.T) {
 	RunSpecs(t, "Ux Suite")
 }
 
-var _ = SynchronizedAfterSuite(func() {}, func() {
-	testingx.Cleanup()
-})
+var _ = SynchronizedAfterSuite(func() {}, testingx.Cleanup)

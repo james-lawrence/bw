@@ -2,13 +2,12 @@ package deployment_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/testingx"
 	"github.com/james-lawrence/bw/storage"
 
 	. "github.com/onsi/ginkgo"
@@ -18,13 +17,7 @@ import (
 var _ = Describe("Coordinator", func() {
 	var workdir string
 	BeforeEach(func() {
-		var err error
-		workdir, err = ioutil.TempDir(".", "deployment")
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	AfterEach(func() {
-		Expect(os.RemoveAll(workdir)).ToNot(HaveOccurred())
+		workdir = testingx.TempDir()
 	})
 
 	It("deployments should return the deploy options", func() {

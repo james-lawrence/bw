@@ -80,6 +80,13 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 	return dctx, nil
 }
 
+func deployDirs(root string, a agent.Archive) (bw.RandomID, string, string) {
+	id := bw.RandomID(a.DeploymentID)
+	droot := filepath.Join(root, id.String())
+	archiveDir := filepath.Join(root, "archive")
+	return id, droot, archiveDir
+}
+
 // NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
 func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
@@ -87,9 +94,7 @@ func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOpti
 		logger dlog
 	)
 
-	id := bw.RandomID(a.DeploymentID)
-	root := filepath.Join(workdir, id.String())
-	archiveDir := filepath.Join(root, "archive")
+	id, root, archiveDir := deployDirs(workdir, a)
 
 	if err = os.MkdirAll(root, 0755); err != nil {
 		return _did, errors.WithMessage(err, "failed to create deployment directory")

@@ -16,6 +16,18 @@ import (
 
 const deployMetadataName = "deploy.metadata"
 
+func less(a, b agent.Deploy) bool {
+	if a.Archive == nil {
+		return true
+	}
+
+	if b.Archive == nil {
+		return false
+	}
+
+	return a.Archive.Ts > b.Archive.Ts
+}
+
 func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
 	deployments := make([]agent.Deploy, 0, 10)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
