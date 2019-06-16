@@ -14,9 +14,8 @@ import (
 func DefaultContext() (ctx Context, err error) {
 	var (
 		hostname string
-		// machineID string
-		u     *user.User
-		_fqdn string
+		u        *user.User
+		_fqdn    string
 	)
 
 	if u, err = user.Current(); err != nil {
