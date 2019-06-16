@@ -34,7 +34,6 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 		err error
 	)
 
-	log.Println("loading directives")
 	results := make([]Directive, 0, 64)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
@@ -93,7 +92,7 @@ func infoToDirective(path string, loaders ...Loader) (dir Directive, err error) 
 func LoadsExtensions(name string, extensions ...string) error {
 	aext := strings.TrimLeft(strings.ToLower(filepath.Ext(name)), ".")
 	for _, ext := range extensions {
-		log.Println("comparing", ext, "==", aext)
+		// log.Println("comparing", ext, "==", aext)
 		if strings.ToLower(ext) == aext {
 			return nil
 		}

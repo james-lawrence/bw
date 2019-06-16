@@ -20,13 +20,13 @@ require (
 	github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4 // indirect
-	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
 	github.com/fatih/structs v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gizak/termui v2.1.1+incompatible
 	github.com/glycerine/go-unsnap-stream v0.0.0-20171127062821-62a9a9eb44fd // indirect
 	github.com/go-acme/lego v2.5.0+incompatible
 	github.com/go-ini/ini v1.32.0 // indirect
+	github.com/go-interpreter/wagon v0.5.1-0.20190621140410-7e800ab3530c
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gofrs/uuid v3.0.0+incompatible
 	github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf
@@ -74,14 +74,14 @@ require (
 	github.com/stretchr/objx v0.2.0 // indirect
 	github.com/subosito/gotenv v1.1.0
 	github.com/tinylib/msgp v1.0.2 // indirect
-	github.com/wasmerio/go-ext-wasm v0.0.0-20190531010502-b3baaf467b63
+	github.com/wasmerio/go-ext-wasm v0.0.0-20190531010502-b3baaf467b63 // indirect
 	github.com/willf/bitset v1.1.3 // indirect
 	github.com/willf/bloom v2.0.3+incompatible // indirect
 	github.com/xenolf/lego v1.0.1 // indirect
 	golang.org/x/crypto v0.0.0-20171228081715-95a4943f35d0 // indirect
 	golang.org/x/net v0.0.0-20171212005608-d866cfc389ce
 	golang.org/x/oauth2 v0.0.0-20180724155351-3d292e4d0cdc
-	golang.org/x/sys v0.0.0-20171222143536-83801418e1b5 // indirect
+	golang.org/x/sys v0.0.0-20190626221950-04f50cda93cb // indirect
 	golang.org/x/text v0.0.0-20171227012246-e19ae1496984 // indirect
 	golang.org/x/time v0.0.0-20170927054726-6dc17368e09b
 	google.golang.org/api v0.0.0-20180811000443-0aa0a1f2c0c4

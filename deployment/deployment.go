@@ -95,7 +95,6 @@ func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOpti
 	)
 
 	id, root, archiveDir := deployDirs(workdir, a)
-
 	if err = os.MkdirAll(root, 0755); err != nil {
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
