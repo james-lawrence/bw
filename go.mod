@@ -1,7 +1,7 @@
 module github.com/james-lawrence/bw
 
 require (
-	cloud.google.com/go v0.26.0
+	cloud.google.com/go v0.40.0
 	github.com/RoaringBitmap/roaring v0.3.16 // indirect
 	github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
@@ -29,9 +29,12 @@ require (
 	github.com/go-ini/ini v1.32.0 // indirect
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gofrs/uuid v3.0.0+incompatible
-	github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf
+	github.com/golang/mock v1.3.1 // indirect
+	github.com/golang/protobuf v1.3.1
 	github.com/golang/snappy v0.0.0-20170215233205-553a64147049 // indirect
-	github.com/google/btree v0.0.0-20161217183710-316fb6d3f031 // indirect
+	github.com/google/btree v1.0.0 // indirect
+	github.com/google/pprof v0.0.0-20190515194954-54271f7e092f // indirect
+	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
 	github.com/hashicorp/errwrap v0.0.0-20141028054710-7554cd9344ce // indirect
 	github.com/hashicorp/go-cleanhttp v0.0.0-20171218145408-d5fe4b57a186 // indirect
@@ -40,7 +43,6 @@ require (
 	github.com/hashicorp/go-multierror v0.0.0-20171204182908-b7773ae21874 // indirect
 	github.com/hashicorp/go-rootcerts v0.0.0-20160503143440-6bb64b370b90 // indirect
 	github.com/hashicorp/go-sockaddr v0.0.0-20171030104312-9b4c5fa5b10a // indirect
-	github.com/hashicorp/golang-lru v0.0.0-20160813221303-0a025b7e63ad // indirect
 	github.com/hashicorp/hcl v0.0.0-20171017181929-23c074d0eceb // indirect
 	github.com/hashicorp/memberlist v0.0.0-20180209033901-2288bf30e9c8
 	github.com/hashicorp/raft v1.0.1
@@ -49,6 +51,7 @@ require (
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 	github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8 // indirect
 	github.com/joho/godotenv v1.2.0
+	github.com/kr/pty v1.1.5 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20181002194514-a7b3b318ed4e
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/maruel/panicparse v1.0.2 // indirect
@@ -77,16 +80,22 @@ require (
 	github.com/willf/bitset v1.1.3 // indirect
 	github.com/willf/bloom v2.0.3+incompatible // indirect
 	github.com/xenolf/lego v1.0.1 // indirect
-	golang.org/x/crypto v0.0.0-20171228081715-95a4943f35d0 // indirect
-	golang.org/x/net v0.0.0-20171212005608-d866cfc389ce
-	golang.org/x/oauth2 v0.0.0-20180724155351-3d292e4d0cdc
-	golang.org/x/sys v0.0.0-20171222143536-83801418e1b5 // indirect
-	golang.org/x/text v0.0.0-20171227012246-e19ae1496984 // indirect
-	golang.org/x/time v0.0.0-20170927054726-6dc17368e09b
-	google.golang.org/api v0.0.0-20180811000443-0aa0a1f2c0c4
-	google.golang.org/appengine v1.1.0 // indirect
-	google.golang.org/genproto v0.0.0-20171212231943-a8101f21cf98 // indirect
-	google.golang.org/grpc v1.5.2
+	go.opencensus.io v0.22.0 // indirect
+	golang.org/x/crypto v0.0.0-20190611184440-5c40567a22f8 // indirect
+	golang.org/x/exp v0.0.0-20190510132918-efd6b22b2522 // indirect
+	golang.org/x/image v0.0.0-20190616094056-33659d3de4f5 // indirect
+	golang.org/x/mobile v0.0.0-20190607214518-6fa95d984e88 // indirect
+	golang.org/x/mod v0.1.0 // indirect
+	golang.org/x/net v0.0.0-20190613194153-d28f0bde5980
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/sys v0.0.0-20190616124812-15dcb6c0061f // indirect
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	golang.org/x/tools v0.0.0-20190614205625-5aca471b1d59 // indirect
+	google.golang.org/api v0.6.0
+	google.golang.org/appengine v1.6.1 // indirect
+	google.golang.org/genproto v0.0.0-20190611190212-a7e196e89fd3 // indirect
+	google.golang.org/grpc v1.21.1
 	gopkg.in/square/go-jose.v2 v2.1.6 // indirect
 	gopkg.in/yaml.v2 v2.0.0
+	honnef.co/go/tools v0.0.0-20190614002413-cb51c254f01b // indirect
 )
