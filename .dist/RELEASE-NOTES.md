@@ -1,3 +1,27 @@
+commit 67063fd131b12d736c4cf4d42abab2c39810ee3a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 16 18:30:22 2019 -0400
+
+    fix deploy initiator key
+
+commit 4c894bd725e03c974e8e317527e7faa573988449
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 16 18:11:38 2019 -0400
+
+    minor setup/testing changes
+
+commit eb8e99cf093a5d5d67d657d5a3c32395436b329d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 16 16:05:09 2019 -0400
+
+    remove comment
+
+commit 001a2bba8413a056ed6c98f33cd7bcc4a6b5a604
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 12 00:32:43 2019 -0400
+
+    release 0.1.1560313958-439c2464
+
 commit 439c24642b87ecec17bebec65da7d5e501a68c68
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jun 12 00:31:44 2019 -0400
