@@ -32,7 +32,7 @@ ifeq ($(origin ALLOW_DIRTY), undefined)
 	git diff --exit-code --quiet || { echo repository has uncommitted files. set ALLOW_DIRTY to ignore this check; exit 1; }
 endif
 
-release: generate release-check
+release: release-check
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
 	git add .dist/RELEASE-NOTES.md; git commit -m "release $(RELEASE)";
 
