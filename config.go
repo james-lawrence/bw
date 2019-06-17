@@ -190,5 +190,5 @@ func InitializeDeploymentDirectory(root string) (err error) {
 
 // fixes environment variable value for use in YAML files.
 func normalizeEnv(s string) string {
-	return strings.ReplaceAll(s, "\n", "\n\n") // ensure newlines work as expected.
+	return strings.Replace(s, "\n", "\n\n", -1) // ensure newlines work as expected.
 }
