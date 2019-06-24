@@ -83,7 +83,7 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 func deployDirs(root string, a agent.Archive) (bw.RandomID, string, string) {
 	id := bw.RandomID(a.DeploymentID)
 	droot := filepath.Join(root, id.String())
-	archiveDir := filepath.Join(root, "archive")
+	archiveDir := filepath.Join(droot, "archive")
 	return id, droot, archiveDir
 }
 
