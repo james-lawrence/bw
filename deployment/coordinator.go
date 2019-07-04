@@ -155,6 +155,35 @@ func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
 	return deployments, errors.Wrap(t.correctLatestDeploy(deployments...), "failed correcting deploy records")
 }
 
+// Reset the coordinator - remove all deploys that are not successfully completed.
+func (t *Coordinator) Reset() error {
+	var (
+		err         error
+		deployments []agent.Deploy
+	)
+
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if deployments, err = readAllDeployMetadata(t.deploysRoot); err != nil {
+		return err
+	}
+
+	for _, d := range deployments {
+		if d.Stage == agent.Deploy_Completed {
+			continue
+		}
+
+		s := filepath.Join(t.deploysRoot, bw.RandomID(d.Archive.DeploymentID).String())
+
+		if err = os.RemoveAll(s); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Deploy deploy a given archive.
 func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d agent.Deploy, err error) {
 	var (

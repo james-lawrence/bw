@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/storage"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	g "github.com/onsi/gomega"
 )
 
@@ -62,4 +63,46 @@ var _ = Describe("Coordinator", func() {
 		g.Expect(deploys).To(g.HaveLen(1))
 		g.Expect(deploys[0].Stage).To(g.Equal(agent.Deploy_Failed))
 	})
+
+	DescribeTable("Reset should properly reset deploys directory", func(s agent.Deploy_Stage, result int) {
+		p := agent.NewPeer("node1")
+		c := New(
+			p,
+			NewDirective(),
+			CoordinatorOptionRoot(workdir),
+			CoordinatorOptionStorage(storage.NoopRegistry{}),
+		)
+
+		deploys, err := c.Deployments()
+		g.Expect(err).To(g.Succeed())
+		g.Expect(deploys).To(g.HaveLen(0))
+
+		dopts := agent.DeployOptions{
+			Concurrency:       1,
+			IgnoreFailures:    false,
+			SilenceDeployLogs: true,
+			Timeout:           int64(time.Minute),
+		}
+		a := agent.Archive{
+			Initiator:    "test user",
+			DeploymentID: bw.MustGenerateID(),
+			Peer:         &p,
+		}
+		deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
+		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())
+		g.Expect(writeDeployMetadata(deploydir, agent.Deploy{Archive: &a, Options: &dopts, Stage: s})).To(g.Succeed())
+		deploys, err = c.Deployments()
+		g.Expect(err).To(g.Succeed())
+		g.Expect(deploys).To(g.HaveLen(1))
+
+		g.Expect(c.Reset()).To(g.Succeed())
+
+		deploys, err = c.Deployments()
+		g.Expect(err).To(g.Succeed())
+		g.Expect(deploys).To(g.HaveLen(result))
+	},
+		Entry("failed deploy should be removed", agent.Deploy_Failed, 0),
+		Entry("currently deploying should be removed", agent.Deploy_Deploying, 0),
+		Entry("completed deploy should remain", agent.Deploy_Completed, 1),
+	)
 })

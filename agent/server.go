@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/pkg/errors"
 )
 
 type connector interface {
@@ -26,6 +27,7 @@ type deployer interface {
 	Deploy(DeployOptions, Archive) (Deploy, error)
 	// Cancel current deploy
 	Cancel()
+	Reset() error
 	Deployments() ([]Deploy, error)
 	Logs([]byte) io.ReadCloser
 }
@@ -36,7 +38,8 @@ func (t noopDeployer) Deploy(DeployOptions, Archive) (d Deploy, err error) {
 	return d, err
 }
 
-func (t noopDeployer) Cancel() {}
+func (t noopDeployer) Reset() error { return nil }
+func (t noopDeployer) Cancel()      {}
 
 func (t noopDeployer) Deployments() ([]Deploy, error) {
 	return []Deploy{}, nil
@@ -105,6 +108,10 @@ type Server struct {
 
 // Shutdown when invoked the agent will self shutdown.
 func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownResponse, error) {
+	if err := logx.MaybeLog(errors.Wrap(t.Deployer.Reset(), "failed to reset")); err != nil {
+		return nil, err
+	}
+
 	t.shutdown()
 	return &ShutdownResponse{}, nil
 }
