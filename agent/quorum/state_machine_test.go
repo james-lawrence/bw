@@ -33,7 +33,7 @@ type mockdeploy struct {
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(_ agent.Dialer, _ agent.Dispatcher, opts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) error {
+func (t *mockdeploy) Deploy(_ agent.Dialer, opts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) error {
 	t.lastOptions = opts
 	t.lastArchive = archive
 	t.lastPeers = peers

@@ -146,6 +146,10 @@ func (t cState) printDeployCommand(m agent.Message) {
 		t.Logger.Println(
 			t.au.Red(fmt.Sprintf("%s - INFO - deployment cancelled by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
 		)
+	case agent.DeployCommand_Restart:
+		t.Logger.Println(
+			t.au.Brown(fmt.Sprintf("%s - INFO - deployment restarted by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
+		)
 	default:
 		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
 	}

@@ -21,9 +21,9 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
 
@@ -147,8 +147,13 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			case raft.Leader:
 				t.sm = func() stateMachine {
 					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy)
-					logx.MaybeLog(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
-					logx.MaybeLog(sm.determineLatestDeploy(t.c, t.dialer))
+
+					// background this task so dispatches work.
+					go func() {
+						logx.Verbose(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
+						logx.MaybeLog(sm.determineLatestDeploy(t.c, t.dialer))
+					}()
+
 					return &sm
 				}()
 			case raft.Follower, raft.Candidate:

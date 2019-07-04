@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
 )
 
@@ -130,20 +131,29 @@ func (t *StateMachine) restartActiveDeploy() (err error) {
 	)
 
 	if dc = t.wal.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
-		if err = t.writeWAL(agentutil.LogEvent(t.local.Local(), "detected new leader, restarting deploy"), 10*time.Second); err != nil {
-			return err
+		if err = t.writeWAL(agentutil.LogEvent(t.local.Local(), "detected new leader during an active deployment, attempting to recover"), 10*time.Second); err != nil {
+			return errors.Wrap(err, "log restart detection failure")
+		}
+
+		if err = t.writeWAL(agentutil.LogEvent(t.local.Local(), "attempting to cancel running deployments"), 10*time.Second); err != nil {
+			return errors.Wrap(err, "log cancel failure")
+		}
+
+		if err = agentutil.Cancel(t.local, t.dialer); err != nil {
+			logx.MaybeLog(t.writeWAL(agentutil.LogEvent(t.local.Local(), "failed to cancel running deployments"), 10*time.Second))
+			return errors.Wrap(err, "cancellation failure")
+		}
+
+		if err = t.writeWAL(agentutil.LogEvent(t.local.Local(), "restarting deploy"), 10*time.Second); err != nil {
+			return errors.Wrap(err, "log restart failure")
 		}
 
 		if err = t.writeWAL(agentutil.DeployCommand(t.local.Local(), agentutil.DeployCommandRestart()), 10*time.Second); err != nil {
-			return err
-		}
-
-		if err = errors.Wrap(t.Cancel(), "failed to cancel previous deploy"); err != nil {
-			return err
+			return errors.Wrap(err, "restart command failure")
 		}
 
 		if err = t.deployer.Deploy(t.dialer, *dc.Options, *dc.Archive); err != nil {
-			return err
+			return errors.Wrap(err, "deploy failure")
 		}
 	}
 
@@ -152,7 +162,7 @@ func (t *StateMachine) restartActiveDeploy() (err error) {
 
 // Cancel a ongoing deploy.
 func (t *StateMachine) Cancel() error {
-	dc := agent.DeployCommand{Command: agent.DeployCommand_Cancel}
+	dc := agentutil.DeployCommandCancel("")
 	return t.writeWAL(agentutil.DeployCommand(t.local.Local(), dc), 10*time.Second)
 }
 
