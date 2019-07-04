@@ -100,7 +100,7 @@ func (t *Dispatcher) Dispatch(ctx context.Context, m ...agent.Message) (err erro
 		return err
 	}
 
-	return logx.MaybeLog(t.dropClient(c.Dispatch(ctx, m...)))
+	return logx.MaybeLog(t.dropClient(c, c.Dispatch(ctx, m...)))
 }
 
 func (t *Dispatcher) getClient() (c agent.Client, err error) {
@@ -117,12 +117,13 @@ func (t *Dispatcher) getClient() (c agent.Client, err error) {
 	return t.c, nil
 }
 
-func (t *Dispatcher) dropClient(err error) error {
+func (t *Dispatcher) dropClient(bad agent.Client, err error) error {
 	if err == nil {
 		return err
 	}
 
 	t.m.Lock()
+	logx.MaybeLog(errors.Wrap(bad.Close(), "failed to cleanup client"))
 	t.c = nil
 	t.m.Unlock()
 

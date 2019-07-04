@@ -97,7 +97,7 @@ func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) 
 func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
 	debugx.Println("deploy command initiated", t.state.State())
 	defer debugx.Println("deploy command completed", t.state.State())
-	return t.deployer.Deploy(t.dialer, t, dopts, a, peers...)
+	return t.deployer.Deploy(t.dialer, dopts, a, peers...)
 }
 
 func (t *StateMachine) determineLatestDeploy(c cluster, d agent.Dialer) (err error) {
@@ -142,7 +142,7 @@ func (t *StateMachine) restartActiveDeploy() (err error) {
 			return err
 		}
 
-		if err = t.deployer.Deploy(t.dialer, t, *dc.Options, *dc.Archive); err != nil {
+		if err = t.deployer.Deploy(t.dialer, *dc.Options, *dc.Archive); err != nil {
 			return err
 		}
 	}

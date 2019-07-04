@@ -34,10 +34,12 @@ type Proxy struct {
 // The deploy itself is run asychronously as they take awhile, letting callers
 // continue on. But it will error out if there are issues initiating the deploy.
 // such as another deploy is currently running.
-func (t Proxy) Deploy(dialer agent.Dialer, d agent.Dispatcher, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
+func (t Proxy) Deploy(dialer agent.Dialer, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
+
+	d := agentutil.NewDispatcher(t.c, agent.NewQuorumDialer(dialer))
 
 	cmd := agent.DeployCommand{
 		Command: agent.DeployCommand_Begin,

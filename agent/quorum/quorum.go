@@ -50,7 +50,7 @@ type cluster interface {
 }
 
 type deployer interface {
-	Deploy(agent.Dialer, agent.Dispatcher, agent.DeployOptions, agent.Archive, ...agent.Peer) error
+	Deploy(agent.Dialer, agent.DeployOptions, agent.Archive, ...agent.Peer) error
 }
 
 // Option option for the quorum rpc.
