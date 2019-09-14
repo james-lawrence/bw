@@ -15,6 +15,16 @@ type dialer interface {
 	Dial(p Peer) (Client, error)
 }
 
+// Random returns a single random peer from the set.
+// if the set is empty then a zero value peer is returned.
+func Random(peers ...Peer) (p Peer) {
+	for _, p = range shuffleQuorum(peers) {
+		return p
+	}
+
+	return p
+}
+
 func shuffleQuorum(q []Peer) []Peer {
 	rand.Shuffle(len(q), func(i int, j int) {
 		q[i], q[j] = q[j], q[i]

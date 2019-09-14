@@ -288,7 +288,7 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 
 type bootstrap struct {
 	Attempts         int
-	EnableFilesystem bool `yaml:"enableFilesystem"`
+	ArchiveDirectory string `yaml:"archiveDirectory"`
 }
 
 // Config - configuration for agent processes.

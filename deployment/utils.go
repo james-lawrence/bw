@@ -74,13 +74,18 @@ func readDeployMetadata(path string) (a agent.Deploy, err error) {
 
 // writeDeployMetadata writes out the archive.metadata to disk.
 func writeDeployMetadata(dir string, d agent.Deploy) error {
+	return writeDeployMetadataFile(filepath.Join(dir, deployMetadataName), d)
+}
+
+// writeDeployMetadata writes out the archive.metadata to disk.
+func writeDeployMetadataFile(path string, d agent.Deploy) error {
 	var (
 		err error
 		dst *os.File
 		raw []byte
 	)
 
-	if dst, err = os.OpenFile(filepath.Join(dir, deployMetadataName), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
+	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return errors.WithStack(err)
 	}
 	defer func() { logx.MaybeLog(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()

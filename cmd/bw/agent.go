@@ -208,7 +208,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		return errors.Wrap(err, "failed to initialize local bootstrap service")
 	}
 
-	if err = bootstrap.NewFilesystem(t.config, cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
+	if err = bootstrap.NewFilesystem(t.config, download.New(), cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
 	}
 

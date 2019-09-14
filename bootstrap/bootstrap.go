@@ -6,6 +6,7 @@ package bootstrap
 
 import (
 	"context"
+	"io"
 	"log"
 	"math"
 	"time"
@@ -20,6 +21,11 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"google.golang.org/grpc"
 )
+
+// downloader ...
+type downloader interface {
+	Download(context.Context, agent.Archive) io.ReadCloser
+}
 
 type dialer interface {
 	Dial(agent.Peer) (zeroc agent.Client, err error)
