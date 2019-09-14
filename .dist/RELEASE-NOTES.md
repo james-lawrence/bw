@@ -1,3 +1,48 @@
+commit f2d3c721f34109684833a64c9257913d09c43b47
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 11:07:36 2019 -0400
+
+    fix up dependencies
+
+commit a3fb699db6da553229e0728c0d74b9a7d67837b7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 13 20:19:33 2019 -0400
+
+    initial bootstrap services refactor
+
+commit 47600a80e5294bbb3f505dba616aae3a6e3c1b54
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 4 19:50:44 2019 -0400
+
+    improve shutdown directive to cleanup bad deploys
+
+commit 98b0f7b4c479ef0616d3030797c512a15058bc84
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 4 09:53:00 2019 -0400
+
+    improve restart reliability
+
+commit 0e7211bac37d966f84ff46d4af22d2c6eb3840de
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 4 08:05:21 2019 -0400
+
+    do not use the state machine as the dispatcher
+    
+    if leadership is changed during a deploy proxy service
+    won't properly dispatch messages.
+
+commit f3e8672968d1455338be29d52286010b8aa436e4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 26 20:30:18 2019 -0400
+
+    update dist debian build rules
+
+commit 312ca5307ab01e906ca77a4c151f03ac01c74300
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 26 20:23:11 2019 -0400
+
+    release 0.1.1561594732-9980085f
+
 commit 9980085fcde86961ac986994d3913cab7f7c915a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jun 26 20:18:52 2019 -0400
