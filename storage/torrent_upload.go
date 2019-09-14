@@ -1,19 +1,18 @@
 package storage
 
 import (
+	"encoding/hex"
 	"hash"
 	"io"
 	"os"
-	// "fmt"
+	"path/filepath"
 
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
-	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
 
 type torrentU struct {
-	uid    bw.RandomID
 	sha    hash.Hash
 	dst    *os.File
 	client *torrent.Client
@@ -31,6 +30,8 @@ func (t torrentU) Info() (hash.Hash, string, error) {
 		util TorrentUtil
 	)
 
+	uid := hex.EncodeToString(t.sha.Sum(nil))
+	path := filepath.Join(filepath.Dir(t.dst.Name()), uid)
 	if err = t.dst.Sync(); err != nil {
 		return nil, "", errors.Wrap(err, "failed to sync to disk")
 	}
@@ -39,9 +40,13 @@ func (t torrentU) Info() (hash.Hash, string, error) {
 		return nil, "", errors.Wrap(err, "failed to close upload")
 	}
 
-	if mi, err = util.loadTorrent(t.client, t.dst.Name()); err != nil {
+	if err = os.Rename(t.dst.Name(), path); err != nil {
+		return nil, "", errors.Wrap(err, "failed to rename upload")
+	}
+
+	if mi, err = util.loadTorrent(t.client, path); err != nil {
 		return nil, "", err
 	}
 
-	return t.sha, mi.Magnet(t.uid.String(), mi.HashInfoBytes()).String(), nil
+	return t.sha, mi.Magnet(uid, mi.HashInfoBytes()).String(), nil
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -96,14 +97,22 @@ func (t Filesystem) monitor() {
 		events = make(chan agent.Message, 5)
 	)
 
-	go agentutil.WatchEvents(t.c.Local(), agent.Random(t.c.Quorum()...), t.d, events)
+	go agentutil.WatchEvents(t.c.Local(), t.c.Local(), t.d, events)
 
 	for m := range events {
+		if m.Replay {
+			continue
+		}
+
 		switch event := m.GetEvent().(type) {
 		case *agent.Message_DeployCommand:
 			dc := *event.DeployCommand
 			if dc.Command == agent.DeployCommand_Done && dc.Archive != nil {
-				logx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed"))
+				go func() {
+					if logx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed")) == nil {
+						log.Println("clone successful")
+					}
+				}()
 			}
 		default:
 			// log.Println("FILESYSTEM EVENT", spew.Sdump(event))
@@ -135,8 +144,11 @@ func (t Filesystem) clone(a agent.DeployCommand) (err error) {
 	if d, err = ioutil.TempFile(t.a.Bootstrap.ArchiveDirectory, "download-*.bin"); err != nil {
 		return errors.WithStack(err)
 	}
+	defer d.Close()
 
-	if _, err = io.Copy(d, t.dl.Download(context.Background(), *a.Archive)); err != nil {
+	ctx, done := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer done()
+	if _, err = io.Copy(d, t.dl.Download(ctx, *a.Archive)); err != nil {
 		return errors.WithStack(err)
 	}
 

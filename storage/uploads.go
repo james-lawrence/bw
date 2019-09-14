@@ -17,7 +17,7 @@ type uploadConfig interface {
 
 // UploadProtocol builds io.WriteCloser given the expected size of the upload.
 type UploadProtocol interface {
-	NewUpload(uid []byte, bytes uint64) (Uploader, error)
+	NewUpload(bytes uint64) (Uploader, error)
 }
 
 // Uploader upload a file using the underlying protocol.
@@ -82,7 +82,7 @@ type errUploadProtocol struct {
 	err error
 }
 
-func (t errUploadProtocol) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
+func (t errUploadProtocol) NewUpload(bytes uint64) (Uploader, error) {
 	return nil, t.err
 }
 

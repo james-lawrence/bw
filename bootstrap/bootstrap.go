@@ -130,15 +130,14 @@ func Bootstrap(ctx context.Context, local agent.Peer, c agent.Config, coord depl
 	}
 
 	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
-		log.Println("qourum latest", err)
-		return errors.Wrap(err, "latest quorum failed")
+		log.Println(errors.Wrap(err, "latest quorum failed"))
 	}
 
 	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(current.Archive, latest.Archive) {
 		return errors.Wrap(err, "active deploy matches the local deployment, waiting for deployment to complete")
 	}
 
-	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments {
+	if err != nil && !agentutil.IsActiveDeployment(err) {
 		if latest, err = getfallback(c, grpc.WithInsecure()); err != nil {
 			if agentutil.IsNoDeployments(err) {
 				return nil

@@ -26,11 +26,6 @@ var _ = Describe("Bootstrap", func() {
 			Ts:           time.Now().Unix(),
 			DeploymentID: bw.MustGenerateID(),
 		}
-		// archive2 = agent.Archive{
-		// 	Peer:         &peer1,
-		// 	Ts:           time.Now().Unix(),
-		// 	DeploymentID: bw.MustGenerateID(),
-		// }
 		dopts1 = agent.DeployOptions{
 			Timeout:           int64(time.Hour),
 			SilenceDeployLogs: true,

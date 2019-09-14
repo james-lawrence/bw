@@ -9,8 +9,6 @@ import (
 	"github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/pkg/errors"
-
-	"github.com/james-lawrence/bw"
 )
 
 // TorrentOption ...
@@ -119,21 +117,17 @@ func (t torrentP) New() Downloader {
 	}
 }
 
-func (t torrentP) NewUpload(uid []byte, bytes uint64) (Uploader, error) {
+func (t torrentP) NewUpload(bytes uint64) (Uploader, error) {
 	var (
 		err error
 		dst *os.File
 	)
 
-	id := bw.RandomID(uid)
-	fpath := t.util.filePath(t.config.DataDir, id.String())
-
-	if dst, err = t.util.createFile(fpath); err != nil {
+	if dst, err = t.util.createFile(t.config.DataDir); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	return torrentU{
-		uid:    id,
 		sha:    sha256.New(),
 		dst:    dst,
 		client: t.client,

@@ -16,6 +16,16 @@ const (
 	socketQuorum = "quorum.socket"
 )
 
+// CleanSockets ...
+func CleanSockets(c agent.Config) {
+	logx.MaybeLog(
+		errors.Wrap(
+			os.RemoveAll(filepath.Join(c.Root, "bootstrap")),
+			"failed to clean bootstrap service directory",
+		),
+	)
+}
+
 func ensureSocketDirectory(c agent.Config) {
 	if err := os.MkdirAll(filepath.Join(c.Root, "bootstrap"), 0744); err != nil {
 		logx.MaybeLog(errors.Wrap(err, "failed to create bootstrap socket directory"))

@@ -17,7 +17,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering/raftutil"
@@ -193,20 +192,14 @@ func (t *Quorum) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...age
 // Upload ...
 func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 	var (
-		deploymentID []byte
-		checksum     hash.Hash
-		location     string
-		dst          agent.Uploader
-		chunk        *agent.UploadChunk
+		checksum hash.Hash
+		location string
+		dst      agent.Uploader
+		chunk    *agent.UploadChunk
 	)
 
 	debugx.Println("upload invoked")
 	defer debugx.Println("upload completed")
-
-	debugx.Println("upload: generating deployment ID")
-	if deploymentID, err = bw.SimpleGenerateID(); err != nil {
-		return err
-	}
 
 	debugx.Println("upload: receiving metadata")
 	if chunk, err = stream.Recv(); err != nil {
@@ -215,7 +208,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 
 	debugx.Printf("upload: initializing protocol: %T\n", t.uploads)
 	metadata := chunk.GetMetadata()
-	if dst, err = t.uploads.NewUpload(deploymentID, metadata.Bytes); err != nil {
+	if dst, err = t.uploads.NewUpload(metadata.Bytes); err != nil {
 		return err
 	}
 
@@ -234,7 +227,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 					Peer:         &tmp,
 					Location:     location,
 					Checksum:     checksum.Sum(nil),
-					DeploymentID: deploymentID,
+					DeploymentID: checksum.Sum(nil),
 					Initiator:    metadata.Initiator,
 					Ts:           time.Now().UTC().Unix(),
 				},
