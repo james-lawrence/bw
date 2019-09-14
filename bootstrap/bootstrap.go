@@ -69,12 +69,16 @@ type UntilSuccess2 struct {
 }
 
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess2) Run(local agent.Peer, c agent.Config, coord deployment.Coordinator) bool {
+func (t UntilSuccess2) Run(ctx context.Context, local agent.Peer, c agent.Config, coord deployment.Coordinator) bool {
 	for i := 0; i < t.maxAttempts; i++ {
-		if err := Bootstrap(local, c, coord); err != nil {
+		if err := Bootstrap(ctx, local, c, coord); err != nil {
 			log.Println(errors.Wrap(err, "bootstrap attempt failed"))
-			time.Sleep(t.bs.Backoff(i))
-			continue
+			select {
+			case <-ctx.Done():
+				return false
+			case <-time.After(t.bs.Backoff(i)):
+				continue
+			}
 		}
 
 		log.Println("--------------- bootstrap complete ---------------")
@@ -97,7 +101,7 @@ func ignore(err error) error {
 }
 
 // Bootstrap a server with the latest deploy.
-func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (err error) {
+func Bootstrap(ctx context.Context, local agent.Peer, c agent.Config, coord deployment.Coordinator) (err error) {
 	var (
 		current agent.Deploy
 		latest  agent.Deploy
@@ -115,11 +119,11 @@ func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (
 	log.Println("--------------- bootstrap attempt initiated -------------")
 	defer log.Println("--------------- bootstrap attempt completed -------------")
 
-	if current, err = Latest(context.Background(), SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
+	if current, err = Latest(ctx, SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
 		return errors.Wrap(err, "latest local failed")
 	}
 
-	if latest, err = Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
+	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
 		log.Println("qourum latest", err)
 		return errors.Wrap(err, "latest quorum failed")
 	}
@@ -130,6 +134,10 @@ func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (
 
 	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments {
 		if latest, err = getfallback(c, grpc.WithInsecure()); err != nil {
+			if agentutil.IsNoDeployments(err) {
+				return nil
+			}
+
 			return errors.Wrap(err, "failed to retrieve latest from fallback bootstrap services")
 		}
 	}
@@ -140,7 +148,7 @@ func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (
 	}
 
 	opts := *latest.Options
-	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
+	deadline, cancel := context.WithTimeout(ctx, time.Duration(opts.Timeout))
 	defer cancel()
 
 	log.Println("bootstrapping", bw.RandomID(latest.Archive.DeploymentID), "with options", spew.Sdump(opts))
@@ -161,7 +169,7 @@ func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (
 	// again retrieve the latest deployment information from the cluster.
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
-	if latest, err = Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure()); err != nil {
+	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); err != nil {
 		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying 2")
 	}
 

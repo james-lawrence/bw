@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/anacrolix/dht/v2"
+	"github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
-
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
@@ -59,6 +59,9 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 	c = TorrentConfig{
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
+	c.ClientConfig.Seed = true
+	c.ClientConfig.NoDefaultPortForwarding = true
+	c.ClientConfig.Logger = log.Discard
 
 	for _, opt := range options {
 		opt(&c)
@@ -71,6 +74,8 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 	if err = util.loadDir(c.ClientConfig.DataDir, c.client); err != nil {
 		return c, errors.WithStack(err)
 	}
+
+	go util.Bootstrap(c.client)
 
 	return c, nil
 }

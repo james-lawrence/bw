@@ -161,9 +161,13 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	go func() {
 		for range tdr {
 			tcu.ClearTorrents(tc)
-			// tcu.PrintTorrentInfo(tc)
 		}
 	}()
+
+	// go timex.Every(time.Minute, func() {
+	// 	log.Println("PID", os.Getpid())
+	// 	tcu.PrintTorrentInfo(tc)
+	// })
 
 	deployResults = append(deployResults, tdr)
 	upload, download = tc.Uploader(), tc.Downloader()
@@ -196,19 +200,19 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	t.runServer(server, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
-	if err = bootstrap.Run(t.global.ctx, bootstrap.SocketLocal(t.config), bootstrap.NewLocal(local.Peer, dialer)); err != nil {
+	if err = bootstrap.NewLocal(local.Peer, dialer).Bind(t.global.ctx, bootstrap.SocketLocal(t.config)); err != nil {
 		return errors.Wrap(err, "failed to initialize local bootstrap service")
 	}
 
-	if err = bootstrap.Run(t.global.ctx, bootstrap.SocketQuorum(t.config), bootstrap.NewQuorum(cx, dialer)); err != nil {
+	if err = bootstrap.NewQuorum(cx, dialer).Bind(t.global.ctx, bootstrap.SocketQuorum(t.config)); err != nil {
 		return errors.Wrap(err, "failed to initialize local bootstrap service")
 	}
 
-	if err = bootstrap.Run(t.global.ctx, bootstrap.SocketAuto(t.config), bootstrap.NewFilesystem(t.config, cx, dialer)); err != nil {
+	if err = bootstrap.NewFilesystem(t.config, cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
 	}
 
-	if err = bootstrap.Run(t.global.ctx, bootstrap.SocketAuto(t.config), bootstrap.NewCluster(cx, dialer)); err != nil {
+	if err = bootstrap.NewCluster(cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
 	}
 
@@ -216,7 +220,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		bootstrap.OptionMaxAttempts(t.config.Bootstrap.Attempts),
 	)
 
-	if !bus.Run(local.Peer, t.config, coordinator) {
+	if !bus.Run(t.global.ctx, local.Peer, t.config, coordinator) {
 		// if bootstrapping fails shutdown the process.
 		return errors.New("failed to bootstrap node shutting down")
 	}

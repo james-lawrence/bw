@@ -6,6 +6,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -21,6 +22,11 @@ func NewQuorum(c cluster, d dialer) Quorum {
 type Quorum struct {
 	c cluster
 	d dialer
+}
+
+// Bind the bootstrap service to the provided socket.
+func (t Quorum) Bind(ctx context.Context, socket string, options ...grpc.ServerOption) error {
+	return Run(ctx, socket, t, options...)
 }
 
 // Archive - implements the bootstrap service.

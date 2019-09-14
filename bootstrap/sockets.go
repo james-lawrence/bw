@@ -28,7 +28,7 @@ func SocketAuto(c agent.Config) string {
 	ensureSocketDirectory(c)
 
 	for i := 0; i < 10; i++ {
-		socket := filepath.Join(c.Root, "bootstrap", fmt.Sprintf("%d.socket", i))
+		socket := socket(c, fmt.Sprintf("%d.socket", i))
 		if _, err := os.Stat(socket); os.IsNotExist(err) {
 			return socket
 		}
@@ -40,11 +40,19 @@ func SocketAuto(c agent.Config) string {
 // SocketLocal generates the well known local socket from the configuration.
 func SocketLocal(c agent.Config) string {
 	ensureSocketDirectory(c)
-	return filepath.Join(c.Root, "bootstrap", socketLocal)
+	return socket(c, socketLocal)
 }
 
 // SocketQuorum generates the well known quorum socket from the configuration.
 func SocketQuorum(c agent.Config) string {
 	ensureSocketDirectory(c)
-	return filepath.Join(c.Root, "bootstrap", socketQuorum)
+	return socket(c, socketQuorum)
+}
+
+func root(c agent.Config) string {
+	return filepath.Join(c.Root, "bootstrap")
+}
+
+func socket(c agent.Config, socket string) string {
+	return filepath.Join(root(c), socket)
 }

@@ -34,10 +34,13 @@ func Latest(ctx context.Context, uds string, options ...grpc.DialOption) (latest
 
 func getfallback(c agent.Config, options ...grpc.DialOption) (latest agent.Deploy, err error) {
 	const done = errorsx.String("done")
+	var (
+		compacted error = agentutil.ErrNoDeployments
+	)
 	qs := SocketQuorum(c)
 	ls := SocketLocal(c)
 
-	err = filepath.Walk(c.Root, func(path string, info os.FileInfo, werr error) error {
+	err = filepath.Walk(root(c), func(path string, info os.FileInfo, werr error) error {
 		if werr != nil {
 			return nil
 		}
@@ -56,13 +59,17 @@ func getfallback(c agent.Config, options ...grpc.DialOption) (latest agent.Deplo
 				return done
 			}
 
+			if !agentutil.IsNoDeployments(err) {
+				compacted = err
+			}
+
 			log.Println("bootstrap failed", err)
 			return nil
 		}
 	})
 
 	if err != done {
-		return latest, agentutil.ErrNoDeployments
+		return latest, compacted
 	}
 
 	return latest, nil

@@ -6,21 +6,22 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sync"
 	"text/tabwriter"
 	"time"
 
+	"github.com/anacrolix/log"
 	"github.com/pkg/errors"
 
-	"github.com/anacrolix/dht/v2/krpc"
 	"github.com/anacrolix/missinggo"
 	"github.com/anacrolix/missinggo/conntrack"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/iplist"
 	"github.com/anacrolix/torrent/logonce"
 	"github.com/anacrolix/torrent/metainfo"
+
+	"github.com/anacrolix/dht/v2/krpc"
 )
 
 // A Server defines parameters for a DHT node server that is able to send
@@ -142,6 +143,11 @@ func NewServer(c *ServerConfig) (s *Server, err error) {
 			SecureNodeId(&c.NodeId, c.PublicIP)
 		}
 	}
+	if c.Logger.LoggerImpl == nil {
+		c.Logger = log.Default.WithFilter(func(m log.Msg) bool {
+			return !m.HasValue(log.Debug)
+		})
+	}
 	s = &Server{
 		config:      *c,
 		ipBlockList: c.IPBlocklist,
@@ -242,13 +248,16 @@ func (s *Server) processPacket(b []byte, addr Addr) {
 	}
 	if d.Y == "q" {
 		expvars.Add("received queries", 1)
+		s.logger().Printf("received query %q from %v", d.Q, addr)
 		s.handleQuery(addr, d)
 		return
 	}
 	t := s.findResponseTransaction(d.T, addr)
 	if t == nil {
+		s.logger().Printf("received response for untracked transaction %q from %v", d.T, addr)
 		return
 	}
+	s.logger().Printf("received response for transaction %q from %v", d.T, addr)
 	go t.handleResponse(d)
 	if n != nil {
 		n.lastGotResponse = time.Now()
@@ -434,9 +443,10 @@ func (s *Server) sendError(addr Addr, t string, e krpc.Error) {
 	if err != nil {
 		panic(err)
 	}
+	s.logger().Printf("sending error to %v: %v", addr, e)
 	_, err = s.writeToNode(b, addr)
 	if err != nil {
-		log.Printf("error replying to %s: %s", addr, err)
+		s.config.Logger.Printf("error replying to %s: %s", addr, err)
 	}
 }
 
@@ -453,9 +463,10 @@ func (s *Server) reply(addr Addr, t string, r krpc.Return) {
 	if err != nil {
 		panic(err)
 	}
+	log.Fmsg("replying to %v", addr).Log(s.logger())
 	_, err = s.writeToNode(b, addr)
 	if err != nil {
-		log.Printf("error replying to %s: %s", addr, err)
+		s.config.Logger.Printf("error replying to %s: %s", addr, err)
 	}
 }
 
@@ -524,7 +535,7 @@ func (s *Server) writeToNode(b []byte, node Addr) (wrote bool, err error) {
 			return
 		}
 	}
-	// log.Printf("writing to %s: %q", node.UDPAddr(), b)
+	//s.config.Logger.WithValues(log.Debug).Printf("writing to %s: %q", node.String(), b)
 	n, err := s.socket.WriteTo(b, node.Raw())
 	writes.Add(1)
 	if err != nil {
@@ -630,7 +641,9 @@ func (s *Server) queryContext(ctx context.Context, addr Addr, q string, a *krpc.
 	t := &Transaction{
 		remoteAddr: addr,
 		t:          tid,
-		querySender: func() error {
+		q:          q,
+		querySender: func(attempt int) error {
+			s.logger().Printf("sending query %q to %v (attempt %d/%d)", q, addr, attempt, maxTransactionSends)
 			cteh := s.config.ConnectionTracking.Wait(ctx, s.connTrackEntryForAddr(addr), "send dht query", -1)
 			wrote, err := s.writeToNode(b, addr)
 			if wrote {
@@ -900,4 +913,8 @@ func (s *Server) AddNodesFromFile(fileName string) (added int, err error) {
 		}
 	}
 	return
+}
+
+func (s *Server) logger() log.Logger {
+	return s.config.Logger
 }

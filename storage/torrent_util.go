@@ -22,6 +22,23 @@ import (
 // TorrentUtil utility functions for the torrent storage subsystem.
 type TorrentUtil struct{}
 
+// Bootstrap the torrent client
+func (TorrentUtil) Bootstrap(c *torrent.Client) {
+	var (
+		err   error
+		stats dht.TraversalStats
+	)
+
+	for _, s := range c.DhtServers() {
+		if stats, err = s.Bootstrap(); err != nil {
+			log.Println("failed to bootstrap dht server", err)
+			continue
+		}
+
+		log.Println("dht bootstrap stats", spew.Sdump(stats))
+	}
+}
+
 // ClearTorrents periodically flushes torrents from storage based on whether or not
 // the deployment directory is still around.
 func (TorrentUtil) ClearTorrents(c TorrentConfig) {
@@ -131,7 +148,8 @@ func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (mi metainfo.Me
 	}
 
 	for _, s := range c.DhtServers() {
-		s.Announce(mi.HashInfoBytes(), 0, true)
+		_, err := s.Announce(mi.HashInfoBytes(), 0, true)
+		logx.MaybeLog(errors.Wrap(err, "announce failure"))
 	}
 
 	return mi, nil

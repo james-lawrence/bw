@@ -212,3 +212,8 @@ func SameArchive(a, b *agent.Archive) bool {
 func IsActiveDeployment(err error) bool {
 	return errors.Cause(err) == ErrActiveDeployment
 }
+
+// IsNoDeployments checks if the error is no deployments.
+func IsNoDeployments(err error) bool {
+	return errors.Cause(err) == ErrNoDeployments
+}

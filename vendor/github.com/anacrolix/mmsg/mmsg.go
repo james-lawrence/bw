@@ -39,7 +39,10 @@ func (me *Conn) recvMsgAsMsgs(ms []Message) (int, error) {
 }
 
 func (me *Conn) RecvMsgs(ms []Message) (n int, err error) {
-	if me.err != nil || len(ms) == 1 {
+	// defer func() {
+	// 	log.Println(n, err)
+	// }()
+	if me.err != nil {
 		return me.recvMsgAsMsgs(ms)
 	}
 	sms := make([]socket.Message, len(ms))
