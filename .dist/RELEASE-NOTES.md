@@ -1,3 +1,24 @@
+commit 293e88a11308ad5f32a9dfc33c8a955fa4504622
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 19:49:07 2019 -0400
+
+    final touches to filesystem bootstrap service
+    
+    - upload deploy now is consistent in its deployment ID, identical
+    archive = identical deployment id.
+
+commit df84130750e46e8123f4028fa80729f61e7da940
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 18:48:42 2019 -0400
+
+    working filesystem bootstrap
+
+commit 7fd9e15681e8f99664cc42c672b3710f7798d4ac
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 14:45:00 2019 -0400
+
+    release 0.1.1568486697-0de1176a
+
 commit 0de1176a47a156067452ba40addce2220317b87e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 14 14:44:57 2019 -0400
