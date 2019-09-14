@@ -1,3 +1,15 @@
+commit 0de1176a47a156067452ba40addce2220317b87e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 14:44:57 2019 -0400
+
+    fix build
+
+commit 9844e7c5e190497fa7452df9b94f07aa12f76f0c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 13:26:31 2019 -0400
+
+    release 0.1.1568481965-9aa2c457
+
 commit 9aa2c4574f87e80b688159eaaa725c96461efbcb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 14 13:26:05 2019 -0400
