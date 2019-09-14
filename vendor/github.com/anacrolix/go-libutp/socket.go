@@ -2,33 +2,78 @@ package utp
 
 /*
 #include "utp.h"
+#include <stdbool.h>
+
+struct utp_process_udp_args {
+	const byte *buf;
+	size_t len;
+	const struct sockaddr *sa;
+	socklen_t sal;
+};
+
+void process_received_messages(utp_context *ctx, struct utp_process_udp_args *args, size_t argslen)
+{
+	bool gotUtp = false;
+	size_t i;
+	for (i = 0; i < argslen; i++) {
+		struct utp_process_udp_args *a = &args[i];
+		//if (!a->len) continue;
+		if (utp_process_udp(ctx, a->buf, a->len, a->sa, a->sal)) {
+			gotUtp = true;
+		}
+	}
+	if (gotUtp) {
+		utp_issue_deferred_acks(ctx);
+		utp_check_timeouts(ctx);
+	}
+}
 */
 import "C"
 import (
 	"context"
 	"errors"
-	"log"
+	"math"
 	"net"
-	"sync/atomic"
 	"time"
+	"unsafe"
 
+	"syscall"
+
+	"github.com/anacrolix/missinggo"
 	"github.com/anacrolix/missinggo/inproc"
+	"github.com/anacrolix/mmsg"
+)
+
+const (
+	utpCheckTimeoutInterval   = 500 * time.Millisecond
+	issueDeferredUtpAcksDelay = 1000 * time.Microsecond
 )
 
 type Socket struct {
-	pc            net.PacketConn
-	ctx           *C.utp_context
-	backlog       chan *Conn
-	closed        bool
-	conns         map[*C.utp_socket]*Conn
-	nonUtpReads   chan packet
-	writeDeadline time.Time
-	readDeadline  time.Time
+	pc               net.PacketConn
+	ctx              *C.utp_context
+	backlog          chan *Conn
+	closed           bool
+	conns            map[*C.utp_socket]*Conn
+	nonUtpReads      chan packet
+	writeDeadline    time.Time
+	readDeadline     time.Time
+	firewallCallback FirewallCallback
+	// Whether the next accept is to be blocked.
+	block bool
+
+	acksScheduled bool
+	ackTimer      *time.Timer
+
+	utpTimeoutChecker *time.Timer
 }
 
+type FirewallCallback func(net.Addr) bool
+
 var (
-	_ net.PacketConn = (*Socket)(nil)
-	_ net.Listener   = (*Socket)(nil)
+	_               net.PacketConn = (*Socket)(nil)
+	_               net.Listener   = (*Socket)(nil)
+	errSocketClosed                = errors.New("Socket closed")
 )
 
 type packet struct {
@@ -48,27 +93,31 @@ func NewSocket(network, addr string) (*Socket, error) {
 	if err != nil {
 		return nil, err
 	}
-	mu.Lock()
-	defer mu.Unlock()
-	ctx := C.utp_init(2)
-	if ctx == nil {
-		panic(ctx)
-	}
-	ctx.setCallbacks()
-	if utpLogging {
-		ctx.setOption(C.UTP_LOG_NORMAL, 1)
-		ctx.setOption(C.UTP_LOG_MTU, 1)
-		ctx.setOption(C.UTP_LOG_DEBUG, 1)
-	}
 	s := &Socket{
 		pc:          pc,
-		ctx:         ctx,
 		backlog:     make(chan *Conn, 5),
 		conns:       make(map[*C.utp_socket]*Conn),
 		nonUtpReads: make(chan packet, 100),
 	}
-	libContextToSocket[ctx] = s
-	go s.timeoutChecker()
+	s.ackTimer = time.AfterFunc(math.MaxInt64, s.ackTimerFunc)
+	s.ackTimer.Stop()
+	func() {
+		mu.Lock()
+		defer mu.Unlock()
+		ctx := C.utp_init(2)
+		if ctx == nil {
+			panic(ctx)
+		}
+		s.ctx = ctx
+		ctx.setCallbacks()
+		if utpLogging {
+			ctx.setOption(C.UTP_LOG_NORMAL, 1)
+			ctx.setOption(C.UTP_LOG_MTU, 1)
+			ctx.setOption(C.UTP_LOG_DEBUG, 1)
+		}
+		libContextToSocket[ctx] = s
+		s.utpTimeoutChecker = time.AfterFunc(0, s.timeoutCheckerTimerFunc)
+	}()
 	go s.packetReader()
 	return s, nil
 }
@@ -79,7 +128,9 @@ func (s *Socket) onLibSocketDestroyed(ls *C.utp_socket) {
 
 func (s *Socket) newConn(us *C.utp_socket) *Conn {
 	c := &Conn{
-		s: us,
+		s:         s,
+		us:        us,
+		localAddr: s.pc.LocalAddr(),
 	}
 	c.cond.L = &mu
 	s.conns[us] = c
@@ -88,91 +139,219 @@ func (s *Socket) newConn(us *C.utp_socket) *Conn {
 	return c
 }
 
-var reads int64
+const maxNumBuffers = 16
 
 func (s *Socket) packetReader() {
-	var b [0x1000]byte
+	mc := mmsg.NewConn(s.pc)
+	// Increasing the messages increases the memory use, but also means we can
+	// reduces utp_issue_deferred_acks and syscalls which should improve
+	// efficiency. On the flip side, not all OSs implement batched reads.
+	ms := make([]mmsg.Message, func() int {
+		if mc.Err() == nil {
+			return maxNumBuffers
+		} else {
+			return 1
+		}
+	}())
+	for i := range ms {
+		// The IPv4 UDP limit is allegedly about 64 KiB, and this message has
+		// been seen on receiving on Windows with just 0x1000: wsarecvfrom: A
+		// message sent on a datagram socket was larger than the internal
+		// message buffer or some other network limit, or the buffer used to
+		// receive a datagram into was smaller than the datagram itself.
+		ms[i].Buffers = [][]byte{make([]byte, 0x10000)}
+	}
+	// Some crap OSs like Windoze will raise errors in Reads that don't
+	// actually mean we should stop.
+	consecutiveErrors := 0
 	for {
 		// In C, all the reads are processed and when it threatens to block,
-		// we're supposed to call utp_issue_deferred_acks. I don't know how we
-		// can do this in Go. An mrecv or non-blocking form of ReadFrom is
-		// required.
-		n, addr, err := s.pc.ReadFrom(b[:])
+		// we're supposed to call utp_issue_deferred_acks.
+		n, err := mc.RecvMsgs(ms)
+		if n == 1 {
+			singleMsgRecvs.Add(1)
+		}
+		if n > 1 {
+			multiMsgRecvs.Add(1)
+		}
 		if err != nil {
 			mu.Lock()
 			closed := s.closed
 			mu.Unlock()
 			if closed {
+				// We don't care.
 				return
 			}
 			// See https://github.com/anacrolix/torrent/issues/83. If we get
 			// an endless stream of errors (such as the PacketConn being
 			// Closed outside of our control, this work around may need to be
 			// reconsidered.
-			log.Print(err)
-			continue
-		}
-		sa, sal := netAddrToLibSockaddr(addr)
-		atomic.AddInt64(&reads, 1)
-		// log.Printf("received %d bytes, %d packets", n, reads)
-		func() {
-			mu.Lock()
-			defer mu.Unlock()
-			if s.closed {
+			Logger.Printf("ignoring socket read error: %s", err)
+			consecutiveErrors++
+			if consecutiveErrors >= 100 {
+				Logger.Print("too many consecutive errors, closing socket")
+				s.Close()
 				return
 			}
-			ret := C.utp_process_udp(s.ctx, (*C.byte)(&b[0]), C.size_t(n), sa, sal)
-			switch ret {
-			case 1:
-				socketUtpPacketsReceived.Add(1)
-				C.utp_issue_deferred_acks(s.ctx)
-				C.utp_check_timeouts(s.ctx)
-			case 0:
-				s.onReadNonUtp(b[:n], addr)
-			default:
-				panic(ret)
-			}
-		}()
-	}
-}
-
-func (s *Socket) timeoutChecker() {
-	for {
-		mu.Lock()
-		if s.closed {
-			mu.Unlock()
-			return
+			continue
 		}
-		// C.utp_issue_deferred_acks(s.ctx)
-		C.utp_check_timeouts(s.ctx)
-		mu.Unlock()
-		time.Sleep(500 * time.Millisecond)
+		consecutiveErrors = 0
+		expMap.Add("successful mmsg receive calls", 1)
+		expMap.Add("received messages", int64(n))
+		s.processReceivedMessages(ms[:n])
 	}
 }
 
-func (me *Socket) Close() error {
+func (s *Socket) processReceivedMessages(ms []mmsg.Message) {
 	mu.Lock()
 	defer mu.Unlock()
-	if me.closed {
+	if s.closed {
+		return
+	}
+	if processPacketsInC {
+		var args [maxNumBuffers]C.struct_utp_process_udp_args
+		for i, m := range ms {
+			a := &args[i]
+			a.buf = (*C.byte)(&m.Buffers[0][0])
+			a.len = C.size_t(m.N)
+			var rsa syscall.RawSockaddrAny
+			rsa, a.sal = netAddrToLibSockaddr(m.Addr)
+			a.sa = (*C.struct_sockaddr)(unsafe.Pointer(&rsa))
+		}
+		C.process_received_messages(s.ctx, &args[0], C.size_t(len(ms)))
+	} else {
+		gotUtp := false
+		for _, m := range ms {
+			gotUtp = s.processReceivedMessage(m.Buffers[0][:m.N], m.Addr) || gotUtp
+		}
+		if gotUtp && !s.closed {
+			s.afterReceivingUtpMessages()
+		}
+	}
+}
+
+func (s *Socket) afterReceivingUtpMessages() {
+	if s.acksScheduled {
+		return
+	}
+	s.ackTimer.Reset(issueDeferredUtpAcksDelay)
+	s.acksScheduled = true
+}
+
+func (s *Socket) issueDeferredAcks() {
+	expMap.Add("utp_issue_deferred_acks calls", 1)
+	C.utp_issue_deferred_acks(s.ctx)
+}
+
+func (s *Socket) checkUtpTimeouts() {
+	expMap.Add("utp_check_timeouts calls", 1)
+	C.utp_check_timeouts(s.ctx)
+}
+
+func (s *Socket) ackTimerFunc() {
+	mu.Lock()
+	defer mu.Unlock()
+	if !s.acksScheduled || s.ctx == nil {
+		return
+	}
+	s.acksScheduled = false
+	s.issueDeferredAcks()
+}
+
+func (s *Socket) processReceivedMessage(b []byte, addr net.Addr) (utp bool) {
+	if s.utpProcessUdp(b, addr) {
+		socketUtpPacketsReceived.Add(1)
+		return true
+	} else {
+		s.onReadNonUtp(b, addr)
+		return false
+	}
+}
+
+// Process packet batches entirely from C, reducing CGO overhead. Currently
+// requires GODEBUG=cgocheck=0.
+const processPacketsInC = false
+
+var staticRsa syscall.RawSockaddrAny
+
+// Wraps libutp's utp_process_udp, returning relevant information.
+func (s *Socket) utpProcessUdp(b []byte, addr net.Addr) (utp bool) {
+	if len(b) == 0 {
+		// The implementation of utp_process_udp rejects null buffers, and
+		// anything smaller than the UTP header size. It's also prone to
+		// assert on those, which we don't want to trigger.
+		return false
+	}
+	if missinggo.AddrPort(addr) == 0 {
+		return false
+	}
+	mu.Unlock()
+	block := func() bool {
+		if s.firewallCallback == nil {
+			return false
+		}
+		return s.firewallCallback(addr)
+	}()
+	mu.Lock()
+	s.block = block
+	if s.closed {
+		return false
+	}
+	var sal C.socklen_t
+	staticRsa, sal = netAddrToLibSockaddr(addr)
+	ret := C.utp_process_udp(s.ctx, (*C.byte)(&b[0]), C.size_t(len(b)), (*C.struct_sockaddr)(unsafe.Pointer(&staticRsa)), sal)
+	switch ret {
+	case 1:
+		return true
+	case 0:
+		return false
+	default:
+		panic(ret)
+	}
+}
+
+func (s *Socket) timeoutCheckerTimerFunc() {
+	mu.Lock()
+	ok := s.ctx != nil
+	if ok {
+		s.checkUtpTimeouts()
+	}
+	if ok {
+		s.utpTimeoutChecker.Reset(utpCheckTimeoutInterval)
+	}
+	mu.Unlock()
+}
+
+func (s *Socket) Close() error {
+	mu.Lock()
+	defer mu.Unlock()
+	return s.closeLocked()
+}
+
+func (s *Socket) closeLocked() error {
+	if s.closed {
 		return nil
 	}
 	// Calling this deletes the pointer. It must not be referred to after
 	// this.
-	C.utp_destroy(me.ctx)
-	me.ctx = nil
-	me.pc.Close()
-	close(me.backlog)
-	close(me.nonUtpReads)
-	me.closed = true
+	C.utp_destroy(s.ctx)
+	s.ctx = nil
+	s.pc.Close()
+	close(s.backlog)
+	close(s.nonUtpReads)
+	s.closed = true
+	s.ackTimer.Stop()
+	s.utpTimeoutChecker.Stop()
+	s.acksScheduled = false
 	return nil
 }
 
-func (me *Socket) Addr() net.Addr {
-	return me.pc.LocalAddr()
+func (s *Socket) Addr() net.Addr {
+	return s.pc.LocalAddr()
 }
 
-func (me *Socket) LocalAddr() net.Addr {
-	return me.pc.LocalAddr()
+func (s *Socket) LocalAddr() net.Addr {
+	return s.pc.LocalAddr()
 }
 
 func (s *Socket) Accept() (net.Conn, error) {
@@ -194,38 +373,46 @@ func (s *Socket) DialTimeout(addr string, timeout time.Duration) (net.Conn, erro
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
 	}
-	return s.DialContext(ctx, addr)
+	return s.DialContext(ctx, "", addr)
 }
 
-func (s *Socket) resolveAddr(addr string) (net.Addr, error) {
-	n := s.Addr().Network()
-	switch n {
+func (s *Socket) resolveAddr(network, addr string) (net.Addr, error) {
+	if network == "" {
+		network = s.Addr().Network()
+	}
+	return resolveAddr(network, addr)
+}
+
+func resolveAddr(network, addr string) (net.Addr, error) {
+	switch network {
 	case "inproc":
-		return inproc.ResolveAddr(n, addr)
+		return inproc.ResolveAddr(network, addr)
 	default:
-		return net.ResolveUDPAddr(n, addr)
+		return net.ResolveUDPAddr(network, addr)
 	}
 }
 
-func (s *Socket) DialContext(ctx context.Context, addr string) (net.Conn, error) {
-	ua, err := s.resolveAddr(addr)
+// Passing an empty network will use the network of the Socket's listener.
+func (s *Socket) DialContext(ctx context.Context, network, addr string) (net.Conn, error) {
+	c, err := s.NewConn()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	sa, sl := netAddrToLibSockaddr(ua)
+	err = c.Connect(ctx, network, addr)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+	return c, nil
+}
+
+func (s *Socket) NewConn() (*Conn, error) {
 	mu.Lock()
 	defer mu.Unlock()
 	if s.closed {
 		return nil, errors.New("socket closed")
 	}
-	c := s.newConn(C.utp_create_socket(s.ctx))
-	C.utp_connect(c.s, sa, sl)
-	err = c.waitForConnect(ctx)
-	if err != nil {
-		c.close()
-		return nil, err
-	}
-	return c, nil
+	return s.newConn(C.utp_create_socket(s.ctx)), nil
 }
 
 func (s *Socket) pushBacklog(c *Conn) {
@@ -248,6 +435,9 @@ func (s *Socket) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
 }
 
 func (s *Socket) onReadNonUtp(b []byte, from net.Addr) {
+	if s.closed {
+		return
+	}
 	socketNonUtpPacketsReceived.Add(1)
 	select {
 	case s.nonUtpReads <- packet{append([]byte(nil), b...), from}:
@@ -292,4 +482,16 @@ func (s *Socket) SetWriteBufferLen(len int) {
 	if i != 0 {
 		panic(i)
 	}
+}
+
+func (s *Socket) SetOption(opt Option, val int) int {
+	mu.Lock()
+	defer mu.Unlock()
+	return int(C.utp_context_set_option(s.ctx, opt, C.int(val)))
+}
+
+func (s *Socket) SetFirewallCallback(f FirewallCallback) {
+	mu.Lock()
+	s.firewallCallback = f
+	mu.Unlock()
 }

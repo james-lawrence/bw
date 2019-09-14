@@ -14,18 +14,25 @@ const (
 	serialCookie               = 12347 // runs, arrays, and bitmaps
 	noOffsetThreshold          = 4
 
+	// MaxUint32 is the largest uint32 value.
+	MaxUint32 = 4294967295
+
+	// MaxRange is One more than the maximum allowed bitmap bit index. For use as an upper
+	// bound for ranges.
+	MaxRange uint64 = MaxUint32 + 1
+
+	// MaxUint16 is the largest 16 bit unsigned int.
+	// This is the largest value an interval16 can store.
+	MaxUint16 = 65535
+
 	// Compute wordSizeInBytes, the size of a word in bytes.
-	_m              = ^word(0)
+	_m              = ^uint64(0)
 	_logS           = _m>>8&1 + _m>>16&1 + _m>>32&1
 	wordSizeInBytes = 1 << _logS
 
 	// other constants used in ctz_generic.go
 	wordSizeInBits = wordSizeInBytes << 3 // word size in bits
-	digitBase      = 1 << wordSizeInBits  // digit base
-	digitMask      = digitBase - 1        // digit mask
 )
-
-type word uintptr
 
 const maxWord = 1<<wordSizeInBits - 1
 
@@ -118,7 +125,6 @@ func flipBitmapRange(bitmap []uint64, start int, end int) {
 	endword := (end - 1) / 64
 	bitmap[firstword] ^= ^(^uint64(0) << uint(start%64))
 	for i := firstword; i < endword; i++ {
-		//p("flipBitmapRange on i=%v", i)
 		bitmap[i] = ^bitmap[i]
 	}
 	bitmap[endword] ^= ^uint64(0) >> (uint(-end) % 64)
@@ -267,4 +273,32 @@ func getRandomPermutation(n int) []int {
 		m[i] = r[i].orig
 	}
 	return m
+}
+
+func minOfInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func maxOfInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func maxOfUint16(a, b uint16) uint16 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func minOfUint16(a, b uint16) uint16 {
+	if a < b {
+		return a
+	}
+	return b
 }

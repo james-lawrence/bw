@@ -5,6 +5,7 @@ package prioritybitmap
 import (
 	"sync"
 
+	"github.com/anacrolix/missinggo/bitmap"
 	"github.com/anacrolix/missinggo/iter"
 	"github.com/anacrolix/missinggo/orderedmap"
 )
@@ -24,6 +25,17 @@ type PriorityBitmap struct {
 	om orderedmap.OrderedMap
 	// From bit index to priority
 	priorities map[int]int
+}
+
+var _ bitmap.Interface = (*PriorityBitmap)(nil)
+
+func (me *PriorityBitmap) Contains(bit int) bool {
+	_, ok := me.priorities[bit]
+	return ok
+}
+
+func (me *PriorityBitmap) Len() int {
+	return len(me.priorities)
 }
 
 func (me *PriorityBitmap) Clear() {
@@ -69,7 +81,7 @@ func (me *PriorityBitmap) lazyInit() {
 	me.priorities = make(map[int]int)
 }
 
-// return value if changed
+// Returns true if the priority is changed, or the bit wasn't present.
 func (me *PriorityBitmap) Set(bit int, priority int) bool {
 	if p, ok := me.priorities[bit]; ok && p == priority {
 		return false
@@ -126,7 +138,7 @@ func (me *PriorityBitmap) Iter(f iter.Callback) {
 	})
 }
 
-func (me *PriorityBitmap) IterTyped(_f func(i int) bool) bool {
+func (me *PriorityBitmap) IterTyped(_f func(i bitmap.BitIndex) bool) bool {
 	me.mu.Lock()
 	defer me.mu.Unlock()
 	if me == nil || me.om == nil {
@@ -137,7 +149,8 @@ func (me *PriorityBitmap) IterTyped(_f func(i int) bool) bool {
 		defer me.mu.Lock()
 		return _f(i)
 	}
-	return iter.All(func(value interface{}) bool {
+	return iter.All(func(key interface{}) bool {
+		value := me.om.Get(key)
 		switch v := value.(type) {
 		case int:
 			return f(v)
@@ -157,4 +170,10 @@ func (me *PriorityBitmap) IsEmpty() bool {
 		return true
 	}
 	return me.om.Len() == 0
+}
+
+// ok is false if the bit is not set.
+func (me *PriorityBitmap) GetPriority(bit int) (prio int, ok bool) {
+	prio, ok = me.priorities[bit]
+	return
 }

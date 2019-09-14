@@ -6,13 +6,19 @@ package utp
 import "C"
 import (
 	"log"
+	"net"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"unsafe"
 )
 
 func (a *C.utp_callback_arguments) bufBytes() []byte {
-	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{uintptr(unsafe.Pointer(a.buf)), int(a.len), int(a.len)}))
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+		uintptr(unsafe.Pointer(a.buf)),
+		int(a.len),
+		int(a.len),
+	}))
 }
 
 func (a *C.utp_callback_arguments) state() C.int {
@@ -23,24 +29,55 @@ func (a *C.utp_callback_arguments) error_code() C.int {
 	return *(*C.int)(unsafe.Pointer(&a.anon0))
 }
 
-var sends int64
+func (a *C.utp_callback_arguments) address() *C.struct_sockaddr {
+	return *(**C.struct_sockaddr)(unsafe.Pointer(&a.anon0[0]))
+}
+
+func (a *C.utp_callback_arguments) addressLen() C.socklen_t {
+	return *(*C.socklen_t)(unsafe.Pointer(&a.anon1[0]))
+}
+
+var (
+	sends         int64
+	sendToUdpAddr = net.UDPAddr{
+		IP: make(net.IP, net.IPv6len),
+	}
+)
 
 //export sendtoCallback
 func sendtoCallback(a *C.utp_callback_arguments) (ret C.uint64) {
 	s := getSocketForLibContext(a.context)
-	sa := *(**C.struct_sockaddr)(unsafe.Pointer(&a.anon0[0]))
 	b := a.bufBytes()
-	addr := structSockaddrToUDPAddr(sa)
-	atomic.AddInt64(&sends, 1)
-	if logCallbacks {
-		Logger.Printf("sending %d bytes, %d packets", len(b), sends)
+	if err := structSockaddrToUDPAddr(a.address(), &sendToUdpAddr); err != nil {
+		panic(err)
 	}
-	n, err := s.pc.WriteTo(b, addr)
+	newSends := atomic.AddInt64(&sends, 1)
+	if logCallbacks {
+		Logger.Printf("sending %d bytes, %d packets", len(b), newSends)
+	}
+	expMap.Add("socket PacketConn writes", 1)
+	n, err := s.pc.WriteTo(b, &sendToUdpAddr)
+	c := s.conns[a.socket]
 	if err != nil {
-		Logger.Printf("error sending packet: %s", err)
+		expMap.Add("socket PacketConn write errors", 1)
+		if c != nil && c.userOnError != nil {
+			go c.userOnError(err)
+		} else if c != nil &&
+			(strings.Contains(err.Error(), "can't assign requested address") ||
+				strings.Contains(err.Error(), "invalid argument")) {
+			// Should be an bad argument or network configuration problem we
+			// can't recover from.
+			c.onError(err)
+		} else if c != nil && strings.Contains(err.Error(), "operation not permitted") {
+			// Rate-limited. Probably Linux. The implementation might try
+			// again later.
+		} else {
+			Logger.Printf("error sending packet: %s", err)
+		}
 		return
 	}
 	if n != len(b) {
+		expMap.Add("socket PacketConn short writes", 1)
 		Logger.Printf("expected to send %d bytes but only sent %d", len(b), n)
 	}
 	return
@@ -48,11 +85,11 @@ func sendtoCallback(a *C.utp_callback_arguments) (ret C.uint64) {
 
 //export errorCallback
 func errorCallback(a *C.utp_callback_arguments) C.uint64 {
-	codeName := libErrorCodeNames(a.error_code())
+	err := errorForCode(a.error_code())
 	if logCallbacks {
-		log.Printf("error callback: socket %p: %s", a.socket, codeName)
+		log.Printf("error callback: socket %p: %s", a.socket, err)
 	}
-	libContextToSocket[a.context].conns[a.socket].onLibError(codeName)
+	libContextToSocket[a.context].conns[a.socket].onError(err)
 	return 0
 }
 
@@ -112,7 +149,10 @@ func acceptCallback(a *C.utp_callback_arguments) C.uint64 {
 		log.Printf("accept callback: %#v", *a)
 	}
 	s := getSocketForLibContext(a.context)
-	s.pushBacklog(s.newConn(a.socket))
+	c := s.newConn(a.socket)
+	c.setRemoteAddr()
+	c.inited = true
+	s.pushBacklog(c)
 	return 0
 }
 
@@ -128,4 +168,14 @@ func getReadBufferSizeCallback(a *C.utp_callback_arguments) (ret C.uint64) {
 	}
 	ret = C.uint64(c.readBuf.Len())
 	return
+}
+
+//export firewallCallback
+func firewallCallback(a *C.utp_callback_arguments) C.uint64 {
+	s := getSocketForLibContext(a.context)
+	if s.block {
+		return 1
+	} else {
+		return 0
+	}
 }

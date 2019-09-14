@@ -206,7 +206,9 @@ func NewConfig(options ...ConfigOption) Config {
 		KeepN:             3,
 		SnapshotFrequency: time.Hour,
 		MinimumNodes:      3,
-		BootstrapAttempts: math.MaxInt32,
+		Bootstrap: bootstrap{
+			Attempts: math.MaxInt32,
+		},
 		DNSBind: dnsBind{
 			TTL:       60,
 			Frequency: time.Hour,
@@ -284,13 +286,18 @@ func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 	}
 }
 
+type bootstrap struct {
+	Attempts         int
+	EnableFilesystem bool `yaml:"enableFilesystem"`
+}
+
 // Config - configuration for agent processes.
 type Config struct {
 	Name              string
 	Root              string        // root directory to store long term data.
 	KeepN             int           `yaml:"keepN"`
 	MinimumNodes      int           `yaml:"minimumNodes"`
-	BootstrapAttempts int           `yaml:"bootstrapAttempts"`
+	Bootstrap         bootstrap     `yaml:"bootstrap"`
 	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
 	RPCBind           *net.TCPAddr
 	RaftBind          *net.TCPAddr

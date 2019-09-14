@@ -2,36 +2,28 @@ module github.com/james-lawrence/bw
 
 require (
 	cloud.google.com/go v0.26.0
-	github.com/RoaringBitmap/roaring v0.3.16 // indirect
+	github.com/RoaringBitmap/roaring v0.4.20 // indirect
 	github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/anacrolix/dht v0.0.0-20171223012356-d16ede1d837f
-	github.com/anacrolix/go-libutp v0.0.0-20171105025811-ab1d4f3b9abb // indirect
-	github.com/anacrolix/missinggo v0.0.0-20171223074148-b41e3843fdea
-	github.com/anacrolix/sync v0.0.0-20171108081538-eee974e4f8c1 // indirect
-	github.com/anacrolix/torrent v0.0.0-20171228125930-898db894e076
-	github.com/anacrolix/utp v0.0.0-20170826155749-87ba7933b8d7 // indirect
+	github.com/anacrolix/dht v0.0.0-20180412060941-24cbf25b72a4
+	github.com/anacrolix/dht/v2 v2.0.4
+	github.com/anacrolix/missinggo v1.2.1
+	github.com/anacrolix/torrent v1.7.1
 	github.com/armon/go-metrics v0.0.0-20171117184120-7aa49fde8082 // indirect
 	github.com/aws/aws-sdk-go v0.0.0-20180216205257-b80dd2206c8e
-	github.com/boltdb/bolt v1.3.1 // indirect
-	github.com/bradfitz/iter v0.0.0-20140124041915-454541ec3da2 // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 // indirect
-	github.com/davecgh/go-spew v1.1.0
-	github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4 // indirect
-	github.com/edsrzf/mmap-go v0.0.0-20170320065105-0bce6a688712 // indirect
+	github.com/davecgh/go-spew v1.1.1
 	github.com/fatih/structs v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/gizak/termui v2.1.1+incompatible
-	github.com/glycerine/go-unsnap-stream v0.0.0-20171127062821-62a9a9eb44fd // indirect
+	github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a // indirect
 	github.com/go-acme/lego v2.5.0+incompatible
 	github.com/go-ini/ini v1.32.0 // indirect
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gofrs/uuid v3.0.0+incompatible
-	github.com/golang/protobuf v0.0.0-20171113180720-1e59b77b52bf
-	github.com/golang/snappy v0.0.0-20170215233205-553a64147049 // indirect
-	github.com/google/btree v0.0.0-20161217183710-316fb6d3f031 // indirect
+	github.com/golang/protobuf v1.3.2
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
 	github.com/hashicorp/errwrap v0.0.0-20141028054710-7554cd9344ce // indirect
 	github.com/hashicorp/go-cleanhttp v0.0.0-20171218145408-d5fe4b57a186 // indirect
@@ -53,40 +45,32 @@ require (
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/maruel/panicparse v1.0.2 // indirect
 	github.com/mattn/go-runewidth v0.0.2 // indirect
-	github.com/mattn/go-sqlite3 v1.4.0 // indirect
+	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/miekg/dns v1.0.1
 	github.com/mitchellh/go-homedir v0.0.0-20161203194507-b8bc1bf76747 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20180203102830-a4e142e9c047 // indirect
-	github.com/mschoch/smat v0.0.0-20160514031455-90eadee771ae // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/nsf/termbox-go v0.0.0-20171104162316-aa4a75b1c20a // indirect
 	github.com/onsi/ginkgo v1.4.0
 	github.com/onsi/gomega v1.2.0
 	github.com/petar/GoLLRB v0.0.0-20130427215148-53be0d36a84c // indirect
-	github.com/philhofer/fwd v1.0.0 // indirect
-	github.com/pkg/errors v0.8.0
-	github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529 // indirect
 	github.com/sethgrid/pester v0.0.0-20180212163032-b18953f5db29 // indirect
-	github.com/spaolacci/murmur3 v0.0.0-20170819071325-9f5d223c6079 // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/subosito/gotenv v1.1.0
-	github.com/tinylib/msgp v1.0.2 // indirect
-	github.com/willf/bitset v1.1.3 // indirect
-	github.com/willf/bloom v2.0.3+incompatible // indirect
 	github.com/xenolf/lego v1.0.1 // indirect
-	golang.org/x/crypto v0.0.0-20171228081715-95a4943f35d0 // indirect
-	golang.org/x/net v0.0.0-20171212005608-d866cfc389ce
-	golang.org/x/oauth2 v0.0.0-20180724155351-3d292e4d0cdc
-	golang.org/x/sys v0.0.0-20171222143536-83801418e1b5 // indirect
-	golang.org/x/text v0.0.0-20171227012246-e19ae1496984 // indirect
-	golang.org/x/time v0.0.0-20170927054726-6dc17368e09b
+	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
+	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+	golang.org/x/sys v0.0.0-20190913121621-c3b328c6e5a7 // indirect
+	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	google.golang.org/api v0.0.0-20180811000443-0aa0a1f2c0c4
-	google.golang.org/appengine v1.1.0 // indirect
-	google.golang.org/genproto v0.0.0-20171212231943-a8101f21cf98 // indirect
-	google.golang.org/grpc v1.5.2
+	google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51 // indirect
+	google.golang.org/grpc v1.23.1
 	gopkg.in/square/go-jose.v2 v2.1.6 // indirect
-	gopkg.in/yaml.v2 v2.0.0
+	gopkg.in/yaml.v2 v2.2.2
 )
+
+go 1.13

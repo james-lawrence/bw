@@ -1,0 +1,43 @@
+package bootstrap
+
+import (
+	"context"
+
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+// NewLocal consumes a configuration and generates a bootstrap socket
+// for the agent.
+func NewLocal(p agent.Peer, d dialer) Local {
+	return Local{p: p, d: d}
+}
+
+// Local bootstrap service returns the latest deployment of the local agent.
+type Local struct {
+	p agent.Peer
+	d dialer
+}
+
+// Archive - implements the bootstrap service.
+func (t Local) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *agent.ArchiveResponse, err error) {
+	var (
+		latest agent.Deploy
+	)
+
+	if latest, err = agentutil.LocalLatestDeployment(t.p, t.d); err != nil {
+		switch cause := errors.Cause(err); cause {
+		case agentutil.ErrNoDeployments:
+			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "local: latest deployment discovery found no deployments").Error())
+		default:
+			return nil, status.Error(codes.Internal, errors.Wrap(cause, "local: failed to determine latest archive to bootstrap").Error())
+		}
+	}
+
+	return &agent.ArchiveResponse{
+		Deploy: &latest,
+	}, nil
+}

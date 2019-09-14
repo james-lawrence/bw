@@ -17,11 +17,7 @@ func isEmptyValue(v reflect.Value) bool {
 }
 
 type Encoder struct {
-	w interface {
-		Flush() error
-		io.Writer
-		WriteString(string) (int, error)
-	}
+	w       io.Writer
 	scratch [64]byte
 }
 
@@ -42,7 +38,7 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 		}
 	}()
 	e.reflectValue(reflect.ValueOf(v))
-	return e.w.Flush()
+	return nil
 }
 
 type string_values []reflect.Value
@@ -60,9 +56,10 @@ func (e *Encoder) write(s []byte) {
 }
 
 func (e *Encoder) writeString(s string) {
-	_, err := e.w.WriteString(s)
-	if err != nil {
-		panic(err)
+	for s != "" {
+		n := copy(e.scratch[:], s)
+		s = s[n:]
+		e.write(e.scratch[:n])
 	}
 }
 
@@ -80,30 +77,26 @@ func (e *Encoder) reflectByteSlice(s []byte) {
 	e.write(s)
 }
 
-// returns true if the value implements Marshaler interface and marshaling was
-// done successfully
+// Returns true if the value implements Marshaler interface and marshaling was
+// done successfully.
 func (e *Encoder) reflectMarshaler(v reflect.Value) bool {
-	m, ok := v.Interface().(Marshaler)
-	if !ok {
-		// T doesn't work, try *T
-		if v.Kind() != reflect.Ptr && v.CanAddr() {
-			m, ok = v.Addr().Interface().(Marshaler)
-			if ok {
-				v = v.Addr()
-			}
+	if !v.Type().Implements(marshalerType) {
+		if v.Kind() != reflect.Ptr && v.CanAddr() && v.Addr().Type().Implements(marshalerType) {
+			v = v.Addr()
+		} else {
+			return false
 		}
 	}
-	if ok && (v.Kind() != reflect.Ptr || !v.IsNil()) {
-		data, err := m.MarshalBencode()
-		if err != nil {
-			panic(&MarshalerError{v.Type(), err})
-		}
-		e.write(data)
-		return true
+	m := v.Interface().(Marshaler)
+	data, err := m.MarshalBencode()
+	if err != nil {
+		panic(&MarshalerError{v.Type(), err})
 	}
-
-	return false
+	e.write(data)
+	return true
 }
+
+var bigIntType = reflect.TypeOf(big.Int{})
 
 func (e *Encoder) reflectValue(v reflect.Value) {
 
@@ -111,10 +104,10 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 		return
 	}
 
-	switch t := v.Interface().(type) {
-	case big.Int:
+	if v.Type() == bigIntType {
 		e.writeString("i")
-		e.writeString(t.String())
+		bi := v.Interface().(big.Int)
+		e.writeString(bi.String())
 		e.writeString("e")
 		return
 	}
@@ -127,13 +120,13 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 			e.writeString("i0e")
 		}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		b := strconv.AppendInt(e.scratch[:0], v.Int(), 10)
 		e.writeString("i")
+		b := strconv.AppendInt(e.scratch[:0], v.Int(), 10)
 		e.write(b)
 		e.writeString("e")
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		b := strconv.AppendUint(e.scratch[:0], v.Uint(), 10)
 		e.writeString("i")
+		b := strconv.AppendUint(e.scratch[:0], v.Uint(), 10)
 		e.write(b)
 		e.writeString("e")
 	case reflect.String:
@@ -166,13 +159,13 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 		}
 		e.writeString("e")
 	case reflect.Slice:
-		if v.IsNil() {
-			e.writeString("le")
-			break
-		}
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			s := v.Bytes()
 			e.reflectByteSlice(s)
+			break
+		}
+		if v.IsNil() {
+			e.writeString("le")
 			break
 		}
 		fallthrough
@@ -240,17 +233,14 @@ func encodeFields(t reflect.Type) []encodeField {
 		ef.i = i
 		ef.tag = f.Name
 
-		tv := f.Tag.Get("bencode")
-		if tv != "" {
-			if tv == "-" {
-				continue
-			}
-			name, opts := parseTag(tv)
-			if name != "" {
-				ef.tag = name
-			}
-			ef.omit_empty = opts.contains("omitempty")
+		tv := getTag(f.Tag)
+		if tv.Ignore() {
+			continue
 		}
+		if tv.Key() != "" {
+			ef.tag = tv.Key()
+		}
+		ef.omit_empty = tv.OmitEmpty()
 		fs = append(fs, ef)
 	}
 	fss := encodeFieldsSortType(fs)

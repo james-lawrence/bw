@@ -4,9 +4,8 @@ import (
 	"crypto/sha256"
 	"net"
 	"os"
-	"time"
 
-	"github.com/anacrolix/dht"
+	"github.com/anacrolix/dht/v2"
 	"github.com/anacrolix/torrent"
 
 	"github.com/pkg/errors"
@@ -20,29 +19,28 @@ type TorrentOption func(*TorrentConfig)
 // TorrentOptionDebug debug the torrent server.
 func TorrentOptionDebug(a bool) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.Config.Debug = a
+		c.ClientConfig.Debug = a
 	}
 }
 
 // TorrentOptionBind set address to bind to.
 func TorrentOptionBind(a net.Addr) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.Config.ListenAddr = a.String()
-		c.Config.DHTConfig.NodeId = dht.MakeDeterministicNodeID(a)
+		c.ClientConfig.SetListenAddr(a.String())
 	}
 }
 
 // TorrentOptionDataDir set the directory to store data in.
 func TorrentOptionDataDir(a string) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.Config.DataDir = a
+		c.ClientConfig.DataDir = a
 	}
 }
 
 // TorrentOptionDHTPeers set the directory to store data in.
 func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.Config.DHTConfig.StartingNodes = func() (peers []dht.Addr, err error) {
+		c.ClientConfig.DhtStartingNodes = func() (peers []dht.Addr, err error) {
 			for _, peer := range a.Quorum() {
 				addr := net.UDPAddr{IP: net.ParseIP(peer.Ip), Port: int(peer.TorrentPort)}
 				peers = append(peers, dht.NewAddr(&addr))
@@ -59,31 +57,18 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 	)
 
 	c = TorrentConfig{
-		Config: torrent.Config{
-			EncryptionPolicy: torrent.EncryptionPolicy{
-				ForceEncryption: true,
-			},
-			Seed:              true,
-			DisableTrackers:   true,
-			DisableTCP:        true,
-			HandshakesTimeout: 4 * time.Second,
-			// HalfOpenConnsPerTorrent:    1,
-			// EstablishedConnsPerTorrent: 5,
-			// TorrentPeersHighWater:      5,
-			// TorrentPeersLowWater:       1,
-			// DHTConfig:                  util.debugDHT(),
-		},
+		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
 
 	for _, opt := range options {
 		opt(&c)
 	}
 
-	if c.client, err = torrent.NewClient(&c.Config); err != nil {
+	if c.client, err = torrent.NewClient(c.ClientConfig); err != nil {
 		return c, errors.WithStack(err)
 	}
 
-	if err = util.loadDir(c.Config.DataDir, c.client); err != nil {
+	if err = util.loadDir(c.ClientConfig.DataDir, c.client); err != nil {
 		return c, errors.WithStack(err)
 	}
 
@@ -92,14 +77,14 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 
 // TorrentConfig ...
 type TorrentConfig struct {
-	torrent.Config
+	*torrent.ClientConfig
 	client *torrent.Client
 }
 
 // Downloader ...
 func (t TorrentConfig) Downloader() DownloadProtocol {
 	return torrentP{
-		config: t.Config,
+		config: t.ClientConfig,
 		client: t.client,
 	}
 }
@@ -107,13 +92,13 @@ func (t TorrentConfig) Downloader() DownloadProtocol {
 // Uploader ...
 func (t TorrentConfig) Uploader() UploadProtocol {
 	return torrentP{
-		config: t.Config,
+		config: t.ClientConfig,
 		client: t.client,
 	}
 }
 
 type torrentP struct {
-	config torrent.Config
+	config *torrent.ClientConfig
 	client *torrent.Client
 	util   TorrentUtil
 }

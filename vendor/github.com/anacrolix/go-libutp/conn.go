@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -16,8 +17,15 @@ import (
 	"unsafe"
 )
 
+var (
+	ErrConnClosed            = errors.New("closed")
+	errConnDestroyed         = errors.New("destroyed")
+	errDeadlineExceededValue = errDeadlineExceeded{}
+)
+
 type Conn struct {
-	s          *C.utp_socket
+	s          *Socket
+	us         *C.utp_socket
 	cond       sync.Cond
 	readBuf    bytes.Buffer
 	gotEOF     bool
@@ -26,8 +34,13 @@ type Conn struct {
 	// socket after getting this.
 	destroyed bool
 	// Conn.Close was called.
-	closed   bool
-	libError error
+	closed bool
+	// Corresponds to utp_socket.state != CS_UNITIALIZED. This requires the
+	// utp_socket was obtained from the accept callback, or has had
+	// utp_connect called on it. We can't call utp_close until it's true.
+	inited bool
+
+	err error
 
 	writeDeadline      time.Time
 	writeDeadlineTimer *time.Timer
@@ -36,10 +49,16 @@ type Conn struct {
 
 	numBytesRead    int64
 	numBytesWritten int64
+
+	localAddr  net.Addr
+	remoteAddr net.Addr
+
+	// Called for non-fatal errors, such as packet write errors.
+	userOnError func(error)
 }
 
-func (c *Conn) onLibError(codeName string) {
-	c.libError = errors.New(codeName)
+func (c *Conn) onError(err error) {
+	c.err = err
 	c.cond.Broadcast()
 }
 
@@ -56,8 +75,11 @@ func (c *Conn) waitForConnect(ctx context.Context) error {
 		c.cond.Broadcast()
 	}()
 	for {
-		if c.libError != nil {
-			return c.libError
+		if c.closed {
+			return ErrConnClosed
+		}
+		if c.err != nil {
+			return c.err
 		}
 		if c.gotConnect {
 			return nil
@@ -77,33 +99,27 @@ func (c *Conn) Close() error {
 }
 
 func (c *Conn) close() {
-	// log.Printf("conn %p: closed", c)
-	if c.closed {
-		return
+	if c.inited && !c.destroyed && !c.closed {
+		C.utp_close(c.us)
 	}
-	if !c.destroyed {
-		C.utp_close(c.s)
-		// C.utp_issue_deferred_acks(C.utp_get_context(c.s))
+	if !c.inited {
+		// We'll never receive a destroy message, so we should remove it now.
+		delete(c.s.conns, c.us)
 	}
 	c.closed = true
 	c.cond.Broadcast()
 }
 
 func (c *Conn) LocalAddr() net.Addr {
-	mu.Lock()
-	defer mu.Unlock()
-	if c.s == nil {
-		return nil
-	}
-	return getSocketForLibContext(C.utp_get_context(c.s)).pc.LocalAddr()
+	return c.localAddr
 }
 
 func (c *Conn) readNoWait(b []byte) (n int, err error) {
 	n, _ = c.readBuf.Read(b)
 	if n != 0 && c.readBuf.Len() == 0 {
 		// Can we call this if the utp_socket is closed, destroyed or errored?
-		if c.s != nil {
-			C.utp_read_drained(c.s)
+		if c.us != nil {
+			C.utp_read_drained(c.us)
 			// C.utp_issue_deferred_acks(C.utp_get_context(c.s))
 		}
 	}
@@ -114,14 +130,14 @@ func (c *Conn) readNoWait(b []byte) (n int, err error) {
 		switch {
 		case c.gotEOF:
 			return io.EOF
-		case c.libError != nil:
-			return c.libError
+		case c.err != nil:
+			return c.err
 		case c.destroyed:
-			return errors.New("destroyed")
+			return errConnDestroyed
 		case c.closed:
-			return errors.New("closed")
+			return ErrConnClosed
 		case !c.readDeadline.IsZero() && !time.Now().Before(c.readDeadline):
-			return errDeadlineExceeded{}
+			return errDeadlineExceededValue
 		default:
 			return nil
 		}
@@ -147,14 +163,14 @@ func (c *Conn) Read(b []byte) (int, error) {
 func (c *Conn) writeNoWait(b []byte) (n int, err error) {
 	err = func() error {
 		switch {
-		case c.libError != nil:
-			return c.libError
+		case c.err != nil:
+			return c.err
 		case c.closed:
-			return errors.New("closed")
+			return ErrConnClosed
 		case c.destroyed:
-			return errors.New("destroyed")
+			return errConnDestroyed
 		case !c.writeDeadline.IsZero() && !time.Now().Before(c.writeDeadline):
-			return errDeadlineExceeded{}
+			return errDeadlineExceededValue
 		default:
 			return nil
 		}
@@ -162,18 +178,14 @@ func (c *Conn) writeNoWait(b []byte) (n int, err error) {
 	if err != nil {
 		return
 	}
-	n = int(C.utp_write(c.s, unsafe.Pointer(&b[0]), C.size_t(len(b))))
+	n = int(C.utp_write(c.us, unsafe.Pointer(&b[0]), C.size_t(len(b))))
 	if n < 0 {
 		panic(n)
 	}
-	// log.Print(n)
-	// C.utp_issue_deferred_acks(C.utp_get_context(c.s))
 	return
 }
 
 func (c *Conn) Write(b []byte) (n int, err error) {
-	// defer func() { log.Printf("wrote %d bytes: %s", n, err) }()
-	// log.Print(len(b))
 	mu.Lock()
 	defer mu.Unlock()
 	for len(b) != 0 {
@@ -194,18 +206,19 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	return
 }
 
-func (c *Conn) RemoteAddr() net.Addr {
+func (c *Conn) setRemoteAddr() {
 	var rsa syscall.RawSockaddrAny
 	var addrlen C.socklen_t = C.socklen_t(unsafe.Sizeof(rsa))
-	if c.s == nil {
-		return nil
-	}
-	C.utp_getpeername(c.s, (*C.struct_sockaddr)(unsafe.Pointer(&rsa)), &addrlen)
-	sa, err := anyToSockaddr(&rsa)
-	if err != nil {
+	C.utp_getpeername(c.us, (*C.struct_sockaddr)(unsafe.Pointer(&rsa)), &addrlen)
+	var udp net.UDPAddr
+	if err := anySockaddrToUdp(&rsa, &udp); err != nil {
 		panic(err)
 	}
-	return sockaddrToUDP(sa)
+	c.remoteAddr = &udp
+}
+
+func (c *Conn) RemoteAddr() net.Addr {
+	return c.remoteAddr
 }
 
 func (c *Conn) SetDeadline(t time.Time) error {
@@ -258,21 +271,55 @@ func (c *Conn) setGotEOF() {
 
 func (c *Conn) onDestroyed() {
 	c.destroyed = true
-	c.s = nil
+	c.us = nil
 	c.cond.Broadcast()
 }
 
 func (c *Conn) WriteBufferLen() int {
 	mu.Lock()
 	defer mu.Unlock()
-	return int(C.utp_getsockopt(c.s, C.UTP_SNDBUF))
+	return int(C.utp_getsockopt(c.us, C.UTP_SNDBUF))
 }
 
 func (c *Conn) SetWriteBufferLen(len int) {
 	mu.Lock()
 	defer mu.Unlock()
-	i := C.utp_setsockopt(c.s, C.UTP_SNDBUF, C.int(len))
+	i := C.utp_setsockopt(c.us, C.UTP_SNDBUF, C.int(len))
 	if i != 0 {
 		panic(i)
 	}
+}
+
+// Connect an unconnected Conn (obtained through Socket.NewConn).
+func (c *Conn) Connect(ctx context.Context, network, addr string) error {
+	if network == "" {
+		network = c.localAddr.Network()
+	}
+	ua, err := resolveAddr(network, addr)
+	if err != nil {
+		return fmt.Errorf("error resolving address: %v", err)
+	}
+	sa, sl := netAddrToLibSockaddr(ua)
+	mu.Lock()
+	defer mu.Unlock()
+	if c.s.closed {
+		return errSocketClosed
+	}
+	if n := C.utp_connect(c.us, (*C.struct_sockaddr)(unsafe.Pointer(&sa)), sl); n != 0 {
+		panic(n)
+	}
+	c.inited = true
+	c.setRemoteAddr()
+	err = c.waitForConnect(ctx)
+	if err != nil {
+		c.close()
+		return err
+	}
+	return nil
+}
+
+func (c *Conn) OnError(f func(error)) {
+	mu.Lock()
+	c.userOnError = f
+	mu.Unlock()
 }

@@ -154,6 +154,7 @@ message DeployRequest {
   Archive archive = 1;
   DeployOptions options = 2;
 }
+
 message DeployResponse {
   Deploy deploy = 1;
 }
@@ -187,4 +188,15 @@ message DispatchRequest {
 
 service Observer {
   rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
+}
+
+message ArchiveRequest {}
+message ArchiveResponse {
+  enum Info { None = 0; ActiveDeploy = 1; }
+  Info info = 1;
+  Deploy deploy = 2;
+}
+
+service Bootstrap {
+  rpc Archive(ArchiveRequest) returns (ArchiveResponse) {}
 }

@@ -82,7 +82,7 @@ func ClusterJoin(ctx context.Context, conf agent.Config, dialer clustering.Diale
 	}
 
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
-	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.BootstrapAttempts))
+	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.Bootstrap.Attempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(defaultPeers...)
 
 	if err = clustering.Bootstrap(ctx, c, peerings, joins, attempts); err != nil {

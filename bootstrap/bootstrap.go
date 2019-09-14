@@ -1,3 +1,7 @@
+// Package bootstrap provides the functionality to bootstrap the agent with the
+// latest deployment. the system allows for arbitrary sources to be built into
+// configured by implementing a bootstrap socket which will provide an archive
+// information to the agent.
 package bootstrap
 
 import (
@@ -14,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/deployment"
+	"google.golang.org/grpc"
 )
 
 type dialer interface {
@@ -64,9 +69,9 @@ type UntilSuccess2 struct {
 }
 
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess2) Run(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) bool {
+func (t UntilSuccess2) Run(local agent.Peer, c agent.Config, coord deployment.Coordinator) bool {
 	for i := 0; i < t.maxAttempts; i++ {
-		if err := Bootstrap(local, c, dialer, coord); err != nil {
+		if err := Bootstrap(local, c, coord); err != nil {
 			log.Println(errors.Wrap(err, "bootstrap attempt failed"))
 			time.Sleep(t.bs.Backoff(i))
 			continue
@@ -80,30 +85,23 @@ func (t UntilSuccess2) Run(local agent.Peer, c cluster, dialer dialer, coord dep
 	return false
 }
 
-// Bootstrap a server with the latest deploy.
-func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coordinator) (err error) {
-	ignore := func(err error) error {
-		cause := errors.Cause(err)
-
-		switch cause {
-		case agentutil.ErrActiveDeployment:
-			// ignore active deployments when initially bootstrapping,
-			// we'll catch it at the end when we validate the version.
-			return nil
-		case agentutil.ErrNoDeployments:
-			// ignore no deployment, we'll fallback to retrieving the latest
-			// from the agents themselves.
-			return nil
-		}
-
-		return err
+func ignore(err error) error {
+	switch errors.Cause(err) {
+	case agentutil.ErrNoDeployments:
+		return nil
+	case agentutil.ErrActiveDeployment:
+		return nil
 	}
 
+	return err
+}
+
+// Bootstrap a server with the latest deploy.
+func Bootstrap(local agent.Peer, c agent.Config, coord deployment.Coordinator) (err error) {
 	var (
-		latest       agent.Deploy
-		latestLocal  agent.Deploy
-		latestQuorum agent.Deploy
-		deploy       deployment.DeployResult
+		current agent.Deploy
+		latest  agent.Deploy
+		deploy  deployment.DeployResult
 	)
 
 	// Here we clone the coordinator to override some behaviours around dispatching and observations.
@@ -116,40 +114,32 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 
 	log.Println("--------------- bootstrap attempt initiated -------------")
 	defer log.Println("--------------- bootstrap attempt completed -------------")
-	if latestLocal, err = agentutil.LocalLatestDeployment(local, dialer); ignore(err) != nil {
+
+	if current, err = Latest(context.Background(), SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
 		return errors.Wrap(err, "latest local failed")
 	}
 
-	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); ignore(err) != nil {
+	if latest, err = Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
+		log.Println("qourum latest", err)
 		return errors.Wrap(err, "latest quorum failed")
 	}
 
-	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(latestQuorum.Archive, latestLocal.Archive) {
+	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(current.Archive, latest.Archive) {
 		return errors.Wrap(err, "active deploy matches the local deployment, waiting for deployment to complete")
 	}
 
 	if cause := errors.Cause(err); cause == agentutil.ErrNoDeployments {
-		log.Println(errors.Wrap(err, "no valid deployments available from quorum, fallback to latest from agents"))
-		if latestQuorum, err = agentutil.DetermineLatestDeployment(c, dialer); err != nil {
-			switch cause := errors.Cause(err); cause {
-			case agentutil.ErrNoDeployments:
-				log.Println(errors.Wrap(cause, "latest deployment discovery found no deployments"))
-				return nil
-			default:
-				return errors.Wrap(cause, "failed to determine latest archive to bootstrap")
-			}
+		if latest, err = getfallback(c, grpc.WithInsecure()); err != nil {
+			return errors.Wrap(err, "failed to retrieve latest from fallback bootstrap services")
 		}
 	}
 
-	latest = latestQuorum
-
-	if agentutil.SameArchive(latest.Archive, latestLocal.Archive) {
-		log.Println("latest already deployed -", spew.Sdump(latestLocal))
+	if agentutil.SameArchive(current.Archive, latest.Archive) {
+		log.Println("latest already deployed -", spew.Sdump(current))
 		return nil
 	}
 
 	opts := *latest.Options
-
 	deadline, cancel := context.WithTimeout(context.Background(), time.Duration(opts.Timeout))
 	defer cancel()
 
@@ -171,11 +161,11 @@ func Bootstrap(local agent.Peer, c cluster, dialer dialer, coord deployment.Coor
 	// again retrieve the latest deployment information from the cluster.
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
-	if latestQuorum, err = agentutil.QuorumLatestDeployment(c, dialer); err != nil {
+	if latest, err = Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure()); err != nil {
 		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying 2")
 	}
 
-	if !agentutil.SameArchive(latestQuorum.Archive, &deploy.Archive) {
+	if !agentutil.SameArchive(latest.Archive, &deploy.Archive) {
 		return errors.WithStack(agentutil.ErrDifferentDeployment)
 	}
 

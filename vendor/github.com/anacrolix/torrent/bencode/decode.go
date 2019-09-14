@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"runtime"
 	"strconv"
-	"strings"
+	"sync"
 )
 
 type Decoder struct {
@@ -20,16 +20,21 @@ type Decoder struct {
 	// Sum of bytes used to Decode values.
 	Offset int64
 	buf    bytes.Buffer
-	key    string
 }
 
 func (d *Decoder) Decode(v interface{}) (err error) {
 	defer func() {
-		if e := recover(); e != nil {
-			if _, ok := e.(runtime.Error); ok {
-				panic(e)
-			}
-			err = e.(error)
+		if err != nil {
+			return
+		}
+		r := recover()
+		_, ok := r.(runtime.Error)
+		if ok {
+			panic(r)
+		}
+		err, ok = r.(error)
+		if !ok && r != nil {
+			panic(r)
 		}
 	}()
 
@@ -38,10 +43,14 @@ func (d *Decoder) Decode(v interface{}) (err error) {
 		return &UnmarshalInvalidArgError{reflect.TypeOf(v)}
 	}
 
-	if !d.parseValue(pv.Elem()) {
+	ok, err := d.parseValue(pv.Elem())
+	if err != nil {
+		return
+	}
+	if !ok {
 		d.throwSyntaxError(d.Offset-1, errors.New("unexpected 'e'"))
 	}
-	return nil
+	return
 }
 
 func checkForUnexpectedEOF(err error, offset int64) {
@@ -103,7 +112,7 @@ func (d *Decoder) parseInt(v reflect.Value) {
 		})
 	}
 
-	s := d.buf.String()
+	s := bytesAsString(d.buf.Bytes())
 
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -139,180 +148,241 @@ func (d *Decoder) parseInt(v reflect.Value) {
 	d.buf.Reset()
 }
 
-func (d *Decoder) parseString(v reflect.Value) {
+func (d *Decoder) parseString(v reflect.Value) error {
 	start := d.Offset - 1
 
 	// read the string length first
 	d.readUntil(':')
-	length, err := strconv.ParseInt(d.buf.String(), 10, 64)
+	length, err := strconv.ParseInt(bytesAsString(d.buf.Bytes()), 10, 0)
 	checkForIntParseError(err, start)
 
-	d.buf.Reset()
-	n, err := io.CopyN(&d.buf, d.r, length)
-	d.Offset += n
-	if err != nil {
-		checkForUnexpectedEOF(err, d.Offset)
-		panic(&SyntaxError{
-			Offset: d.Offset,
-			What:   errors.New("unexpected I/O error: " + err.Error()),
-		})
+	defer d.buf.Reset()
+
+	read := func(b []byte) {
+		n, err := io.ReadFull(d.r, b)
+		d.Offset += int64(n)
+		if err != nil {
+			checkForUnexpectedEOF(err, d.Offset)
+			panic(&SyntaxError{
+				Offset: d.Offset,
+				What:   errors.New("unexpected I/O error: " + err.Error()),
+			})
+		}
 	}
 
 	switch v.Kind() {
 	case reflect.String:
-		v.SetString(d.buf.String())
+		b := make([]byte, length)
+		read(b)
+		v.SetString(bytesAsString(b))
+		return nil
 	case reflect.Slice:
 		if v.Type().Elem().Kind() != reflect.Uint8 {
-			panic(&UnmarshalTypeError{
-				Value: "string",
-				Type:  v.Type(),
-			})
+			break
 		}
-		sl := make([]byte, len(d.buf.Bytes()))
-		copy(sl, d.buf.Bytes())
-		v.Set(reflect.ValueOf(sl))
-	default:
-		panic(&UnmarshalTypeError{
-			Value: "string",
-			Type:  v.Type(),
-		})
+		b := make([]byte, length)
+		read(b)
+		v.SetBytes(b)
+		return nil
+	case reflect.Array:
+		if v.Type().Elem().Kind() != reflect.Uint8 {
+			break
+		}
+		d.buf.Grow(int(length))
+		b := d.buf.Bytes()[:length]
+		read(b)
+		reflect.Copy(v, reflect.ValueOf(b))
+		return nil
 	}
-
-	d.buf.Reset()
+	d.buf.Grow(int(length))
+	read(d.buf.Bytes()[:length])
+	// I believe we return here to support "ignore_unmarshal_type_error".
+	return &UnmarshalTypeError{
+		Value: "string",
+		Type:  v.Type(),
+	}
 }
 
-func (d *Decoder) parseDict(v reflect.Value) {
-	switch v.Kind() {
+// Info for parsing a dict value.
+type dictField struct {
+	Value reflect.Value // Storage for the parsed value.
+	// True if field value should be parsed into Value. If false, the value
+	// should be parsed and discarded.
+	Ok                       bool
+	Set                      func() // Call this after parsing into Value.
+	IgnoreUnmarshalTypeError bool
+}
+
+// Returns specifics for parsing a dict field value.
+func getDictField(dict reflect.Value, key string) dictField {
+	// get valuev as a map value or as a struct field
+	switch dict.Kind() {
 	case reflect.Map:
-		t := v.Type()
-		if t.Key().Kind() != reflect.String {
-			panic(&UnmarshalTypeError{
-				Value: "object",
-				Type:  t,
-			})
-		}
-		if v.IsNil() {
-			v.Set(reflect.MakeMap(t))
+		value := reflect.New(dict.Type().Elem()).Elem()
+		return dictField{
+			Value: value,
+			Ok:    true,
+			Set: func() {
+				if dict.IsNil() {
+					dict.Set(reflect.MakeMap(dict.Type()))
+				}
+				// Assigns the value into the map.
+				dict.SetMapIndex(reflect.ValueOf(key).Convert(dict.Type().Key()), value)
+			},
 		}
 	case reflect.Struct:
+		sf, ok := getStructFieldForKey(dict.Type(), key)
+		if !ok {
+			return dictField{}
+		}
+		if sf.r.PkgPath != "" {
+			panic(&UnmarshalFieldError{
+				Key:   key,
+				Type:  dict.Type(),
+				Field: sf.r,
+			})
+		}
+		return dictField{
+			Value:                    dict.FieldByIndex(sf.r.Index),
+			Ok:                       true,
+			Set:                      func() {},
+			IgnoreUnmarshalTypeError: sf.tag.IgnoreUnmarshalTypeError(),
+		}
 	default:
-		panic(&UnmarshalTypeError{
-			Value: "object",
-			Type:  v.Type(),
-		})
+		return dictField{}
 	}
+}
 
-	var mapElem reflect.Value
+type structField struct {
+	r   reflect.StructField
+	tag tag
+}
 
+var (
+	structFieldsMu sync.Mutex
+	structFields   = map[reflect.Type]map[string]structField{}
+)
+
+func parseStructFields(struct_ reflect.Type, each func(string, structField)) {
+	for i, n := 0, struct_.NumField(); i < n; i++ {
+		f := struct_.Field(i)
+		if f.Anonymous {
+			continue
+		}
+		tagStr := f.Tag.Get("bencode")
+		if tagStr == "-" {
+			continue
+		}
+		tag := parseTag(tagStr)
+		key := tag.Key()
+		if key == "" {
+			key = f.Name
+		}
+		each(key, structField{f, tag})
+	}
+}
+
+func saveStructFields(struct_ reflect.Type) {
+	m := make(map[string]structField)
+	parseStructFields(struct_, func(key string, sf structField) {
+		m[key] = sf
+	})
+	structFields[struct_] = m
+}
+
+func getStructFieldForKey(struct_ reflect.Type, key string) (f structField, ok bool) {
+	structFieldsMu.Lock()
+	if _, ok := structFields[struct_]; !ok {
+		saveStructFields(struct_)
+	}
+	f, ok = structFields[struct_][key]
+	structFieldsMu.Unlock()
+	return
+}
+
+func (d *Decoder) parseDict(v reflect.Value) error {
 	// so, at this point 'd' byte was consumed, let's just read key/value
 	// pairs one by one
 	for {
-		var valuev reflect.Value
-		keyv := reflect.ValueOf(&d.key).Elem()
-		if !d.parseValue(keyv) {
-			return
+		var keyStr string
+		keyValue := reflect.ValueOf(&keyStr).Elem()
+		ok, err := d.parseValue(keyValue)
+		if err != nil {
+			return fmt.Errorf("error parsing dict key: %s", err)
+		}
+		if !ok {
+			return nil
 		}
 
-		// get valuev as a map value or as a struct field
-		switch v.Kind() {
-		case reflect.Map:
-			elem_type := v.Type().Elem()
-			if !mapElem.IsValid() {
-				mapElem = reflect.New(elem_type).Elem()
-			} else {
-				mapElem.Set(reflect.Zero(elem_type))
-			}
-			valuev = mapElem
-		case reflect.Struct:
-			var f reflect.StructField
-			var ok bool
-
-			t := v.Type()
-			for i, n := 0, t.NumField(); i < n; i++ {
-				f = t.Field(i)
-				tag := f.Tag.Get("bencode")
-				if tag == "-" {
-					continue
-				}
-				if f.Anonymous {
-					continue
-				}
-
-				tag_name, _ := parseTag(tag)
-				if tag_name == d.key {
-					ok = true
-					break
-				}
-
-				if f.Name == d.key {
-					ok = true
-					break
-				}
-
-				if strings.EqualFold(f.Name, d.key) {
-					ok = true
-					break
-				}
-			}
-
-			if ok {
-				if f.PkgPath != "" {
-					panic(&UnmarshalFieldError{
-						Key:   d.key,
-						Type:  v.Type(),
-						Field: f,
-					})
-				} else {
-					valuev = v.FieldByIndex(f.Index)
-				}
-			} else {
-				_, ok := d.parseValueInterface()
-				if !ok {
-					return
-				}
-				continue
-			}
-		}
+		df := getDictField(v, keyStr)
 
 		// now we need to actually parse it
-		if !d.parseValue(valuev) {
-			return
+		if df.Ok {
+			// log.Printf("parsing ok struct field for key %q", keyStr)
+			ok, err = d.parseValue(df.Value)
+		} else {
+			// Discard the value, there's nowhere to put it.
+			var if_ interface{}
+			if_, ok = d.parseValueInterface()
+			if if_ == nil {
+				err = fmt.Errorf("error parsing value for key %q", keyStr)
+			}
 		}
-
-		if v.Kind() == reflect.Map {
-			v.SetMapIndex(keyv, valuev)
+		if err != nil {
+			if _, ok := err.(*UnmarshalTypeError); !ok || !df.IgnoreUnmarshalTypeError {
+				return fmt.Errorf("parsing value for key %q: %s", keyStr, err)
+			}
+		}
+		if !ok {
+			return fmt.Errorf("missing value for key %q", keyStr)
+		}
+		if df.Ok {
+			df.Set()
 		}
 	}
 }
 
-func (d *Decoder) parseList(v reflect.Value) {
+func (d *Decoder) parseList(v reflect.Value) error {
 	switch v.Kind() {
-	case reflect.Array, reflect.Slice:
 	default:
-		panic(&UnmarshalTypeError{
-			Value: "array",
-			Type:  v.Type(),
-		})
+		// If the list is a singleton of the expected type, use that value. See
+		// https://github.com/anacrolix/torrent/issues/297.
+		l := reflect.New(reflect.SliceOf(v.Type()))
+		if err := d.parseList(l.Elem()); err != nil {
+			return err
+		}
+		if l.Elem().Len() != 1 {
+			return &UnmarshalTypeError{
+				Value: "list",
+				Type:  v.Type(),
+			}
+		}
+		v.Set(l.Elem().Index(0))
+		return nil
+	case reflect.Array, reflect.Slice:
+		// We can work with this. Normal case, fallthrough.
 	}
 
 	i := 0
-	for {
+	for ; ; i++ {
 		if v.Kind() == reflect.Slice && i >= v.Len() {
 			v.Set(reflect.Append(v, reflect.Zero(v.Type().Elem())))
 		}
 
-		ok := false
 		if i < v.Len() {
-			ok = d.parseValue(v.Index(i))
+			ok, err := d.parseValue(v.Index(i))
+			if err != nil {
+				return err
+			}
+			if !ok {
+				break
+			}
 		} else {
-			_, ok = d.parseValueInterface()
+			_, ok := d.parseValueInterface()
+			if !ok {
+				break
+			}
 		}
-
-		if !ok {
-			break
-		}
-
-		i++
 	}
 
 	if i < v.Len() {
@@ -329,6 +399,7 @@ func (d *Decoder) parseList(v reflect.Value) {
 	if i == 0 && v.Kind() == reflect.Slice {
 		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
 	}
+	return nil
 }
 
 func (d *Decoder) readOneValue() bool {
@@ -359,7 +430,7 @@ func (d *Decoder) readOneValue() bool {
 		if b >= '0' && b <= '9' {
 			start := d.buf.Len() - 1
 			d.readUntil(':')
-			length, err := strconv.ParseInt(d.buf.String()[start:], 10, 64)
+			length, err := strconv.ParseInt(bytesAsString(d.buf.Bytes()[start:]), 10, 64)
 			checkForIntParseError(err, d.Offset-1)
 
 			d.buf.WriteString(":")
@@ -383,34 +454,28 @@ func (d *Decoder) readOneValue() bool {
 }
 
 func (d *Decoder) parseUnmarshaler(v reflect.Value) bool {
-	m, ok := v.Interface().(Unmarshaler)
-	if !ok {
-		// T doesn't work, try *T
-		if v.Kind() != reflect.Ptr && v.CanAddr() {
-			m, ok = v.Addr().Interface().(Unmarshaler)
-			if ok {
-				v = v.Addr()
-			}
+	if !v.Type().Implements(unmarshalerType) {
+		if v.Addr().Type().Implements(unmarshalerType) {
+			v = v.Addr()
+		} else {
+			return false
 		}
 	}
-	if ok && (v.Kind() != reflect.Ptr || !v.IsNil()) {
-		if d.readOneValue() {
-			err := m.UnmarshalBencode(d.buf.Bytes())
-			d.buf.Reset()
-			if err != nil {
-				panic(&UnmarshalerError{v.Type(), err})
-			}
-			return true
-		}
-		d.buf.Reset()
+	d.buf.Reset()
+	if !d.readOneValue() {
+		return false
 	}
-
-	return false
+	m := v.Interface().(Unmarshaler)
+	err := m.UnmarshalBencode(d.buf.Bytes())
+	if err != nil {
+		panic(&UnmarshalerError{v.Type(), err})
+	}
+	return true
 }
 
 // Returns true if there was a value and it's now stored in 'v', otherwise
 // there was an end symbol ("e") and no value was stored.
-func (d *Decoder) parseValue(v reflect.Value) bool {
+func (d *Decoder) parseValue(v reflect.Value) (bool, error) {
 	// we support one level of indirection at the moment
 	if v.Kind() == reflect.Ptr {
 		// if the pointer is nil, allocate a new element of the type it
@@ -422,14 +487,14 @@ func (d *Decoder) parseValue(v reflect.Value) bool {
 	}
 
 	if d.parseUnmarshaler(v) {
-		return true
+		return true, nil
 	}
 
 	// common case: interface{}
 	if v.Kind() == reflect.Interface && v.NumMethod() == 0 {
 		iface, _ := d.parseValueInterface()
 		v.Set(reflect.ValueOf(iface))
-		return true
+		return true, nil
 	}
 
 	b, err := d.r.ReadByte()
@@ -440,26 +505,26 @@ func (d *Decoder) parseValue(v reflect.Value) bool {
 
 	switch b {
 	case 'e':
-		return false
+		return false, nil
 	case 'd':
-		d.parseDict(v)
+		return true, d.parseDict(v)
 	case 'l':
-		d.parseList(v)
+		return true, d.parseList(v)
 	case 'i':
 		d.parseInt(v)
+		return true, nil
 	default:
 		if b >= '0' && b <= '9' {
-			// string
-			// append first digit of the length to the buffer
+			// It's a string.
+			d.buf.Reset()
+			// Write the first digit of the length to the buffer.
 			d.buf.WriteByte(b)
-			d.parseString(v)
-			break
+			return true, d.parseString(v)
 		}
 
 		d.raiseUnknownValueType(b, d.Offset-1)
 	}
-
-	return true
+	panic("unreachable")
 }
 
 // An unknown bencode type character was encountered.

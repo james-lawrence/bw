@@ -24,7 +24,15 @@ func (ac *arrayContainer) fillLeastSignificant16bits(x []uint32, i int, mask uin
 	}
 }
 
-func (ac *arrayContainer) getShortIterator() shortIterable {
+func (ac *arrayContainer) getShortIterator() shortPeekable {
+	return &shortIterator{ac.content, 0}
+}
+
+func (ac *arrayContainer) getReverseIterator() shortIterable {
+	return &reverseIterator{ac.content, len(ac.content) - 1}
+}
+
+func (ac *arrayContainer) getManyIterator() manyIterable {
 	return &shortIterator{ac.content, 0}
 }
 
@@ -111,7 +119,6 @@ func (ac *arrayContainer) iremoveRange(firstOfRange, endx int) container {
 // flip the values in the range [firstOfRange,endx)
 func (ac *arrayContainer) not(firstOfRange, endx int) container {
 	if firstOfRange >= endx {
-		//p("arrayContainer.not(): exiting early with ac.clone()")
 		return ac.clone()
 	}
 	return ac.notClose(firstOfRange, endx-1) // remove everything in [firstOfRange,endx-1]
@@ -120,18 +127,15 @@ func (ac *arrayContainer) not(firstOfRange, endx int) container {
 // flip the values in the range [firstOfRange,lastOfRange]
 func (ac *arrayContainer) notClose(firstOfRange, lastOfRange int) container {
 	if firstOfRange > lastOfRange { // unlike add and remove, not uses an inclusive range [firstOfRange,lastOfRange]
-		//p("arrayContainer.notClose(): exiting early with ac.clone()")
 		return ac.clone()
 	}
 
 	// determine the span of array indices to be affected^M
 	startIndex := binarySearch(ac.content, uint16(firstOfRange))
-	//p("startIndex=%v", startIndex)
 	if startIndex < 0 {
 		startIndex = -startIndex - 1
 	}
 	lastIndex := binarySearch(ac.content, uint16(lastOfRange))
-	//p("lastIndex=%v", lastIndex)
 	if lastIndex < 0 {
 		lastIndex = -lastIndex - 2
 	}
@@ -140,9 +144,7 @@ func (ac *arrayContainer) notClose(firstOfRange, lastOfRange int) container {
 	newValuesInRange := spanToBeFlipped - currentValuesInRange
 	cardinalityChange := newValuesInRange - currentValuesInRange
 	newCardinality := len(ac.content) + cardinalityChange
-	//p("new card is %v", newCardinality)
 	if newCardinality > arrayDefaultMaxSize {
-		//p("new card over arrayDefaultMaxSize, so returning bitmap")
 		return ac.toBitmapContainer().not(firstOfRange, lastOfRange+1)
 	}
 	answer := newArrayContainer()
@@ -329,7 +331,8 @@ func (ac *arrayContainer) ior(a container) container {
 	case *arrayContainer:
 		return ac.iorArray(x)
 	case *bitmapContainer:
-		return ac.iorBitmap(x)
+		return a.(*bitmapContainer).orArray(ac)
+		//return ac.iorBitmap(x) // note: this does not make sense
 	case *runContainer16:
 		if x.isFull() {
 			return x.clone()
@@ -339,14 +342,44 @@ func (ac *arrayContainer) ior(a container) container {
 	panic("unsupported container type")
 }
 
-func (ac *arrayContainer) iorArray(ac2 *arrayContainer) container {
-	bc1 := ac.toBitmapContainer()
-	bc2 := ac2.toBitmapContainer()
-	bc1.iorBitmap(bc2)
-	*ac = *newArrayContainerFromBitmap(bc1)
+func (ac *arrayContainer) iorArray(value2 *arrayContainer) container {
+	value1 := ac
+	len1 := value1.getCardinality()
+	len2 := value2.getCardinality()
+	maxPossibleCardinality := len1 + len2
+	if maxPossibleCardinality > arrayDefaultMaxSize { // it could be a bitmap!
+		bc := newBitmapContainer()
+		for k := 0; k < len(value2.content); k++ {
+			v := value2.content[k]
+			i := uint(v) >> 6
+			mask := uint64(1) << (v % 64)
+			bc.bitmap[i] |= mask
+		}
+		for k := 0; k < len(ac.content); k++ {
+			v := ac.content[k]
+			i := uint(v) >> 6
+			mask := uint64(1) << (v % 64)
+			bc.bitmap[i] |= mask
+		}
+		bc.cardinality = int(popcntSlice(bc.bitmap))
+		if bc.cardinality <= arrayDefaultMaxSize {
+			return bc.toArrayContainer()
+		}
+		return bc
+	}
+	if maxPossibleCardinality > cap(value1.content) {
+		newcontent := make([]uint16, 0, maxPossibleCardinality)
+		copy(newcontent[len2:maxPossibleCardinality], ac.content[0:len1])
+		ac.content = newcontent
+	} else {
+		copy(ac.content[len2:maxPossibleCardinality], ac.content[0:len1])
+	}
+	nl := union2by2(value1.content[len2:maxPossibleCardinality], value2.content, ac.content)
+	ac.content = ac.content[:nl] // reslice to match actual used capacity
 	return ac
 }
 
+// Note: such code does not make practical sense, except for lazy evaluations
 func (ac *arrayContainer) iorBitmap(bc2 *bitmapContainer) container {
 	bc1 := ac.toBitmapContainer()
 	bc1.iorBitmap(bc2)
@@ -468,7 +501,6 @@ func (ac *arrayContainer) lazyorArray(value2 *arrayContainer) container {
 }
 
 func (ac *arrayContainer) and(a container) container {
-	//p("ac.and() called")
 	switch x := a.(type) {
 	case *arrayContainer:
 		return ac.andArray(x)
@@ -515,19 +547,11 @@ func (ac *arrayContainer) iand(a container) container {
 		return ac.iandBitmap(x)
 	case *runContainer16:
 		if x.isFull() {
-			return ac.clone()
+			return ac
 		}
-		return ac.iandRun16(x)
+		return x.andArray(ac)
 	}
 	panic("unsupported container type")
-}
-
-func (ac *arrayContainer) iandRun16(rc *runContainer16) container {
-	bc1 := ac.toBitmapContainer()
-	bc2 := newBitmapContainerFromRun(rc)
-	bc2.iandBitmap(bc1)
-	*ac = *newArrayContainerFromBitmap(bc2)
-	return ac
 }
 
 func (ac *arrayContainer) iandBitmap(bc *bitmapContainer) container {
@@ -695,7 +719,6 @@ func (ac *arrayContainer) inot(firstOfRange, endx int) container {
 
 // flip the values in the range [firstOfRange,lastOfRange]
 func (ac *arrayContainer) inotClose(firstOfRange, lastOfRange int) container {
-	//p("ac.inotClose() starting")
 	if firstOfRange > lastOfRange { // unlike add and remove, not uses an inclusive range [firstOfRange,lastOfRange]
 		return ac
 	}
@@ -718,7 +741,6 @@ func (ac *arrayContainer) inotClose(firstOfRange, lastOfRange int) container {
 	if cardinalityChange > 0 {
 		if newCardinality > len(ac.content) {
 			if newCardinality > arrayDefaultMaxSize {
-				//p("ac.inotClose() converting to bitmap and doing inot there")
 				bcRet := ac.toBitmapContainer()
 				bcRet.inot(firstOfRange, lastOfRange+1)
 				*ac = *bcRet.toArrayContainer()
@@ -739,7 +761,6 @@ func (ac *arrayContainer) inotClose(firstOfRange, lastOfRange int) container {
 		}
 	}
 	ac.content = ac.content[:newCardinality]
-	//p("bottom of ac.inotClose(): returning ac")
 	return ac
 }
 
@@ -776,19 +797,12 @@ func (ac *arrayContainer) negateRange(buffer []uint16, startIndex, lastIndex, st
 	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 func (ac *arrayContainer) isFull() bool {
 	return false
 }
 
 func (ac *arrayContainer) andArray(value2 *arrayContainer) container {
-	desiredcapacity := min(ac.getCardinality(), value2.getCardinality())
+	desiredcapacity := minOfInt(ac.getCardinality(), value2.getCardinality())
 	answer := newArrayContainerCapacity(desiredcapacity)
 	length := intersection2by2(
 		ac.content,
@@ -926,7 +940,7 @@ func (ac *arrayContainer) toEfficientContainer() container {
 	card := ac.getCardinality()
 	sizeAsArrayContainer := arrayContainerSizeInBytes(card)
 
-	if sizeAsRunContainer <= min(sizeAsBitmapContainer, sizeAsArrayContainer) {
+	if sizeAsRunContainer <= minOfInt(sizeAsBitmapContainer, sizeAsArrayContainer) {
 		return newRunContainer16FromArray(ac)
 	}
 	if card <= arrayDefaultMaxSize {
@@ -937,4 +951,18 @@ func (ac *arrayContainer) toEfficientContainer() container {
 
 func (ac *arrayContainer) containerType() contype {
 	return arrayContype
+}
+
+func (ac *arrayContainer) addOffset(x uint16) []container {
+	low := &arrayContainer{}
+	high := &arrayContainer{}
+	for _, val := range ac.content {
+		y := uint32(val) + uint32(x)
+		if highbits(y) > 0 {
+			high.content = append(high.content, lowbits(y))
+		} else {
+			low.content = append(low.content, lowbits(y))
+		}
+	}
+	return []container{low, high}
 }

@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anacrolix/dht"
-	"github.com/anacrolix/dht/krpc"
+	"github.com/anacrolix/dht/v2"
+	"github.com/anacrolix/dht/v2/krpc"
 	"github.com/anacrolix/missinggo"
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/bencode"
@@ -25,8 +25,8 @@ type TorrentUtil struct{}
 // ClearTorrents periodically flushes torrents from storage based on whether or not
 // the deployment directory is still around.
 func (TorrentUtil) ClearTorrents(c TorrentConfig) {
-	debugx.Println("torrent data directory", c.Config.DataDir)
-	deploysDir := filepath.Join(filepath.Dir(c.Config.DataDir), bw.DirDeploys)
+	debugx.Println("torrent data directory", c.ClientConfig.DataDir)
+	deploysDir := filepath.Join(filepath.Dir(c.ClientConfig.DataDir), bw.DirDeploys)
 	dropped := 0
 	for _, tt := range c.client.Torrents() {
 		if info := tt.Info(); info != nil {
@@ -34,7 +34,7 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 				deployDir := filepath.Join(deploysDir, tf.Path())
 				if _, cause := os.Stat(deployDir); os.IsNotExist(cause) {
 					tt.Drop()
-					logx.MaybeLog(os.Remove(filepath.Join(c.Config.DataDir, tf.Path())))
+					logx.MaybeLog(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
 					dropped = dropped + 1
 				}
 			}
@@ -50,7 +50,7 @@ func (t TorrentUtil) PrintTorrentInfo(c TorrentConfig) {
 }
 
 func (TorrentUtil) printTorrentInfo(c *torrent.Client) {
-	c.DHT().WriteStatus(os.Stderr)
+	c.WriteStatus(os.Stderr)
 	log.Println(len(c.Torrents()), "torrents running")
 }
 
@@ -130,7 +130,9 @@ func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (mi metainfo.Me
 		return mi, errors.WithStack(err)
 	}
 
-	c.DHT().Announce(mi.HashInfoBytes(), 0, true)
+	for _, s := range c.DhtServers() {
+		s.Announce(mi.HashInfoBytes(), 0, true)
+	}
 
 	return mi, nil
 }

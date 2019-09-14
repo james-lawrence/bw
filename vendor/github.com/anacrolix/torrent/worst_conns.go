@@ -1,15 +1,29 @@
 package torrent
 
-import "container/heap"
+import (
+	"container/heap"
+	"fmt"
+	"unsafe"
+)
 
 func worseConn(l, r *connection) bool {
-	if l.useful() != r.useful() {
-		return r.useful()
+	var ml multiLess
+	ml.NextBool(!l.useful(), !r.useful())
+	ml.StrictNext(
+		l.lastHelpful().Equal(r.lastHelpful()),
+		l.lastHelpful().Before(r.lastHelpful()))
+	ml.StrictNext(
+		l.completedHandshake.Equal(r.completedHandshake),
+		l.completedHandshake.Before(r.completedHandshake))
+	ml.Next(func() (bool, bool) {
+		return l.peerPriority() == r.peerPriority(), l.peerPriority() < r.peerPriority()
+	})
+	ml.StrictNext(l == r, uintptr(unsafe.Pointer(l)) < uintptr(unsafe.Pointer(r)))
+	less, ok := ml.FinalOk()
+	if !ok {
+		panic(fmt.Sprintf("cannot differentiate %#v and %#v", l, r))
 	}
-	if !l.lastHelpful().Equal(r.lastHelpful()) {
-		return l.lastHelpful().Before(r.lastHelpful())
-	}
-	return l.completedHandshake.Before(r.completedHandshake)
+	return less
 }
 
 type worseConnSlice struct {
