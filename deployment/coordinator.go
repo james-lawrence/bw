@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/storage"
@@ -66,7 +67,7 @@ type CoordinatorOption func(*Coordinator)
 func CoordinatorOptionRoot(root string) CoordinatorOption {
 	return func(d *Coordinator) {
 		d.root = root
-		d.deploysRoot = filepath.Join(root, bw.DirDeploys)
+		d.deploysRoot = bw.DeployDir(root)
 	}
 }
 
@@ -302,13 +303,32 @@ func (t *Coordinator) correctLatestDeploy(deploys ...agent.Deploy) error {
 	return writeDeployMetadata(root, d)
 }
 
-func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) error {
+func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err error) {
+	var (
+		dst *os.File
+	)
+
 	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
-	if err := archive.Unpack(dctx.ArchiveRoot, dlreg.New(dctx.Archive.Location).Download(dctx.deadline, dctx.Archive)); err != nil {
+	if dst, err = os.OpenFile(filepath.Join(dctx.Root, bw.ArchiveFile), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+		return errors.Wrap(err, "unable to open archive file")
+	}
+	defer func() {
+		logx.MaybeLog(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
+	}()
+
+	if _, err = io.Copy(dst, dlreg.New(dctx.Archive.Location).Download(dctx.deadline, dctx.Archive)); err != nil {
 		return errors.Wrapf(err, "retrieve archive")
+	}
+
+	if err = iox.Rewind(dst); err != nil {
+		return errors.Wrap(err, "unable to rewind archive")
+	}
+
+	if err = archive.Unpack(dctx.ArchiveRoot, dst); err != nil {
+		return errors.Wrapf(err, "unpack archive")
 	}
 
 	dctx.Log.Println("completed download", dctx.ArchiveRoot)

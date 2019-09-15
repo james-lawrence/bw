@@ -7,13 +7,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
@@ -22,13 +22,12 @@ import (
 
 // NewFilesystem consumes a configuration and generates a bootstrap socket
 // for the agent.
-func NewFilesystem(a agent.Config, dl downloader, c cluster, d dialer) Filesystem {
+func NewFilesystem(a agent.Config, c cluster, d dialer) Filesystem {
 	return Filesystem{
 		a:        a,
 		c:        c,
-		dl:       dl,
 		d:        d,
-		current:  filepath.Join(a.Bootstrap.ArchiveDirectory, "current.bin"),
+		current:  filepath.Join(a.Bootstrap.ArchiveDirectory, "current.tar.gz"),
 		metadata: filepath.Join(a.Bootstrap.ArchiveDirectory, "current.meta"),
 		uploaded: filepath.Join(a.Bootstrap.ArchiveDirectory, "current.uploaded"),
 	}
@@ -41,7 +40,6 @@ type Filesystem struct {
 	a        agent.Config
 	c        cluster
 	d        dialer
-	dl       downloader
 	current  string
 	metadata string
 	uploaded string
@@ -128,6 +126,7 @@ func (t Filesystem) init() error {
 func (t Filesystem) clone(a agent.DeployCommand) (err error) {
 	var (
 		d        *os.File
+		archive  *os.File
 		metadata = t.metadata + ".tmp"
 	)
 
@@ -141,14 +140,16 @@ func (t Filesystem) clone(a agent.DeployCommand) (err error) {
 		return errors.WithStack(err)
 	}
 
+	if archive, err = os.Open(filepath.Join(bw.DeployDir(t.a.Root), bw.RandomID(a.Archive.DeploymentID).String(), bw.ArchiveFile)); err != nil {
+		return errors.WithStack(err)
+	}
+
 	if d, err = ioutil.TempFile(t.a.Bootstrap.ArchiveDirectory, "download-*.bin"); err != nil {
 		return errors.WithStack(err)
 	}
 	defer d.Close()
 
-	ctx, done := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer done()
-	if _, err = io.Copy(d, t.dl.Download(ctx, *a.Archive)); err != nil {
+	if _, err = io.Copy(d, archive); err != nil {
 		return errors.WithStack(err)
 	}
 

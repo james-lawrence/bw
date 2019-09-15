@@ -32,3 +32,9 @@ func (t errReader) Read([]byte) (int, error) {
 func ErrReader(err error) io.Reader {
 	return errReader{err}
 }
+
+// Rewind an io.Seeker
+func Rewind(o io.Seeker) error {
+	_, err := o.Seek(0, io.SeekStart)
+	return err
+}

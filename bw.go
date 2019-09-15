@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"io"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -30,6 +31,8 @@ const (
 	DefaultDeployTimeout = time.Hour
 	// DeployLog filename for the logs of a given deployment.
 	DeployLog = "deploy.log"
+	// ArchiveFile name of the archive file stored on disk
+	ArchiveFile = "archive.tar.gz"
 	// DefaultRPCPort default port for RPC service.
 	DefaultRPCPort = 2000
 	// DefaultSWIMPort default port for peering service.
@@ -41,6 +44,11 @@ const (
 	// DefaultACMEPort port for ACME TLSALPN01 service.
 	DefaultACMEPort = 2004
 )
+
+// DeployDir return the deploy directory under the given root.
+func DeployDir(root string) string {
+	return filepath.Join(root, DirDeploys)
+}
 
 // RandomID a random identifier.
 type RandomID []byte
