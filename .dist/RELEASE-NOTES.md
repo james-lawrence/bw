@@ -1,3 +1,9 @@
+commit 48229414ffe39ffdb28f5752a740f721e7d5c5e2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 19:50:16 2019 -0400
+
+    release 0.1.1568504947-293e88a1
+
 commit 293e88a11308ad5f32a9dfc33c8a955fa4504622
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 14 19:49:07 2019 -0400
