@@ -1,3 +1,15 @@
+commit 421603f7c3ad52bf0d5baa10e4cdce208a26d084
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 15 11:44:39 2019 -0400
+
+    fixes for filesystem bootstrap
+
+commit 0f32f465c4a295cf0ca939904086f6da18e47819
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 14 20:28:48 2019 -0400
+
+    release 0.1.1568505946-104682d8
+
 commit 104682d8bf4f0f9b3d0d269b598b089459a9bba4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 14 20:05:46 2019 -0400
