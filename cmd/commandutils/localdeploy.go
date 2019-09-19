@@ -29,10 +29,16 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		sctx    shell.Context
 		dctx    deployment.DeployContext
 		archive agent.Archive
+		environ []string
 	)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
+	}
+
+	if environ, err = shell.EnvironFromFile(filepath.Join(config.DeployDataDir, bw.EnvFile)); err != nil {
+		dctx.Done(err)
+		return
 	}
 
 	local := NewClientPeer()
@@ -40,6 +46,12 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 	if sctx, err = shell.DefaultContext(); err != nil {
 		return err
 	}
+
+	sctx = shell.NewContext(
+		sctx,
+		shell.OptionEnviron(append(environ, sctx.Environ...)),
+		shell.OptionDir(config.DeployDataDir),
+	)
 
 	archive = agent.Archive{}
 
