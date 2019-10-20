@@ -16,7 +16,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
 	github.com/anacrolix/missinggo v1.2.1
-	github.com/anacrolix/torrent v1.8.2
+	github.com/anacrolix/torrent v1.8.3-0.20191017064635-289293f3cc0c
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/aws/aws-sdk-go v1.15.24
@@ -96,7 +96,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-	golang.org/x/sys v0.0.0-20191018095205-727590c5006e // indirect
+	golang.org/x/sys v0.0.0-20191020152052-9984515f0562 // indirect
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
