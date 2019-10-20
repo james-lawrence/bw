@@ -107,8 +107,8 @@ func (TorrentUtil) debugDHT() dht.ServerConfig {
 			log.Println("query", source.String(), spew.Sdump(query))
 			return true
 		},
-		OnAnnouncePeer: func(infoHash metainfo.Hash, peer dht.Peer) {
-			log.Println("announce peer", peer.String(), infoHash.String())
+		OnAnnouncePeer: func(infoHash metainfo.Hash, ip net.IP, port int, portOK bool) {
+			log.Printf("announce peer %s:%d %t %s\n", ip.String(), port, portOK, infoHash.String())
 		},
 	}
 }

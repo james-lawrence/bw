@@ -51,7 +51,7 @@ func FromConfig(dir, mode, configname string) (err error) {
 	case ModeACME2:
 		v := ACME{
 			CertificateDir: dir,
-			Config: defaultConfig(),
+			Config:         defaultConfig(),
 		}
 
 		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
@@ -81,8 +81,8 @@ func FromConfig(dir, mode, configname string) (err error) {
 
 		return RefreshAutomatic(dir, v)
 	default:
-		log.Println("using nop refresh mode, certificates will need to be refreshed manually")
 		certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
+		log.Println("using nop refresh mode, certificates will need to be refreshed manually\ncertpath", certpath)
 
 		// certificate must exist when using nop refresher.
 		if _, err := os.Stat(certpath); os.IsNotExist(err) {

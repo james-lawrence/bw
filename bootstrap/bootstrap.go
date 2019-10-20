@@ -126,7 +126,7 @@ func Bootstrap(ctx context.Context, local agent.Peer, c agent.Config, coord depl
 	defer log.Println("--------------- bootstrap attempt completed -------------")
 
 	if current, err = Latest(ctx, SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
-		return errors.Wrap(err, "latest local failed")
+		return errors.Wrapf(err, "latest local failed: %s", SocketLocal(c))
 	}
 
 	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
