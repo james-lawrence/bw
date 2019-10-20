@@ -2,7 +2,6 @@ package torrent
 
 import (
 	"context"
-	"log"
 	"net"
 	"net/url"
 	"strconv"
@@ -82,42 +81,20 @@ func (me tcpSocket) dial(ctx context.Context, addr string) (net.Conn, error) {
 	return me.d(ctx, addr)
 }
 
-func listenAll(networks []network, host string, port int, proxyURL string, f firewallCallback) ([]socket, error) {
-	var (
-		nahs []networkAndHost
-		ips  = lookupIP(host)
-	)
-
-	if len(networks) == 0 || len(ips) == 0 {
+func listenAll(networks []network, getHost func(string) string, port int, proxyURL string, f firewallCallback) ([]socket, error) {
+	if len(networks) == 0 {
 		return nil, nil
 	}
-
-	for _, ip := range ips {
-		for _, n := range networks {
-			nahs = append(nahs, networkAndHost{n, ip.String()})
-		}
+	var nahs []networkAndHost
+	for _, n := range networks {
+		nahs = append(nahs, networkAndHost{n, getHost(n.String())})
 	}
-
 	for {
 		ss, retry, err := listenAllRetry(nahs, port, proxyURL, f)
 		if !retry {
 			return ss, err
 		}
 	}
-}
-
-func lookupIP(host string) (ips []net.IP) {
-	var err error
-	if host == "" {
-		host = net.IPv6unspecified.String()
-	}
-
-	ips, err = net.LookupIP(host)
-	if err != nil {
-		log.Printf("host lookup failed \"%s\": %s\n", host, err)
-	}
-
-	return ips
 }
 
 type networkAndHost struct {

@@ -39,7 +39,7 @@ github.com/anacrolix/mmsg
 github.com/anacrolix/mmsg/socket
 # github.com/anacrolix/sync v0.2.0
 github.com/anacrolix/sync
-# github.com/anacrolix/torrent v1.8.2 => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
+# github.com/anacrolix/torrent v1.8.2
 github.com/anacrolix/torrent
 github.com/anacrolix/torrent/bencode
 github.com/anacrolix/torrent/iplist

@@ -576,15 +576,7 @@ func (t *Torrent) writeStatus(w io.Writer) {
 		tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 		fmt.Fprintf(tw, "    URL\tNext announce\tLast announce\n")
 		for _, ta := range slices.Sort(slices.FromMapElems(t.trackerAnnouncers), func(l, r *trackerScraper) bool {
-			lu := l.u
-			ru := r.u
-			var luns, runs url.URL = lu, ru
-			luns.Scheme = ""
-			runs.Scheme = ""
-			var ml missinggo.MultiLess
-			ml.StrictNext(luns.String() == runs.String(), luns.String() < runs.String())
-			ml.StrictNext(lu.String() == ru.String(), lu.String() < ru.String())
-			return ml.Less()
+			return l.u.String() < r.u.String()
 		}).([]*trackerScraper) {
 			fmt.Fprintf(tw, "    %s\n", ta.statusLine())
 		}
@@ -1341,7 +1333,7 @@ func (t *Torrent) consumeDhtAnnouncePeers(pvs <-chan dht.PeersValues) {
 			t.addPeer(Peer{
 				IP:     cp.IP[:],
 				Port:   cp.Port,
-				Source: peerSourceDhtGetPeers,
+				Source: peerSourceDHTGetPeers,
 			})
 		}
 		cl.unlock()
@@ -1710,7 +1702,7 @@ func (t *Torrent) initiateConn(peer Peer) {
 	if t.cl.badPeerIPPort(peer.IP, peer.Port) {
 		return
 	}
-	addr := IpPort{IP: peer.IP, Port: uint16(peer.Port)}
+	addr := IpPort{peer.IP, uint16(peer.Port)}
 	if t.addrActive(addr.String()) {
 		return
 	}

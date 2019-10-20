@@ -1,6 +1,6 @@
 module github.com/james-lawrence/bw
 
-replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
+// replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
 
 require (
 	cloud.google.com/go v0.26.0
@@ -15,9 +15,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
-	github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
 	github.com/anacrolix/missinggo v1.2.1
-	github.com/anacrolix/mmsg v1.0.0 // indirect
 	github.com/anacrolix/torrent v1.8.2
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
@@ -94,8 +92,6 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.0.6 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
-	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/subosito/gotenv v1.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
 	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
