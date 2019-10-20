@@ -1,3 +1,33 @@
+commit 9ba2703130a0c3a067d437cd8599378eaa7d8750
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 20 10:29:57 2019 -0400
+
+    debugging
+
+commit fae8f1f85369d44c55fc7459a434361827170f64
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 20 09:29:51 2019 -0400
+
+    fix api changes
+
+commit 8c46767d53b877d1cd58b4de30dbefdfb73e46b3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 20 08:48:48 2019 -0400
+
+    update torrent library to fix deadlock
+
+commit 6ec9c8b07f67a8dd8fbb42e6464cde0b2676cc27
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 19 16:41:13 2019 -0400
+
+    propagate config environment to shell directive for local deploys
+
+commit 6f01e242570be2a2b2fe427311cf44a94826a2e0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 15 11:45:01 2019 -0400
+
+    release 0.1.1568562279-421603f7
+
 commit 421603f7c3ad52bf0d5baa10e4cdce208a26d084
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Sep 15 11:44:39 2019 -0400
