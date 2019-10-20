@@ -16,9 +16,27 @@ import (
 )
 
 type torrentD struct {
+	c      cluster
 	client *torrent.Client
 	dir    string
 	util   TorrentUtil
+}
+
+func peerToNode(p agent.Peer) krpc.NodeInfo {
+	udp := &net.UDPAddr{IP: net.ParseIP(p.Ip), Port: int(p.TorrentPort)}
+	na := krpc.NodeAddr{}
+	na.FromUDPAddr(udp)
+
+	return krpc.NodeInfo{
+		Addr: na,
+	}
+}
+
+func peersToNode(peers ...agent.Peer) (r []krpc.NodeInfo) {
+	for _, p := range peers {
+		r = append(r, peerToNode(p))
+	}
+	return r
 }
 
 func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCloser {
@@ -28,18 +46,18 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 		tt         *torrent.Torrent
 		m          metainfo.Magnet
 	)
-	udp := &net.UDPAddr{IP: net.ParseIP(archive.Peer.Ip), Port: int(archive.Peer.TorrentPort)}
-	na := krpc.NodeAddr{}
-	na.FromUDPAddr(udp)
 
-	ni := krpc.NodeInfo{
-		Addr: na,
-	}
-
-	log.Println("adding peer to DHT", ni.Addr.String())
 	for _, s := range t.client.DhtServers() {
-		if err = s.AddNode(ni); err != nil {
+		n := peerToNode(*archive.Peer)
+		if err = s.AddNode(n); err != nil {
 			return newErrReader(errors.WithStack(err))
+		}
+
+		for _, n := range peersToNode(t.c.Quorum()...) {
+			log.Println("adding peer to DHT", n.Addr.String())
+			if err = s.AddNode(n); err != nil {
+				return newErrReader(errors.WithStack(err))
+			}
 		}
 		s.Bootstrap()
 	}
@@ -48,10 +66,8 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 		return newErrReader(errors.WithStack(err))
 	}
 
-	for _, s := range t.client.DhtServers() {
-		_, err := s.Announce(m.InfoHash, 0, true)
-		logx.MaybeLog(errors.Wrap(err, "announce failed"))
-	}
+	wait, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
 
 	if tt, dlrequired = t.client.AddTorrentInfoHash(m.InfoHash); dlrequired {
 		for _, s := range t.client.DhtServers() {
@@ -60,11 +76,8 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 		}
 
 		select {
-		case <-time.After(30 * time.Second):
-			TorrentUtil{}.printTorrentInfo(t.client)
-			return newErrReader(errors.New("timed out waiting for torrent info"))
 		case <-tt.GotInfo():
-		case <-ctx.Done():
+		case <-wait.Done():
 			return newErrReader(errors.New("timed out waiting for torrent info"))
 		}
 

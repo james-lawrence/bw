@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/anacrolix/dht/v2"
-	"github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/pkg/errors"
 )
@@ -49,17 +48,19 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 }
 
 // NewTorrent ...
-func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
+func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err error) {
 	var (
 		util TorrentUtil
 	)
 
 	c = TorrentConfig{
+		c:            cls,
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
+	c.ClientConfig.DisableIPv6 = true
+	// c.ClientConfig.Debug = true
 	c.ClientConfig.Seed = true
 	c.ClientConfig.NoDefaultPortForwarding = true
-	c.ClientConfig.Logger = log.Discard
 
 	for _, opt := range options {
 		opt(&c)
@@ -80,6 +81,7 @@ func NewTorrent(options ...TorrentOption) (c TorrentConfig, err error) {
 
 // TorrentConfig ...
 type TorrentConfig struct {
+	c cluster
 	*torrent.ClientConfig
 	client *torrent.Client
 }
@@ -87,6 +89,7 @@ type TorrentConfig struct {
 // Downloader ...
 func (t TorrentConfig) Downloader() DownloadProtocol {
 	return torrentP{
+		c:      t.c,
 		config: t.ClientConfig,
 		client: t.client,
 	}
@@ -95,12 +98,14 @@ func (t TorrentConfig) Downloader() DownloadProtocol {
 // Uploader ...
 func (t TorrentConfig) Uploader() UploadProtocol {
 	return torrentP{
+		c:      t.c,
 		config: t.ClientConfig,
 		client: t.client,
 	}
 }
 
 type torrentP struct {
+	c      cluster
 	config *torrent.ClientConfig
 	client *torrent.Client
 	util   TorrentUtil
@@ -112,6 +117,7 @@ func (t torrentP) Protocol() string {
 
 func (t torrentP) New() Downloader {
 	return torrentD{
+		c:      t.c,
 		dir:    t.config.DataDir,
 		client: t.client,
 	}

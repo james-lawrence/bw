@@ -154,7 +154,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		storage.TorrentOptionDataDir(filepath.Join(t.config.Root, bw.DirTorrents)),
 	}
 
-	if tc, err = storage.NewTorrent(opts...); err != nil {
+	if tc, err = storage.NewTorrent(cx, opts...); err != nil {
 		return err
 	}
 
