@@ -1,3 +1,15 @@
+commit 48ec32acae0dd5db1661b4856ac052247686dbda
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 20 19:46:02 2019 -0400
+
+    fix vendor directory
+
+commit 507b2ec81e8181bcc37e3df4305a0be95c58d038
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 20 12:57:27 2019 -0400
+
+    release 0.1.1571590523-059830fb
+
 commit 059830fb308acf565a1f173b7e809297e0b04d0d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Oct 20 12:55:23 2019 -0400
