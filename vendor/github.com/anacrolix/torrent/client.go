@@ -965,6 +965,7 @@ func (cl *Client) gotMetadataExtensionMsg(payload []byte, t *Torrent, c *connect
 			return nil
 		}
 		start := (1 << 14) * piece
+		c.logger.Printf("sending metadata piece %d", piece)
 		c.Post(t.newMetadataExtensionMessage(c, pp.DataMetadataExtensionMsgType, piece, t.metadataBytes[start:start+t.metadataPieceSize(piece)]))
 		return nil
 	case pp.RejectMetadataExtensionMsgType:
@@ -1022,7 +1023,9 @@ func (cl *Client) newTorrent(ih metainfo.Hash, specStorage storage.ClientImpl) (
 		},
 		duplicateRequestTimeout: 1 * time.Second,
 	}
-	t.logger = cl.logger.WithValues(t)
+	t.logger = cl.logger.WithValues(t).WithText(func(m log.Msg) string {
+		return fmt.Sprintf("%v: %s", t, m.Text())
+	})
 	t.setChunkSize(defaultChunkSize)
 	return
 }
@@ -1211,16 +1214,22 @@ func (cl *Client) newConnection(nc net.Conn, outgoing bool, remoteAddr IpPort, n
 		remoteAddr:      remoteAddr,
 		network:         network,
 	}
+	c.logger = cl.logger.WithValues(c,
+		log.Debug, // I want messages to default to debug, and can set it here as it's only used by new code
+	).WithText(func(m log.Msg) string {
+		return fmt.Sprintf("%v: %s", c, m.Text())
+	})
 	c.writerCond.L = cl.locker()
 	c.setRW(connStatsReadWriter{nc, c})
 	c.r = &rateLimitedReader{
 		l: cl.config.DownloadRateLimiter,
 		r: c.r,
 	}
+	c.logger.Printf("initialized with remote %v over network %v (outgoing=%t)", remoteAddr, network, outgoing)
 	return
 }
 
-func (cl *Client) onDHTAnnouncePeer(ih metainfo.Hash, p dht.Peer) {
+func (cl *Client) onDHTAnnouncePeer(ih metainfo.Hash, ip net.IP, port int, portOk bool) {
 	cl.lock()
 	defer cl.unlock()
 	t := cl.torrent(ih)
@@ -1228,9 +1237,9 @@ func (cl *Client) onDHTAnnouncePeer(ih metainfo.Hash, p dht.Peer) {
 		return
 	}
 	t.addPeers([]Peer{{
-		IP:     p.IP,
-		Port:   p.Port,
-		Source: peerSourceDHTAnnouncePeer,
+		IP:     ip,
+		Port:   port,
+		Source: peerSourceDhtAnnouncePeer,
 	}})
 }
 
@@ -1352,6 +1361,10 @@ func (cl *Client) unlock() {
 
 func (cl *Client) locker() sync.Locker {
 	return clientLocker{cl}
+}
+
+func (cl *Client) String() string {
+	return fmt.Sprintf("<%[1]T %[1]p>", cl)
 }
 
 type clientLocker struct {

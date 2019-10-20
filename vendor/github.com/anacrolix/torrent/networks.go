@@ -48,6 +48,7 @@ func parseIP(addr net.Addr) net.IP {
 		return nil
 	}
 }
+
 func peerNetworkEnabled(a net.Addr, cfg *ClientConfig) bool {
 	n := parseNetworkString(a.Network())
 	ip := parseIP(a)

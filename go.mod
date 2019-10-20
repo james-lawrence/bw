@@ -1,6 +1,6 @@
 module github.com/james-lawrence/bw
 
-replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20190914141846-3083e0b5b366
+replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
 
 require (
 	cloud.google.com/go v0.26.0
@@ -8,16 +8,17 @@ require (
 	github.com/Microsoft/go-winio v0.4.3 // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/RoaringBitmap/roaring v0.4.20 // indirect
+	github.com/RoaringBitmap/roaring v0.4.21 // indirect
 	github.com/SAP/go-hdb v0.14.1 // indirect
 	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/anacrolix/dht/v2 v2.0.5-0.20190912223956-bfe5b201d6f7
-	github.com/anacrolix/log v0.3.0
+	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
+	github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
 	github.com/anacrolix/missinggo v1.2.1
-	github.com/anacrolix/torrent v1.7.1
+	github.com/anacrolix/mmsg v1.0.0 // indirect
+	github.com/anacrolix/torrent v1.8.2
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/aws/aws-sdk-go v1.15.24
@@ -93,14 +94,16 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.0.6 // indirect
+	github.com/smartystreets/goconvey v0.0.0-20190306220146-200a235640ff // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
 	github.com/subosito/gotenv v1.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4 // indirect
-	golang.org/x/net v0.0.0-20190912160710-24e19bdeb0f2 // indirect
+	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
-	golang.org/x/sys v0.0.0-20190913121621-c3b328c6e5a7 // indirect
+	golang.org/x/sys v0.0.0-20191018095205-727590c5006e // indirect
 	golang.org/x/text v0.3.2 // indirect
-	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
+	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
+	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/api v0.0.0-20180829000535-087779f1d2c9
 	google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51 // indirect
 	google.golang.org/grpc v1.23.1

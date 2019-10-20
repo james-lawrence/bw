@@ -30,6 +30,7 @@ type Exec struct {
 	Command string
 	Lenient bool
 	Timeout time.Duration
+	Environ string
 }
 
 func (t Exec) execute(ctx context.Context, sctx Context) error {

@@ -116,6 +116,7 @@ func lookupIP(host string) (ips []net.IP) {
 	if err != nil {
 		log.Printf("host lookup failed \"%s\": %s\n", host, err)
 	}
+
 	return ips
 }
 

@@ -3,10 +3,10 @@ module github.com/anacrolix/torrent
 require (
 	bazil.org/fuse v0.0.0-20180421153158-65cc252bf669
 	github.com/alexflint/go-arg v1.1.0
-	github.com/anacrolix/dht/v2 v2.0.5-0.20190912223956-bfe5b201d6f7
+	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
 	github.com/anacrolix/envpprof v1.0.1
 	github.com/anacrolix/go-libutp v1.0.2
-	github.com/anacrolix/log v0.3.0
+	github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
 	github.com/anacrolix/missinggo v1.2.1
 	github.com/anacrolix/missinggo/perf v1.0.0
 	github.com/anacrolix/sync v0.2.0
@@ -25,9 +25,12 @@ require (
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/pkg/errors v0.8.1
 	github.com/stretchr/testify v1.4.0
+	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7
 	golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 	golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7
 )
 
 go 1.13
+
+replace github.com/boltdb/bolt => github.com/etcd-io/bbolt v1.3.3
