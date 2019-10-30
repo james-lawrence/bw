@@ -42,6 +42,10 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCl
 		tt  *torrent.Torrent
 	)
 
+	for _, s := range t.client.DhtServers() {
+		s.Bootstrap()
+	}
+
 	wait, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
