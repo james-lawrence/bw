@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"encoding/hex"
 	"hash"
 	"io"
 	"os"
@@ -9,6 +8,7 @@ import (
 
 	"github.com/anacrolix/torrent"
 	"github.com/anacrolix/torrent/metainfo"
+	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
 
@@ -30,7 +30,8 @@ func (t torrentU) Info() (hash.Hash, string, error) {
 		util TorrentUtil
 	)
 
-	uid := hex.EncodeToString(t.sha.Sum(nil))
+	// IMPORTANT: this id must match the deployment ID.
+	uid := bw.RandomID(t.sha.Sum(nil)[:]).String()
 	path := filepath.Join(filepath.Dir(t.dst.Name()), uid)
 	if err = t.dst.Sync(); err != nil {
 		return nil, "", errors.Wrap(err, "failed to sync to disk")
