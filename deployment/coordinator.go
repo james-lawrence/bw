@@ -10,6 +10,7 @@ import (
 	"sort"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -192,6 +193,10 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		dctx DeployContext
 	)
 
+	// set the timestamp of the archive to as this marks the time the archive was actually deployed.
+	// and ensures it shows up properly in the deployments history
+	archive.Dts = time.Now().UTC().Unix()
+
 	// cleanup workspace directory prior to deployment. this leaves the last deployment
 	// is available until the next run for debugging.
 	// IMPORTANT: torrent storage relies on this behaviour in order to prevent
@@ -212,7 +217,11 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		return t.ds.current, err
 	}
 
-	go t.background(dctx)
+	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+	go func() {
+		defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
+		t.background(dctx)
+	}()
 
 	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
 		err = errors.Errorf("already deploying - unknown deployment - %s", t.ds.current.Stage)
@@ -308,10 +317,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err err
 		dst *os.File
 	)
 
-	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
-	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
-
-	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
+	dctx.Log.Println("download initiated", dctx.Archive.Location)
 	if dst, err = os.OpenFile(dctx.ArchiveFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
 		return errors.Wrap(err, "unable to open archive file")
 	}
@@ -332,7 +338,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err err
 		return errors.Wrapf(err, "unpack archive")
 	}
 
-	dctx.Log.Println("completed download", dctx.ArchiveRoot)
+	dctx.Log.Println("download completed", dctx.Archive.Location)
 	return nil
 }
 

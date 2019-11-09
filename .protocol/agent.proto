@@ -6,7 +6,8 @@ message Archive {
   Peer peer = 2;
   string location = 3;
   bytes checksum = 4;
-  int64 ts = 5; // unix timestamp.
+  int64 ts = 5; // unix timestamp marking the time the archive was created.
+  int64 dts = 7; // marks the time the archive was deployed.
   string initiator = 6;
 }
 

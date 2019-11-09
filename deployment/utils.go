@@ -25,7 +25,7 @@ func less(a, b agent.Deploy) bool {
 		return false
 	}
 
-	return a.Archive.Ts > b.Archive.Ts
+	return a.Archive.Dts > b.Archive.Dts
 }
 
 func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
