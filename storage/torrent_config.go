@@ -60,7 +60,7 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 	c.ClientConfig.DisableIPv6 = true
 	// c.ClientConfig.Debug = true
 	c.ClientConfig.Seed = true
-	c.ClientConfig.NoDefaultPortForwarding = true
+	// c.ClientConfig.NoDefaultPortForwarding = true
 
 	for _, opt := range options {
 		opt(&c)

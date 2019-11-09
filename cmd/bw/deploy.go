@@ -32,6 +32,7 @@ import (
 type deployCmd struct {
 	global         *global
 	environment    string
+	deploymentID   string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
 	debug          bool
@@ -52,6 +53,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 
 	t.deployCmd(deployOptions(common(parent.Command("all", "deploy to all nodes within the cluster").Default())))
 	t.filteredCmd(deployOptions(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters"))))
+	t.redeployCmd(deployOptions(common(parent.Command("archive", "redeploy an archive to nodes within the cluster"))))
 	t.localCmd(common(parent.Command("local", "deploy to the local system")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
@@ -94,6 +96,13 @@ func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {
 	}
 
 	return t._deploy(deployment.Or(filters...), false)
+}
+
+func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
+	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
+	parent.Arg("archive", "deployment ID to redeploy").StringVar(&t.deploymentID)
+	return parent.Action(t.redeploy)
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
@@ -149,7 +158,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	logRetryError := func(err error) {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "connection to cluster failed"))
+		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
@@ -378,4 +387,116 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 
 	result := deployment.AwaitDeployResult(dctx)
 	return result.Error
+}
+
+func (t *deployCmd) redeploy(ctx *kingpin.ParseContext) error {
+	filters := make([]deployment.Filter, 0, len(t.filteredRegex))
+	for _, n := range t.filteredRegex {
+		filters = append(filters, deployment.Named(n))
+	}
+
+	for _, n := range t.filteredIP {
+		filters = append(filters, deployment.IP(n))
+	}
+
+	return t._redeploy(deployment.Or(filters...), len(filters) == 0)
+}
+
+func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
+	var (
+		err     error
+		d       agent.Dialer
+		client  agent.Client
+		config  agent.ConfigClient
+		c       clustering.Cluster
+		located agent.Deploy
+		archive agent.Archive
+	)
+
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	log.Println("pid", os.Getpid())
+	log.Println("configuration:", spew.Sdump(config))
+
+	events := make(chan agent.Message, 100)
+
+	local := cluster.NewLocal(
+		commandutils.NewClientPeer(
+			agent.PeerOptionName("local"),
+		),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	)
+
+	coptions := []agent.ConnectOption{
+		agent.ConnectOptionClustering(
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
+			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+			clustering.OptionLogOutput(ioutil.Discard),
+		),
+	}
+
+	logRetryError := func(err error) {
+		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
+	}
+
+	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+
+	t.initializeUX(d, events)
+	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+	go func() {
+		<-t.global.ctx.Done()
+		if err = client.Close(); err != nil {
+			log.Println("failed to close client", err)
+		}
+	}()
+
+	cx := cluster.New(local, c)
+	go agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
+
+	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {
+		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive retrieval failed"))
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		return err
+	}
+
+	if located.Archive == nil {
+		err = errors.New("archive retrieval failed, deployment found but archive is nil")
+		events <- agentutil.LogError(local.Peer, err)
+		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		return err
+	}
+
+	archive = *located.Archive
+
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
+
+	max := int64(config.Partitioner().Partition(len(cx.Members())))
+	peers := deployment.ApplyFilter(filter, cx.Peers()...)
+	dopts := agent.DeployOptions{
+		Concurrency:       int64(config.Partitioner().Partition(len(cx.Members()))),
+		Timeout:           int64(config.DeployTimeout),
+		IgnoreFailures:    t.ignoreFailures,
+		SilenceDeployLogs: t.silenceLogs,
+	}
+
+	if len(peers) == 0 && !allowEmpty {
+		cause := errorsx.String("deployment failed, filter did not match any servers")
+		events <- agentutil.LogError(local.Peer, cause)
+		return cause
+	}
+
+	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
+	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
+		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
+	}
+
+	return err
 }

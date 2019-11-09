@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
@@ -160,4 +161,82 @@ func AgentLatestDeployment(c agent.Client) (a agent.Deploy, err error) {
 
 	// no successful deploys
 	return a, errors.WithStack(ErrNoDeployments)
+}
+
+// FilterDeployID check if the given deploy matches the provided ID.
+func FilterDeployID(id string) func(d agent.Deploy) bool {
+	return func(d agent.Deploy) bool {
+		if d.Archive != nil {
+			log.Println("checking", bw.RandomID(d.Archive.DeploymentID).String(), "==", id)
+		} else {
+			log.Println("archive is nil", id)
+		}
+		return d.Archive != nil && bw.RandomID(d.Archive.DeploymentID).String() == id
+	}
+}
+
+// LocateDeployment returns the deployment info based on the provided filter.
+func LocateDeployment(c cluster, d dialer, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
+	const done = errorsx.String("done")
+
+	locate := func(c agent.Client) (err error) {
+		var (
+			ds []agent.Deploy
+		)
+
+		if ds, err = AgentDeployments(c); err != nil {
+			switch cause := errors.Cause(err); cause {
+			case ErrNoDeployments:
+				return nil
+			default:
+				log.Println(errors.Wrap(cause, "failed retrieving deployments, checking next agent"))
+				return nil
+			}
+		}
+
+		for _, d := range ds {
+			if filter(d) {
+				latest = d
+				return done
+			}
+		}
+
+		return nil
+	}
+
+	if err = NewClusterOperation(Operation(locate))(c, d); errors.Cause(err) == done {
+		return latest, nil
+	}
+
+	if err == nil {
+		// completed successfully but no deployment was found.
+		return latest, ErrNoDeployments
+	}
+
+	return latest, err
+}
+
+// AgentDeployments returns the set of successful deployments of a given agent.
+func AgentDeployments(c agent.Client) (a []agent.Deploy, err error) {
+	var (
+		info agent.StatusResponse
+	)
+
+	if info, err = c.Info(); err != nil {
+		return a, errors.Wrap(err, "failed to retrieve latest deployment")
+	}
+
+	if len(info.Deployments) == 0 {
+		return a, errors.WithStack(ErrNoDeployments)
+	}
+
+	for _, d := range info.Deployments {
+		a = append(a, *d)
+	}
+
+	if len(a) == 0 {
+		return a, errors.WithStack(ErrNoDeployments)
+	}
+
+	return a, nil
 }
