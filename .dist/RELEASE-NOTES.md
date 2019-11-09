@@ -1,3 +1,27 @@
+commit ad336746fbf6bdaa1a6f7b54382cbf2716331e34
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 9 04:50:53 2019 -0500
+
+    fix redeploy to properly wait for completion
+
+commit 449ac4a9a48c8877e5c5a611d095fedba4bd9dd8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 9 03:52:00 2019 -0500
+
+    prep deploy directory when a deploy context is created
+
+commit 2c505ab08f7098996102607d51e72de406cdd29a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 9 03:07:47 2019 -0500
+
+    implement redeployment of a already uploaded archive
+
+commit ec07243a80394baf9e23e904897998ac82210ffe
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 29 21:02:44 2019 -0400
+
+    release 0.1.1572397254-4893a7f9
+
 commit 4893a7f9711520ffe13a5ab224de4f1923b05101
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Oct 29 21:00:54 2019 -0400
