@@ -64,6 +64,9 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 		ID:            id,
 		Root:          root,
 		ArchiveRoot:   root,
+		ArchiveFile:   filepath.Join(root, bw.ArchiveFile),
+		MetadataFile:  filepath.Join(root, deployMetadataName),
+		LogFile:       filepath.Join(root, bw.DeployLog),
 		Log:           dlog{log: log.New(ioutil.Discard, "", 0)},
 		Archive:       a,
 		DeployOptions: dopts,
@@ -74,6 +77,11 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 
 	for _, opt := range options {
 		opt(&dctx)
+	}
+
+	// resets the directory to prepare for the deploy.
+	if err = dctx.reset(); err != nil {
+		return dctx, nil
 	}
 
 	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
@@ -123,7 +131,10 @@ type DeployContext struct {
 	completed     chan DeployResult
 	ID            bw.RandomID
 	Root          string
+	ArchiveFile   string
 	ArchiveRoot   string
+	MetadataFile  string
+	LogFile       string
 	Log           logger
 	Archive       agent.Archive
 	DeployOptions agent.DeployOptions
@@ -167,6 +178,22 @@ func (t DeployContext) Done(result error) error {
 	})
 
 	return result
+}
+
+func (t DeployContext) reset() (err error) {
+	if err = os.RemoveAll(t.ArchiveRoot); err != nil {
+		return errors.WithMessage(err, "failed to clear archive directory")
+	}
+
+	if err = os.Truncate(t.LogFile, 0); err != nil {
+		return errors.WithMessage(err, "failed to reset log file")
+	}
+
+	if err = os.Remove(t.MetadataFile); err != nil {
+		return errors.WithMessage(err, "failed to reset metadata file")
+	}
+
+	return nil
 }
 
 type logger interface {

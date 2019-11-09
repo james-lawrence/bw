@@ -312,9 +312,10 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err err
 	defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 
 	dctx.Log.Println("attempting to download", dctx.Archive.Location, dctx.ArchiveRoot)
-	if dst, err = os.OpenFile(filepath.Join(dctx.Root, bw.ArchiveFile), os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+	if dst, err = os.OpenFile(dctx.ArchiveFile, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
 		return errors.Wrap(err, "unable to open archive file")
 	}
+
 	defer func() {
 		logx.MaybeLog(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
 	}()
