@@ -1,3 +1,21 @@
+commit 8ff38c004e7177c02cd7055ab9685870bb2327c4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Nov 11 11:42:23 2019 -0500
+
+    fix local
+
+commit f6c0b94d0e0e2ce6044a38f59eec85395270d390
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 12 21:20:26 2019 -0400
+
+    implement acme support.
+
+commit 015b79eb8e9d0ced74ef9e173b9b8c1042ef2698
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 9 04:53:30 2019 -0500
+
+    release 0.1.1573293189-d9cb7395
+
 commit d9cb7395ffa1a69d8c88c2e08a25ea45ae8c039d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Nov 9 04:53:09 2019 -0500
