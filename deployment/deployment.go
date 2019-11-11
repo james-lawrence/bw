@@ -49,6 +49,11 @@ func DeployContextOptionArchiveRoot(ar string) DeployContextOption {
 	}
 }
 
+// DeployContextOptionDisableReset disables resetting the root directory.
+func DeployContextOptionDisableReset(dctx *DeployContext) {
+	dctx.disableReset = true
+}
+
 // AwaitDeployResult waits for the deployment result of the context
 func AwaitDeployResult(dctx DeployContext) DeployResult {
 	defer close(dctx.completed)
@@ -130,6 +135,7 @@ type DeployContext struct {
 	Local         agent.Peer
 	completed     chan DeployResult
 	ID            bw.RandomID
+	disableReset  bool
 	Root          string
 	ArchiveFile   string
 	ArchiveRoot   string
@@ -181,6 +187,10 @@ func (t DeployContext) Done(result error) error {
 }
 
 func (t DeployContext) reset() (err error) {
+	if t.disableReset {
+		return nil
+	}
+
 	if err = os.RemoveAll(t.ArchiveRoot); err != nil {
 		return errors.WithMessage(err, "failed to clear archive directory")
 	}
