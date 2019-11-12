@@ -1,3 +1,9 @@
+commit d7d9ff7c59a8df5aa72db7c90b24a539b889f01e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 12 16:10:39 2019 -0500
+
+    release 0.1.1573593036-d517f3ce
+
 commit d517f3ce07291a169def59210f8c521ad08ac5bb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Nov 12 16:10:36 2019 -0500
