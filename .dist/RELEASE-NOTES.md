@@ -1,3 +1,15 @@
+commit d517f3ce07291a169def59210f8c521ad08ac5bb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 12 16:10:36 2019 -0500
+
+    fix reset
+
+commit 3729ddaaf86ff818f40a1edee00197ce686bcdb5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Nov 11 12:10:07 2019 -0500
+
+    release 0.1.1573492097-aff3261c
+
 commit aff3261c5dd39b797303a786263b8135ed659018
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Nov 11 12:08:17 2019 -0500
