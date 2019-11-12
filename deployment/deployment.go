@@ -86,10 +86,11 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 
 	// resets the directory to prepare for the deploy.
 	if err = dctx.reset(); err != nil {
-		return dctx, nil
+		return dctx, err
 	}
 
 	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
+
 	return dctx, nil
 }
 
@@ -199,7 +200,7 @@ func (t DeployContext) reset() (err error) {
 		return errors.WithMessage(err, "failed to reset log file")
 	}
 
-	if err = os.Remove(t.MetadataFile); err != nil {
+	if err = os.Remove(t.MetadataFile); err != nil && !os.IsNotExist(err) {
 		return errors.WithMessage(err, "failed to reset metadata file")
 	}
 

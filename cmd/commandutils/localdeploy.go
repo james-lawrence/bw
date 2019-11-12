@@ -61,6 +61,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 
 	opts := []deployment.DeployContextOption{
 		deployment.DeployContextOptionLog(deployment.StdErrLogger("[LOCAL] ")),
+		deployment.DeployContextOptionDisableReset,
 	}
 
 	if dctx, err = deployment.NewDeployContext(config.DeployDataDir, local, dopts, archive, opts...); err != nil {
