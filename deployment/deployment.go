@@ -89,6 +89,10 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 		return dctx, err
 	}
 
+	if err = os.MkdirAll(dctx.ArchiveRoot, 0755); err != nil {
+		return dctx, errors.WithMessage(err, "failed to create archive directory")
+	}
+
 	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
 
 	return dctx, nil
@@ -198,10 +202,6 @@ func (t DeployContext) reset() (err error) {
 
 	if err = os.Remove(t.MetadataFile); err != nil && !os.IsNotExist(err) {
 		return errors.WithMessage(err, "failed to reset metadata file")
-	}
-
-	if err = os.MkdirAll(t.ArchiveRoot, 0755); err != nil {
-		return errors.WithMessage(err, "failed to create archive directory")
 	}
 
 	return nil
