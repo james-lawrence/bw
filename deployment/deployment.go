@@ -114,10 +114,6 @@ func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOpti
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
 
-	if err = os.MkdirAll(archiveDir, 0755); err != nil {
-		return _did, errors.WithMessage(err, "failed to create archive directory")
-	}
-
 	logger = dlog{log: log.New(ioutil.Discard, "", 0)}
 	if !dopts.SilenceDeployLogs {
 		if logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
@@ -202,6 +198,10 @@ func (t DeployContext) reset() (err error) {
 
 	if err = os.Remove(t.MetadataFile); err != nil && !os.IsNotExist(err) {
 		return errors.WithMessage(err, "failed to reset metadata file")
+	}
+
+	if err = os.MkdirAll(t.ArchiveRoot, 0755); err != nil {
+		return errors.WithMessage(err, "failed to create archive directory")
 	}
 
 	return nil
