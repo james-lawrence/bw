@@ -376,7 +376,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Timeout: int64(config.DeployTimeout),
 	}
 
-	if dctx, err = deployment.NewRemoteDeployContext(root, local, dopts, archive); err != nil {
+	if dctx, err = deployment.NewRemoteDeployContext(root, local, dopts, archive, deployment.DeployContextOptionDisableReset); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 
