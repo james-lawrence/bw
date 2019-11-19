@@ -3,6 +3,7 @@ package clustering
 import (
 	"io"
 	"log"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -155,7 +156,12 @@ func NewOptionsFromConfig(c *memberlist.Config, options ...Option) Options {
 
 // NewOptions build default cluster options.
 func NewOptions(options ...Option) Options {
-	return NewOptionsFromConfig(memberlist.DefaultWANConfig(), options...)
+	c := memberlist.DefaultWANConfig()
+	c.SuspicionMult = 8
+	c.GossipInterval = 2 * time.Second
+	c.GossipToTheDeadTime = 240 * time.Second
+
+	return NewOptionsFromConfig(c, options...)
 }
 
 // Options holds the options for the cluster.
