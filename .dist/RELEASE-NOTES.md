@@ -1,3 +1,33 @@
+commit ff5c89c72608207882ccdf4d73189c8a689effa7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 19 10:28:25 2019 -0500
+
+    make dead nodes slower to detect
+
+commit 52828d3a8788741637901c97682cf9d5b84a0e40
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Nov 15 07:51:25 2019 -0500
+
+    fix local deploys
+
+commit 8789a31800a77f4c831de89e13c71facf7ca2e06
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 13 12:14:32 2019 -0500
+
+    another fix
+
+commit b6ce43201a0459d08ca50d3d8c89707e9c1c3ffb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 13 12:11:38 2019 -0500
+
+    fix archive root creation
+
+commit 690fd0618d3f23fa5e567e83167e98ad9a8adc24
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 12 16:11:44 2019 -0500
+
+    release 0.1.1573593061-ea99721c
+
 commit ea99721c20631d64181d75f0350f95a9805386a1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Nov 12 16:11:01 2019 -0500
