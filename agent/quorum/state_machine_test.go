@@ -151,13 +151,12 @@ var _ = Describe("StateMachine", func() {
 			var (
 				decoded agent.WAL
 			)
-			convert := func(c []*agent.Message) []interface{} {
-				r := make([]interface{}, 0, len(c))
-				for _, v := range c {
+			convert := func(c []*agent.Message) *agent.WAL {
+				for idx, v := range c {
 					v.Replay = true
-					r = append(r, v)
+					c[idx] = v
 				}
-				return r
+				return &agent.WAL{Messages: c}
 			}
 			protocols, _, err := newCluster(nil, "server1", "server2", "server3")
 			Expect(err).ToNot(HaveOccurred())
@@ -175,7 +174,7 @@ var _ = Describe("StateMachine", func() {
 			raw, err := ioutil.ReadAll(ior)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(proto.Unmarshal(raw, &decoded)).ToNot(HaveOccurred())
-			Expect(decoded.Messages).To(ConsistOf(convert(agent.MessagesToPtr(messages[n:]...))...))
+			Expect(proto.Equal(&decoded, convert(agent.MessagesToPtr(messages[n:]...)))).To(BeTrue())
 		},
 		Entry(
 			"example 1",
@@ -266,7 +265,7 @@ var _ = Describe("StateMachine", func() {
 		for _, m := range messages {
 			var expected agent.Message
 			Eventually(obs).Should(Receive(&expected))
-			Expect(expected).To(Equal(m))
+			Expect(proto.Equal(&expected, &m)).To(BeTrue())
 		}
 	})
 })

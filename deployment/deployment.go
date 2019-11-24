@@ -196,7 +196,7 @@ func (t DeployContext) reset() (err error) {
 		return errors.WithMessage(err, "failed to clear archive directory")
 	}
 
-	if err = os.Truncate(t.LogFile, 0); err != nil {
+	if err = os.Truncate(t.LogFile, 0); err != nil && !os.IsNotExist(err) {
 		return errors.WithMessage(err, "failed to reset log file")
 	}
 
