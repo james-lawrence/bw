@@ -33,7 +33,7 @@ func Cleanup() {
 }
 
 // NewGRPCServer sets up a server and a connection.
-func NewGRPCServer(bind func(s *grpc.Server)) (c *grpc.ClientConn, s *grpc.Server) {
+func NewGRPCServer(bind func(s *grpc.Server), options ...grpc.DialOption) (c *grpc.ClientConn, s *grpc.Server) {
 	l, err := net.Listen("tcp", ":0")
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	s = grpc.NewServer()
@@ -42,7 +42,9 @@ func NewGRPCServer(bind func(s *grpc.Server)) (c *grpc.ClientConn, s *grpc.Serve
 		s.Serve(l)
 	}()
 
-	c, err = grpc.Dial(l.Addr().String(), grpc.WithInsecure())
+	options = append([]grpc.DialOption{grpc.WithInsecure()}, options...)
+	c, err = grpc.Dial(l.Addr().String(), options...)
+
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 
 	return c, s

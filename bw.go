@@ -11,8 +11,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/discovery.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
-//go:generate protoc -I=.protocol --go_out=cluster .protocol/cluster.proto
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (
 	// DirDeploys the name of the deploys directory.
@@ -21,6 +22,8 @@ const (
 	DirObservers = "observers"
 	// DirRaft the name of the directory dealing with the raft state.
 	DirRaft = "raft"
+	// DirNotary the name of the directory dealing with credentials
+	DirNotary = "notary"
 	// DirPlugins the name of the directory dealing with plugins for the agent.
 	DirPlugins = "plugins"
 	// DirTorrents the name of the directory for storing torrent information.
@@ -41,8 +44,14 @@ const (
 	DefaultRaftPort = 2002
 	// DefaultTorrentPort default port for torrent service.
 	DefaultTorrentPort = 2003
+	// DefaultDiscoveryPort default port for the notary service.
+	// notary service is special as its expected to be accessed without
+	// a client certificate.
+	DefaultDiscoveryPort = 2004
 	// DefaultACMEPort port for ACME TLSALPN01 service.
-	DefaultACMEPort = 2004
+	DefaultACMEPort = 2005
+	// DefaultNotaryKey ...
+	DefaultNotaryKey = "notary.key"
 )
 
 // DeployDir return the deploy directory under the given root.

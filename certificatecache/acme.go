@@ -47,7 +47,7 @@ func defaultConfig() ACMEConfig {
 type ACMEConfig struct {
 	CAURL              string   `yaml:"caurl"`
 	Email              string   `yaml:"email"`
-	PrivateKey         string   `yaml:"key"` // PEM encoded private key.,
+	PrivateKey         string   `yaml:"key"` // PEM encoded private key.
 	Port               int      `yaml:"port"`
 	Network            string   `yaml:"network"`
 	Country            []string `yaml:"country"`  // Country Codes for the CSR

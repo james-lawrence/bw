@@ -25,6 +25,11 @@ func Random(peers ...Peer) (p Peer) {
 	return p
 }
 
+// Shuffle the peers
+func Shuffle(q []Peer) []Peer {
+	return shuffleQuorum(q)
+}
+
 func shuffleQuorum(q []Peer) []Peer {
 	rand.Shuffle(len(q), func(i int, j int) {
 		q[i], q[j] = q[j], q[i]

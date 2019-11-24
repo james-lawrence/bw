@@ -55,7 +55,7 @@ func (t Cluster) Peers() []agent.Peer {
 
 // Quorum ...
 func (t Cluster) Quorum() []agent.Peer {
-	return agent.NodesToPeers(raftutil.Quorum(3, t.cluster)...)
+	return agent.Shuffle(agent.NodesToPeers(raftutil.Quorum(3, t.cluster)...))
 }
 
 // Connect connection information for the cluster.

@@ -1,0 +1,24 @@
+syntax = "proto3";
+package discovery;
+
+message Node {
+  string ip = 1;
+  string name = 2;
+  uint32 RPCPort = 3;
+  uint32 RaftPort = 4;
+  uint32 SWIMPort = 5;
+  uint32 TorrentPort = 6;
+  uint32 DiscoveryPort = 7;
+}
+
+message QuorumRequest {}
+message QuorumResponse {
+  repeated Node nodes = 1;
+}
+
+// Discovery service provides information about the cluster. typically this is used
+// for establishing connections with the quorum nodes, which are responsible for
+// persisting data needed by the cluster.
+service Discovery {
+  rpc Quorum(QuorumRequest) returns (QuorumResponse) {}
+}

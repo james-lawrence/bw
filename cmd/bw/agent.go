@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/tls"
 	"log"
-	"net"
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
@@ -18,7 +17,6 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
 
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/alecthomas/kingpin"
@@ -170,23 +168,4 @@ func (t *agentCmd) bind() (err error) {
 	go deployment.ResultBus(dctx.Results, deployResults...)
 
 	return nil
-}
-
-func (t *agentCmd) runServer(server *grpc.Server, listeners ...net.Listener) {
-	for _, l := range listeners {
-		go server.Serve(l)
-	}
-}
-
-func (t *agentCmd) gracefulShutdown(c clustering.Cluster, listeners ...net.Listener) {
-	t.global.cleanup.Add(1)
-	go func() {
-		defer t.global.cleanup.Done()
-		<-t.global.ctx.Done()
-
-		log.Println("left cluster", c.Shutdown())
-		for _, l := range listeners {
-			log.Println("agent shutdown", l.Close())
-		}
-	}()
 }

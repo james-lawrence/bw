@@ -1,0 +1,83 @@
+syntax = "proto3";
+package notary;
+
+message Token {
+  bytes ID = 1;
+  string fingerprint = 3;
+  int64 Issued = 4;
+  int64 Expires = 5;
+}
+
+message Signature {
+  string format = 1;
+  bytes Data = 2;
+}
+
+message Authorization {
+  Token token = 1;
+  Signature signature = 2;
+}
+
+message Permission {
+  bool refresh = 1;
+  bool search = 2;
+  bool grant = 3;
+  bool revoke = 4;
+}
+
+message Grant {
+  Permission permission = 1;
+  bytes authorization = 2;
+  string fingerprint = 3;
+}
+
+// GrantRequest uploads new credentials
+// to the cluster which allows people to request
+// certificates from the cluster allowing them to
+// interact with it.
+message GrantRequest {
+  Grant grant = 1;
+}
+
+// GrantResponse echos the requested Grant.
+// not necessary to store, just informational.
+message GrantResponse {
+  Grant grant = 1;
+}
+
+// RevokeRequest revoke a grant by its fingerprint.
+message RevokeRequest {
+  string fingerprint = 1;
+}
+
+// RevokeResponse echos an error if something goes wrong.
+// otherwise includes the revoked grant.
+message RevokeResponse {
+  string error = 1;
+  Grant grant = 2;
+}
+
+// SearchRequest search the stored grants.
+// empty query will return all grants.
+message SearchRequest {
+  string query = 1;
+}
+
+message SearchResponse {
+  repeated Grant grants = 1;
+}
+
+message RefreshRequest {}
+
+message RefreshResponse {
+  bytes certificate = 1;
+  bytes privateKey = 2;
+}
+
+// Notary service used for generating certificates to interact with the cluster.
+service Notary {
+  rpc Grant(GrantRequest) returns (GrantResponse) {}
+  rpc Revoke(RevokeRequest) returns (RevokeResponse) {}
+  rpc Refresh(RefreshRequest) returns (RefreshResponse) {}
+  rpc Search(SearchRequest) returns (stream SearchResponse) {}
+}

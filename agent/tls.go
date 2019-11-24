@@ -18,8 +18,8 @@ import (
 // ConfigClientTLS ...
 func ConfigClientTLS(credentials string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.CredentialsDir = bw.DefaultUserDirLocation(credentials, "")
-		c.CA = bw.DefaultUserDirLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA), "")
+		c.CredentialsDir = bw.DefaultUserDirLocation(credentials)
+		c.CA = bw.DefaultUserDirLocation(filepath.Join(credentials, certificatecache.DefaultTLSCertCA))
 		c.ServerName = stringsx.DefaultIfBlank(c.ServerName, systemx.HostnameOrLocalhost())
 	}
 }
@@ -36,11 +36,15 @@ func newTLSAgent(environment, override string) ConfigOption {
 // BuildServer ...
 func (t Config) BuildServer() (creds *tls.Config, err error) {
 	var (
-		ca []byte
+		ca   []byte
+		pool *x509.CertPool
 	)
 
 	m := certificatecache.NewDirectory(t.ServerName, t.CredentialsDir)
-	pool := x509.NewCertPool()
+
+	if pool, err = x509.SystemCertPool(); err != nil {
+		return creds, errors.WithStack(err)
+	}
 
 	if ca, err = ioutil.ReadFile(t.CA); err != nil {
 		return creds, errors.WithStack(err)
@@ -77,17 +81,22 @@ func (t Config) GRPCCredentials() (credentials.TransportCredentials, error) {
 // BuildClient ...
 func (t ConfigClient) BuildClient() (creds *tls.Config, err error) {
 	var (
-		ca []byte
+		ca   []byte
+		pool *x509.CertPool
 	)
 
 	m := certificatecache.NewDirectory(t.ServerName, t.CredentialsDir)
-	pool := x509.NewCertPool()
+
+	if pool, err = x509.SystemCertPool(); err != nil {
+		return creds, errors.WithStack(err)
+	}
+
 	if ca, err = ioutil.ReadFile(t.CA); err != nil {
-		return nil, errors.WithStack(err)
+		return creds, errors.WithStack(err)
 	}
 
 	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return nil, errors.New("failed to append client certs")
+		return creds, errors.New("failed to append client certs")
 	}
 
 	creds = &tls.Config{

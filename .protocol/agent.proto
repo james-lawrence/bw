@@ -17,6 +17,7 @@ message PeerMetadata {
   uint32 RaftPort = 3;
   uint32 SWIMPort = 4;
   uint32 TorrentPort = 5;
+  uint32 DiscoveryPort = 7;
   int32 Status = 6;
 }
 
@@ -29,6 +30,7 @@ message Peer {
   uint32 RaftPort = 5;
   uint32 SWIMPort = 6;
   uint32 TorrentPort = 7;
+  uint32 DiscoveryPort = 8;
 }
 
 // Represents every message sent between nodes. effectively describes all possible events we may want

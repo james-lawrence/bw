@@ -58,9 +58,9 @@ func DefaultConfigFile() string {
 // the given name and potentially an override path.
 // File locations are checked in the following order:
 // {override}/{name}
-// ${XDG_CONFIG_HOME}/{configurationDirDefault}/{name}
-// ${HOME}/.config/{configurationDirDefault}/{name}
-// /etc/{configurationDirDefault}/{name}
+// ${XDG_CONFIG_HOME}/{DefaultDir}/{name}
+// ${HOME}/.config/{DefaultDir}/{name}
+// /etc/{DefaultDir}/{name}
 //
 // if none of the files are found then the last location checked is returned.
 func DefaultLocation(name, override string) string {
@@ -86,13 +86,13 @@ func LocateFirstInDir(dir string, names ...string) (result string) {
 }
 
 // DefaultUserDirLocation returns the user directory location.
-func DefaultUserDirLocation(name, override string) string {
+func DefaultUserDirLocation(name string) string {
 	user := systemx.CurrentUserOrDefault(fallbackUser)
 
 	envconfig := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), DefaultDir)
 	home := filepath.Join(user.HomeDir, ".config", DefaultDir)
 
-	return DefaultDirectory(name, override, envconfig, home)
+	return DefaultDirectory(name, envconfig, home)
 }
 
 // DefaultDirLocation looks for a directory one of the default directory locations.

@@ -35,7 +35,7 @@ func CCOptionTLSConfig(name string) ConfigClientOption {
 // CCOptionAddress set address for the configuration.
 func CCOptionAddress(s string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.Address = net.JoinHostPort(s, strconv.Itoa(DefaultPortRPC))
+		c.Address = net.JoinHostPort(s, strconv.Itoa(bw.DefaultRPCPort))
 		c.ServerName = s
 	}
 }

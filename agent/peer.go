@@ -8,20 +8,18 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
 )
 
-// Default ports for the agent
-const (
-	DefaultPortRPC     = 2000
-	DefaultPortSWIM    = 2001
-	DefaultPortRaft    = 2002
-	DefaultPortTorrent = 2003
-)
-
-// RPCAddress for peer.
+// RPCAddress for a peer.
 func RPCAddress(p Peer) string {
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
+}
+
+// DiscoveryAddress for a peer.
+func DiscoveryAddress(p Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
 }
 
@@ -94,13 +92,14 @@ func PeerOptionName(n string) PeerOption {
 func NewPeer(id string, opts ...PeerOption) Peer {
 	hn := systemx.HostnameOrLocalhost()
 	p := Peer{
-		Name:        id,
-		Ip:          systemx.HostIP(hn).String(),
-		RPCPort:     DefaultPortRPC,
-		SWIMPort:    DefaultPortSWIM,
-		RaftPort:    DefaultPortRaft,
-		TorrentPort: DefaultPortTorrent,
-		Status:      Peer_Node,
+		Name:          id,
+		Ip:            systemx.HostIP(hn).String(),
+		RPCPort:       bw.DefaultRPCPort,
+		SWIMPort:      bw.DefaultSWIMPort,
+		RaftPort:      bw.DefaultRaftPort,
+		TorrentPort:   bw.DefaultTorrentPort,
+		DiscoveryPort: bw.DefaultDiscoveryPort,
+		Status:        Peer_Node,
 	}
 
 	return NewPeerFromTemplate(p, opts...)
@@ -182,13 +181,14 @@ func NodeToPeer(n *memberlist.Node) (_zerop Peer, err error) {
 	}
 
 	return Peer{
-		Status:      Peer_State(m.Status),
-		Name:        n.Name,
-		Ip:          n.Addr.String(),
-		RPCPort:     m.RPCPort,
-		SWIMPort:    m.SWIMPort,
-		RaftPort:    m.RaftPort,
-		TorrentPort: m.TorrentPort,
+		Status:        Peer_State(m.Status),
+		Name:          n.Name,
+		Ip:            n.Addr.String(),
+		RPCPort:       m.RPCPort,
+		SWIMPort:      m.SWIMPort,
+		RaftPort:      m.RaftPort,
+		TorrentPort:   m.TorrentPort,
+		DiscoveryPort: m.DiscoveryPort,
 	}, nil
 }
 
