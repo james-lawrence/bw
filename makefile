@@ -33,6 +33,8 @@ ifeq ($(origin ALLOW_DIRTY), undefined)
 endif
 
 release: release-check
+	sudo rm -f .dist/build/*
+
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
 	git add .dist/RELEASE-NOTES.md; git commit -m "release $(RELEASE)";
 
@@ -46,6 +48,7 @@ release: release-check
 		RELEASE-NOTES.md \
 		systemd \
 		-C build/bearded-wookie-linux-amd64-$(RELEASE) .
+
 	sudo docker run \
 		-e BUILD_VERSION=$(RELEASE) \
 		-e BW_VERSION=$(BW_VERSION) \
@@ -55,8 +58,6 @@ release: release-check
 		-v $(CURDIR):/opt/bw \
 		-v $(HOME)/.gnupg:/root/.gnupg \
 		-it debian-build:latest
-
-	dput -f -c .dist/deb/dput.config bw .dist/build/bearded-wookie_$(BW_VERSION)_source.changes
 
 release-clean:
 	rm -rf .dist/build

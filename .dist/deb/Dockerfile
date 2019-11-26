@@ -4,7 +4,6 @@ FROM ubuntu:18.10
 WORKDIR /opt/bw/.dist/deb
 
 RUN apt-get update
-RUN apt-get -y install dput devscripts dh-make golang
-RUN ["/bin/bash", "build.sh", "bionic"]
-RUN ["/bin/bash", "build.sh", "eoan"]
-CMD /bin/bash
+RUN apt-get -y install dput devscripts dh-make golang dput
+
+CMD /bin/bash build.sh bionic eoan
