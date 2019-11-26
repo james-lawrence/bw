@@ -33,7 +33,7 @@ ifeq ($(origin ALLOW_DIRTY), undefined)
 endif
 
 release: release-check
-	sudo rm -f .dist/build/*
+	sudo rm -rf .dist/build/*
 
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
 	git add .dist/RELEASE-NOTES.md; git commit -m "release $(RELEASE)";

@@ -6,4 +6,4 @@ WORKDIR /opt/bw/.dist/deb
 RUN apt-get update
 RUN apt-get -y install dput devscripts dh-make golang dput
 
-CMD /bin/bash build.sh bionic eoan
+CMD /bin/bash build.sh bionic disco eoan
