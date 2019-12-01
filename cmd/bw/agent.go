@@ -13,13 +13,13 @@ import (
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
 
@@ -200,34 +200,13 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	t.runServer(server, rpcBind)
 	t.gracefulShutdown(c, rpcBind)
 
-	bootstrap.CleanSockets(t.config)
-
-	if err = bootstrap.NewLocal(local.Peer, dialer).Bind(t.global.ctx, bootstrap.SocketLocal(t.config)); err != nil {
-		return errors.Wrap(err, "failed to initialize local bootstrap service")
-	}
-
-	if err = bootstrap.NewQuorum(cx, dialer).Bind(t.global.ctx, bootstrap.SocketQuorum(t.config)); err != nil {
-		return errors.Wrap(err, "failed to initialize local bootstrap service")
-	}
-
-	if err = bootstrap.NewCluster(cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
-		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
-	}
-
-	if err = bootstrap.NewFilesystem(t.config, cx, dialer).Bind(t.global.ctx, bootstrap.SocketAuto(t.config)); err != nil {
-		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
-	}
-
-	bus := bootstrap.NewUntilSuccess(
-		bootstrap.OptionMaxAttempts(t.config.Bootstrap.Attempts),
-	)
-
-	if !bus.Run(t.global.ctx, local.Peer, t.config, coordinator) {
+	if err = daemons.Bootstrap(t.global.ctx, cx, t.config, download); err != nil {
 		// if bootstrapping fails shutdown the process.
-		return errors.New("failed to bootstrap node shutting down")
+		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}
 
 	go deployment.ResultBus(actx.completedDeploys, deployResults...)
+
 	return nil
 }
 

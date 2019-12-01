@@ -19,6 +19,9 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc"
 )
 
@@ -38,25 +41,25 @@ type cluster interface {
 	Connect() agent.ConnectResponse
 }
 
-type option func(*UntilSuccess2)
+type option func(*UntilSuccess)
 
 // OptionMaxAttempts set maximum number of attempts.
-func OptionMaxAttempts(n int) func(*UntilSuccess2) {
-	return func(us *UntilSuccess2) {
+func OptionMaxAttempts(n int) func(*UntilSuccess) {
+	return func(us *UntilSuccess) {
 		us.maxAttempts = n
 	}
 }
 
 // OptionBackoff set strategy for backing off.
-func OptionBackoff(bs backoff.Strategy) func(*UntilSuccess2) {
-	return func(us *UntilSuccess2) {
+func OptionBackoff(bs backoff.Strategy) func(*UntilSuccess) {
+	return func(us *UntilSuccess) {
 		us.bs = bs
 	}
 }
 
 // NewUntilSuccess continuously bootstraps until it succeeds or hits maximum attempts.
-func NewUntilSuccess(options ...option) UntilSuccess2 {
-	us := UntilSuccess2{
+func NewUntilSuccess(options ...option) UntilSuccess {
+	us := UntilSuccess{
 		maxAttempts: math.MaxInt64, // effectively forever.
 		bs:          backoff.Maximum(time.Minute, backoff.Exponential(2*time.Second)),
 	}
@@ -68,31 +71,52 @@ func NewUntilSuccess(options ...option) UntilSuccess2 {
 	return us
 }
 
-// UntilSuccess2 attempts to bootstrap until max attempts or success.
-type UntilSuccess2 struct {
+// UntilSuccess attempts to bootstrap until max attempts or success.
+type UntilSuccess struct {
 	maxAttempts int
 	bs          backoff.Strategy
 }
 
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess2) Run(ctx context.Context, local agent.Peer, c agent.Config, coord deployment.Coordinator) bool {
+func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol) (err error) {
+	var (
+		sctx shell.Context
+	)
+
+	if sctx, err = shell.DefaultContext(); err != nil {
+		return err
+	}
+
+	coord := deployment.New(
+		c.Peer(),
+		deployment.NewDirective(
+			deployment.DirectiveOptionShellContext(sctx),
+		),
+		deployment.CoordinatorOptionRoot(c.Root),
+		deployment.CoordinatorOptionKeepN(c.KeepN),
+		deployment.CoordinatorOptionStorage(
+			storage.New(storage.OptionProtocols(dl)),
+		),
+		deployment.CoordinatorOptionDispatcher(agentutil.LogDispatcher{}),
+	)
+
 	for i := 0; i < t.maxAttempts; i++ {
-		if err := Bootstrap(ctx, local, c, coord); err != nil {
+		if err := Bootstrap(ctx, c, coord); err != nil {
 			log.Println(errors.Wrap(err, "bootstrap attempt failed"))
 			select {
 			case <-ctx.Done():
-				return false
+				return errors.Wrap(ctx.Err(), "bootstrap attempt failed")
 			case <-time.After(t.bs.Backoff(i)):
 				continue
 			}
 		}
 
 		log.Println("--------------- bootstrap complete ---------------")
-		return true
+		return nil
 	}
 
 	log.Println("--------------- bootstrap failure ---------------")
-	return false
+	return errorsx.String("bootstrap failed")
 }
 
 func ignore(err error) error {
@@ -107,23 +131,22 @@ func ignore(err error) error {
 }
 
 // Bootstrap a server with the latest deploy.
-func Bootstrap(ctx context.Context, local agent.Peer, c agent.Config, coord deployment.Coordinator) (err error) {
+func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator) (err error) {
 	var (
 		current agent.Deploy
 		latest  agent.Deploy
 		deploy  deployment.DeployResult
-	)
-
-	// Here we clone the coordinator to override some behaviours around dispatching and observations.
-	deployResults := make(chan deployment.DeployResult)
-	coord = deployment.CloneCoordinator(
-		coord,
-		deployment.CoordinatorOptionDispatcher(agentutil.LogDispatcher{}),
-		deployment.CoordinatorOptionDeployResults(deployResults),
+		results = make(chan deployment.DeployResult)
 	)
 
 	log.Println("--------------- bootstrap attempt initiated -------------")
 	defer log.Println("--------------- bootstrap attempt completed -------------")
+
+	// Here we clone the coordinator to override some behaviours around dispatching and observations.
+	coord = deployment.CloneCoordinator(
+		coord,
+		deployment.CoordinatorOptionDeployResults(results),
+	)
 
 	if current, err = Latest(ctx, SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
 		return errors.Wrapf(err, "latest local failed: %s", SocketLocal(c))
@@ -164,7 +187,7 @@ func Bootstrap(ctx context.Context, local agent.Peer, c agent.Config, coord depl
 	select {
 	case <-deadline.Done():
 		return errors.Wrap(deadline.Err(), "failed to bootstrap timeout")
-	case deploy = <-deployResults:
+	case deploy = <-results:
 	}
 
 	if err = deploy.Error; err != nil {
