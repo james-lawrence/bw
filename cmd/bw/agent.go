@@ -5,14 +5,9 @@ import (
 	"log"
 	"net"
 	"path/filepath"
-	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/observers"
-	"github.com/james-lawrence/bw/agent/proxy"
-	"github.com/james-lawrence/bw/agent/quorum"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
@@ -25,12 +20,10 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
-	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
@@ -51,18 +44,12 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 }
 
-func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtocol) deployment.Coordinator) error {
+func (t *agentCmd) bind() (err error) {
 	var (
-		err           error
-		observersdir  observers.Directory
-		rpcBind       net.Listener
-		server        *grpc.Server
 		c             clustering.Cluster
 		creds         *tls.Config
 		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
-		upload        storage.UploadProtocol
-		download      storage.DownloadProtocol
 		deployResults []chan deployment.DeployResult
 	)
 
@@ -82,10 +69,6 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		return err
 	}
 
-	if rpcBind, err = net.Listen(t.config.RPCBind.Network(), t.config.RPCBind.String()); err != nil {
-		return errors.Wrapf(err, "failed to bind agent to %s", t.config.RPCBind)
-	}
-
 	if keyring, err = t.config.Keyring(); err != nil {
 		return err
 	}
@@ -94,17 +77,9 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		return err
 	}
 
-	if observersdir, err = observers.NewDirectory(filepath.Join(t.config.Root, "observers")); err != nil {
-		return err
-	}
-
 	local := cluster.NewLocal(t.config.Peer())
 	tlscreds := credentials.NewTLS(creds)
-	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
-		MaxConnectionIdle: 1 * time.Hour,
-		Time:              1 * time.Minute,
-		Timeout:           2 * time.Minute,
-	})
+
 	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
 
 	cdialer := commandutils.NewClusterDialer(
@@ -137,6 +112,7 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 		Queue:    make(chan raftutil.Event, 100),
 	}
 	go sq.Background(bq)
+
 	if p, err = t.global.cluster.Raft(t.global.ctx, t.config, sq); err != nil {
 		return err
 	}
@@ -170,42 +146,28 @@ func (t *agentCmd) bind(newCoordinator func(agentContext, storage.DownloadProtoc
 	// })
 
 	deployResults = append(deployResults, tdr)
-	upload, download = tc.Uploader(), tc.Downloader()
 
-	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(tlscreds))...)
-	qdialer := agent.NewQuorumDialer(dialer)
-	dispatcher := agentutil.NewDispatcher(cx, qdialer)
-	actx := agentContext{Dispatcher: dispatcher, Config: t.config, completedDeploys: make(chan deployment.DeployResult, 100)}
-	coordinator := newCoordinator(actx, download)
+	dctx := daemons.Context{
+		Context:        t.global.ctx,
+		Shutdown:       t.global.shutdown,
+		Cleanup:        t.global.cleanup,
+		Upload:         tc.Uploader(),
+		Download:       tc.Downloader(),
+		RPCCredentials: tlscreds,
+		Raft:           p,
+		Results:        make(chan deployment.DeployResult, 100),
+	}
 
-	q := quorum.New(
-		observersdir,
-		cx,
-		proxy.NewProxy(cx),
-		upload,
-		quorum.OptionDialer(dialer),
-	)
-	go (&q).Observe(p, make(chan raft.Observation, 200))
+	if err = daemons.Agent(dctx, cx, t.config); err != nil {
+		return err
+	}
 
-	a := agent.NewServer(
-		cx,
-		agent.ServerOptionDeployer(&coordinator),
-		agent.ServerOptionShutdown(t.global.shutdown),
-	)
-
-	aq := agent.NewQuorum(&q)
-	server = grpc.NewServer(grpc.Creds(tlscreds), keepalive)
-	agent.RegisterAgentServer(server, a)
-	agent.RegisterQuorumServer(server, aq)
-	t.runServer(server, rpcBind)
-	t.gracefulShutdown(c, rpcBind)
-
-	if err = daemons.Bootstrap(t.global.ctx, cx, t.config, download); err != nil {
+	if err = daemons.Bootstrap(dctx, cx, t.config); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}
 
-	go deployment.ResultBus(actx.completedDeploys, deployResults...)
+	go deployment.ResultBus(dctx.Results, deployResults...)
 
 	return nil
 }
