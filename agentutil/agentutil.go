@@ -132,11 +132,15 @@ func KeepNewestN(n int) Cleaner {
 // peer as a proxy.
 func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 1)
+	var (
+		err error
+		qc  agent.Client
+	)
+
 	for {
-		var (
-			err error
-			qc  agent.Client
-		)
+		if qc != nil {
+			logx.MaybeLog(qc.Close())
+		}
 
 		if err = rl.Wait(context.Background()); err != nil {
 			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
@@ -158,10 +162,13 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 // WatchClusterEvents pushes events into the provided channel for the given cluster.
 func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
+	var (
+		err error
+		qc  agent.Client
+	)
+
 	for {
 		var (
-			err   error
-			qc    agent.Client
 			local = c.Local()
 		)
 
