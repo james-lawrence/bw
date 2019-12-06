@@ -1,3 +1,68 @@
+commit 74082f2c4cf711d8e3051b1f4b039388c325fdab
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 5 21:45:21 2019 -0500
+
+    build fix
+
+commit cf7f27418f0c3948b952b70dcb0760cf47114028
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 5 21:27:34 2019 -0500
+
+    give routine dump a fallback option
+    
+    if we are out of file descriptors we'll be unable to dump
+    the routines due to the file failing to open.
+    
+    when this occurs fallback to stderr
+
+commit 7cdc1f39b1b29adad2c131df04fc29399df398f2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 5 21:03:02 2019 -0500
+
+    cleanup connection each iteration
+
+commit 037232b620b9ca36af2fffb183c281642f6a444c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 1 13:46:12 2019 -0500
+
+    refactor agent daemon into daemons package
+
+commit f45b218644a22edd1d6d81673edbfdd7b18c42cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 1 11:50:18 2019 -0500
+
+    refactor bootstrap
+
+commit 4f040637cdb805feae5f69b8a4400303997debf6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 26 11:23:10 2019 -0500
+
+    minor fix for release code
+
+commit 8ead3afa69391cc8b4c7d9c9b05fd76aed55165a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 26 10:04:01 2019 -0500
+
+    support releasing to multiple ubuntu distributions
+
+commit 047a5b37242ae0bd2fb1425dbb3c8cc7a0a6aa5c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 26 09:26:28 2019 -0500
+
+    update distributions
+
+commit 03556263a6ff1f31f8346460306508f459e8e8e1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 24 14:02:49 2019 -0500
+
+    test fixes
+
+commit af8a73638f27c63d6208f0ede1f1d38a94900f4d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Nov 21 10:10:45 2019 -0500
+
+    release 0.1.1574342862-7e5b93bd
+
 commit 7e5b93bd8452b8e3922495a64de886d79fb31dd0
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Nov 21 08:27:42 2019 -0500
