@@ -9,7 +9,6 @@ release() {
   echo "DISTRO ${DISTRO} VERSION ${VERSION}"
   mkdir -p ${DEBDIR}
   mkdir -p ${DEBDIR}/source
-  mkdir -p src/github.com/james-lawrence/bw
 
   cat .templates/control.tmpl | envsubst > ${DEBDIR}/control
   cat .templates/changelog.tmpl | env DISTRO=${DISTRO} VERSION=${VERSION} envsubst > ${DEBDIR}/changelog
@@ -33,6 +32,7 @@ export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-k'${DEBFULLNAME} <${DEBEMAIL}>' -sa"
 ARCHIVE=../build/bearded-wookie-source-${BUILD_VERSION}.tar.gz
 
 cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
+mkdir -p src/github.com/james-lawrence/bw
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/github.com/james-lawrence/bw
 
 i=-1
