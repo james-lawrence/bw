@@ -38,3 +38,15 @@ func Rewind(o io.Seeker) error {
 	_, err := o.Seek(0, io.SeekStart)
 	return err
 }
+
+type writeNopCloser struct {
+	io.Writer
+}
+
+func (writeNopCloser) Close() error { return nil }
+
+// WriteNopCloser returns a WriteCloser with a no-op Close method wrapping
+// the provided Writer w.
+func WriteNopCloser(w io.Writer) io.WriteCloser {
+	return writeNopCloser{w}
+}

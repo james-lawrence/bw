@@ -3,6 +3,7 @@ package debugx
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -11,26 +12,40 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/pkg/errors"
 )
 
-// DumpRoutines writes current goroutine stack traces to a temp file.
-// and returns that files path.
-func DumpRoutines() (string, error) {
+func genDst() (path string, dst io.WriteCloser) {
+	var (
+		err error
+	)
+
 	t := time.Now()
 	ts := stringsx.Reverse(strconv.Itoa(int(t.Unix())))
-	path := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s-mailman.trace", t.Format("2006-01-02"), ts))
+	path = filepath.Join(os.TempDir(), fmt.Sprintf("%s-%s-%s.trace", filepath.Base(os.Args[0]), t.Format("2006-01-02"), ts))
 
-	out, err := os.Create(path)
-	if err != nil {
-		log.Printf("failed to open file (%s):%s\n", path, err)
-		return "", err
-	}
-	if err = pprof.Lookup("goroutine").WriteTo(out, 1); err != nil {
-		return "", err
+	if dst, err = os.Create(path); err != nil {
+		log.Println(errors.Wrapf(err, "failed to open file: %s", path))
+		log.Println("routine dump falling back to stderr")
+		return "stderr", iox.WriteNopCloser(os.Stderr)
 	}
 
-	return path, nil
+	return path, dst
+}
+
+// DumpRoutines writes current goroutine stack traces to a temp file.
+// and returns that files path. if for some reason a file could not be opened
+// it falls back to stderr
+func DumpRoutines() (path string, err error) {
+	var (
+		dst io.WriteCloser
+	)
+
+	path, dst = genDst()
+	return path, errorsx.Compact(pprof.Lookup("goroutine").WriteTo(dst, 1), dst.Close())
 }
 
 // DumpOnSignal runs the DumpRoutes method and prints to stderr whenever one of the provided
