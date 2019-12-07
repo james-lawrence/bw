@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"log"
 	"path/filepath"
 
@@ -46,7 +45,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind() (err error) {
 	var (
 		c             clustering.Cluster
-		creds         *tls.Config
+		tlscreds      credentials.TransportCredentials
 		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
 		deployResults []chan deployment.DeployResult
@@ -72,13 +71,11 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if creds, err = daemons.TLSGenServer(t.config); err != nil {
+	if tlscreds, err = daemons.GRPCGenServer(t.config); err != nil {
 		return err
 	}
 
 	local := cluster.NewLocal(t.config.Peer())
-	tlscreds := credentials.NewTLS(creds)
-
 	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
 
 	cdialer := commandutils.NewClusterDialer(

@@ -42,6 +42,7 @@ func Discovery(ctx Context, c agent.Config, config string) (err error) {
 	}
 
 	server = grpc.NewServer(grpc.Creds(creds), keepalive)
+
 	notary.New(ns).Bind(server)
 
 	ctx.grpc("discovery", server, bind)

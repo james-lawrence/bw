@@ -27,13 +27,6 @@ import (
 
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
 // cd ${HOME}/go/src/github.com/letsencrypt/pebble; pebble -config ./test/config/pebble-config.json
-// func main() {
-// 	_, err := commandutils.LoadConfiguration(bw.DefaultEnvironmentName)
-// 	if err != nil {
-// 		log.Fatalln(err)
-// 	}
-// 	<-make(chan struct{})
-// }
 
 func defaultConfig() ACMEConfig {
 	return ACMEConfig{
