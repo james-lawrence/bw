@@ -69,6 +69,7 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 		quorum.OptionDialer(dialer),
 	)
 	go (&q).Observe(ctx.Raft, make(chan raft.Observation, 200))
+	qc := quorum.NewConfig(&q, quorum.NewEmptySnapshot(), quorum.NewEmptySnapshot())
 
 	a := agent.NewServer(
 		cx,
@@ -81,6 +82,7 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 	server := grpc.NewServer(grpc.Creds(ctx.RPCCredentials), keepalive)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
+	quorum.RegisterConfigurationServer(server, qc)
 
 	if bind, err = net.Listen(config.RPCBind.Network(), config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", config.RPCBind)

@@ -22,6 +22,7 @@ type ConnectableDispatcher interface {
 
 // Client - client facade interface.
 type Client interface {
+	Conn() *grpc.ClientConn
 	Shutdown() error
 	Close() error
 	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)

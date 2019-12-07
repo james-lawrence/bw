@@ -169,5 +169,10 @@ func (t *agentCmd) bind() (err error) {
 
 	go deployment.ResultBus(dctx.Results, deployResults...)
 
+	if err = daemons.Sync(dctx, cx); err != nil {
+		// if syncing fails shutdown the process.
+		return errors.Wrap(err, "failed to bootstrap node shutting down")
+	}
+
 	return nil
 }

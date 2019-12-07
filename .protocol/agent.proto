@@ -47,7 +47,8 @@ message Message {
   }
 
   string id = 9;
-  bool replay = 999;
+  bool observable = 998;
+  bool replay = 999; // deprecated, use observable
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -124,8 +125,8 @@ message UploadResponse {
 message WatchRequest {}
 message DispatchResponse {}
 
-message InfoRequest{}
-message InfoResponse{
+message InfoRequest {}
+message InfoResponse {
   enum Mode { None = 0; Deploying = 1; }
   Mode mode = 1;
   DeployCommand deploying = 2;

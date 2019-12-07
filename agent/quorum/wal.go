@@ -91,7 +91,7 @@ func (t *WAL) decode(buf []byte) error {
 	// TODO consider moving observer into the state machine, would resolve needing
 	// to mark messages as replays when restoring state.
 	// ignore replayed messages.
-	if !m.Replay && t.observer != nil {
+	if (!m.Replay || m.Observable) && t.observer != nil {
 		t.observer <- m
 	}
 
@@ -233,6 +233,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		}
 
 		tmp := msg
+		tmp.Observable = false
 		tmp.Replay = true
 		state.Messages = append(state.Messages, &tmp)
 	}

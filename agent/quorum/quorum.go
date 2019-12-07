@@ -254,17 +254,11 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		l net.Listener
 	)
 
-	t.m.Lock()
-	p := t.sm
-	t.m.Unlock()
-
 	debugx.Println("watch invoked")
 	defer debugx.Println("watch completed")
 
-	switch state := p.State(); state {
-	case raft.Leader, raft.Follower, raft.Candidate:
-	default:
-		return errors.Errorf("watch must be run on a member of quorum: %s", state)
+	if _, err = t.quorumOnly(); err != nil {
+		return errors.Wrap(err, "watch")
 	}
 
 	events := make(chan agent.Message)
@@ -296,10 +290,21 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 func (t *Quorum) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
 	debugx.Println("dispatch initiated")
 	defer debugx.Println("dispatch completed")
+	return logx.MaybeLog(errors.Wrap(t.proxy().Dispatch(ctx, m...), "failed to dispatch"))
+}
 
+func (t *Quorum) proxy() stateMachine {
 	t.m.Lock()
-	p := t.sm
-	t.m.Unlock()
+	defer t.m.Unlock()
+	return t.sm
+}
 
-	return logx.MaybeLog(errors.Wrap(p.Dispatch(ctx, m...), "failed to dispatch"))
+func (t *Quorum) quorumOnly() (p stateMachine, err error) {
+	p = t.proxy()
+	switch state := p.State(); state {
+	case raft.Leader, raft.Follower, raft.Candidate:
+		return p, nil
+	default:
+		return p, errors.Errorf("must be run on a member of quorum: %s", state)
+	}
 }

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package quorum;
+
+// Snapshot allows for a strict check for missing data and for server side filtering.
+message Snapshot {
+  bytes checksum = 1;
+  bytes bloom = 2;
+}
+
+// request configuration based on checksums and bloomfilters.
+message Checksum {
+  bytes authority = 1; // checksum of the client tls certificate.
+  Snapshot authorizations = 2; // snapshot of the current authorizations keys.
+}
+
+// stream configuration data to an agent.
+message Config {
+  oneof type {
+    // the requested checksum is sent as a completion event.
+    Checksum checksum = 1;
+    bytes authority = 2;
+    bytes authorizations = 3;
+  }
+}
+
+service Configuration {
+  rpc Check(Checksum) returns (stream Config) {}
+}

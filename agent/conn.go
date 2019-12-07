@@ -14,9 +14,30 @@ import (
 	"github.com/pkg/errors"
 )
 
+type qDialer interface {
+	Dial(c cluster) (client Client, err error)
+}
+
+// MaybeConn hack to retrieve the udnerlying grpc.ClientConn until the dial sutation is resolved.
+func MaybeConn(c Client, err error) (*grpc.ClientConn, error) {
+	if err != nil {
+		return nil, err
+	}
+	if cc := c.Conn(); cc != nil {
+		return cc, nil
+	}
+
+	return nil, errorsx.String("invalid client, missing connection")
+}
+
 // Conn a connection to the cluster. implements the Client interface.
 type Conn struct {
 	conn *grpc.ClientConn
+}
+
+// Conn - return the underlying grpc connection, this is a hack until the dial situation is resolved.
+func (t Conn) Conn() *grpc.ClientConn {
+	return t.conn
 }
 
 // Close ...
