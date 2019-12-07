@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -150,4 +151,13 @@ func WriteTLS(key *rsa.PrivateKey, derBytes []byte, err error) func(io.Writer, i
 
 		return nil
 	}
+}
+
+// Option tls config options
+type Option func(*tls.Config) error
+
+// OptionVerifyClientIfGiven ...
+func OptionVerifyClientIfGiven(c *tls.Config) error {
+	c.ClientAuth = tls.VerifyClientCertIfGiven
+	return nil
 }

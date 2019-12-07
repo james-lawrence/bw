@@ -41,12 +41,12 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
 	log.Println("loading configuration", path)
 	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
-		return config, err
+		return config, errors.Wrap(err, "configuration load failed")
 	}
 
 	// load or create credentials.
 	if err = certificatecache.FromConfig(config.CredentialsDir, config.CredentialsMode, path); err != nil {
-		return config, err
+		return config, errors.Wrap(err, "credentials load failed")
 	}
 
 	return config, err

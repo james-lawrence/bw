@@ -7,13 +7,14 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
 
 // TLSGenServer generate tls config for the agent.
-func TLSGenServer(c agent.Config) (creds *tls.Config, err error) {
+func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, err error) {
 	var (
 		ca   []byte
 		pool *x509.CertPool
@@ -33,24 +34,32 @@ func TLSGenServer(c agent.Config) (creds *tls.Config, err error) {
 		return creds, errors.New("failed to append client ca")
 	}
 
-	return &tls.Config{
+	creds = &tls.Config{
 		ServerName:           c.ServerName,
 		ClientAuth:           tls.RequireAndVerifyClientCert,
 		GetCertificate:       m.GetCertificate,
 		GetClientCertificate: m.GetClientCertificate,
 		ClientCAs:            pool,
 		RootCAs:              pool,
-	}, nil
+	}
+
+	for _, opt := range options {
+		if err = opt(creds); err != nil {
+			return creds, err
+		}
+	}
+
+	return creds, nil
 }
 
 // GRPCGenServer generate grpc tls transport credentials for the server.
-func GRPCGenServer(c agent.Config) (credentials.TransportCredentials, error) {
+func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.TransportCredentials, error) {
 	var (
 		err      error
 		tlscreds *tls.Config
 	)
 
-	if tlscreds, err = TLSGenServer(c); err != nil {
+	if tlscreds, err = TLSGenServer(c, options...); err != nil {
 		return nil, err
 	}
 

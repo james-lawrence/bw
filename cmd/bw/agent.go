@@ -36,7 +36,8 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
-	parent.Flag("agent-torrent", "address for the Torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
+	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
+	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(t.config.DiscoveryBind.String()).TCPVar(&t.config.DiscoveryBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
@@ -156,7 +157,7 @@ func (t *agentCmd) bind() (err error) {
 		Results:        make(chan deployment.DeployResult, 100),
 	}
 
-	if err = daemons.Discovery(dctx, t.configFile); err != nil {
+	if err = daemons.Discovery(dctx, t.config, t.configFile); err != nil {
 		return err
 	}
 

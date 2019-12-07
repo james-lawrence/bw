@@ -21,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
@@ -275,7 +276,7 @@ func defaultRaftConfig() *raft.Config {
 	conf := raft.DefaultConfig()
 
 	conf.LogOutput = ioutil.Discard
-	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+	if envx.Boolean(false, bw.EnvLogsRaft, bw.EnvLogsVerbose) {
 		conf.LogOutput = os.Stderr
 	}
 
@@ -398,6 +399,11 @@ func (t BacklogQueueWorker) Background(backlog BacklogQueue) {
 		if rs, err = t.Provider.RaftAddr(n.Node); err != nil {
 			log.Println("ignoring join due to error decoding meta data", err)
 			continue
+		}
+		p := agent.MustPeer(agent.NodeToPeer(n.Node))
+
+		if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
+			log.Println(n.Event, spew.Sdump(p))
 		}
 
 		t.Queue <- Event{

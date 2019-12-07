@@ -81,14 +81,14 @@ func (t Local) GetBroadcasts(overhead, limit int) [][]byte {
 
 // MergeRemoteState ...
 func (t Local) MergeRemoteState(buf []byte, join bool) {
-	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+	if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
 		log.Println("MergeRemoteState join:", join, "len(buf):", len(buf))
 	}
 }
 
 // NotifyMsg ...
 func (t Local) NotifyMsg(buf []byte) {
-	if envx.Boolean(false, bw.EnvGossipLogs, bw.EnvVerbose) {
+	if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
 		log.Println("NotifyMsg string(buf):", string(buf))
 	}
 }

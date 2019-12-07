@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	nsvc "github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
 )
@@ -18,6 +19,7 @@ import (
 // the notary service.
 type notary struct {
 	Address        string `yaml:"address"`
+	Discovery      string `yaml:"discovery"`
 	CommonName     string `yaml:"servername"`
 	CertificateDir string
 	CA             string
@@ -54,16 +56,26 @@ func (t notary) Refresh() (err error) {
 		RootCAs:    pool,
 	}
 
-	if d, err = discovery.NewQuorumDialer(t.Address); err != nil {
+	log.Println("dialing discovery service", t.CommonName, t.Discovery)
+	if d, err = discovery.NewQuorumDialer(t.Discovery); err != nil {
 		return err
 	}
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c)))
 
 	if key, cert, err = client.Refresh(); err != nil {
-		return err
+		// TODO:
+		// backwards compatibility code, for now only consider permission errors
+		// as hard failures, not all agents have the discovery service.
+		if grpcx.IsUnauthorized(err) {
+			return err
+		}
+
+		// backwards compatibility code.
+		return nopRefresh{}.Refresh()
 	}
 
+	log.Println("refresh completed")
 	// capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
 	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)

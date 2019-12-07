@@ -4,20 +4,19 @@ import (
 	"net"
 	"time"
 
-	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/notary"
 )
 
 // Discovery initiates the discovery backend.
-func Discovery(ctx Context, config string) (err error) {
+func Discovery(ctx Context, c agent.Config, config string) (err error) {
 	var (
-		c      agent.Config
 		ns     notary.Storage
 		bind   net.Listener
 		creds  credentials.TransportCredentials
@@ -30,15 +29,11 @@ func Discovery(ctx Context, config string) (err error) {
 		Timeout:           2 * time.Minute,
 	})
 
-	if err = bw.ExpandAndDecodeFile(config, &c); err != nil {
-		return err
-	}
-
 	if ns, err = notary.NewFromFile(config); err != nil {
 		return err
 	}
 
-	if creds, err = GRPCGenServer(c); err != nil {
+	if creds, err = GRPCGenServer(c, tlsx.OptionVerifyClientIfGiven); err != nil {
 		return err
 	}
 

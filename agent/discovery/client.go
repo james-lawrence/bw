@@ -4,31 +4,38 @@ import (
 	"context"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"google.golang.org/grpc"
 )
 
 // NewQuorumDialer use the address to build a quorum dialer
 func NewQuorumDialer(address string) (QuorumDialer, error) {
-	conn, err := grpc.Dial(address)
 	return QuorumDialer{
-		conn:    conn,
+		addr:    address,
 		address: agent.RPCAddress,
-	}, err
+		cached:  grpcx.NewCachedClient(),
+	}, nil
 }
 
 // QuorumDialer ...
 type QuorumDialer struct {
-	conn    *grpc.ClientConn
+	addr    string
+	cached  *grpcx.CachedClient
 	address func(agent.Peer) string
 }
 
 // Dial given the options
 func (t QuorumDialer) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
 	var (
-		resp *QuorumResponse
+		proxy *grpc.ClientConn
+		resp  *QuorumResponse
 	)
 
-	if resp, err = NewDiscoveryClient(t.conn).Quorum(context.Background(), &QuorumRequest{}); err != nil {
+	if proxy, err = t.cached.Dial(t.addr, options...); err != nil {
+		return c, err
+	}
+
+	if resp, err = NewDiscoveryClient(proxy).Quorum(context.Background(), &QuorumRequest{}); err != nil {
 		return c, err
 	}
 

@@ -32,7 +32,11 @@ func DialOptionCredentials(c credentials.PerRPCCredentials) DialOption {
 // NewDialer used to establish connections to the cluster
 // prior to TLS authentication of the client.
 func NewDialer(proxy dialer, options ...DialOption) Dialer {
-	d := Dialer{proxy: proxy}
+	d := Dialer{
+		proxy: proxy,
+		tls:   grpc.EmptyDialOption{},
+		creds: grpc.EmptyDialOption{},
+	}
 
 	for _, opt := range options {
 		opt(&d)
@@ -141,6 +145,7 @@ func (t Client) Refresh() (key, cert []byte, err error) {
 		resp *RefreshResponse
 		c    NotaryClient
 	)
+
 	log.Println("refresh invoked")
 	if c, err = t.cached(); err != nil {
 		return key, cert, err

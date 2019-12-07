@@ -258,8 +258,8 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	p := t.sm
 	t.m.Unlock()
 
-	log.Println("watch invoked")
-	defer log.Println("watch completed")
+	debugx.Println("watch invoked")
+	defer debugx.Println("watch completed")
 
 	switch state := p.State(); state {
 	case raft.Leader, raft.Follower, raft.Candidate:

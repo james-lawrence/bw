@@ -76,7 +76,8 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	Address         string
+	Address         string // cluster address
+	Discovery       string // discovery service address
 	Concurrency     float64
 	DeployDataDir   string        `yaml:"deployDataDir"`
 	DeployTimeout   time.Duration `yaml:"deployTimeout"`
@@ -169,6 +170,10 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 			IP:   ip,
 			Port: bw.DefaultTorrentPort,
 		}),
+		ConfigOptionDiscovery(&net.TCPAddr{
+			IP:   ip,
+			Port: bw.DefaultDiscoveryPort,
+		}),
 	)
 }
 
@@ -193,10 +198,17 @@ func ConfigOptionRaft(p *net.TCPAddr) ConfigOption {
 	}
 }
 
-// ConfigOptionTorrent sets the Torrent address to bind.
+// ConfigOptionTorrent sets the address for the torrent service address to bind.
 func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
 	return func(c *Config) {
 		c.TorrentBind = p
+	}
+}
+
+// ConfigOptionDiscovery sets the address for the discovery service to bind.
+func ConfigOptionDiscovery(p *net.TCPAddr) ConfigOption {
+	return func(c *Config) {
+		c.DiscoveryBind = p
 	}
 }
 

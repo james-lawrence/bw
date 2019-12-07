@@ -131,7 +131,7 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 		return &resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	return &resp, errorsx.String("not implemented")
+	return &resp, status.Error(codes.Unimplemented, "")
 }
 
 // Search the notary service for grants.

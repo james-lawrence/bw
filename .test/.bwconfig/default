@@ -1,6 +1,8 @@
 address: "localhost:2000"
+discovery: "localhost:2004"
 concurrency: 2
 servername: "localhost"
+ca: "${PWD}/../.bwagent1/credentials/tlsca.cert"
 #credentialsSource: "ACMEv2"
 #acme:
 #  email: "foo@example.com"
