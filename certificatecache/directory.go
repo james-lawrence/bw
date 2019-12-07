@@ -1,14 +1,20 @@
 package certificatecache
 
 import (
+	"context"
 	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
@@ -27,11 +33,13 @@ func mustWatcher(dir string) *fsnotify.Watcher {
 }
 
 // NewDirectory maintains a certificate config by watching a directory.
-func NewDirectory(serverName, dir string) (cache Directory) {
+func NewDirectory(serverName, dir string, pool *x509.CertPool) (cache Directory) {
 	w := mustWatcher(dir)
 	return Directory{
 		serverName: serverName,
 		dir:        dir,
+		pooldir:    filepath.Join(dir, "authorities"),
+		pool:       pool,
 		watcher:    w,
 		cachedCert: &tls.Certificate{}, // prevent nil exception if something goes wrong on initial load.
 		initialize: &sync.Once{},
@@ -44,6 +52,8 @@ func NewDirectory(serverName, dir string) (cache Directory) {
 type Directory struct {
 	serverName string
 	dir        string
+	pooldir    string
+	pool       *x509.CertPool
 	cachedCert *tls.Certificate
 	watcher    *fsnotify.Watcher
 	initialize *sync.Once
@@ -52,11 +62,27 @@ type Directory struct {
 
 func (t Directory) init() (err error) {
 	t.initialize.Do(func() {
-		err = t.refresh()
-		go t.background()
+		err = errorsx.Compact(
+			os.RemoveAll(t.pooldir),
+			os.MkdirAll(t.pooldir, 0700),
+			t.refresh(),
+		)
+
+		if err == nil {
+			go t.background()
+		}
 	})
 
-	return errors.Wrap(err, "failed to load tls credentials")
+	return errors.Wrap(err, "failed to initialize certificate cache")
+}
+
+// InsertAuthority insert the cluster authority into the pool directory.
+func (t Directory) InsertAuthority(pemCerts []byte) (err error) {
+	if err = t.init(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetCertificate for use by tls.Config.
@@ -71,13 +97,28 @@ func (t Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certi
 
 func (t Directory) background() {
 	limit := rate.NewLimiter(rate.Every(time.Second), 1)
+	debounce := make(chan struct{}, 1)
 	for {
 		select {
+		case _ = <-debounce:
+			if err := limit.Wait(context.Background()); err != nil {
+				log.Println("debounce wait failed", err)
+				continue
+			}
+
+			log.Println("refreshing certificates")
+			t.refresh()
 		case _ = <-t.watcher.Events:
 			if limit.Allow() {
 				log.Println("refreshing certificates")
+				t.refresh()
+				continue
 			}
-			t.refresh()
+
+			select {
+			case debounce <- struct{}{}:
+			default:
+			}
 		case err := <-t.watcher.Errors:
 			if limit.Allow() {
 				log.Println("watch error", err)
@@ -115,8 +156,38 @@ func (t Directory) refresh() (err error) {
 	}
 
 	t.m.Lock()
-	*t.cachedCert = cert
-	t.m.Unlock()
+	defer t.m.Unlock()
 
-	return nil
+	*t.cachedCert = cert
+
+	// refresh the pool
+	return filepath.Walk(t.pooldir, func(path string, info os.FileInfo, err error) error {
+		var (
+			ca []byte
+		)
+
+		if err != nil {
+			log.Println("error walking authority cache", err)
+			return nil
+		}
+
+		if info.IsDir() && path == t.pooldir {
+			return nil
+		}
+
+		if info.IsDir() {
+			return filepath.SkipDir
+		}
+
+		if ca, err = ioutil.ReadFile(path); err != nil {
+			log.Println("failed to read certificate", path)
+			return nil
+		}
+
+		if ok := t.pool.AppendCertsFromPEM(ca); !ok {
+			return nil
+		}
+
+		return nil
+	})
 }

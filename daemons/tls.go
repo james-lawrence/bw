@@ -20,8 +20,6 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 		pool *x509.CertPool
 	)
 
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir)
-
 	if pool, err = x509.SystemCertPool(); err != nil {
 		return creds, errors.WithStack(err)
 	}
@@ -33,6 +31,8 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 	if ok := pool.AppendCertsFromPEM(ca); !ok {
 		return creds, errors.New("failed to append client ca")
 	}
+
+	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, pool)
 
 	creds = &tls.Config{
 		ServerName:           c.ServerName,
@@ -73,8 +73,6 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 		pool *x509.CertPool
 	)
 
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir)
-
 	if pool, err = x509.SystemCertPool(); err != nil {
 		return creds, errors.WithStack(err)
 	}
@@ -86,6 +84,8 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 	if ok := pool.AppendCertsFromPEM(ca); !ok {
 		return creds, errors.New("failed to append client certs")
 	}
+
+	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, pool)
 
 	creds = &tls.Config{
 		ServerName:           c.ServerName,
