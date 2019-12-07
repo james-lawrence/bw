@@ -35,12 +35,13 @@ func NewLocal(p agent.Peer, options ...localOption) Local {
 	}
 
 	m := agent.PeerMetadata{
-		Status:      int32(l.Peer.Status),
-		Capability:  l.Capability,
-		RPCPort:     l.Peer.RPCPort,
-		RaftPort:    l.Peer.RaftPort,
-		SWIMPort:    l.Peer.SWIMPort,
-		TorrentPort: l.Peer.TorrentPort,
+		Status:        int32(l.Peer.Status),
+		Capability:    l.Capability,
+		RPCPort:       l.Peer.RPCPort,
+		RaftPort:      l.Peer.RaftPort,
+		SWIMPort:      l.Peer.SWIMPort,
+		TorrentPort:   l.Peer.TorrentPort,
+		DiscoveryPort: l.Peer.DiscoveryPort,
 	}
 
 	if l.metadata, err = proto.Marshal(&m); err != nil {

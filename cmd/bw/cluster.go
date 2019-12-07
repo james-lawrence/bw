@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/pkg/errors"
 )
 
@@ -66,7 +67,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 		cs *tls.Config
 	)
 
-	if cs, err = conf.BuildServer(); err != nil {
+	if cs, err = daemons.TLSGenServer(conf); err != nil {
 		return p, errors.WithStack(err)
 	}
 

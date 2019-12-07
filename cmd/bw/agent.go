@@ -71,7 +71,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if creds, err = t.config.BuildServer(); err != nil {
+	if creds, err = daemons.TLSGenServer(t.config); err != nil {
 		return err
 	}
 
@@ -154,6 +154,10 @@ func (t *agentCmd) bind() (err error) {
 		RPCCredentials: tlscreds,
 		Raft:           p,
 		Results:        make(chan deployment.DeployResult, 100),
+	}
+
+	if err = daemons.Discovery(dctx, t.configFile); err != nil {
+		return err
 	}
 
 	if err = daemons.Agent(dctx, cx, t.config); err != nil {

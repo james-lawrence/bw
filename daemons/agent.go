@@ -86,7 +86,7 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 		return errors.Wrapf(err, "failed to bind agent to %s", config.RPCBind)
 	}
 
-	ctx.grpc(server, bind)
+	ctx.grpc("agent", server, bind)
 
 	return nil
 }

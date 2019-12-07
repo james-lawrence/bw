@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/ux"
@@ -63,8 +64,8 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -73,7 +74,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		),
 	}
 
-	if client, d, c, err = agent.Connect(config, coptions...); err != nil {
+	if client, d, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
 
@@ -110,8 +111,8 @@ func (t *agentInfo) _info() (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -120,7 +121,7 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if client, d, c, err = agent.Connect(config, coptions...); err != nil {
+	if client, d, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
 

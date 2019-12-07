@@ -21,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
@@ -146,8 +147,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -162,7 +163,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
@@ -260,8 +261,8 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -276,7 +277,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
@@ -429,8 +430,8 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -445,7 +446,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = agent.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 

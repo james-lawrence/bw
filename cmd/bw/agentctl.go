@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -35,8 +36,8 @@ func (t *actlCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.actlCmd(common(parent.Command("all", "deploy to all nodes within the cluster").Default()))
-	t.filteredCmd(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters")))
+	t.actlCmd(common(parent.Command("all", "restart all the nodes within the cluster").Default()))
+	t.filteredCmd(common(parent.Command("filtered", "restart all the nodes that match one of the provided filters")))
 }
 
 func (t *actlCmd) actlCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -88,8 +89,8 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []agent.ConnectOption{
-		agent.ConnectOptionClustering(
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
 			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
@@ -98,7 +99,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		),
 	}
 
-	if client, dialer, c, err = agent.Connect(config, coptions...); err != nil {
+	if client, dialer, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
 

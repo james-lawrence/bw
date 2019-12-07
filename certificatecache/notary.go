@@ -29,6 +29,7 @@ func (t notary) Refresh() (err error) {
 		cert []byte
 		ca   []byte
 		pool *x509.CertPool
+		d    discovery.QuorumDialer
 	)
 
 	if pool, err = x509.SystemCertPool(); err != nil {
@@ -53,7 +54,11 @@ func (t notary) Refresh() (err error) {
 		RootCAs:    pool,
 	}
 
-	client := nsvc.NewClient(nsvc.NewDialer(discovery.NewQuorumDialer(t.Address), nsvc.DialOptionTLS(&c)))
+	if d, err = discovery.NewQuorumDialer(t.Address); err != nil {
+		return err
+	}
+
+	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c)))
 
 	if key, cert, err = client.Refresh(); err != nil {
 		return err

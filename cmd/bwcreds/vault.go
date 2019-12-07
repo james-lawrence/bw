@@ -30,7 +30,7 @@ func (t *vaultCreds) generate(ctx *kingpin.ParseContext) (err error) {
 	path := bw.DefaultLocation(t.environment, "")
 
 	if os.Geteuid() > 0 {
-		path = bw.DefaultUserDirLocation(t.environment, "")
+		path = bw.DefaultUserDirLocation(t.environment)
 		log.Println("creating workspace configuration directory:", path)
 		if err = os.MkdirAll(path, 0700); err != nil {
 			return errors.WithStack(err)

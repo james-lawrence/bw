@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/notifier"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
 	"google.golang.org/grpc"
@@ -41,7 +42,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(t.config))
 
-	if creds, err = t.config.GRPCCredentials(); err != nil {
+	if creds, err = daemons.GRPCGenServer(t.config); err != nil {
 		return err
 	}
 

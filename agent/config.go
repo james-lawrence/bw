@@ -1,10 +1,7 @@
 package agent
 
 import (
-	"context"
 	"crypto/sha256"
-	"crypto/tls"
-	"io/ioutil"
 	"math"
 	"net"
 	"path/filepath"
@@ -12,14 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/pkg/errors"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
@@ -78,7 +69,7 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
 	}
 
-	ConfigClientTLS(certificatecache.DefaultTLSCredentialsRoot)(&config)
+	ConfigClientTLS(bw.DefaultEnvironmentName)(&config)
 
 	return NewConfigClient(config, options...)
 }
@@ -96,39 +87,6 @@ type ConfigClient struct {
 	Environment     string
 }
 
-// Connect to the address in the config client.
-func (t ConfigClient) Connect(creds credentials.TransportCredentials, options ...ConnectOption) (client Client, d Dialer, c clustering.Cluster, err error) {
-	var (
-		details ConnectResponse
-	)
-
-	conn := newConnect(options...)
-
-	if client, d, details, err = t.connect(creds); err != nil {
-		return client, d, c, err
-	}
-
-	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
-		return client, d, c, err
-	}
-
-	return client, d, c, nil
-}
-
-func (t ConfigClient) connect(creds credentials.TransportCredentials) (c Client, d Dialer, details ConnectResponse, err error) {
-	opts := DefaultDialerOptions(grpc.WithTransportCredentials(creds))
-	d = NewDialer(opts...)
-	if c, err = AddressProxyDialQuorum(t.Address, opts...); err != nil {
-		return c, d, details, err
-	}
-
-	if details, err = c.Connect(); err != nil {
-		return c, d, details, err
-	}
-
-	return c, d, details, err
-}
-
 // LoadConfig create a new configuration from the specified path using the current
 // configuration as the default values for the new configuration.
 func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
@@ -142,50 +100,6 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 // Partitioner ...
 func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionFromFloat64(t.Concurrency)
-}
-
-func clusterConnect(details ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
-	keyring, err := memberlist.NewKeyring([][]byte{}, details.Secret)
-	if err != nil {
-		return c, errors.Wrap(err, "failed to create keyring")
-	}
-
-	copts = append([]clustering.Option{
-		clustering.OptionBindPort(0),
-		clustering.OptionLogOutput(ioutil.Discard),
-		clustering.OptionKeyring(keyring),
-	}, copts...)
-
-	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
-		return c, errors.Wrap(err, "failed to join cluster")
-	}
-
-	bopts = append([]clustering.BootstrapOption{
-		clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1)),
-		clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts),
-		clustering.BootstrapOptionPeeringStrategies(
-			BootstrapPeers(details.Quorum...),
-		),
-	}, bopts...)
-
-	if err = clustering.Bootstrap(context.Background(), c, bopts...); err != nil {
-		return c, errors.Wrap(err, "failed to connect to cluster")
-	}
-
-	return c, nil
-}
-
-func (t ConfigClient) creds() (credentials.TransportCredentials, error) {
-	var (
-		err  error
-		conf *tls.Config
-	)
-
-	if conf, err = t.BuildClient(); err != nil {
-		return nil, err
-	}
-
-	return credentials.NewTLS(conf), nil
 }
 
 // BootstrapPeers converts a list of Peers into a list of addresses to bootstrap from.
@@ -215,7 +129,7 @@ func NewConfig(options ...ConfigOption) Config {
 		},
 	}
 
-	newTLSAgent(certificatecache.DefaultTLSCredentialsRoot, "")(&c)
+	newTLSAgent(bw.DefaultEnvironmentName, "")(&c)
 
 	for _, opt := range options {
 		opt(&c)
@@ -299,6 +213,7 @@ type Config struct {
 	MinimumNodes      int           `yaml:"minimumNodes"`
 	Bootstrap         bootstrap     `yaml:"bootstrap"`
 	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
+	DiscoveryBind     *net.TCPAddr
 	RPCBind           *net.TCPAddr
 	RaftBind          *net.TCPAddr
 	SWIMBind          *net.TCPAddr
@@ -323,13 +238,14 @@ type dnsBind struct {
 // Peer - builds the Peer information from the configuration.
 func (t Config) Peer() Peer {
 	return Peer{
-		Status:      Peer_Node,
-		Name:        t.Name,
-		Ip:          t.RPCBind.IP.String(),
-		RPCPort:     uint32(t.RPCBind.Port),
-		RaftPort:    uint32(t.RaftBind.Port),
-		SWIMPort:    uint32(t.SWIMBind.Port),
-		TorrentPort: uint32(t.TorrentBind.Port),
+		Status:        Peer_Node,
+		Name:          t.Name,
+		Ip:            t.RPCBind.IP.String(),
+		RPCPort:       uint32(t.RPCBind.Port),
+		RaftPort:      uint32(t.RaftBind.Port),
+		SWIMPort:      uint32(t.SWIMBind.Port),
+		TorrentPort:   uint32(t.TorrentBind.Port),
+		DiscoveryPort: uint32(t.DiscoveryBind.Port),
 	}
 }
 

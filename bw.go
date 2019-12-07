@@ -52,6 +52,10 @@ const (
 	DefaultACMEPort = 2005
 	// DefaultNotaryKey ...
 	DefaultNotaryKey = "notary.key"
+	// DefaultTLSKeyCA default name for the certificate authority key.
+	DefaultTLSKeyCA = "tlsca.key"
+	// DefaultTLSCertCA default name for the certificate authority certificate.
+	DefaultTLSCertCA = "tlsca.cert"
 )
 
 // DeployDir return the deploy directory under the given root.

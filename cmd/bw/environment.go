@@ -67,7 +67,7 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 
 	environmentCredentialsDir := bw.DefaultLocation(t.name, "")
 	if os.Geteuid() > 0 {
-		environmentCredentialsDir = bw.DefaultUserDirLocation(t.name, "")
+		environmentCredentialsDir = bw.DefaultUserDirLocation(t.name)
 	}
 
 	log.Println("creating configuration directory:", environmentCredentialsDir)

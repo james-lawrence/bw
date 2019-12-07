@@ -1,5 +1,5 @@
 // Package daemons provide simplified functions to running the various daemons
-// the agent runs.
+// the agent runs. include initialization and setup utility functions.
 package daemons
 
 import (
@@ -11,7 +11,9 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/storage"
+	"github.com/pkg/errors"
 
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc"
@@ -46,21 +48,21 @@ type Context struct {
 	Results        chan deployment.DeployResult
 }
 
-func (t *Context) grpc(server *grpc.Server, listeners ...net.Listener) {
-	t.shutdown(listeners...)
+func (t *Context) grpc(name string, server *grpc.Server, listeners ...net.Listener) {
+	t.shutdown(name, listeners...)
 
 	for _, l := range listeners {
 		go server.Serve(l)
 	}
 }
 
-func (t *Context) shutdown(listeners ...net.Listener) {
+func (t *Context) shutdown(name string, listeners ...net.Listener) {
 	t.Cleanup.Add(1)
 	go func() {
 		defer t.Cleanup.Done()
 		<-t.Context.Done()
 		for _, l := range listeners {
-			log.Println("agent shutdown", l.Close())
+			log.Println(name, "shutdown", errorsx.Compact(errors.Wrap(l.Close(), "failed"), errorsx.String("complete")))
 		}
 	}()
 }
