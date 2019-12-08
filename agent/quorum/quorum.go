@@ -69,6 +69,13 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 	}
 }
 
+// OptionInitializers for the state machine.
+func OptionInitializers(inits ...Initializer) Option {
+	return func(q *Quorum) {
+		q.initializers = inits
+	}
+}
+
 // New new quorum instance based on the options.
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
 	wal := NewWAL(make(chan agent.Message, 100))
@@ -94,14 +101,15 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.U
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
-	wal     *WAL
-	sm      stateMachine
-	uploads storage.UploadProtocol
-	m       *sync.Mutex
-	c       cluster
-	dialer  agent.Dialer
-	deploy  deployer
-	lost    chan struct{}
+	wal          *WAL
+	sm           stateMachine
+	uploads      storage.UploadProtocol
+	m            *sync.Mutex
+	c            cluster
+	dialer       agent.Dialer
+	deploy       deployer
+	lost         chan struct{}
+	initializers []Initializer
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -145,10 +153,11 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			switch o.Raft.State() {
 			case raft.Leader:
 				t.sm = func() stateMachine {
-					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy)
+					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy, t.initializers)
 
 					// background this task so dispatches work.
 					go func() {
+						logx.MaybeLog(sm.initialize())
 						logx.Verbose(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
 						logx.MaybeLog(sm.determineLatestDeploy(t.c, t.dialer))
 					}()

@@ -52,6 +52,25 @@ func NewAutoSigner(comment string) (s Signer, err error) {
 	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, sshx.Auto)
 }
 
+// AutoSignerInfo returns the fingerprint and authorized ssh key.
+func AutoSignerInfo() (fp string, pub []byte, err error) {
+	var (
+		pubk    ssh.PublicKey
+		encoded []byte
+	)
+
+	location := bw.DefaultUserDirLocation(bw.DefaultNotaryKey) + ".pub"
+	if encoded, err = ioutil.ReadFile(location); err != nil {
+		return fp, pub, err
+	}
+
+	if pubk, _, _, _, err = ssh.ParseAuthorizedKey(encoded); err != nil {
+		return fp, pub, err
+	}
+
+	return genFingerprint(ssh.MarshalAuthorizedKey(pubk)), encoded, nil
+}
+
 func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, err error) {
 	var (
 		encoded    []byte

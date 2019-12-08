@@ -19,17 +19,31 @@ const (
 	deploying
 )
 
+// Initializer for the state machine.
+type Initializer interface {
+	Initialize(agent.Dispatcher) error
+}
+
 // StateMachineOption options for the state machine.
 type StateMachineOption func(*StateMachine)
 
 // NewStateMachine stores the state of the cluster.
-func NewStateMachine(w *WAL, l cluster, r *raft.Raft, d agent.Dialer, deploy deployer, options ...StateMachineOption) StateMachine {
+func NewStateMachine(
+	w *WAL,
+	l cluster,
+	r *raft.Raft,
+	d agent.Dialer,
+	deploy deployer,
+	inits []Initializer,
+	options ...StateMachineOption,
+) StateMachine {
 	sm := StateMachine{
 		wal:      w,
 		local:    l,
 		state:    r,
 		dialer:   d,
 		deployer: deploy,
+		inits:    inits,
 	}
 
 	for _, opt := range options {
@@ -47,6 +61,7 @@ type StateMachine struct {
 	wal    *WAL
 	state  *raft.Raft
 	dialer agent.Dialer
+	inits  []Initializer
 }
 
 // State returns the state of the raft cluster.
@@ -99,6 +114,16 @@ func (t *StateMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers 
 	debugx.Println("deploy command initiated", t.state.State())
 	defer debugx.Println("deploy command completed", t.state.State())
 	return t.deployer.Deploy(t.dialer, dopts, a, peers...)
+}
+
+func (t *StateMachine) initialize() (err error) {
+	for _, init := range t.inits {
+		if err = init.Initialize(t); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (t *StateMachine) determineLatestDeploy(c cluster, d agent.Dialer) (err error) {

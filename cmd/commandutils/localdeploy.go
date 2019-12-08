@@ -18,9 +18,10 @@ import (
 func RemoteTasksAvailable(config agent.ConfigClient) bool {
 	debugx.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
 	defer debugx.Println("done checking")
+
 	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
 	logx.MaybeLog(errors.Wrap(err, "stat failed"))
-	return os.IsExist(err) || err == nil
+	return err == nil
 }
 
 // RunLocalDirectives runs local directives, used to build archives prior to deploying.

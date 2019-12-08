@@ -64,7 +64,6 @@ type Directory struct {
 func (t Directory) init() (err error) {
 	t.initialize.Do(func() {
 		err = errorsx.Compact(
-			os.RemoveAll(t.pooldir),
 			os.MkdirAll(t.pooldir, 0700),
 			t.refresh(),
 		)
@@ -75,15 +74,6 @@ func (t Directory) init() (err error) {
 	})
 
 	return errors.Wrap(err, "failed to initialize certificate cache")
-}
-
-// InsertAuthority insert the cluster authority into the pool directory.
-func (t Directory) InsertAuthority(pemCerts []byte) (err error) {
-	if err = t.init(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // GetCertificate for use by tls.Config.

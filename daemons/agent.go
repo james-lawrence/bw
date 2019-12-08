@@ -61,6 +61,9 @@ func Agent(ctx Context, config agent.Config) (err error) {
 		proxy.NewProxy(ctx.Cluster),
 		ctx.Upload,
 		quorum.OptionDialer(dialer),
+		quorum.OptionInitializers(
+			GenCertificate(config),
+		),
 	)
 	go (&q).Observe(ctx.Raft, make(chan raft.Observation, 200))
 	qc := quorum.NewConfig(&q, quorum.NewEmptySnapshot(), quorum.NewEmptySnapshot())

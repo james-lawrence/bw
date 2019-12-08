@@ -12,7 +12,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/certificatecache"
+	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/systemx"
@@ -46,7 +46,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	}
 
 	// load or create credentials.
-	if err = certificatecache.FromConfig(config.CredentialsDir, config.CredentialsMode, path, certificatecache.NewRefreshClient()); err != nil {
+	if err = cc.FromConfig(config.CredentialsDir, config.CredentialsMode, path, cc.NewRefreshClient()); err != nil {
 		return config, err
 	}
 

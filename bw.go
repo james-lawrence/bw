@@ -21,18 +21,23 @@ import (
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (
+	// DirCache used as the top level cache directory below the root.
+	// used to store data that can be regenerated. examples:
+	// - torrents
+	// - tls credentials
+	// - deploy archives
+	// - snapshots
+	DirCache = "cache.d"
 	// DirDeploys the name of the deploys directory.
 	DirDeploys = "deploys"
 	// DirObservers name of the observer directory.
 	DirObservers = "observers"
 	// DirRaft the name of the directory dealing with the raft state.
 	DirRaft = "raft"
-	// DirNotary the name of the directory dealing with credentials
-	DirNotary = "notary"
-	// DirPlugins the name of the directory dealing with plugins for the agent.
-	DirPlugins = "plugins"
 	// DirTorrents the name of the directory for storing torrent information.
 	DirTorrents = "torrents"
+	// DirAuthorizations the directory storing authorization credentials
+	DirAuthorizations = "authorizations"
 	// EnvFile environment file name.
 	EnvFile = "bw.env"
 	// DefaultDeployTimeout default timeout for a deployment.
@@ -55,6 +60,8 @@ const (
 	DefaultDiscoveryPort = 2004
 	// DefaultACMEPort port for ACME TLSALPN01 service.
 	DefaultACMEPort = 2005
+	// DefaultDirAgentCredentials ...
+	DefaultDirAgentCredentials = "credentials"
 	// DefaultNotaryKey ...
 	DefaultNotaryKey = "private.key"
 	// DefaultTLSKeyCA default name for the certificate authority key.

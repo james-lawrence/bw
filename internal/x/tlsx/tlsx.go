@@ -153,6 +153,16 @@ func WriteTLS(key *rsa.PrivateKey, derBytes []byte, err error) func(io.Writer, i
 	}
 }
 
+// WritePrivateKey ...
+func WritePrivateKey(dst io.Writer, key *rsa.PrivateKey) error {
+	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
+}
+
+// WriteCertificate ...
+func WriteCertificate(dst io.Writer, cert []byte) error {
+	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "CERTIFICATE", Bytes: cert}))
+}
+
 // Option tls config options
 type Option func(*tls.Config) error
 

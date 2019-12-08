@@ -160,7 +160,7 @@ func (t Storage) Delete(g Grant) (_ Grant, err error) {
 }
 
 func genKey(root, fingerprint string) string {
-	return filepath.Join(root, bw.DirNotary, fingerprint)
+	return filepath.Join(root, bw.DirAuthorizations, fingerprint)
 }
 
 func genFingerprint(d []byte) string {
