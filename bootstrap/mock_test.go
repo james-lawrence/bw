@@ -10,6 +10,8 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment"
+
+	"google.golang.org/grpc"
 )
 
 // Mock bootstrap service
@@ -34,6 +36,10 @@ type fakeClient struct {
 	connect   agent.ConnectResponse
 	status    agent.StatusResponse
 	qinfo     agent.InfoResponse
+}
+
+func (t fakeClient) Conn() *grpc.ClientConn {
+	return nil
 }
 
 func (t fakeClient) Shutdown() error {
