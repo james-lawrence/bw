@@ -15,6 +15,7 @@ require (
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
+	github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
 	github.com/anacrolix/missinggo v1.2.1
 	github.com/anacrolix/torrent v1.8.3-0.20191017064635-289293f3cc0c
 	github.com/armon/go-radix v1.0.0 // indirect

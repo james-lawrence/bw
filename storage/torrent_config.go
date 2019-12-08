@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/anacrolix/dht/v2"
+	"github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/pkg/errors"
 )
@@ -58,6 +59,7 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
 	c.ClientConfig.DisableIPv6 = true
+	c.ClientConfig.Logger = log.Discard
 	// c.ClientConfig.Debug = true
 	c.ClientConfig.Seed = true
 	// c.ClientConfig.NoDefaultPortForwarding = true

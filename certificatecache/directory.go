@@ -12,11 +12,12 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
+
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/pkg/errors"
-	"golang.org/x/time/rate"
 )
 
 func mustWatcher(dir string) *fsnotify.Watcher {
@@ -96,11 +97,10 @@ func (t Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certi
 }
 
 func (t Directory) background() {
-	limit := rate.NewLimiter(rate.Every(time.Second), 1)
-	debounce := make(chan struct{}, 1)
-	for {
-		select {
-		case _ = <-debounce:
+	limit := rate.NewLimiter(rate.Every(10*time.Second), 1)
+	debounce := make(chan struct{})
+	go func() {
+		for _ = range debounce {
 			if err := limit.Wait(context.Background()); err != nil {
 				log.Println("debounce wait failed", err)
 				continue
@@ -108,13 +108,12 @@ func (t Directory) background() {
 
 			log.Println("refreshing certificates")
 			t.refresh()
-		case _ = <-t.watcher.Events:
-			if limit.Allow() {
-				log.Println("refreshing certificates")
-				t.refresh()
-				continue
-			}
+		}
+	}()
 
+	for {
+		select {
+		case _ = <-t.watcher.Events:
 			select {
 			case debounce <- struct{}{}:
 			default:

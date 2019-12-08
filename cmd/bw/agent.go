@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -17,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/storage"
 
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -150,15 +152,21 @@ func (t *agentCmd) bind() (err error) {
 		Upload:         tc.Uploader(),
 		Download:       tc.Downloader(),
 		RPCCredentials: tlscreds,
-		Raft:           p,
-		Results:        make(chan deployment.DeployResult, 100),
+		RPCKeepalive: keepalive.ServerParameters{
+			MaxConnectionIdle: 1 * time.Hour,
+			Time:              1 * time.Minute,
+			Timeout:           2 * time.Minute,
+		},
+		Cluster: cx,
+		Raft:    p,
+		Results: make(chan deployment.DeployResult, 100),
 	}
 
 	if err = daemons.Discovery(dctx, t.config, t.configFile); err != nil {
 		return err
 	}
 
-	if err = daemons.Agent(dctx, cx, t.config); err != nil {
+	if err = daemons.Agent(dctx, t.config); err != nil {
 		return err
 	}
 

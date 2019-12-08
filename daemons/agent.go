@@ -3,7 +3,6 @@ package daemons
 import (
 	"net"
 	"path/filepath"
-	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/observers"
@@ -17,11 +16,10 @@ import (
 
 	"github.com/hashicorp/raft"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 )
 
 // Agent daemon - rpc endpoint for the system.
-func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
+func Agent(ctx Context, config agent.Config) (err error) {
 	var (
 		sctx         shell.Context
 		observersdir observers.Directory
@@ -37,15 +35,11 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 		return err
 	}
 
-	keepalive := grpc.KeepaliveParams(keepalive.ServerParameters{
-		MaxConnectionIdle: 1 * time.Hour,
-		Time:              1 * time.Minute,
-		Timeout:           2 * time.Minute,
-	})
+	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
 
 	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(ctx.RPCCredentials))...)
 	qdialer := agent.NewQuorumDialer(dialer)
-	dispatcher := agentutil.NewDispatcher(cx, qdialer)
+	dispatcher := agentutil.NewDispatcher(ctx.Cluster, qdialer)
 
 	deploy := deployment.NewDirective(
 		deployment.DirectiveOptionShellContext(sctx),
@@ -63,8 +57,8 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 
 	q := quorum.New(
 		observersdir,
-		cx,
-		proxy.NewProxy(cx),
+		ctx.Cluster,
+		proxy.NewProxy(ctx.Cluster),
 		ctx.Upload,
 		quorum.OptionDialer(dialer),
 	)
@@ -72,7 +66,7 @@ func Agent(ctx Context, cx cluster, config agent.Config) (err error) {
 	qc := quorum.NewConfig(&q, quorum.NewEmptySnapshot(), quorum.NewEmptySnapshot())
 
 	a := agent.NewServer(
-		cx,
+		ctx.Cluster,
 		agent.ServerOptionDeployer(&coordinator),
 		agent.ServerOptionShutdown(ctx.Shutdown),
 	)

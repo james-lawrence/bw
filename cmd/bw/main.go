@@ -8,9 +8,11 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
 	"github.com/alecthomas/kingpin"
@@ -64,9 +66,15 @@ func main() {
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
 	})
-	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
-	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
 
+	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99")
+		os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
+	}
+
+	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
+
+	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
 	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))

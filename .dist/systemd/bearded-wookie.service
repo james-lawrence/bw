@@ -8,11 +8,13 @@ Restart=always
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 Environment=SHELL=/bin/bash
 # enable verbose logging. enables all of the BEARDED_WOOKIE_LOGS_ switches.
-#Environment=EnvLogsVerbose=1
+#Environment=BEARDED_WOOKIE_LOGS_VERBOSE=1
 # enable verbose logging for the gossip service.
-#Environment=EnvLogsGossip=1
+#Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
 # enable verbose logging for the raft service.
-#Environment=EnvLogsRaft=1
+#Environment=BEARDED_WOOKIE_LOGS_RAFT=1
+# enable verbose logging for grpc
+#Environment=BEARDED_WOOKIE_LOGS_GRPC=1
 ExecStart=/usr/local/bin/bw agent --cluster-dns-enable
 
 [Install]

@@ -12,7 +12,7 @@ import (
 func NewQuorumDialer(address string) (QuorumDialer, error) {
 	return QuorumDialer{
 		addr:    address,
-		address: agent.RPCAddress,
+		address: agent.DiscoveryAddress,
 		cached:  grpcx.NewCachedClient(),
 	}, nil
 }

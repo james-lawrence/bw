@@ -2,6 +2,7 @@ package notary
 
 import (
 	"context"
+	"log"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -127,6 +128,7 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 		resp RefreshResponse
 	)
 
+	log.Println("Notary.Refresh invoked")
 	if p := t.auth.Authorize(ctx); !p.Refresh {
 		return &resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}

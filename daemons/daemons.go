@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/keepalive"
 )
 
 type cluster interface {
@@ -44,7 +45,9 @@ type Context struct {
 	Upload         storage.UploadProtocol
 	Download       storage.DownloadProtocol
 	Raft           raftutil.Protocol
+	Cluster        cluster
 	RPCCredentials credentials.TransportCredentials
+	RPCKeepalive   keepalive.ServerParameters
 	Results        chan deployment.DeployResult
 }
 

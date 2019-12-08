@@ -20,7 +20,7 @@ func RPCAddress(p Peer) string {
 
 // DiscoveryAddress for a peer.
 func DiscoveryAddress(p Peer) string {
-	return net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort))
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.DiscoveryPort))
 }
 
 // SWIMAddress for peer.
