@@ -5,9 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"io"
+	"os"
+	"os/user"
 	"path/filepath"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
 )
 
@@ -52,7 +56,7 @@ const (
 	// DefaultACMEPort port for ACME TLSALPN01 service.
 	DefaultACMEPort = 2005
 	// DefaultNotaryKey ...
-	DefaultNotaryKey = "notary.key"
+	DefaultNotaryKey = "private.key"
 	// DefaultTLSKeyCA default name for the certificate authority key.
 	DefaultTLSKeyCA = "tlsca.key"
 	// DefaultTLSCertCA default name for the certificate authority certificate.
@@ -103,4 +107,10 @@ func MustGenerateID() RandomID {
 	}
 
 	return id
+}
+
+// DisplayName for the user
+func DisplayName() string {
+	u := systemx.CurrentUserOrDefault(user.User{Username: "unknown"})
+	return stringsx.DefaultIfBlank(os.Getenv(EnvDisplayName), stringsx.DefaultIfBlank(u.Name, u.Username))
 }

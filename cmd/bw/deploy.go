@@ -208,7 +208,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}
 
-	if archive, err = client.Upload(DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
+	if archive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment failed")
 		return nil
@@ -296,7 +296,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	cmd := agentutil.DeployCommandCancel(DisplayName())
+	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
 	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
 		return err
 	}

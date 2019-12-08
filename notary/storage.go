@@ -17,7 +17,7 @@ import (
 )
 
 // NewFromFile load notary configuration from a file.
-func NewFromFile(path string) (c Storage, err error) {
+func NewFromFile(root, path string) (c Storage, err error) {
 	var (
 		in io.ReadCloser
 	)
@@ -27,7 +27,7 @@ func NewFromFile(path string) (c Storage, err error) {
 	}
 	defer in.Close()
 
-	if c, err = NewFrom(in); err != nil {
+	if c, err = NewFrom(root, in); err != nil {
 		return c, errors.Wrapf(err, "failed to read configuration from: %s", path)
 	}
 
@@ -35,9 +35,9 @@ func NewFromFile(path string) (c Storage, err error) {
 }
 
 // NewFrom parse the configuration from an io.Reader.
-func NewFrom(in io.Reader) (c Storage, err error) {
+func NewFrom(root string, in io.Reader) (c Storage, err error) {
 	var (
-		nc  Storage
+		nc  = NewStorage(root)
 		bin []byte
 	)
 
@@ -66,7 +66,7 @@ type nconfig struct {
 
 // Storage ...
 type Storage struct {
-	root   string  `yaml:"root"`
+	root   string
 	config nconfig `yaml:"notary"`
 	m      *sync.RWMutex
 }

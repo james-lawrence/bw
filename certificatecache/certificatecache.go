@@ -41,9 +41,19 @@ const (
 	ModeACME2 = "ACMEv2"
 )
 
+// NewRefreshClient default tls credentials refresh strategy for agents.
+func NewRefreshClient() *Notary {
+	return &Notary{}
+}
+
+// NewRefreshAgent default tls credentials refresh strategy for agents.
+func NewRefreshAgent() *Noop {
+	return &Noop{}
+}
+
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
-func FromConfig(dir, mode, configname string) (err error) {
+func FromConfig(dir, mode, configname string, fallback refresher) (err error) {
 	switch mode {
 	case ModeACME2:
 		v := ACME{
@@ -76,13 +86,11 @@ func FromConfig(dir, mode, configname string) (err error) {
 
 		return RefreshAutomatic(dir, v)
 	default:
-		v := notary{}
-
-		if err = bw.ExpandAndDecodeFile(configname, &v); err != nil {
+		if err = bw.ExpandAndDecodeFile(configname, fallback); err != nil {
 			return err
 		}
 
-		return RefreshAutomatic(dir, v)
+		return RefreshAutomatic(dir, fallback)
 	}
 }
 
@@ -91,9 +99,11 @@ type refresher interface {
 	Refresh() error
 }
 
-type nopRefresh struct{}
+// Noop refresh which does nothing
+type Noop struct{}
 
-func (t nopRefresh) Refresh() error {
+// Refresh implement refresher interface.
+func (t Noop) Refresh() error {
 	return nil
 }
 

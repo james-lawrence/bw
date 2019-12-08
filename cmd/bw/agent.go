@@ -65,7 +65,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile); err != nil {
+	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile, certificatecache.NewRefreshAgent()); err != nil {
 		return err
 	}
 

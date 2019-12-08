@@ -8,16 +8,18 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	nsvc "github.com/james-lawrence/bw/notary"
+
 	"github.com/pkg/errors"
 )
 
-// notary configuration used for bootstrapping a client from the cluster itself.
+// Notary refresher used for bootstrapping a client from the cluster itself.
 // for legacy reasons notary system will return an error if the cluster doesn't support
 // the notary service.
-type notary struct {
+type Notary struct {
 	Address        string `yaml:"address"`
 	Discovery      string `yaml:"discovery"`
 	CommonName     string `yaml:"servername"`
@@ -25,14 +27,20 @@ type notary struct {
 	CA             string
 }
 
-func (t notary) Refresh() (err error) {
+// Refresh the current credentials
+func (t Notary) Refresh() (err error) {
 	var (
 		key  []byte
 		cert []byte
 		ca   []byte
 		pool *x509.CertPool
 		d    discovery.QuorumDialer
+		ss   nsvc.Signer
 	)
+
+	if ss, err = nsvc.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
 
 	if pool, err = x509.SystemCertPool(); err != nil {
 		log.Println(errors.Wrap(err, "WARN: unable to load certificate authorities, assuming static certificates"))
@@ -61,18 +69,18 @@ func (t notary) Refresh() (err error) {
 		return err
 	}
 
-	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c)))
+	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 
 	if key, cert, err = client.Refresh(); err != nil {
 		// TODO:
 		// backwards compatibility code, for now only consider permission errors
 		// as hard failures, not all agents have the discovery service.
 		if grpcx.IsUnauthorized(err) {
-			return err
+			return nsvc.ErrUnauthorizedKey{}
 		}
 
 		// backwards compatibility code.
-		return nopRefresh{}.Refresh()
+		return Noop{}.Refresh()
 	}
 
 	log.Println("refresh completed")

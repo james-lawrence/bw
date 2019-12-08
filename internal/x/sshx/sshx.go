@@ -74,3 +74,8 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 
 	return ssh.MarshalAuthorizedKey(pubkey), nil
 }
+
+// IsNoKeyFound check if ssh key is not found.
+func IsNoKeyFound(err error) bool {
+	return err.Error() == "ssh: no key found"
+}

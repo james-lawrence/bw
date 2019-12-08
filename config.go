@@ -106,6 +106,11 @@ func DefaultDirLocation(rel string) string {
 	return DefaultDirectory(rel, env, home, system)
 }
 
+// DefaultCacheDirectory cache directory for storing data.
+func DefaultCacheDirectory() string {
+	return DefaultDirLocation("")
+}
+
 // DefaultDirectory finds the first directory root that exists and then returns
 // that root directory joined with the relative path provided.
 func DefaultDirectory(rel string, roots ...string) (path string) {

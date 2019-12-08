@@ -6,4 +6,5 @@ const (
 	EnvLogsGossip  = "BEARDED_WOOKIE_LOGS_GOSSIP"  // enable logging for gossip protocol. boolean, see strconv.ParseBool for valid values.
 	EnvLogsRaft    = "BEARDED_WOOKIE_LOGS_RAFT"    // enable logging for the raft protocol. boolean, see strconv.ParseBool for valid values.
 	EnvLogsGRPC    = "BEARDED_WOOKIE_LOGS_GRPC"    // enable logging for grpc protocol. boolean, see strconv.ParseBool for valid values.
+	EnvDisplayName = "BEARDED_WOOKIE_DISPLAY_NAME" // environment variable to determine display name to be used, defaults to current user's name.
 )

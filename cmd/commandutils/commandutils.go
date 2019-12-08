@@ -8,13 +8,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/pkg/errors"
 )
 
 // NewClientPeer create a client peer.
@@ -39,14 +40,14 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 // LoadConfiguration loads the configuration for the given environment.
 func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
-	log.Println("loading configuration", path)
+	log.Println("loading configuration", path, bw.DefaultCacheDirectory())
 	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
 		return config, errors.Wrap(err, "configuration load failed")
 	}
 
 	// load or create credentials.
-	if err = certificatecache.FromConfig(config.CredentialsDir, config.CredentialsMode, path); err != nil {
-		return config, errors.Wrap(err, "credentials load failed")
+	if err = certificatecache.FromConfig(config.CredentialsDir, config.CredentialsMode, path, certificatecache.NewRefreshClient()); err != nil {
+		return config, err
 	}
 
 	return config, err

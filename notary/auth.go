@@ -1,13 +1,17 @@
 package notary
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -25,15 +29,30 @@ const (
 	mdkey = "authorization"
 )
 
+// ErrUnauthorizedKey used when the key isn't authorized by the cluster its trying to connect too.
+type ErrUnauthorizedKey struct{}
+
+func (t ErrUnauthorizedKey) Error() string {
+	path := bw.DefaultUserDirLocation(bw.DefaultNotaryKey) + ".pub"
+	return fmt.Sprintf(`your key is unauthorized and will need to be added by an authorized user.
+please give the following file to an authorized user "%s".
+they can add the key using the command "bw notary insert %s"`, path, path)
+}
+
+// Format override standard error formatting.
+func (t ErrUnauthorizedKey) Format(s fmt.State, verb rune) {
+	io.WriteString(s, t.Error())
+}
+
 type keyGen func() ([]byte, error)
 
 // NewAutoSigner - loads or generates a ssh key to sign RPC requests with.
 // this method is only for use by clients and the new key will need to be added to the cluster.
-func NewAutoSigner() (s Signer, err error) {
-	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), sshx.Auto)
+func NewAutoSigner(comment string) (s Signer, err error) {
+	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, sshx.Auto)
 }
 
-func newAutoSignerPath(location string, kgen keyGen) (s Signer, err error) {
+func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, err error) {
 	var (
 		encoded    []byte
 		pubencoded []byte
@@ -53,8 +72,6 @@ func newAutoSignerPath(location string, kgen keyGen) (s Signer, err error) {
 
 	// if the file just didn't exist then great, lets generate it.
 	log.Println("authorization key not found, generating automatically")
-	log.Println("this key will need to be added to the cluster by an authorized user")
-	log.Printf("using the command `bw notary insert %s`\n", pub)
 
 	if encoded, err = kgen(); err != nil {
 		return s, errors.Wrap(err, "failed to generate authorization key")
@@ -66,6 +83,11 @@ func newAutoSignerPath(location string, kgen keyGen) (s Signer, err error) {
 
 	if pubencoded, err = sshx.PublicKey(encoded); err != nil {
 		return s, errors.Wrap(err, "failed to generate authorization key")
+	}
+
+	if strings.TrimSpace(comment) != "" {
+		comment = " " + comment + "\r\n"
+		pubencoded = append(bytes.TrimSpace(pubencoded), []byte(comment)...)
 	}
 
 	if err = ioutil.WriteFile(pub, pubencoded, 0600); err != nil {
@@ -108,7 +130,6 @@ func (t Signer) GetRequestMetadata(ctx context.Context, uri ...string) (m map[st
 		encoded string
 		sig     Signature
 	)
-
 	tok := GenerateToken(t.fingerprint)
 
 	if sig, err = genSignature(t.signer, tok); err != nil {
@@ -275,14 +296,15 @@ func loadAuthorizedKeys() (roots map[string]Grant, err error) {
 		encoded []byte
 		u       *user.User
 	)
-
 	roots = map[string]Grant{}
 
 	if u, err = user.Current(); err != nil {
 		return roots, err
 	}
 
-	if encoded, err = ioutil.ReadFile(filepath.Join(u.HomeDir, ".ssh", "authorized_keys")); err != nil {
+	authorizedKeysPath := filepath.Join(u.HomeDir, ".ssh", "authorized_keys")
+
+	if encoded, err = ioutil.ReadFile(authorizedKeysPath); err != nil {
 		return roots, err
 	}
 
@@ -292,16 +314,22 @@ func loadAuthorizedKeys() (roots map[string]Grant, err error) {
 		)
 
 		if key, _, _, encoded, err = ssh.ParseAuthorizedKey(encoded); err != nil {
-			return roots, err
+			if sshx.IsNoKeyFound(err) {
+				continue
+			}
+			log.Println(err)
+			continue
 		}
 
 		g := Grant{
 			Permission:    ptr(all()),
-			Authorization: key.Marshal(),
+			Authorization: ssh.MarshalAuthorizedKey(key),
 		}.EnsureDefaults()
-
+		log.Println("loaded", g.Fingerprint)
 		roots[g.Fingerprint] = g
 	}
 
-	return roots, err
+	log.Println("loaded", len(roots), "key(s)", authorizedKeysPath)
+
+	return roots, nil
 }

@@ -16,6 +16,7 @@ var _ = Describe("newAutoSignerPath", func() {
 	It("should succeed when no key exists", func() {
 		_, err := newAutoSignerPath(
 			filepath.Join(testingx.TempDir(), bw.DefaultNotaryKey),
+			"",
 			sshx.UnsafeAuto,
 		)
 		Expect(err).To(Succeed())
@@ -26,6 +27,7 @@ var _ = Describe("newAutoSignerPath", func() {
 		os.RemoveAll(tmp)
 		_, err := newAutoSignerPath(
 			filepath.Join(tmp, bw.DefaultNotaryKey),
+			"",
 			sshx.UnsafeAuto,
 		)
 		Expect(err).ToNot(Succeed())

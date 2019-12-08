@@ -2,6 +2,7 @@ package daemons
 
 import (
 	"net"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -24,7 +25,7 @@ func Discovery(ctx Context, c agent.Config, config string) (err error) {
 
 	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
 
-	if ns, err = notary.NewFromFile(config); err != nil {
+	if ns, err = notary.NewFromFile(filepath.Join(c.Root, "notary"), config); err != nil {
 		return err
 	}
 
