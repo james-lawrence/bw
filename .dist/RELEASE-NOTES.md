@@ -1,3 +1,60 @@
+commit ad5d15fe37755fb903ff1e25107deff95e7069c4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 8 12:04:20 2019 -0500
+
+    clean around notary service
+    
+    - most of notary service is now working, mainly refresh and search methods
+    - more cleanup will be needed around ssh credentials. mainly ux related.
+
+commit 44c3eadd7a833c94e59df82179f924e914257fef
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 8 09:30:12 2019 -0500
+
+    misc cleanup towards discovery/notary endpoints
+
+commit c22b184f4a419b57e1fc5c43a7b1ff298f999e48
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 16:31:27 2019 -0500
+
+    first pass at agent configuration sync
+
+commit 06c9d641a0f993b5da2095e1767ac8e7da85e466
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 13:10:21 2019 -0500
+
+    add certificate cache authority directory
+
+commit a2b65afb2e1468e1f4dfa4e9a71c88ed7d8cb189
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 12:26:07 2019 -0500
+
+    working discovery service
+
+commit 6f590764aa99766fe2820491da92b6d49caac880
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 10:57:24 2019 -0500
+
+    almost working notary endpoint
+
+commit 20c92cd300f6f5b0a92f4bad248b2205937582db
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 08:46:40 2019 -0500
+
+    rework TLS setup to remove dependency cycle
+
+commit 5c7559396779153fb4a6c5ba71776f2aa19726a4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 24 13:45:49 2019 -0500
+
+    storage, basic auth setup, client, service tests, and persistance remaining
+
+commit bc430435fa90ef824bef8755feb74898f515db0a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 5 21:45:23 2019 -0500
+
+    release 0.1.1575600321-74082f2c
+
 commit 74082f2c4cf711d8e3051b1f4b039388c325fdab
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Dec 5 21:45:21 2019 -0500
