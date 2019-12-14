@@ -37,6 +37,14 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
 
+// LoadAgentConfig - load the agent configuration from the provided file.
+func LoadAgentConfig(path string, proto agent.Config) (c agent.Config, err error) {
+	if err = bw.ExpandAndDecodeFile(path, &proto); err != nil {
+		return c, err
+	}
+	return proto.EnsureDefaults(), nil
+}
+
 // LoadConfiguration loads the configuration for the given environment.
 func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)

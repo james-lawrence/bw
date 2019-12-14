@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/notifier"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
@@ -36,7 +37,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	)
 	defer t.global.shutdown()
 
-	if err = bw.ExpandAndDecodeFile(t.configPath, &t.config); err != nil {
+	if t.config, err = commandutils.LoadAgentConfig(t.configPath, t.config); err != nil {
 		return err
 	}
 

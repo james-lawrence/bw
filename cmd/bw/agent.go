@@ -55,10 +55,9 @@ func (t *agentCmd) bind() (err error) {
 
 	log.SetPrefix("[AGENT] ")
 
-	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
+	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
 		return err
 	}
-	t.config = t.config.EnsureDefaults()
 
 	log.Println("configuration:", spew.Sdump(t.config))
 
