@@ -18,7 +18,6 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -27,15 +26,8 @@ import (
 )
 
 type stateMachine interface {
-	// Info high level information about deployment status.
-	Info() (agent.InfoResponse, error)
-	// Deploy initiate a deploy.
-	Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) error
-	// Cancel current deploy.
-	Cancel() error
-	// Dispatch a message to the raft cluster.
-	Dispatch(context.Context, ...agent.Message) error
 	State() raft.RaftState
+	Dispatch(context.Context, ...agent.Message) error
 }
 
 type cluster interface {
@@ -77,16 +69,26 @@ func OptionInitializers(inits ...Initializer) Option {
 }
 
 // New new quorum instance based on the options.
-func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.UploadProtocol, options ...Option) Quorum {
-	wal := NewWAL(make(chan agent.Message, 100))
+func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, options ...Option) Quorum {
+	deployment := newDeployment(d, c)
+	obs := NewObserver(make(chan agent.Message, 100))
+	go obs.Observe(cd)
+	wal := NewWAL(
+		NewTranscoder(
+			deployment,
+			codec,
+			obs,
+		),
+	)
+
 	r := Quorum{
+		deployment:            deployment,
 		ConnectableDispatcher: cd,
 		wal:                   &wal,
 		sm:                    &DisabledMachine{},
 		uploads:               upload,
 		dialer:                agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
 		m:                     &sync.Mutex{},
-		deploy:                d,
 		c:                     c,
 		lost:                  make(chan struct{}),
 	}
@@ -101,27 +103,19 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, upload storage.U
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
+	deployment   *deployment
 	wal          *WAL
 	sm           stateMachine
 	uploads      storage.UploadProtocol
 	m            *sync.Mutex
 	c            cluster
 	dialer       agent.Dialer
-	deploy       deployer
 	lost         chan struct{}
 	initializers []Initializer
 }
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
-	go func() {
-		for m := range t.wal.observer {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			logx.MaybeLog(errors.Wrap(t.ConnectableDispatcher.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
-			cancel()
-		}
-	}()
-
 	go rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
@@ -153,16 +147,22 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			switch o.Raft.State() {
 			case raft.Leader:
 				t.sm = func() stateMachine {
-					sm := NewStateMachine(t.wal, t.c, o.Raft, t.dialer, t.deploy, t.initializers)
+					sm := NewMachine(
+						o.Raft,
+						t.initializers...,
+					)
 
 					// background this task so dispatches work.
 					go func() {
 						logx.MaybeLog(sm.initialize())
-						logx.Verbose(errors.Wrap(sm.restartActiveDeploy(), "failed to restart an active deploy"))
-						logx.MaybeLog(sm.determineLatestDeploy(t.c, t.dialer))
+						logx.Verbose(errors.Wrap(
+							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm),
+							"failed to restart an active deploy",
+						))
+						logx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
 					}()
 
-					return &sm
+					return sm
 				}()
 			case raft.Follower, raft.Candidate:
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
@@ -178,24 +178,21 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
 	debugx.Println("info invoked")
 	defer debugx.Println("info completed")
-
-	return t.sm.Info()
+	return t.deployment.getInfo(), nil
 }
 
 // Cancel any active deploys
 func (t *Quorum) Cancel(ctx context.Context) (err error) {
-	if err = agentutil.Cancel(t.c, t.dialer); err != nil {
-		return err
-	}
-
-	return t.sm.Cancel()
+	debugx.Println("cancel invoked")
+	defer debugx.Println("cancel completed")
+	return t.deployment.cancel(ctx, t.dialer, t.proxy())
 }
 
 // Deploy ...
 func (t *Quorum) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
 	debugx.Println("deploy invoked")
 	defer debugx.Println("deploy completed")
-	return logx.MaybeLog(t.sm.Deploy(dopts, a, peers...))
+	return logx.MaybeLog(t.deployment.deploy(t.dialer, dopts, a, peers...))
 }
 
 // Upload ...
@@ -280,9 +277,6 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 
 	for {
 		select {
-		// useful code for testing clients for timeouts.
-		// case _ = <-time.After(5 * time.Second):
-		// 	return logx.MaybeLog(errors.New("timed out"))
 		case _ = <-out.Context().Done():
 			return logx.MaybeLog(errors.WithStack(out.Context().Err()))
 		case _ = <-t.lost:

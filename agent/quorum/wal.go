@@ -1,7 +1,7 @@
 package quorum
 
 import (
-	"fmt"
+	"bytes"
 	"io"
 	"io/ioutil"
 	"log"
@@ -11,7 +11,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/pkg/errors"
 )
 
@@ -26,25 +26,26 @@ func commandToMessage(cmd []byte) (m agent.Message, err error) {
 }
 
 // NewWAL ...
-func NewWAL(obs chan agent.Message) WAL {
+func NewWAL(c transcoder) WAL {
 	return WAL{
-		m:        &sync.RWMutex{},
-		observer: obs,
+		c: c,
+		innerstate: innerstate{
+			ctx: TranscoderContext{State: StateHealthy},
+		},
+		m: &sync.RWMutex{},
 	}
 }
 
 type innerstate struct {
-	logs                 []agent.Message
-	deploying            int32                // is a deploy process in progress.
-	runningDeploy        *agent.DeployCommand // currently active deployment.
-	lastSuccessfulDeploy *agent.DeployCommand // used for bootstrapping and recovering when a deploy proxy fails.
+	ctx  TranscoderContext
+	logs []agent.Message
 }
 
 // WAL for the quorum.
 type WAL struct {
 	innerstate
-	observer chan agent.Message
-	m        *sync.RWMutex
+	c transcoder
+	m *sync.RWMutex
 }
 
 // Apply log is invoked once a log entry is committed.
@@ -56,7 +57,7 @@ func (t *WAL) Apply(l *raft.Log) interface{} {
 	case raft.LogBarrier:
 		log.Println("barrier invoked", l.Index, l.Term)
 	case raft.LogCommand:
-		if err := t.decode(l.Data); err != nil {
+		if err := t.decode(t.ctx, l.Data); err != nil {
 			return err
 		}
 	case raft.LogNoop:
@@ -66,7 +67,7 @@ func (t *WAL) Apply(l *raft.Log) interface{} {
 	return nil
 }
 
-func (t *WAL) decode(buf []byte) error {
+func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 	var (
 		err error
 		m   agent.Message
@@ -76,79 +77,15 @@ func (t *WAL) decode(buf []byte) error {
 		return err
 	}
 
-	switch event := m.GetEvent().(type) {
-	case *agent.Message_DeployCommand:
-		if err = t.deployCommand(event.DeployCommand); err != nil {
-			return err
-		}
-	default:
+	if err = t.c.Decode(ctx, m); err != nil {
+		return err
 	}
 
 	t.m.Lock()
 	t.logs = append(t.logs, m)
 	t.m.Unlock()
 
-	// TODO consider moving observer into the state machine, would resolve needing
-	// to mark messages as replays when restoring state.
-	// ignore replayed messages.
-	if (!m.Replay || m.Observable) && t.observer != nil {
-		t.observer <- m
-	}
-
 	return nil
-}
-
-func (t *WAL) deployCommand(dc *agent.DeployCommand) error {
-	debugx.Println("deploy command received", dc.Command.String())
-	defer debugx.Println("deploy command processed", dc.Command.String())
-
-	switch dc.Command {
-	case agent.DeployCommand_Begin:
-		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
-			return errors.New(fmt.Sprint("deploy already in progress"))
-		}
-		t.m.Lock()
-		t.runningDeploy = dc
-		t.m.Unlock()
-	case agent.DeployCommand_Done:
-		atomic.SwapInt32(&t.deploying, none)
-		t.m.Lock()
-		t.lastSuccessfulDeploy = dc
-		t.runningDeploy = nil
-		t.m.Unlock()
-	default:
-		atomic.SwapInt32(&t.deploying, none)
-	}
-
-	return nil
-}
-
-func (t *WAL) getInfo() agent.InfoResponse {
-	t.m.RLock()
-	defer t.m.RUnlock()
-
-	m := agent.InfoResponse_None
-	if atomic.LoadInt32(&t.deploying) == deploying {
-		m = agent.InfoResponse_Deploying
-	}
-
-	return agent.InfoResponse{
-		Mode:      m,
-		Deploying: t.runningDeploy,
-		Deployed:  t.lastSuccessfulDeploy,
-	}
-}
-
-func (t *WAL) getLastSuccessfulDeploy() *agent.DeployCommand {
-	t.m.RLock()
-	defer t.m.RUnlock()
-	return t.lastSuccessfulDeploy
-}
-
-func (t *WAL) getRunningDeploy() *agent.DeployCommand {
-	t.m.RLock()
-	defer t.m.RUnlock()
-	return t.runningDeploy
 }
 
 // Snapshot is used to support log compaction. This call should
@@ -164,18 +101,58 @@ func (t *WAL) Snapshot() (raft.FSMSnapshot, error) {
 // Restore is used to restore an FSM from a snapshot. It is not called
 // concurrently with any other command. The FSM must discard all previous
 // state.
-func (t *WAL) Restore(r io.ReadCloser) (err error) {
+func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	var (
+		version agent.Message
 		encoded []byte
-		decoded agent.WAL
 	)
+
+	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
 
 	log.Println("WAL restoring")
 	defer log.Println("WAL restored")
 
-	if encoded, err = ioutil.ReadAll(r); err != nil {
+	if encoded, err = ioutil.ReadAll(o); err != nil {
 		return errors.WithStack(err)
 	}
+
+	// attempt v0 wal restore.
+	if err = t.deprecatedRestore(encoded); err == nil {
+		return nil
+	}
+
+	r := bytes.NewReader(encoded)
+
+	// reset the internal state of the write ahead log.
+	t.innerstate = innerstate{
+		ctx:  t.ctx,
+		logs: make([]agent.Message, 0, 128),
+	}
+
+	// read and discard version message, for future use.
+	if err = Decode(r, &version); err != nil && err != io.EOF {
+		return errors.WithStack(err)
+	}
+
+	for err != io.EOF {
+		if encoded, err = decodeRaw(r); err != nil && err != io.EOF {
+			return errors.WithStack(err)
+		}
+
+		if err = t.decode(t.ctx, encoded); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+
+	t.innerstate.ctx.State = StateHealthy
+
+	return nil
+}
+
+func (t *WAL) deprecatedRestore(encoded []byte) (err error) {
+	var (
+		decoded agent.WAL
+	)
 
 	if err = proto.Unmarshal(encoded, &decoded); err != nil {
 		return errors.WithStack(err)
@@ -183,8 +160,7 @@ func (t *WAL) Restore(r io.ReadCloser) (err error) {
 
 	// reset the internal state of the write ahead log.
 	t.innerstate = innerstate{
-		logs:      make([]agent.Message, 0, len(decoded.Messages)),
-		deploying: none,
+		logs: make([]agent.Message, 0, len(decoded.Messages)),
 	}
 
 	for _, m := range decoded.Messages {
@@ -192,7 +168,7 @@ func (t *WAL) Restore(r io.ReadCloser) (err error) {
 			return errors.WithStack(err)
 		}
 
-		if err = t.decode(encoded); err != nil {
+		if err = t.decode(t.ctx, encoded); err != nil {
 			return errors.WithStack(err)
 		}
 	}
@@ -215,10 +191,8 @@ type walSnapshot struct {
 // and call sink.Close() when finished or call sink.Cancel() on error.
 func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 	var (
-		encoded []byte
-		msg     agent.Message
-		state   agent.WAL
-		i       int
+		msg agent.Message
+		i   int
 	)
 
 	log.Println("persist invoked")
@@ -229,23 +203,23 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		// this ensures we only keep the state of the latest deploy when compacting the fsm.
 		case agent.Message_DeployCommandEvent:
 			t.min = i
-			state.Messages = state.Messages[:0]
 		}
-
-		tmp := msg
-		tmp.Observable = false
-		tmp.Replay = true
-		state.Messages = append(state.Messages, &tmp)
 	}
 
-	if encoded, err = proto.Marshal(&state); err != nil {
+	if err = encodeProtoTo(sink, agentutil.WALPreamble()); err != nil {
 		sink.Cancel()
 		return errors.WithStack(err)
 	}
 
-	if _, err = sink.Write(encoded); err != nil {
+	history := t.wal.logs[t.min:t.max]
+	if err = encodeTo(sink, history...); err != nil {
 		sink.Cancel()
 		return errors.WithStack(err)
+	}
+
+	if err = t.wal.c.Encode(sink); err != nil {
+		sink.Cancel()
+		return err
 	}
 
 	return sink.Close()

@@ -1,6 +1,9 @@
 package systemx
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -93,4 +96,22 @@ func FileExists(path string) bool {
 	}
 
 	return true
+}
+
+// FileMD5 computes digest of file contents.
+// if something goes wrong logs and returns an empty string.
+func FileMD5(path string) string {
+	var (
+		err  error
+		read []byte
+	)
+
+	if read, err = ioutil.ReadFile(path); err != nil {
+		log.Println("digest failed", err)
+		return ""
+	}
+
+	digest := md5.Sum(read)
+
+	return hex.EncodeToString(digest[:])
 }

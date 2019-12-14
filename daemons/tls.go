@@ -101,6 +101,22 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 	return creds, nil
 }
 
+// GRPCGenClientNoClientCert ...
+func GRPCGenClientNoClientCert(c agent.ConfigClient) (credentials.TransportCredentials, error) {
+	var (
+		err      error
+		tlscreds *tls.Config
+	)
+
+	if tlscreds, err = TLSGenClient(c); err != nil {
+		return nil, err
+	}
+
+	tlscreds.GetClientCertificate = nil
+
+	return credentials.NewTLS(tlscreds), nil
+}
+
 // GRPCGenClient generate grpc tls transport credentials for a client.
 func GRPCGenClient(c agent.ConfigClient) (credentials.TransportCredentials, error) {
 	var (

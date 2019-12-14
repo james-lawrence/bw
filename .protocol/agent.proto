@@ -33,6 +33,18 @@ message Peer {
   uint32 DiscoveryPort = 8;
 }
 
+message TLSEvent {
+  string fingerprint = 1;
+  bytes Key = 2;
+  bytes Certificate = 3;
+}
+
+message WALPreamble {
+  int32 Major = 1;
+  int32 Minor = 2;
+  int32 Patch = 3;
+}
+
 // Represents every message sent between nodes. effectively describes all possible events we may want
 // to act upon.
 message Message {
@@ -44,11 +56,11 @@ message Message {
     DeployEvent = 3;
     PeersFoundEvent = 4;
     PeersCompletedEvent = 5;
+    TLSCAEvent = 6;
   }
 
   string id = 9;
-  bool observable = 998;
-  bool replay = 999; // deprecated, use observable
+  bool hidden = 999;
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -62,6 +74,7 @@ message Message {
     DeployCommand deployCommand = 7;
     Deploy deploy = 8;
     NodeEvent membership = 10;
+    TLSEvent authority = 11;
   }
 }
 

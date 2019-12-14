@@ -249,7 +249,7 @@ func (t Config) EnsureDefaults() Config {
 	}
 
 	if t.CA == "" {
-		t.CA = filepath.Join(t.Root, bw.DefaultDirAgentCredentials, bw.DefaultTLSCertCA)
+		t.CA = filepath.Join(t.CredentialsDir, bw.DefaultTLSCertCA)
 	}
 
 	return t

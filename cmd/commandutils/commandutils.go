@@ -9,12 +9,18 @@ import (
 	"path/filepath"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/discovery"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -47,10 +53,43 @@ func LoadAgentConfig(path string, proto agent.Config) (c agent.Config, err error
 
 // LoadConfiguration loads the configuration for the given environment.
 func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
+	var (
+		creds credentials.TransportCredentials
+	)
+
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
 	log.Println("loading configuration", path, bw.DefaultCacheDirectory())
 	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
 		return config, errors.Wrap(err, "configuration load failed")
+	}
+
+	if creds, err = daemons.GRPCGenClientNoClientCert(config); err != nil {
+		return config, err
+	}
+
+	certpath := bw.LocateFirstInDir(
+		config.CredentialsDir,
+		cc.DefaultTLSCertCA,
+		cc.DefaultTLSCertServer,
+		cc.DefaultTLSCertClient,
+	)
+
+	if err = discovery.CheckCredentials(config.Discovery, certpath, grpc.WithTransportCredentials(creds)); err != nil && !grpcx.IsUnimplemented(err) {
+		if !grpcx.IsNotFound(err) {
+			return config, err
+		}
+
+		logx.MaybeLog(os.Remove(filepath.Join(config.CredentialsDir, cc.DefaultTLSCertCA)))
+		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+			config.CredentialsDir,
+			cc.DefaultTLSCertServer,
+			cc.DefaultTLSCertClient,
+		)))
+		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+			config.CredentialsDir,
+			cc.DefaultTLSKeyServer,
+			cc.DefaultTLSKeyClient,
+		)))
 	}
 
 	// load or create credentials.

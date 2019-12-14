@@ -17,7 +17,6 @@ import (
 
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/discovery.proto
-//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/quorum .protocol/configuration.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (

@@ -45,6 +45,15 @@ func IsUnauthorized(err error) bool {
 	return false
 }
 
+// IsNotFound check if the error is a grpc not found status error.
+func IsNotFound(err error) bool {
+	if s, ok := status.FromError(err); ok {
+		return s.Code() == codes.NotFound
+	}
+
+	return false
+}
+
 // NewCachedClient ...
 func NewCachedClient() *CachedClient {
 	return &CachedClient{m: &sync.RWMutex{}}
@@ -55,6 +64,19 @@ func NewCachedClient() *CachedClient {
 type CachedClient struct {
 	conn *grpc.ClientConn
 	m    *sync.RWMutex
+}
+
+// Close close the cached connection.
+func (t *CachedClient) Close() error {
+	t.m.RLock()
+	c := t.conn
+	t.m.RUnlock()
+
+	if c == nil {
+		return nil
+	}
+
+	return c.Close()
 }
 
 // Dial - returns the cached connection if any, otherwise it'll use the provided

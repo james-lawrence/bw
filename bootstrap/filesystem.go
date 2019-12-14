@@ -98,7 +98,7 @@ func (t Filesystem) monitor() {
 	go agentutil.WatchEvents(t.c.Local(), t.c.Local(), t.d, events)
 
 	for m := range events {
-		if m.Replay {
+		if m.Hidden {
 			continue
 		}
 

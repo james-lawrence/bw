@@ -87,7 +87,6 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	log.Println("creating credentials")
 	return t.authority.Create(duration, bits, options...)
 }
 
@@ -107,26 +106,25 @@ func (t Authority) Create(duration time.Duration, bits int, options ...tlsx.X509
 		cabuf     = bytes.NewBufferString("")
 	)
 
-	log.Println("checkpoint 1")
 	if template, err = tlsx.X509Template(duration, options...); err != nil {
 		return ca, key, cert, err
 	}
-	log.Println("checkpoint 2")
+
 	if generated, cert, err = tlsx.SignedRSAGen(bits, template, *t.CACert, t.CAKey); err != nil {
 		return ca, key, cert, err
 	}
-	log.Println("checkpoint 3")
+
 	if err = tlsx.WritePrivateKey(keybuf, generated); err != nil {
 		return ca, key, cert, err
 	}
-	log.Println("checkpoint 4")
+
 	if err = tlsx.WriteCertificate(certbuf, cert); err != nil {
 		return ca, key, cert, err
 	}
-	log.Println("checkpoint 5")
+
 	if err = tlsx.WriteCertificate(cabuf, t.CACert.Raw); err != nil {
 		return ca, key, cert, err
 	}
-	log.Println("checkpoint 6")
+
 	return cabuf.Bytes(), keybuf.Bytes(), certbuf.Bytes(), err
 }

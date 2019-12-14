@@ -22,3 +22,15 @@ message QuorumResponse {
 service Discovery {
   rpc Quorum(QuorumRequest) returns (QuorumResponse) {}
 }
+
+
+message CheckRequest {
+  string fingerprint = 1;
+}
+
+message CheckResponse {}
+
+// Authority service provides methods for ensure TLS credentials are correct.
+service Authority {
+  rpc Check(CheckRequest) returns (CheckResponse) {}
+}

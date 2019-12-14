@@ -1,6 +1,8 @@
 package agentutil
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -33,6 +35,47 @@ func LogEvent(p agent.Peer, s string) agent.Message {
 			},
 		},
 	}
+}
+
+// TLSEvent ...
+func TLSEvent(p agent.Peer, key, cert []byte) agent.Message {
+	digest := md5.Sum(cert)
+	return agent.Message{
+		Id:     uuid.Must(uuid.NewV4()).String(),
+		Type:   agent.Message_TLSCAEvent,
+		Peer:   &p,
+		Ts:     time.Now().Unix(),
+		Hidden: true,
+		Event: &agent.Message_Authority{
+			Authority: &agent.TLSEvent{
+				Fingerprint: hex.EncodeToString(digest[:]),
+				Key:         key,
+				Certificate: cert,
+			},
+		},
+	}
+}
+
+// WALPreamble preamble message for the WAL.
+func WALPreamble() *agent.WALPreamble {
+	return &agent.WALPreamble{
+		Major: 1,
+		Minor: 0,
+		Patch: 0,
+	}
+	// return agent.Message{
+	// 	Id:   uuid.Must(uuid.NewV4()).String(),
+	// 	Type: agent.Message_WALPreambleEvent,
+	// 	Peer: &agent.Peer{},
+	// 	Ts:   time.Now().Unix(),
+	// 	Event: &agent.Message_WALPreamble{
+	// 		WALPreamble: &agent.WALPreamble{
+	// 			Major: 0,
+	// 			Minor: 0,
+	// 			Patch: 0,
+	// 		},
+	// 	},
+	// }
 }
 
 // LogError create a log event message from an error.

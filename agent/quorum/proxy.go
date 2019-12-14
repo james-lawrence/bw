@@ -7,7 +7,6 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 )
 
 // NewProxyMachine stores the state of the cluster.
@@ -58,44 +57,9 @@ func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 	return d.Dial(leader)
 }
 
-// Info ...
-func (t *ProxyMachine) Info() (z agent.InfoResponse, err error) {
-	var (
-		c agent.Client
-	)
-
-	if c, err = t.DialLeader(t.dialer); err != nil {
-		return z, err
-	}
-
-	defer c.Close()
-
-	return c.QuorumInfo()
-}
-
 // Dispatch a message to the WAL.
 func (t *ProxyMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
 	return t.writeWAL(m...)
-}
-
-// Deploy trigger a deploy
-func (t *ProxyMachine) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
-	var (
-		c agent.Client
-	)
-
-	if c, err = t.DialLeader(t.dialer); err != nil {
-		return err
-	}
-
-	defer c.Close()
-	return c.RemoteDeploy(dopts, a, peers...)
-}
-
-// Cancel cancel a ongoing deploy.
-func (t *ProxyMachine) Cancel() error {
-	dc := agent.DeployCommand{Command: agent.DeployCommand_Cancel}
-	return t.writeWAL(agentutil.DeployCommand(t.local.Local(), dc))
 }
 
 func (t *ProxyMachine) writeWAL(m ...agent.Message) (err error) {

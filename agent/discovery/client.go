@@ -24,6 +24,11 @@ type QuorumDialer struct {
 	address func(agent.Peer) string
 }
 
+// Close close the cached connection.
+func (t QuorumDialer) Close() error {
+	return t.cached.Close()
+}
+
 // Dial given the options
 func (t QuorumDialer) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
 	var (

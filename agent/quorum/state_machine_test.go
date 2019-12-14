@@ -1,21 +1,20 @@
 package quorum_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"io/ioutil"
 	"log"
-	"net"
 	"runtime"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/agent"
-	. "github.com/james-lawrence/bw/agent/quorum"
-	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/cluster"
-	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agentutil"
+
+	. "github.com/james-lawrence/bw/agent/quorum"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -40,7 +39,7 @@ func (t *mockdeploy) Deploy(_ agent.Dialer, opts agent.DeployOptions, archive ag
 	return nil
 }
 
-func newCluster(obs chan agent.Message, names ...string) (peers []*raft.Raft, transports []*raft.InmemTransport, err error) {
+func newCluster(c Transcoder, names ...string) (peers []*raft.Raft, transports []*raft.InmemTransport, err error) {
 	var (
 		servers []raft.Server
 	)
@@ -52,11 +51,10 @@ func newCluster(obs chan agent.Message, names ...string) (peers []*raft.Raft, tr
 			protocol  *raft.Raft
 		)
 
-		if server, transport, protocol, err = newPeer(obs, n, false); err != nil {
+		if server, transport, protocol, err = newPeer(c, n, false); err != nil {
 			return peers, transports, err
 		}
-		// don't add the observer to any other nodes.
-		obs = nil
+
 		peers = append(peers, protocol)
 		servers = append(servers, server)
 		transports = append(transports, transport)
@@ -74,7 +72,7 @@ func newCluster(obs chan agent.Message, names ...string) (peers []*raft.Raft, tr
 	return peers, transports, nil
 }
 
-func newPeer(obs chan agent.Message, name string, leader bool) (raft.Server, *raft.InmemTransport, *raft.Raft, error) {
+func newPeer(c Transcoder, name string, leader bool) (raft.Server, *raft.InmemTransport, *raft.Raft, error) {
 	var (
 		addr      raft.ServerAddress
 		transport *raft.InmemTransport
@@ -86,7 +84,7 @@ func newPeer(obs chan agent.Message, name string, leader bool) (raft.Server, *ra
 	storage := raft.NewInmemStore()
 	snapshot := raft.NewInmemSnapshotStore()
 	addr, transport = raft.NewInmemTransport("")
-	fsm := NewWAL(obs)
+	fsm := NewWAL(c)
 	protocol, err := raft.NewRaft(config, &fsm, storage, storage, snapshot, transport)
 	return raft.Server{Address: addr, ID: config.LocalID, Suffrage: raft.Voter}, transport, protocol, err
 }
@@ -132,49 +130,54 @@ var _ = Describe("StateMachine", func() {
 	local := mockLocal{}
 
 	It("should write to WAL on dispatch", func() {
-		protocols, _, err := newCluster(nil, "server1", "server2", "server3")
+		protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
 		log.Println("awaiting leader")
 		leader := awaitLeader(protocols...)
 		log.Println("leader elected")
 		lp := agent.NewPeer("node")
-		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
+		sm := NewMachine(
+			leader,
+		)
 		cmd := qCommand(agent.DeployCommand_Begin)
 
-		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
+		Expect(sm.Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
 	})
 
 	DescribeTable("persisting state",
 		func(n int, messages ...agent.Message) {
 			var (
-				decoded agent.WAL
+				decoded []agent.Message
 			)
 			convert := func(c []*agent.Message) *agent.WAL {
-				for idx, v := range c {
-					v.Replay = true
-					c[idx] = v
-				}
 				return &agent.WAL{Messages: c}
 			}
-			protocols, _, err := newCluster(nil, "server1", "server2", "server3")
+			protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
 			Expect(err).ToNot(HaveOccurred())
 			leader := awaitLeader(protocols...)
-			lp := agent.NewPeer("node")
-			mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-			wal := NewWAL(make(chan agent.Message))
-			sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
+			sm := NewMachine(
+				leader,
+			)
 
-			Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
+			Expect(sm.Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 			snapshotfuture := leader.Snapshot()
 			Expect(snapshotfuture.Error()).ToNot(HaveOccurred())
 			_, ior, err := snapshotfuture.Open()
-			Expect(err).ToNot(HaveOccurred())
-			raw, err := ioutil.ReadAll(ior)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(proto.Unmarshal(raw, &decoded)).ToNot(HaveOccurred())
-			Expect(proto.Equal(&decoded, convert(agent.MessagesToPtr(messages[n:]...)))).To(BeTrue())
+			Expect(err).To(Succeed())
+			preamble := &agent.WALPreamble{}
+			Expect(Decode(ior, preamble)).To(Succeed())
+			Expect(preamble.Major).To(Equal(int32(1)))
+			Expect(preamble.Minor).To(Equal(int32(0)))
+			Expect(preamble.Patch).To(Equal(int32(0)))
+			decoded, err = DecodeEvery(ior)
+			Expect(err).To(Succeed())
+
+			Expect(
+				proto.Equal(
+					convert(agent.MessagesToPtr(decoded...)),
+					convert(agent.MessagesToPtr(messages[n:]...)),
+				),
+			).To(BeTrue())
 		},
 		Entry(
 			"example 1",
@@ -225,23 +228,31 @@ var _ = Describe("StateMachine", func() {
 		),
 	)
 
-	It("should return an error when dispatch failed", func() {
+	It("should restore v0 state", func() {
+		obs := make(chan agent.Message, 5)
+		ob := NewEvery(obs)
+		encoded, err := ioutil.ReadFile(".fixtures/wal-v0.proto.bin")
+		Expect(err).To(Succeed())
+		wal := NewWAL(NewTranscoder(ob))
+		Expect(wal.Restore(ioutil.NopCloser(bytes.NewBuffer(encoded)))).To(Succeed())
+		Expect(len(obs)).To(Equal(3))
+	})
+
+	It("should return an error when dispatch fails", func() {
 		cmd := agent.DeployCommand{
 			Command: agent.DeployCommand_Begin,
 			Options: &agent.DeployOptions{},
 			Archive: &agent.Archive{},
 		}
 
-		protocols, _, err := newCluster(nil, "server1", "server2", "server3")
+		protocols, _, err := newCluster(NewTranscoder(Discard{Cause: errors.New("boom")}), "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
 		leader := awaitLeader(protocols...)
-		lp := agent.NewPeer("node")
-		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
+		sm := NewMachine(
+			leader,
+		)
 
-		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).ToNot(HaveOccurred())
-		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
+		Expect(sm.Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
 	})
 
 	It("should write message to the observer", func() {
@@ -251,16 +262,18 @@ var _ = Describe("StateMachine", func() {
 			agentutil.LogEvent(local.Local(), "message 3"),
 			agentutil.LogEvent(local.Local(), "message 4"),
 		}
+
 		obs := make(chan agent.Message, len(messages))
-		protocols, _, err := newCluster(obs, "server1", "server2", "server3")
+		ob := NewObserver(obs)
+		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
 		Expect(err).ToNot(HaveOccurred())
 		leader := awaitLeader(protocols...)
-		lp := agent.NewPeer("node")
-		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
-		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
 
-		Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
+		sm := NewMachine(
+			leader,
+		)
+
+		Expect(sm.Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 
 		for _, m := range messages {
 			var expected agent.Message

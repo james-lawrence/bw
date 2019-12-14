@@ -72,7 +72,6 @@ func (t Notary) Refresh() (err error) {
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 
 	if ca, key, cert, err = client.Refresh(); err != nil {
-		// TODO:
 		// backwards compatibility code, for now only consider permission errors
 		// as hard failures, not all agents have the discovery service.
 		if grpcx.IsUnauthorized(err) {

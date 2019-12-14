@@ -47,6 +47,12 @@ func Discovery(ctx Context, c agent.Config, config string) (err error) {
 		ns,
 	).Bind(server)
 	discovery.New(ctx.Cluster).Bind(server)
+
+	// used to validate client certificates.
+	discovery.NewAuthority(
+		certificatecache.CAKeyPath(c.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
+	).Bind(server)
+
 	ctx.grpc("discovery", server, bind)
 
 	return nil
