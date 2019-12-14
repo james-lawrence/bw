@@ -130,7 +130,7 @@ func NewConfig(options ...ConfigOption) Config {
 		},
 	}
 
-	newTLSAgent(bw.DefaultEnvironmentName, "")(&c)
+	newTLSAgent(bw.DefaultEnvironmentName)(&c)
 
 	for _, opt := range options {
 		opt(&c)
@@ -240,6 +240,19 @@ type Config struct {
 	AWSBootstrap      struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
+}
+
+// EnsureDefaults values after configuration load
+func (t Config) EnsureDefaults() Config {
+	if t.CredentialsDir == "" {
+		t.CredentialsDir = filepath.Join(t.Root, bw.DefaultDirAgentCredentials)
+	}
+
+	if t.CA == "" {
+		t.CA = filepath.Join(t.Root, bw.DefaultDirAgentCredentials, bw.DefaultTLSCertCA)
+	}
+
+	return t
 }
 
 type dnsBind struct {

@@ -58,6 +58,7 @@ func (t *agentCmd) bind() (err error) {
 	if err = bw.ExpandAndDecodeFile(t.configFile, &t.config); err != nil {
 		return err
 	}
+	t.config = t.config.EnsureDefaults()
 
 	log.Println("configuration:", spew.Sdump(t.config))
 

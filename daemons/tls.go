@@ -32,7 +32,11 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 		return creds, errors.New("failed to append client ca")
 	}
 
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, pool)
+	m := certificatecache.NewDirectory(
+		c.ServerName,
+		c.CredentialsDir,
+		pool,
+	)
 
 	creds = &tls.Config{
 		ServerName:           c.ServerName,

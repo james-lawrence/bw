@@ -61,7 +61,7 @@ const (
 	// DefaultACMEPort port for ACME TLSALPN01 service.
 	DefaultACMEPort = 2005
 	// DefaultDirAgentCredentials ...
-	DefaultDirAgentCredentials = "credentials"
+	DefaultDirAgentCredentials = "tls"
 	// DefaultNotaryKey ...
 	DefaultNotaryKey = "private.key"
 	// DefaultTLSKeyCA default name for the certificate authority key.

@@ -8,6 +8,8 @@ import (
 	"crypto/x509/pkix"
 	"io/ioutil"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
@@ -44,6 +46,10 @@ func (t genCA) Initialize(dispatch agent.Dispatcher) (err error) {
 		log.Println("GENERATE CERTIFICATE AUTHORITY COMPLETED")
 		logx.MaybeLog(dispatch.Dispatch(context.Background(), agentutil.LogEvent(t.c.Peer(), "generate certificate authority completed")))
 	}()
+
+	if err = os.MkdirAll(filepath.Dir(cacertpath), 0700); err != nil {
+		return err
+	}
 
 	if err = dispatch.Dispatch(context.Background(), agentutil.LogEvent(t.c.Peer(), "generate certificate authority initiated")); err != nil {
 		return err
