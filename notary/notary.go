@@ -2,13 +2,16 @@ package notary
 
 import (
 	"context"
+	"crypto/x509/pkix"
 	"log"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 // PermAll all the permissions.
@@ -51,18 +54,26 @@ type storage interface {
 
 type option func(*Service)
 
+type authority interface {
+	Create(duration time.Duration, bits int, options ...tlsx.X509Option) (ca, key, cert []byte, err error)
+}
+
 // New notary service.
-func New(s storage, options ...option) Service {
+func New(servername string, a authority, s storage, options ...option) Service {
 	return Service{
-		storage: s,
-		auth:    newAuth(s),
+		servername: servername,
+		authority:  a,
+		storage:    s,
+		auth:       newAuth(s),
 	}
 }
 
 // Service of a notary service
 type Service struct {
-	storage storage
-	auth    auth
+	servername string
+	authority  authority
+	storage    storage
+	auth       auth
 }
 
 func (t Service) merge(options ...option) Service {
@@ -127,13 +138,30 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 	var (
 		resp RefreshResponse
 	)
+	defer func() {
+		if r := recover(); r != nil {
+			log.Println("recovered", r)
+		}
+	}()
 
-	log.Println("Notary.Refresh invoked")
+	log.Println("Notary.Refresh initated")
+	defer log.Println("Notary.Refresh completed")
 	if p := t.auth.Authorize(ctx); !p.Refresh {
 		return &resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	return &resp, status.Error(codes.Unimplemented, "refresh not implemented")
+	caoptions := []tlsx.X509Option{
+		tlsx.X509OptionSubject(pkix.Name{
+			CommonName: t.servername,
+		}),
+	}
+
+	if resp.Authority, resp.PrivateKey, resp.Certificate, err = t.authority.Create(20*time.Hour, 4096, caoptions...); err != nil {
+		log.Println("failed to generate credentials", err)
+		return nil, status.Error(codes.Unavailable, "authority not available")
+	}
+
+	return &resp, nil
 }
 
 // Search the notary service for grants.

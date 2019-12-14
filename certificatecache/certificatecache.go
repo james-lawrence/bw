@@ -50,8 +50,8 @@ const (
 )
 
 // NewRefreshClient default tls credentials refresh strategy for agents.
-func NewRefreshClient() *Notary {
-	return &Notary{}
+func NewRefreshClient(dir string) *Notary {
+	return &Notary{CertificateDir: dir}
 }
 
 // NewRefreshAgent default tls credentials refresh strategy for agents.

@@ -54,7 +54,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	}
 
 	// load or create credentials.
-	if err = cc.FromConfig(config.CredentialsDir, config.CredentialsMode, path, cc.NewRefreshClient()); err != nil {
+	if err = cc.FromConfig(config.CredentialsDir, config.CredentialsMode, path, cc.NewRefreshClient(config.CredentialsDir)); err != nil {
 		return config, err
 	}
 

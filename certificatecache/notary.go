@@ -71,7 +71,7 @@ func (t Notary) Refresh() (err error) {
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 
-	if key, cert, err = client.Refresh(); err != nil {
+	if ca, key, cert, err = client.Refresh(); err != nil {
 		// TODO:
 		// backwards compatibility code, for now only consider permission errors
 		// as hard failures, not all agents have the discovery service.
@@ -84,7 +84,7 @@ func (t Notary) Refresh() (err error) {
 	}
 
 	log.Println("refresh completed")
-	// capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
+	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
 	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
 
@@ -98,10 +98,10 @@ func (t Notary) Refresh() (err error) {
 		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
 	}
 
-	// log.Println("writing authority certificate", capath)
-	// if err = ioutil.WriteFile(capath, []byte(credentials.Data["issuing_ca"].(string)), 0600); err != nil {
-	// 	return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
-	// }
+	log.Println("writing authority certificate", capath)
+	if err = ioutil.WriteFile(capath, ca, 0600); err != nil {
+		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
+	}
 
 	return nil
 }

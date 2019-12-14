@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/cmd"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
 	"github.com/alecthomas/kingpin"
@@ -25,6 +26,13 @@ type global struct {
 	shutdown context.CancelFunc
 	cleanup  *sync.WaitGroup
 	debug    bool
+}
+
+func init() {
+	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99"))
+		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info"))
+	}
 }
 
 func main() {
@@ -66,11 +74,6 @@ func main() {
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
 	})
-
-	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
-		os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99")
-		os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
-	}
 
 	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
 

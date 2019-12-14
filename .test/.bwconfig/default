@@ -2,4 +2,4 @@ address: "localhost:2000"
 discovery: "localhost:2004"
 concurrency: 2
 servername: "localhost"
-ca: "${PWD}/../.bwagent1/credentials/tlsca.cert"
+ca: "${PWD}/../.bwagent1/tls/tlsca.cert"

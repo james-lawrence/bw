@@ -140,22 +140,24 @@ func (t Client) Revoke(fingerprint string) (g Grant, err error) {
 }
 
 // Refresh refresh TLS credentials.
-func (t Client) Refresh() (key, cert []byte, err error) {
+func (t Client) Refresh() (ca, key, cert []byte, err error) {
 	var (
 		resp *RefreshResponse
 		c    NotaryClient
 	)
 
-	log.Println("refresh invoked")
+	log.Println("refresh initiated")
+	defer log.Println("refresh completed")
+
 	if c, err = t.cached(); err != nil {
-		return key, cert, err
+		return ca, key, cert, err
 	}
 
 	if resp, err = c.Refresh(context.Background(), &RefreshRequest{}); err != nil {
-		return key, cert, err
+		return ca, key, cert, err
 	}
 
-	return resp.PrivateKey, resp.Certificate, err
+	return resp.Authority, resp.PrivateKey, resp.Certificate, err
 }
 
 // Search the service for a given key.

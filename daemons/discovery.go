@@ -8,8 +8,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
 )
@@ -25,7 +27,7 @@ func Discovery(ctx Context, c agent.Config, config string) (err error) {
 
 	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
 
-	if ns, err = notary.NewFromFile(filepath.Join(c.Root, "notary"), config); err != nil {
+	if ns, err = notary.NewFromFile(filepath.Join(c.Root, bw.DirAuthorizations), config); err != nil {
 		return err
 	}
 
@@ -39,7 +41,11 @@ func Discovery(ctx Context, c agent.Config, config string) (err error) {
 
 	server = grpc.NewServer(grpc.Creds(creds), keepalive)
 
-	notary.New(ns).Bind(server)
+	notary.New(
+		c.ServerName,
+		certificatecache.NewAuthorityCache(c.CredentialsDir),
+		ns,
+	).Bind(server)
 	discovery.New(ctx.Cluster).Bind(server)
 	ctx.grpc("discovery", server, bind)
 

@@ -169,7 +169,6 @@ func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) st
 
 // InitializeDeploymentDirectory initializes the directory for the deployments.
 func InitializeDeploymentDirectory(root string) (err error) {
-	log.Println("creating deploys directory", filepath.Join(root, DirDeploys))
 	if err = os.MkdirAll(filepath.Join(root, DirDeploys), 0755); err != nil {
 		return errors.WithStack(err)
 	}

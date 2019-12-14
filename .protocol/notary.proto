@@ -70,8 +70,9 @@ message SearchResponse {
 message RefreshRequest {}
 
 message RefreshResponse {
-  bytes certificate = 1;
+  bytes authority = 1;
   bytes privateKey = 2;
+  bytes certificate = 3;
 }
 
 // Notary service used for generating certificates to interact with the cluster.
