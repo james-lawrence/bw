@@ -140,7 +140,7 @@ var _ = Describe("StateMachine", func() {
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
 		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
 		cmd := qCommand(agent.DeployCommand_Begin)
 
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
@@ -164,7 +164,7 @@ var _ = Describe("StateMachine", func() {
 			lp := agent.NewPeer("node")
 			mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
 			wal := NewWAL(make(chan agent.Message))
-			sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+			sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
 
 			Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 			snapshotfuture := leader.Snapshot()
@@ -238,7 +238,7 @@ var _ = Describe("StateMachine", func() {
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
 		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
 
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).ToNot(HaveOccurred())
 		Expect((&sm).Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
@@ -258,7 +258,7 @@ var _ = Describe("StateMachine", func() {
 		lp := agent.NewPeer("node")
 		mock := clustering.NewMock(clusteringtestutil.NewNode(lp.Name, net.ParseIP(lp.Ip)))
 		wal := NewWAL(make(chan agent.Message))
-		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{})
+		sm := NewStateMachine(&wal, cluster.New(cluster.NewLocal(lp), mock), leader, agent.NewDialer(), &mockdeploy{}, []Initializer{})
 
 		Expect((&sm).Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 
