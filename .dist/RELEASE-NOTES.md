@@ -1,3 +1,51 @@
+commit e0fbf9ee3207ce7f2ef96609214501421811c3bd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 14 18:16:23 2019 -0500
+
+    makes the WAL more extensible.
+    
+    - converts the WAL into a true binary log file. successive records
+    written one after another.
+    - maintains WAL backwards compatibility.
+    - clients can now detect when their cacerts are invalid and properly
+    dispose of them.
+
+commit 69f0539ebb995e1a0b0eb4851dc8cca48fc5e7b5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 15 10:09:57 2019 -0500
+
+    fix state machine tests
+
+commit d455c27bbfc535b2d0abc86898cc34c37e6957ed
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 14 12:37:41 2019 -0500
+
+    working refresh endpoint
+
+commit cc08a37f91b40dfead8add2998d6585dc6f2e29f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 14 10:46:01 2019 -0500
+
+    standard agent configuration loading
+
+commit f8fdaa81d7b3676f4452bb10f29434d5cd1aee74
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 14 10:37:27 2019 -0500
+
+    cleanup acme setup
+
+commit ad4c2e09b9ab0896886a905e3e9b10152a6c6e0c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 8 16:30:22 2019 -0500
+
+    state machine initialization
+
+commit 4f0709f62661852616597e9d4eb7f441a99f1991
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 10 08:59:14 2019 -0500
+
+    release 0.1.1575825751-85ffe2d1
+
 commit 85ffe2d1c6816a6d88c486a0bd56a860a58a2ca8
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Dec 8 12:22:31 2019 -0500
