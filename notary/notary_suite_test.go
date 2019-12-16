@@ -29,7 +29,7 @@ func QuickService() (notary.Client, func()) {
 	ss, err := notary.NewSigner(pkey)
 	Expect(err).To(Succeed())
 
-	svc := notary.New(storage)
+	svc := notary.New("", nil, storage)
 	conn, server := testingx.NewGRPCServer(func(s *grpc.Server) {
 		svc.Bind(s)
 	}, grpc.WithPerRPCCredentials(ss))
