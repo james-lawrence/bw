@@ -1,4 +1,5 @@
 syntax = "proto3";
+
 package agent;
 
 message Archive {
@@ -39,6 +40,9 @@ message TLSEvent {
   bytes Certificate = 3;
 }
 
+// used to request TLS credentials.
+message TLSRequest {}
+
 message WALPreamble {
   int32 Major = 1;
   int32 Minor = 2;
@@ -60,7 +64,8 @@ message Message {
   }
 
   string id = 9;
-  bool hidden = 999;
+  bool disallowWAL = 998; // used to prevent message's from recording in the WAL.
+  bool hidden = 999; // used to prevent message's from appearing in observers.
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -75,6 +80,7 @@ message Message {
     Deploy deploy = 8;
     NodeEvent membership = 10;
     TLSEvent authority = 11;
+    TLSRequest TLSRequest = 12;
   }
 }
 
@@ -198,6 +204,16 @@ service Agent {
   rpc Cancel(CancelRequest) returns (CancelResponse) {}
   rpc Shutdown(ShutdownRequest) returns (ShutdownResponse) {}
   rpc Logs(LogRequest) returns (stream LogResponse) {}
+}
+
+message TLSUpdateRequest {
+  TLSEvent creds = 1;
+}
+
+message TLSUpdateResponse {}
+
+service Configuration {
+  rpc TLSUpdate(TLSUpdateRequest) returns (TLSUpdateResponse) {}
 }
 
 message DispatchRequest {

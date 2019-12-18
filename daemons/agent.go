@@ -3,6 +3,11 @@ package daemons
 import (
 	"net"
 	"path/filepath"
+	"time"
+
+	"github.com/hashicorp/raft"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/observers"
@@ -11,11 +16,9 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/james-lawrence/bw/storage"
-	"github.com/pkg/errors"
-
-	"github.com/hashicorp/raft"
-	"google.golang.org/grpc"
 )
 
 // Agent daemon - rpc endpoint for the system.
@@ -56,12 +59,17 @@ func Agent(ctx Context, config agent.Config) (err error) {
 	)
 
 	authority := quorum.NewAuthority(config)
+
+	configuration := quorum.NewConfiguration(authority, ctx.Cluster, dialer)
+	configurationsvc := quorum.NewConfigurationService(configuration)
+
 	q := quorum.New(
 		observersdir,
 		ctx.Cluster,
 		proxy.NewProxy(ctx.Cluster),
 		quorum.NewTranscoder(
 			authority,
+			configuration,
 		),
 		ctx.Upload,
 		quorum.OptionDialer(dialer),
@@ -82,10 +90,29 @@ func Agent(ctx Context, config agent.Config) (err error) {
 	server := grpc.NewServer(grpc.Creds(ctx.RPCCredentials), keepalive)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
+	agent.RegisterConfigurationServer(server, configurationsvc)
 
 	if bind, err = net.Listen(config.RPCBind.Network(), config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", config.RPCBind)
 	}
+
+	// hack to propagate TLS to agents who are not in the quorum.
+	// this can be removed once RPC credentials is fully implemented.
+	go timex.Every(1*time.Hour, func() {
+		if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
+			return
+		}
+
+		logx.MaybeLog(
+			errors.Wrap(
+				agentutil.ReliableDispatch(
+					ctx.Context, dispatcher,
+					agentutil.TLSRequest(ctx.Cluster.Local()),
+				),
+				"failed to dispatch tls request",
+			),
+		)
+	})
 
 	ctx.grpc("agent", server, bind)
 

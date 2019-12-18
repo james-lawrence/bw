@@ -81,6 +81,10 @@ func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 		return err
 	}
 
+	if m.DisallowWAL {
+		return nil
+	}
+
 	t.m.Lock()
 	t.logs = append(t.logs, m)
 	t.m.Unlock()

@@ -37,21 +37,43 @@ func LogEvent(p agent.Peer, s string) agent.Message {
 	}
 }
 
-// TLSEvent ...
-func TLSEvent(p agent.Peer, key, cert []byte) agent.Message {
-	digest := md5.Sum(cert)
+// TLSEventMessage contains the generated TLS certificate for the cluster.
+func TLSEventMessage(p agent.Peer, key, cert []byte) agent.Message {
+	tls := TLSEvent(key, cert)
 	return agent.Message{
-		Id:     uuid.Must(uuid.NewV4()).String(),
-		Type:   agent.Message_TLSCAEvent,
-		Peer:   &p,
-		Ts:     time.Now().Unix(),
-		Hidden: true,
+		Id:          uuid.Must(uuid.NewV4()).String(),
+		Type:        agent.Message_TLSCAEvent,
+		Peer:        &p,
+		Ts:          time.Now().Unix(),
+		DisallowWAL: true,
+		Hidden:      true,
 		Event: &agent.Message_Authority{
-			Authority: &agent.TLSEvent{
-				Fingerprint: hex.EncodeToString(digest[:]),
-				Key:         key,
-				Certificate: cert,
-			},
+			Authority: &tls,
+		},
+	}
+}
+
+// TLSEvent ...
+func TLSEvent(key, cert []byte) agent.TLSEvent {
+	digest := md5.Sum(cert)
+	return agent.TLSEvent{
+		Fingerprint: hex.EncodeToString(digest[:]),
+		Key:         key,
+		Certificate: cert,
+	}
+}
+
+// TLSRequest request the clusters tls certificate.
+func TLSRequest(p agent.Peer) agent.Message {
+	return agent.Message{
+		Id:          uuid.Must(uuid.NewV4()).String(),
+		Type:        agent.Message_TLSCAEvent,
+		Peer:        &p,
+		Ts:          time.Now().Unix(),
+		DisallowWAL: true,
+		Hidden:      true,
+		Event: &agent.Message_TLSRequest{
+			TLSRequest: &agent.TLSRequest{},
 		},
 	}
 }
@@ -63,19 +85,6 @@ func WALPreamble() *agent.WALPreamble {
 		Minor: 0,
 		Patch: 0,
 	}
-	// return agent.Message{
-	// 	Id:   uuid.Must(uuid.NewV4()).String(),
-	// 	Type: agent.Message_WALPreambleEvent,
-	// 	Peer: &agent.Peer{},
-	// 	Ts:   time.Now().Unix(),
-	// 	Event: &agent.Message_WALPreamble{
-	// 		WALPreamble: &agent.WALPreamble{
-	// 			Major: 0,
-	// 			Minor: 0,
-	// 			Patch: 0,
-	// 		},
-	// 	},
-	// }
 }
 
 // LogError create a log event message from an error.

@@ -73,3 +73,10 @@ func IsLeader(address string) func(Peer) bool {
 		return RaftAddress(n) == address
 	}
 }
+
+// IsInQuorum ...
+func IsInQuorum(p Peer) func(Peer) bool {
+	return func(n Peer) bool {
+		return n.Name == p.Name
+	}
+}

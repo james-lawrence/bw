@@ -153,6 +153,8 @@ type QuorumDialer struct {
 
 // Dial connects to a member of the quorum based on the cluster.
 func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
+	err = errors.New("unable to connect")
+
 	for _, p := range shuffleQuorum(c.Quorum()) {
 		debugx.Println("dialing", spew.Sdump(p))
 		if client, err = t.dialer.Dial(p); err == nil {

@@ -73,16 +73,8 @@ func (t Authority) Decode(_ TranscoderContext, m agent.Message) (err error) {
 	log.Println("consume generated tls initiated", evt.Fingerprint)
 	defer log.Println("consume generated tls completed", evt.Fingerprint)
 
-	if err = os.MkdirAll(filepath.Dir(t.pathCACert), 0700); err != nil {
-		return err
-	}
-
-	if err = ioutil.WriteFile(t.pathCACert, evt.Certificate, 0600); err != nil {
-		return err
-	}
-
-	if err = ioutil.WriteFile(t.pathCAKey, evt.Key, 0600); err != nil {
-		return err
+	if err = t.write(evt); err != nil {
+		return nil
 	}
 
 	if buf, err = proto.Marshal(&m); err != nil {
@@ -155,5 +147,38 @@ func (t Authority) generate(d agent.Dispatcher) (err error) {
 	}
 
 	// dispatch cert to cluster.
-	return d.Dispatch(context.Background(), agentutil.TLSEvent(t.c.Peer(), keybuf.Bytes(), certbuf.Bytes()))
+	return d.Dispatch(context.Background(), agentutil.TLSEventMessage(t.c.Peer(), keybuf.Bytes(), certbuf.Bytes()))
+}
+
+func (t Authority) write(evt *agent.TLSEvent) (err error) {
+	if err = os.MkdirAll(filepath.Dir(t.pathCACert), 0700); err != nil {
+		return err
+	}
+
+	if err = ioutil.WriteFile(t.pathCACert, evt.Certificate, 0600); err != nil {
+		return err
+	}
+
+	if err = ioutil.WriteFile(t.pathCAKey, evt.Key, 0600); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t Authority) read() (evt agent.TLSEvent, err error) {
+	var (
+		cert []byte
+		key  []byte
+	)
+
+	if cert, err = ioutil.ReadFile(t.pathCACert); err != nil {
+		return evt, err
+	}
+
+	if key, err = ioutil.ReadFile(t.pathCAKey); err != nil {
+		return evt, err
+	}
+
+	return agentutil.TLSEvent(key, cert), nil
 }

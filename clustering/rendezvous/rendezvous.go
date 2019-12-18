@@ -8,6 +8,12 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
+// Auto is just a predefined byte array that can be used as a quick way
+// to compute a set of nodes when one just cares about consistency.
+func Auto() []byte {
+	return []byte("auto")
+}
+
 // Compute computes the HRW for each node.
 func Compute(key []byte, nodes []*memberlist.Node, x func(*memberlist.Node, *big.Int)) {
 	for _, node := range nodes {
