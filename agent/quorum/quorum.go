@@ -27,6 +27,7 @@ import (
 
 type stateMachine interface {
 	State() raft.RaftState
+	Leader() *agent.Peer
 	Dispatch(context.Context, ...agent.Message) error
 }
 
@@ -148,6 +149,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 			case raft.Leader:
 				t.sm = func() stateMachine {
 					sm := NewMachine(
+						t.c.Local(),
 						o.Raft,
 						t.initializers...,
 					)
@@ -178,7 +180,7 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
 	debugx.Println("info invoked")
 	defer debugx.Println("info completed")
-	return t.deployment.getInfo(), nil
+	return t.deployment.getInfo(t.sm.Leader()), nil
 }
 
 // Cancel any active deploys

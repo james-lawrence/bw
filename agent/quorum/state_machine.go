@@ -16,8 +16,9 @@ type Initializer interface {
 }
 
 // NewMachine ...
-func NewMachine(rp *raft.Raft, inits ...Initializer) *StateMachine {
+func NewMachine(l agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine {
 	return &StateMachine{
+		l:     l,
 		state: rp,
 		inits: inits,
 	}
@@ -25,6 +26,7 @@ func NewMachine(rp *raft.Raft, inits ...Initializer) *StateMachine {
 
 // StateMachine wraps the raft protocol giving more convient access to the protocol.
 type StateMachine struct {
+	l     agent.Peer
 	state *raft.Raft
 	inits []Initializer
 }
@@ -37,6 +39,11 @@ func (t *StateMachine) initialize() (err error) {
 	}
 
 	return nil
+}
+
+// Leader returns the current leader.
+func (t *StateMachine) Leader() *agent.Peer {
+	return &t.l
 }
 
 // State returns the state of the raft cluster.

@@ -137,6 +137,7 @@ var _ = Describe("StateMachine", func() {
 		log.Println("leader elected")
 		lp := agent.NewPeer("node")
 		sm := NewMachine(
+			lp,
 			leader,
 		)
 		cmd := qCommand(agent.DeployCommand_Begin)
@@ -156,6 +157,7 @@ var _ = Describe("StateMachine", func() {
 			Expect(err).ToNot(HaveOccurred())
 			leader := awaitLeader(protocols...)
 			sm := NewMachine(
+				agent.NewPeer("node"),
 				leader,
 			)
 
@@ -249,6 +251,7 @@ var _ = Describe("StateMachine", func() {
 		Expect(err).ToNot(HaveOccurred())
 		leader := awaitLeader(protocols...)
 		sm := NewMachine(
+			agent.NewPeer("node"),
 			leader,
 		)
 
@@ -270,6 +273,7 @@ var _ = Describe("StateMachine", func() {
 		leader := awaitLeader(protocols...)
 
 		sm := NewMachine(
+			agent.NewPeer("node"),
 			leader,
 		)
 

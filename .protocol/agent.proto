@@ -78,7 +78,7 @@ message Message {
   }
 }
 
-// Write ahead log
+// Write ahead log, deprecated.
 message WAL {
   repeated Message messages = 1;
 }
@@ -144,6 +144,7 @@ message InfoResponse {
   Mode mode = 1;
   DeployCommand deploying = 2;
   DeployCommand deployed = 3;
+  Peer leader = 4;
 }
 
 service Quorum {

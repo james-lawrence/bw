@@ -79,7 +79,7 @@ func (t *deployment) Decode(_ TranscoderContext, m agent.Message) error {
 	return nil
 }
 
-func (t *deployment) getInfo() agent.InfoResponse {
+func (t *deployment) getInfo(leader *agent.Peer) agent.InfoResponse {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
@@ -92,6 +92,7 @@ func (t *deployment) getInfo() agent.InfoResponse {
 		Mode:      m,
 		Deploying: t.runningDeploy,
 		Deployed:  t.lastSuccessfulDeploy,
+		Leader:    leader,
 	}
 }
 

@@ -11,10 +11,7 @@ import (
 )
 
 func TestAgentutil(t *testing.T) {
+	log.SetOutput(ioutil.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Agentutil Suite")
 }
-
-var _ = BeforeSuite(func() {
-	log.SetOutput(ioutil.Discard)
-})

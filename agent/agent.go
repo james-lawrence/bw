@@ -54,3 +54,22 @@ type Uploader interface {
 	Upload(io.Reader) (hash.Hash, error)
 	Info() (hash.Hash, string, error)
 }
+
+// DetectQuorum detects a peer based on the compare function.
+// from the set of quorum nodes.
+func DetectQuorum(c cluster, compare func(Peer) bool) *Peer {
+	for _, n := range c.Quorum() {
+		if compare(n) {
+			return &n
+		}
+	}
+
+	return nil
+}
+
+// IsLeader compares the address of a peer to the provided leader address.
+func IsLeader(address string) func(Peer) bool {
+	return func(n Peer) bool {
+		return RaftAddress(n) == address
+	}
+}

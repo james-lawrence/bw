@@ -11,12 +11,12 @@ import (
 	"sort"
 	"time"
 
+	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
+
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
-	"golang.org/x/time/rate"
-
-	"github.com/pkg/errors"
 )
 
 const (

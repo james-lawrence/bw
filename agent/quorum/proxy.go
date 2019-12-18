@@ -34,11 +34,13 @@ func (t *ProxyMachine) State() raft.RaftState {
 }
 
 // Leader returns the current leader.
-func (t *ProxyMachine) Leader() (peader agent.Peer, err error) {
-	for _, peader = range t.local.Peers() {
-		if agent.RaftAddress(peader) == string(t.state.Leader()) {
-			return peader, err
-		}
+func (t *ProxyMachine) Leader() *agent.Peer {
+	return agent.DetectQuorum(t.local, agent.IsLeader(string(t.state.Leader())))
+}
+
+func (t *ProxyMachine) leader() (peader agent.Peer, err error) {
+	if p := t.Leader(); p != nil {
+		return *p, nil
 	}
 
 	return peader, errors.New("failed to locate leader")
@@ -50,7 +52,7 @@ func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 		leader agent.Peer
 	)
 
-	if leader, err = t.Leader(); err != nil {
+	if leader, err = t.leader(); err != nil {
 		return c, err
 	}
 
@@ -58,11 +60,11 @@ func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
 }
 
 // Dispatch a message to the WAL.
-func (t *ProxyMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
-	return t.writeWAL(m...)
+func (t *ProxyMachine) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
+	return t.writeWAL(ctx, m...)
 }
 
-func (t *ProxyMachine) writeWAL(m ...agent.Message) (err error) {
+func (t *ProxyMachine) writeWAL(ctx context.Context, m ...agent.Message) (err error) {
 	var (
 		c agent.Client
 	)
@@ -72,7 +74,8 @@ func (t *ProxyMachine) writeWAL(m ...agent.Message) (err error) {
 	}
 
 	defer c.Close()
-	ctx, done := context.WithTimeout(context.Background(), 10*time.Second)
+
+	ctx, done := context.WithTimeout(ctx, 10*time.Second)
 	defer done()
 
 	return c.Dispatch(ctx, m...)

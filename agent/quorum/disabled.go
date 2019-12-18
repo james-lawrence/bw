@@ -16,6 +16,9 @@ var ErrDisabledMachine = errors.New("this node is not a member of the quorum")
 // returns reasonable results on every method.
 type DisabledMachine struct{}
 
+// Leader returns the leader peer of the cluster.
+func (t DisabledMachine) Leader() *agent.Peer { return nil }
+
 // State returns the state of the raft cluster.
 func (t DisabledMachine) State() raft.RaftState {
 	return raft.Shutdown
