@@ -1,3 +1,33 @@
+commit a421093220a30038bda86865725eec94a6cd36a1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 18 12:09:49 2019 -0500
+
+    sync every hour
+
+commit 896adbd6146e9ee693dda04e6cadddbdc655cd80
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 18 02:18:45 2019 -0500
+
+    working tls sync
+
+commit ce969962680fef70fddc00f1d1a57c3b21c87c40
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 18 00:21:38 2019 -0500
+
+    work towards TLS propagation
+
+commit 134dc7beded62712d561660dfe28b2f9c7be738b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 15 20:03:49 2019 -0500
+
+    test fixes
+
+commit 593728899195b5378c2b802d88a121931a4c5967
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 15 19:56:31 2019 -0500
+
+    release 0.1.1576457713-e0fbf9ee
+
 commit e0fbf9ee3207ce7f2ef96609214501421811c3bd
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 14 18:16:23 2019 -0500
