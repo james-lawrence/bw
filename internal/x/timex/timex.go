@@ -12,6 +12,14 @@ func Every(d time.Duration, do func()) {
 	}
 }
 
+// NowAndEvery executes the provided function immeditately and every duration.
+func NowAndEvery(d time.Duration, do func()) {
+	do()
+	for _ = range time.Tick(d) {
+		do()
+	}
+}
+
 // DurationOrDefault ...
 func DurationOrDefault(a, b time.Duration) time.Duration {
 	if a == 0 {
