@@ -1,3 +1,15 @@
+commit fa38f0817261c336c29a8454b86d44edcae2edbc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 19 06:53:01 2019 -0500
+
+    auto generate account key
+
+commit d7ed78ea097e3dfde4e20cad25aac78b0119f427
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 18 12:10:02 2019 -0500
+
+    release 0.1.1576688989-a4210932
+
 commit a421093220a30038bda86865725eec94a6cd36a1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Dec 18 12:09:49 2019 -0500
