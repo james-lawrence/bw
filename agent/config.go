@@ -154,6 +154,10 @@ func ConfigOptionCompose(options ...ConfigOption) ConfigOption {
 // ConfigOptionDefaultBind default connection bindings.
 func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 	return ConfigOptionCompose(
+		ConfigOptionAutocert(&net.TCPAddr{
+			IP:   ip,
+			Port: bw.DefaultAutocertPort,
+		}),
 		ConfigOptionRPC(&net.TCPAddr{
 			IP:   ip,
 			Port: bw.DefaultRPCPort,
@@ -175,6 +179,13 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 			Port: bw.DefaultDiscoveryPort,
 		}),
 	)
+}
+
+// ConfigOptionAutocert sets the autocert address to bind.
+func ConfigOptionAutocert(p *net.TCPAddr) ConfigOption {
+	return func(c *Config) {
+		c.AutocertBind = p
+	}
 }
 
 // ConfigOptionRPC sets the RPC address to bind.
@@ -229,6 +240,7 @@ type Config struct {
 	RPCBind           *net.TCPAddr
 	RaftBind          *net.TCPAddr
 	SWIMBind          *net.TCPAddr
+	AutocertBind      *net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
 	CA                string `yaml:"ca"`
@@ -266,6 +278,7 @@ func (t Config) Peer() Peer {
 		Status:        Peer_Node,
 		Name:          t.Name,
 		Ip:            t.RPCBind.IP.String(),
+		AutocertPort:  uint32(t.AutocertBind.Port),
 		RPCPort:       uint32(t.RPCBind.Port),
 		RaftPort:      uint32(t.RaftBind.Port),
 		SWIMPort:      uint32(t.SWIMBind.Port),

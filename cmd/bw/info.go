@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"log"
 	"os"
@@ -10,20 +11,25 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/ux"
+
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type agentInfo struct {
-	global      *global
-	environment string
+	global       *global
+	environment  string
+	checkAddress string
 }
 
 func (t *agentInfo) configure(parent *kingpin.CmdClause) {
@@ -34,6 +40,7 @@ func (t *agentInfo) configure(parent *kingpin.CmdClause) {
 
 	t.infoCmd(common(parent.Command("all", "retrieve info from all nodes within the cluster").Default()))
 	t.logCmd(common(parent.Command("logs", "log retrieval for the latest deployment")))
+	t.checkCmd(parent.Command("check", "check connectively with the discovery service"))
 }
 
 func (t *agentInfo) infoCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -42,6 +49,11 @@ func (t *agentInfo) infoCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 func (t *agentInfo) logCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	return parent.Action(t.logs)
+}
+
+func (t *agentInfo) checkCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Arg("address", "address to check").Required().StringVar(&t.checkAddress)
+	return parent.Action(t.check)
 }
 
 func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
@@ -91,6 +103,20 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 
 func (t *agentInfo) info(ctx *kingpin.ParseContext) error {
 	return t._info()
+}
+
+func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
+	proxy := grpcx.NewCachedClient()
+	cc, err := proxy.Dial(t.checkAddress, grpc.WithTransportCredentials(grpcx.InsecureTLS()))
+	if err != nil {
+		return err
+	}
+	resp, err := discovery.NewDiscoveryClient(cc).Quorum(context.Background(), &discovery.QuorumRequest{})
+	if err != nil {
+		return err
+	}
+	log.Println("discovered", spew.Sdump(resp))
+	return nil
 }
 
 func (t *agentInfo) _info() (err error) {

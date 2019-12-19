@@ -9,36 +9,37 @@ import (
 )
 
 // Bootstrap daemon - pulls latest deploy from the cluster and ensures its running locally.
-func Bootstrap(ctx Context, cx cluster, config agent.Config) (err error) {
+func Bootstrap(ctx Context) (err error) {
+	cx := ctx.Cluster
 	dialer := agent.NewDialer(
 		agent.DefaultDialerOptions(
-			grpc.WithTransportCredentials(ctx.RPCCredentials),
+			grpc.WithTransportCredentials(ctx.GRPCCreds()),
 		)...,
 	)
 
-	bootstrap.CleanSockets(config)
+	bootstrap.CleanSockets(ctx.Config)
 
-	if err = bootstrap.NewLocal(cx.Local(), dialer).Bind(ctx.Context, bootstrap.SocketLocal(config)); err != nil {
+	if err = bootstrap.NewLocal(cx.Local(), dialer).Bind(ctx.Context, bootstrap.SocketLocal(ctx.Config)); err != nil {
 		return errors.Wrap(err, "failed to initialize local bootstrap service")
 	}
 
-	if err = bootstrap.NewQuorum(cx, dialer).Bind(ctx.Context, bootstrap.SocketQuorum(config)); err != nil {
+	if err = bootstrap.NewQuorum(cx, dialer).Bind(ctx.Context, bootstrap.SocketQuorum(ctx.Config)); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum bootstrap service")
 	}
 
-	if err = bootstrap.NewCluster(cx, dialer).Bind(ctx.Context, bootstrap.SocketAuto(config)); err != nil {
+	if err = bootstrap.NewCluster(cx, dialer).Bind(ctx.Context, bootstrap.SocketAuto(ctx.Config)); err != nil {
 		return errors.Wrap(err, "failed to initialize cluster bootstrap service")
 	}
 
-	if err = bootstrap.NewFilesystem(config, cx, dialer).Bind(ctx.Context, bootstrap.SocketAuto(config)); err != nil {
+	if err = bootstrap.NewFilesystem(ctx.Config, cx, dialer).Bind(ctx.Context, bootstrap.SocketAuto(ctx.Config)); err != nil {
 		return errors.Wrap(err, "failed to initialize filesystem bootstrap service")
 	}
 
 	bus := bootstrap.NewUntilSuccess(
-		bootstrap.OptionMaxAttempts(config.Bootstrap.Attempts),
+		bootstrap.OptionMaxAttempts(ctx.Config.Bootstrap.Attempts),
 	)
 
-	if err = bus.Run(ctx.Context, config, ctx.Download); err != nil {
+	if err = bus.Run(ctx.Context, ctx.Config, ctx.Download); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}

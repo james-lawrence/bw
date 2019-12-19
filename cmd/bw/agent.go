@@ -1,13 +1,13 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"path/filepath"
 	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -17,7 +17,6 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
 
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
@@ -39,6 +38,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
 	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(t.config.DiscoveryBind.String()).TCPVar(&t.config.DiscoveryBind)
+	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(t.config.AutocertBind.String()).TCPVar(&t.config.AutocertBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
@@ -47,7 +47,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind() (err error) {
 	var (
 		c             clustering.Cluster
-		tlscreds      credentials.TransportCredentials
+		tlscreds      *tls.Config
 		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
 		deployResults []chan deployment.DeployResult
@@ -65,15 +65,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile, certificatecache.NewRefreshAgent()); err != nil {
-		return err
-	}
-
 	if keyring, err = t.config.Keyring(); err != nil {
-		return err
-	}
-
-	if tlscreds, err = daemons.GRPCGenServer(t.config); err != nil {
 		return err
 	}
 
@@ -104,6 +96,10 @@ func (t *agentCmd) bind() (err error) {
 		clustering.SnapshotOptionFrequency(t.config.SnapshotFrequency),
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
+
+	if tlscreds, err = daemons.TLSGenServer(t.config); err != nil {
+		return err
+	}
 
 	sq := raftutil.BacklogQueueWorker{
 		Provider: cluster.NewRaftAddressProvider(c),
@@ -138,20 +134,17 @@ func (t *agentCmd) bind() (err error) {
 		}
 	}()
 
-	// go timex.Every(time.Minute, func() {
-	// 	log.Println("PID", os.Getpid())
-	// 	tcu.PrintTorrentInfo(tc)
-	// })
-
 	deployResults = append(deployResults, tdr)
 
 	dctx := daemons.Context{
-		Context:        t.global.ctx,
-		Shutdown:       t.global.shutdown,
-		Cleanup:        t.global.cleanup,
-		Upload:         tc.Uploader(),
-		Download:       tc.Downloader(),
-		RPCCredentials: tlscreds,
+		ConfigurationFile: t.configFile,
+		Config:            t.config,
+		Context:           t.global.ctx,
+		Shutdown:          t.global.shutdown,
+		Cleanup:           t.global.cleanup,
+		Upload:            tc.Uploader(),
+		Download:          tc.Downloader(),
+		RPCCredentials:    tlscreds,
 		RPCKeepalive: keepalive.ServerParameters{
 			MaxConnectionIdle: 1 * time.Hour,
 			Time:              1 * time.Minute,
@@ -162,15 +155,24 @@ func (t *agentCmd) bind() (err error) {
 		Results: make(chan deployment.DeployResult, 100),
 	}
 
-	if err = daemons.Discovery(dctx, t.config, t.configFile); err != nil {
+	if err = daemons.Discovery(dctx); err != nil {
 		return err
 	}
 
-	if err = daemons.Agent(dctx, t.config); err != nil {
+	// this is a blocking operation until a certificate is acquired.
+	if err = daemons.Autocert(dctx); err != nil {
 		return err
 	}
 
-	if err = daemons.Bootstrap(dctx, cx, t.config); err != nil {
+	if err = daemons.AgentCertificateCache(dctx); err != nil {
+		return err
+	}
+
+	if err = daemons.Agent(dctx); err != nil {
+		return err
+	}
+
+	if err = daemons.Bootstrap(dctx); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}

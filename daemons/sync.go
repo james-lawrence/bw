@@ -15,7 +15,7 @@ import (
 func Sync(ctx Context, cx cluster) (err error) {
 	dialer := agent.NewDialer(
 		agent.DefaultDialerOptions(
-			grpc.WithTransportCredentials(ctx.RPCCredentials),
+			grpc.WithTransportCredentials(ctx.GRPCCreds()),
 		)...,
 	)
 

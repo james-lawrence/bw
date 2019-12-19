@@ -23,6 +23,11 @@ func DiscoveryAddress(p Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.DiscoveryPort))
 }
 
+// AutocertAddress for a peer.
+func AutocertAddress(p Peer) string {
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.AutocertPort))
+}
+
 // SWIMAddress for peer.
 func SWIMAddress(p Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort))
@@ -99,6 +104,7 @@ func NewPeer(id string, opts ...PeerOption) Peer {
 		RaftPort:      bw.DefaultRaftPort,
 		TorrentPort:   bw.DefaultTorrentPort,
 		DiscoveryPort: bw.DefaultDiscoveryPort,
+		AutocertPort:  bw.DefaultAutocertPort,
 		Status:        Peer_Node,
 	}
 
@@ -189,6 +195,7 @@ func NodeToPeer(n *memberlist.Node) (_zerop Peer, err error) {
 		RaftPort:      m.RaftPort,
 		TorrentPort:   m.TorrentPort,
 		DiscoveryPort: m.DiscoveryPort,
+		AutocertPort:  m.AutocertPort,
 	}, nil
 }
 

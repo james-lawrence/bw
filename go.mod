@@ -47,6 +47,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
+	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-hclog v0.10.0 // indirect

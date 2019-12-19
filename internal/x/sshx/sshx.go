@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	defaultBits = 8096 // 8096 bit keysize, reasonable default.
+	defaultBits = 4096 // 4096 bit keysize, reasonable default.
 )
 
 // Auto generates a ssh key using package defined defaults.
@@ -29,6 +29,23 @@ func CachedAuto(path string) (pkey []byte, err error) {
 	}
 
 	if pkey, err = Auto(); err != nil {
+		return nil, err
+	}
+
+	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+		return nil, err
+	}
+
+	return pkey, nil
+}
+
+// CachedGenerate loads/generates an SSH key at the provided filepath.
+func CachedGenerate(path string, bits int) (pkey []byte, err error) {
+	if systemx.FileExists(path) {
+		return ioutil.ReadFile(path)
+	}
+
+	if pkey, err = Generate(bits); err != nil {
 		return nil, err
 	}
 

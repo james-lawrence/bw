@@ -19,6 +19,7 @@ message PeerMetadata {
   uint32 SWIMPort = 4;
   uint32 TorrentPort = 5;
   uint32 DiscoveryPort = 7;
+  uint32 AutocertPort = 8; // deprecated - temporary field until RPC credentials is prevelant.
   int32 Status = 6;
 }
 
@@ -32,6 +33,7 @@ message Peer {
   uint32 SWIMPort = 6;
   uint32 TorrentPort = 7;
   uint32 DiscoveryPort = 8;
+  uint32 AutocertPort = 9; // deprecated - temporary field until RPC credentials is prevelant.
 }
 
 message TLSEvent {

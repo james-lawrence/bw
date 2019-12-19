@@ -3,9 +3,10 @@ package daemons
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"os"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"google.golang.org/grpc/credentials"
@@ -13,28 +14,38 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AgentCertificateCache initializes the certificate cache manager.
+func AgentCertificateCache(ctx Context) (err error) {
+	config := ctx.Config
+	client := acme.NewClient(ctx.Cluster)
+	fallback := certificatecache.NewRefreshAgent(config.CredentialsDir, client)
+
+	return certificatecache.FromConfig(
+		config.CredentialsDir,
+		config.CredentialsMode,
+		ctx.ConfigurationFile,
+		fallback,
+	)
+}
+
 // TLSGenServer generate tls config for the agent.
 func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, err error) {
 	var (
-		ca   []byte
 		pool *x509.CertPool
 	)
+
+	if err = os.MkdirAll(c.CredentialsDir, 0700); err != nil {
+		return creds, errors.WithStack(err)
+	}
 
 	if pool, err = x509.SystemCertPool(); err != nil {
 		return creds, errors.WithStack(err)
 	}
 
-	if ca, err = ioutil.ReadFile(c.CA); err != nil {
-		return creds, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return creds, errors.New("failed to append client ca")
-	}
-
 	m := certificatecache.NewDirectory(
 		c.ServerName,
 		c.CredentialsDir,
+		c.CA,
 		pool,
 	)
 
@@ -73,7 +84,6 @@ func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.Transpor
 // TLSGenClient generate tls config for a client.
 func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 	var (
-		ca   []byte
 		pool *x509.CertPool
 	)
 
@@ -81,15 +91,7 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 		return creds, errors.WithStack(err)
 	}
 
-	if ca, err = ioutil.ReadFile(c.CA); err != nil {
-		return creds, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return creds, errors.New("failed to append client certs")
-	}
-
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, pool)
+	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, c.CA, pool)
 
 	creds = &tls.Config{
 		ServerName:           c.ServerName,

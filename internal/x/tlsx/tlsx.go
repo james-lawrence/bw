@@ -9,12 +9,17 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
+	"os"
 	"time"
 
+	"github.com/grantae/certinfo"
 	"github.com/pkg/errors"
+
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 // X509Option ...
@@ -128,6 +133,15 @@ func SelfSignedRSAGen(bits int, template x509.Certificate) (priv *rsa.PrivateKey
 	return priv, derBytes, errors.WithStack(err)
 }
 
+// SelfSigned signs its own certificate ..
+func SelfSigned(priv *rsa.PrivateKey, template x509.Certificate) (_ *rsa.PrivateKey, derBytes []byte, err error) {
+	if derBytes, err = x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv); err != nil {
+		return priv, derBytes, errors.WithStack(err)
+	}
+
+	return priv, derBytes, nil
+}
+
 // WriteTLS ...
 func WriteTLS(key *rsa.PrivateKey, derBytes []byte, err error) func(io.Writer, io.Writer, error) error {
 	if err != nil {
@@ -158,9 +172,35 @@ func WritePrivateKey(dst io.Writer, key *rsa.PrivateKey) error {
 	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
 }
 
+// WritePrivateKeyFile ...
+func WritePrivateKeyFile(path string, key *rsa.PrivateKey) (err error) {
+	var (
+		dst *os.File
+	)
+
+	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+		return err
+	}
+
+	return errorsx.Compact(WritePrivateKey(dst, key), dst.Close())
+}
+
 // WriteCertificate ...
 func WriteCertificate(dst io.Writer, cert []byte) error {
 	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "CERTIFICATE", Bytes: cert}))
+}
+
+// WriteCertificateFile ...
+func WriteCertificateFile(path string, cert []byte) (err error) {
+	var (
+		dst *os.File
+	)
+
+	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+		return err
+	}
+
+	return errorsx.Compact(WriteCertificate(dst, cert), dst.Sync(), dst.Close())
 }
 
 // Option tls config options
@@ -170,4 +210,60 @@ type Option func(*tls.Config) error
 func OptionVerifyClientIfGiven(c *tls.Config) error {
 	c.ClientAuth = tls.VerifyClientCertIfGiven
 	return nil
+}
+
+// Clone ...
+func Clone(c *tls.Config, options ...Option) (updated *tls.Config, err error) {
+	updated = c.Clone()
+
+	for _, opt := range options {
+		if err = opt(updated); err != nil {
+			return updated, err
+		}
+	}
+
+	return updated, nil
+}
+
+// PrintEncoded certificate
+func PrintEncoded(cx []byte) (s string) {
+	ccc, err := x509.ParseCertificates(cx)
+	if err != nil {
+		return fmt.Sprintf("failed : %s - %s\n", err, string(cx))
+	}
+
+	for _, cc := range ccc {
+		ss, err := certinfo.CertificateText(cc)
+		if err != nil {
+			return fmt.Sprintf("failed index: %s - %s\n", err, string(cx))
+		}
+		s += ss + "\n"
+	}
+
+	return s
+}
+
+// Print tls certificate.
+func Print(c *tls.Certificate) (s string) {
+	if c == nil {
+		return ""
+	}
+
+	for idx, cx := range c.Certificate {
+		cc, err := x509.ParseCertificate(cx)
+		if err != nil {
+			s += fmt.Sprintf("failed index: %d - %s\n", idx, err)
+			continue
+		}
+
+		ss, err := certinfo.CertificateText(cc)
+		if err != nil {
+			s += fmt.Sprintf("failed index: %d - %s\n", idx, err)
+			continue
+		}
+
+		s += fmt.Sprintf("%d - %s\n", idx, ss)
+	}
+
+	return s
 }

@@ -17,6 +17,7 @@ import (
 
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/discovery.proto
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/acme .protocol/acme.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (
@@ -45,20 +46,21 @@ const (
 	DeployLog = "deploy.log"
 	// ArchiveFile name of the archive file stored on disk
 	ArchiveFile = "archive.tar.gz"
+	// DefaultDiscoveryPort default port for the public service.
+	// discovery is special because it expects to be accessed globally.
+	DefaultDiscoveryPort = 2001
 	// DefaultRPCPort default port for RPC service.
-	DefaultRPCPort = 2000
+	DefaultRPCPort = 2002
 	// DefaultSWIMPort default port for peering service.
-	DefaultSWIMPort = 2001
+	DefaultSWIMPort = 2003
 	// DefaultRaftPort default port for consensus service.
-	DefaultRaftPort = 2002
+	DefaultRaftPort = 2004
 	// DefaultTorrentPort default port for torrent service.
-	DefaultTorrentPort = 2003
-	// DefaultDiscoveryPort default port for the notary service.
-	// notary service is special as its expected to be accessed without
-	// a client certificate.
-	DefaultDiscoveryPort = 2004
-	// DefaultACMEPort port for ACME TLSALPN01 service.
-	DefaultACMEPort = 2005
+	DefaultTorrentPort = 2005
+	// DefaultAutocertPort port for automatic certificate generation.
+	// hopefully will be able to drop this port once RPC credentials are used
+	// instead of client certificates.
+	DefaultAutocertPort = 2006
 	// DefaultDirAgentCredentials ...
 	DefaultDirAgentCredentials = "tls"
 	// DefaultNotaryKey ...
