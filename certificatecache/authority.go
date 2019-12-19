@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
+// ErrAuthorityNotAvailable ...
 const ErrAuthorityNotAvailable = errorsx.String("authority not available")
 
 // NewAuthorityCache cached authority from the directory.

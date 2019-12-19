@@ -39,6 +39,23 @@ func CachedAuto(path string) (pkey []byte, err error) {
 	return pkey, nil
 }
 
+// CachedGenerate loads/generates an SSH key at the provided filepath.
+func CachedGenerate(path string, bits int) (pkey []byte, err error) {
+	if systemx.FileExists(path) {
+		return ioutil.ReadFile(path)
+	}
+
+	if pkey, err = Generate(bits); err != nil {
+		return nil, err
+	}
+
+	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+		return nil, err
+	}
+
+	return pkey, nil
+}
+
 // UnsafeAuto generates a ssh key using unsafe defaults, this method is used to
 // generate an ssh key quickly for cases were we do not care about safety, i.e.
 // tests.

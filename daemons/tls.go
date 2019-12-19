@@ -3,7 +3,6 @@ package daemons
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
@@ -16,7 +15,6 @@ import (
 // TLSGenServer generate tls config for the agent.
 func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, err error) {
 	var (
-		ca   []byte
 		pool *x509.CertPool
 	)
 
@@ -24,17 +22,10 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 		return creds, errors.WithStack(err)
 	}
 
-	if ca, err = ioutil.ReadFile(c.CA); err != nil {
-		return creds, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return creds, errors.New("failed to append client ca")
-	}
-
 	m := certificatecache.NewDirectory(
 		c.ServerName,
 		c.CredentialsDir,
+		c.CA,
 		pool,
 	)
 
@@ -66,6 +57,7 @@ func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.Transpor
 	if tlscreds, err = TLSGenServer(c, options...); err != nil {
 		return nil, err
 	}
+	tlscreds = certificatecache.NewALPN(tlscreds)
 
 	return credentials.NewTLS(tlscreds), nil
 }
@@ -73,7 +65,6 @@ func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.Transpor
 // TLSGenClient generate tls config for a client.
 func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 	var (
-		ca   []byte
 		pool *x509.CertPool
 	)
 
@@ -81,15 +72,7 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 		return creds, errors.WithStack(err)
 	}
 
-	if ca, err = ioutil.ReadFile(c.CA); err != nil {
-		return creds, errors.WithStack(err)
-	}
-
-	if ok := pool.AppendCertsFromPEM(ca); !ok {
-		return creds, errors.New("failed to append client certs")
-	}
-
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, pool)
+	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, c.CA, pool)
 
 	creds = &tls.Config{
 		ServerName:           c.ServerName,

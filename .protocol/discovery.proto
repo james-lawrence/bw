@@ -23,7 +23,6 @@ service Discovery {
   rpc Quorum(QuorumRequest) returns (QuorumResponse) {}
 }
 
-
 message CheckRequest {
   string fingerprint = 1;
 }

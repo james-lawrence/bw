@@ -98,7 +98,7 @@ func Agent(ctx Context, config agent.Config) (err error) {
 	}
 
 	// hack to propagate TLS to agents who are not in the quorum.
-	// this can be removed once RPC credentials is fully implemented.
+	// this can be removed once per request credentials is fully implemented.
 	go timex.NowAndEvery(1*time.Hour, func() {
 		if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
 			log.Println("tls request skipped")

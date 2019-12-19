@@ -43,7 +43,7 @@ const (
 	// DefaultDirTLSAuthority ...
 	DefaultDirTLSAuthority = "authorities"
 	// DefaultACMEKey default filename for the acme protocol account key.
-	defaultACMEKey = "acme.account.pem"
+	DefaultACMEKey = "acme.account.pem"
 )
 
 const (

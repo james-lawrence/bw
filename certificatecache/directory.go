@@ -12,12 +12,14 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
 func mustWatcher(dir string) *fsnotify.Watcher {
@@ -34,10 +36,12 @@ func mustWatcher(dir string) *fsnotify.Watcher {
 }
 
 // NewDirectory maintains a certificate config by watching a directory.
-func NewDirectory(serverName, dir string, pool *x509.CertPool) (cache Directory) {
+func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Directory) {
+	log.Println("WATCHING", dir)
 	w := mustWatcher(dir)
 	return Directory{
 		serverName: serverName,
+		caFile:     ca,
 		dir:        dir,
 		pooldir:    filepath.Join(dir, "authorities"),
 		pool:       pool,
@@ -52,6 +56,7 @@ func NewDirectory(serverName, dir string, pool *x509.CertPool) (cache Directory)
 // and reloading when necessary.
 type Directory struct {
 	serverName string
+	caFile     string
 	dir        string
 	pooldir    string
 	pool       *x509.CertPool
@@ -77,7 +82,14 @@ func (t Directory) init() (err error) {
 }
 
 // GetCertificate for use by tls.Config.
-func (t Directory) GetCertificate(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (t Directory) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+	for _, proto := range hello.SupportedProtos {
+		if proto == tlsalpn01.ACMETLS1Protocol {
+			// https://github.com/caddyserver/caddy/pull/2201/files
+			log.Println("$$$$$$$$$$$$$$$$$$$$$ ACME DETECTED")
+		}
+	}
+
 	return t.cert()
 }
 
@@ -129,6 +141,20 @@ func (t Directory) cert() (cert *tls.Certificate, err error) {
 	return cert, nil
 }
 
+func (t Directory) load(path string) (err error) {
+	var ca []byte
+
+	if ca, err = ioutil.ReadFile(path); err != nil {
+		return errors.Wrapf(err, "failed to read certificate: %s", path)
+	}
+
+	if ok := t.pool.AppendCertsFromPEM(ca); !ok {
+		return nil
+	}
+
+	return nil
+}
+
 func (t Directory) refresh() (err error) {
 	var (
 		certpath, keypath string
@@ -149,12 +175,14 @@ func (t Directory) refresh() (err error) {
 
 	*t.cachedCert = cert
 
+	if systemx.FileExists(t.caFile) {
+		if err = t.load(t.caFile); err != nil {
+			return err
+		}
+	}
+
 	// refresh the pool
 	return filepath.Walk(t.pooldir, func(path string, info os.FileInfo, err error) error {
-		var (
-			ca []byte
-		)
-
 		if err != nil {
 			log.Println("error walking authority cache", err)
 			return nil
@@ -168,12 +196,8 @@ func (t Directory) refresh() (err error) {
 			return filepath.SkipDir
 		}
 
-		if ca, err = ioutil.ReadFile(path); err != nil {
-			log.Println("failed to read certificate", path)
-			return nil
-		}
-
-		if ok := t.pool.AppendCertsFromPEM(ca); !ok {
+		if err = t.load(path); err != nil {
+			log.Println(err)
 			return nil
 		}
 

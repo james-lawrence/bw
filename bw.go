@@ -17,6 +17,7 @@ import (
 
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/discovery.proto
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/acme.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (
@@ -53,9 +54,8 @@ const (
 	DefaultRaftPort = 2002
 	// DefaultTorrentPort default port for torrent service.
 	DefaultTorrentPort = 2003
-	// DefaultDiscoveryPort default port for the notary service.
-	// notary service is special as its expected to be accessed without
-	// a client certificate.
+	// DefaultDiscoveryPort default port for the public service.
+	// discovery is special because it expects to be accessed globally.
 	DefaultDiscoveryPort = 2004
 	// DefaultACMEPort port for ACME TLSALPN01 service.
 	DefaultACMEPort = 2005

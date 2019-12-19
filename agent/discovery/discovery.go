@@ -6,11 +6,16 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
+
+type rendezvous interface {
+	Get([]byte) *memberlist.Node
+}
 
 // cluster interface for the package.
 type cluster interface {

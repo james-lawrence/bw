@@ -65,15 +65,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile, certificatecache.NewRefreshAgent()); err != nil {
-		return err
-	}
-
 	if keyring, err = t.config.Keyring(); err != nil {
-		return err
-	}
-
-	if tlscreds, err = daemons.GRPCGenServer(t.config); err != nil {
 		return err
 	}
 
@@ -104,6 +96,10 @@ func (t *agentCmd) bind() (err error) {
 		clustering.SnapshotOptionFrequency(t.config.SnapshotFrequency),
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
+
+	if tlscreds, err = daemons.GRPCGenServer(t.config); err != nil {
+		return err
+	}
 
 	sq := raftutil.BacklogQueueWorker{
 		Provider: cluster.NewRaftAddressProvider(c),
@@ -167,6 +163,12 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	if err = daemons.Agent(dctx, t.config); err != nil {
+		return err
+	}
+
+	log.Println("$$$$$$$ generating certificate")
+	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile, certificatecache.NewRefreshAgent()); err != nil {
+		time.Sleep(time.Hour)
 		return err
 	}
 

@@ -13,10 +13,9 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
-	"strconv"
+	"time"
 
 	"github.com/go-acme/lego/certcrypto"
-	"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/registration"
 	"github.com/pkg/errors"
@@ -30,7 +29,8 @@ import (
 
 func defaultConfig() ACMEConfig {
 	return ACMEConfig{
-		CAURL: lego.LEDirectoryProduction,
+		// CAURL: lego.LEDirectoryProduction,
+		CAURL: lego.LEDirectoryStaging,
 		Port:  bw.DefaultACMEPort,
 		reg:   &registration.Resource{},
 	}
@@ -83,6 +83,23 @@ type ACME struct {
 	Config         ACMEConfig `yaml:"acme"`
 }
 
+type solver ACME
+
+func (t solver) Present(domain, token, keyAuth string) error {
+	log.Println("PRESENT INITIATED", domain, token, keyAuth)
+	defer log.Println("PRESENT COMPLETED", domain, token, keyAuth)
+	time.Sleep(time.Second)
+	return nil
+}
+
+func (t solver) CleanUp(domain, token, keyAuth string) error {
+	log.Println("CLEANUP INTIATED", domain, token, keyAuth)
+	defer log.Println("CLEANUP COMPLETED", domain, token, keyAuth)
+
+	time.Sleep(5 * time.Second)
+	return nil
+}
+
 func (t ACME) sanitize() ACME {
 	digest := md5.Sum([]byte(t.Config.PrivateKey))
 	t.Config.PrivateKey = "fingerprint:" + hex.EncodeToString(digest[:])
@@ -98,7 +115,8 @@ func (t ACME) Refresh() (err error) {
 	)
 
 	if len(t.Config.PrivateKey) == 0 {
-		if encoded, err = sshx.CachedAuto(filepath.Join(t.CertificateDir, defaultACMEKey)); err != nil {
+		// acme only accepts a max of 4096.
+		if encoded, err = sshx.CachedGenerate(filepath.Join(t.CertificateDir, DefaultACMEKey), 4096); err != nil {
 			return err
 		}
 
@@ -122,7 +140,7 @@ func (t ACME) Refresh() (err error) {
 
 	log.Println("loaded registration")
 
-	if err = client.Challenge.SetTLSALPN01Provider(tlsalpn01.NewProviderServer(t.Config.Network, strconv.Itoa(t.Config.Port))); err != nil {
+	if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
 		return errors.Wrap(err, "failed to setup tlsalpn01 provider")
 	}
 
