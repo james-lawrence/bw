@@ -10,10 +10,8 @@ import (
 	"encoding/asn1"
 	"encoding/hex"
 	"encoding/json"
-	"encoding/pem"
 	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -21,8 +19,10 @@ import (
 	"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/registration"
-	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
+
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
@@ -58,14 +58,8 @@ func (t ACMEConfig) GetPrivateKey() (priv crypto.PrivateKey) {
 		err error
 	)
 
-	b, _ := pem.Decode([]byte(t.PrivateKey))
-	if b == nil {
-		log.Println("failed to decode private key", len(t.PrivateKey))
-		return nil
-	}
-
-	if priv, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
-		log.Println("failed to parse private key", err)
+	if priv, err = sshx.DecodeRSA([]byte(t.PrivateKey)); err != nil {
+		log.Println("failed to decode private key", err)
 		return nil
 	}
 
@@ -98,9 +92,18 @@ func (t ACME) sanitize() ACME {
 // Refresh the credentials if necessary.
 func (t ACME) Refresh() (err error) {
 	var (
-		client *lego.Client
-		priv   *rsa.PrivateKey
+		encoded []byte
+		client  *lego.Client
+		priv    *rsa.PrivateKey
 	)
+
+	if len(t.Config.PrivateKey) == 0 {
+		if encoded, err = sshx.CachedAuto(filepath.Join(t.CertificateDir, defaultACMEKey)); err != nil {
+			return err
+		}
+
+		t.Config.PrivateKey = string(encoded)
+	}
 
 	config := lego.NewConfig(t.Config)
 
@@ -123,7 +126,7 @@ func (t ACME) Refresh() (err error) {
 		return errors.Wrap(err, "failed to setup tlsalpn01 provider")
 	}
 
-	if priv, err = t.generatePrivateKey(); err != nil {
+	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
 
@@ -185,38 +188,6 @@ func (t ACME) Refresh() (err error) {
 	log.Println(certificates.Domain, certificates.CertURL, certificates.CertStableURL)
 
 	return nil
-}
-
-func (t ACME) generatePrivateKey() (priv *rsa.PrivateKey, err error) {
-	var (
-		encoded []byte
-	)
-
-	keyp := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
-	if _, err = os.Stat(keyp); os.IsNotExist(err) {
-		if priv, err = rsa.GenerateKey(rand.Reader, 8192); err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		if err = ioutil.WriteFile(
-			keyp,
-			pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(priv)}),
-			0600,
-		); err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
-
-	if encoded, err = ioutil.ReadFile(keyp); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	b, _ := pem.Decode(encoded)
-	if priv, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	return priv, nil
 }
 
 func (t ACME) loadRegistration(client *lego.Client) (zreg registration.Resource, err error) {

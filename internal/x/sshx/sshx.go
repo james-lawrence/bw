@@ -5,8 +5,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"io/ioutil"
 
 	"golang.org/x/crypto/ssh"
+
+	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -16,6 +20,23 @@ const (
 // Auto generates a ssh key using package defined defaults.
 func Auto() (pkey []byte, err error) {
 	return Generate(defaultBits)
+}
+
+// CachedAuto loads/generates an SSH key at the provided filepath.
+func CachedAuto(path string) (pkey []byte, err error) {
+	if systemx.FileExists(path) {
+		return ioutil.ReadFile(path)
+	}
+
+	if pkey, err = Auto(); err != nil {
+		return nil, err
+	}
+
+	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+		return nil, err
+	}
+
+	return pkey, nil
 }
 
 // UnsafeAuto generates a ssh key using unsafe defaults, this method is used to
@@ -78,4 +99,22 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 // IsNoKeyFound check if ssh key is not found.
 func IsNoKeyFound(err error) bool {
 	return err.Error() == "ssh: no key found"
+}
+
+// DecodeRSA decode a RSA private key.
+func DecodeRSA(encoded []byte) (priv *rsa.PrivateKey, err error) {
+	b, _ := pem.Decode(encoded)
+	if priv, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	return priv, nil
+}
+
+// MaybeDecodeRSA decodes RSA from an encoded array and possible error.
+func MaybeDecodeRSA(encoded []byte, err error) (priv *rsa.PrivateKey, _ error) {
+	if err != nil {
+		return priv, err
+	}
+	return DecodeRSA(encoded)
 }
