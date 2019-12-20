@@ -17,7 +17,7 @@ import (
 
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/discovery.proto
-//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/discovery .protocol/acme.proto
+//go:generate protoc -I=.protocol --go_out=plugins=grpc:agent/acme .protocol/acme.proto
 //go:generate protoc -I=.protocol --go_out=plugins=grpc:notary .protocol/notary.proto
 
 const (
@@ -57,8 +57,6 @@ const (
 	// DefaultDiscoveryPort default port for the public service.
 	// discovery is special because it expects to be accessed globally.
 	DefaultDiscoveryPort = 2004
-	// DefaultACMEPort port for ACME TLSALPN01 service.
-	DefaultACMEPort = 2005
 	// DefaultDirAgentCredentials ...
 	DefaultDirAgentCredentials = "tls"
 	// DefaultNotaryKey ...

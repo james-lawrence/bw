@@ -1,5 +1,5 @@
 syntax = "proto3";
-package discovery;
+package acme;
 
 message Challenge {
   string domain = 1;
@@ -8,8 +8,7 @@ message Challenge {
 }
 
 message ChallengeRequest {
-  string domain = 1;
-  bytes CSR = 2;
+  bytes CSR = 1;
 }
 
 message ChallengeResponse {

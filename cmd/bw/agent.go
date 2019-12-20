@@ -7,7 +7,6 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -142,12 +141,14 @@ func (t *agentCmd) bind() (err error) {
 	deployResults = append(deployResults, tdr)
 
 	dctx := daemons.Context{
-		Context:        t.global.ctx,
-		Shutdown:       t.global.shutdown,
-		Cleanup:        t.global.cleanup,
-		Upload:         tc.Uploader(),
-		Download:       tc.Downloader(),
-		RPCCredentials: tlscreds,
+		ConfigurationFile: t.configFile,
+		Config:            t.config,
+		Context:           t.global.ctx,
+		Shutdown:          t.global.shutdown,
+		Cleanup:           t.global.cleanup,
+		Upload:            tc.Uploader(),
+		Download:          tc.Downloader(),
+		RPCCredentials:    tlscreds,
 		RPCKeepalive: keepalive.ServerParameters{
 			MaxConnectionIdle: 1 * time.Hour,
 			Time:              1 * time.Minute,
@@ -158,21 +159,20 @@ func (t *agentCmd) bind() (err error) {
 		Results: make(chan deployment.DeployResult, 100),
 	}
 
-	if err = daemons.Discovery(dctx, t.config, t.configFile); err != nil {
+	if err = daemons.Discovery(dctx); err != nil {
 		return err
 	}
 
-	if err = daemons.Agent(dctx, t.config); err != nil {
+	if err = daemons.Agent(dctx); err != nil {
 		return err
 	}
 
-	log.Println("$$$$$$$ generating certificate")
-	if err = certificatecache.FromConfig(t.config.CredentialsDir, t.config.CredentialsMode, t.configFile, certificatecache.NewRefreshAgent()); err != nil {
-		time.Sleep(time.Hour)
+	log.Println("$$$$$$$ initializing certificate cache")
+	if err = daemons.AgentCertificateCache(dctx); err != nil {
 		return err
 	}
 
-	if err = daemons.Bootstrap(dctx, cx, t.config); err != nil {
+	if err = daemons.Bootstrap(dctx); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}

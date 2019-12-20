@@ -23,7 +23,7 @@ import (
 )
 
 // Agent daemon - rpc endpoint for the system.
-func Agent(ctx Context, config agent.Config) (err error) {
+func Agent(ctx Context) (err error) {
 	var (
 		sctx         shell.Context
 		observersdir observers.Directory
@@ -35,7 +35,7 @@ func Agent(ctx Context, config agent.Config) (err error) {
 		return err
 	}
 
-	if observersdir, err = observers.NewDirectory(filepath.Join(config.Root, "observers")); err != nil {
+	if observersdir, err = observers.NewDirectory(filepath.Join(ctx.Config.Root, "observers")); err != nil {
 		return err
 	}
 
@@ -50,16 +50,16 @@ func Agent(ctx Context, config agent.Config) (err error) {
 	)
 
 	coordinator := deployment.New(
-		config.Peer(),
+		ctx.Config.Peer(),
 		deploy,
 		deployment.CoordinatorOptionDispatcher(dispatcher),
-		deployment.CoordinatorOptionRoot(config.Root),
-		deployment.CoordinatorOptionKeepN(config.KeepN),
+		deployment.CoordinatorOptionRoot(ctx.Config.Root),
+		deployment.CoordinatorOptionKeepN(ctx.Config.KeepN),
 		deployment.CoordinatorOptionDeployResults(ctx.Results),
 		deployment.CoordinatorOptionStorage(dlreg),
 	)
 
-	authority := quorum.NewAuthority(config)
+	authority := quorum.NewAuthority(ctx.Config)
 
 	configuration := quorum.NewConfiguration(authority, ctx.Cluster, dialer)
 	configurationsvc := quorum.NewConfigurationService(configuration)
@@ -93,8 +93,8 @@ func Agent(ctx Context, config agent.Config) (err error) {
 	agent.RegisterQuorumServer(server, aq)
 	agent.RegisterConfigurationServer(server, configurationsvc)
 
-	if bind, err = net.Listen(config.RPCBind.Network(), config.RPCBind.String()); err != nil {
-		return errors.Wrapf(err, "failed to bind agent to %s", config.RPCBind)
+	if bind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
+		return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)
 	}
 
 	// hack to propagate TLS to agents who are not in the quorum.

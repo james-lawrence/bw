@@ -49,8 +49,6 @@ const (
 const (
 	// ModeVault refresh certificates using vault's PKI
 	ModeVault = "vault"
-	// ModeACME2 acme v2 protocol.
-	ModeACME2 = "ACMEv2"
 )
 
 // NewRefreshClient default tls credentials refresh strategy for agents.
@@ -59,25 +57,15 @@ func NewRefreshClient(dir string) *Notary {
 }
 
 // NewRefreshAgent default tls credentials refresh strategy for agents.
-func NewRefreshAgent() *Noop {
-	return &Noop{}
+func NewRefreshAgent(dir string, a acme) *ACME {
+	x := NewACME(dir, a)
+	return &x
 }
 
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
 	switch mode {
-	case ModeACME2:
-		v := ACME{
-			CertificateDir: dir,
-			Config:         defaultConfig(),
-		}
-
-		if err = bw.ExpandAndDecodeFile(configfile, &v); err != nil {
-			return err
-		}
-
-		return RefreshAutomatic(dir, v)
 	case ModeVault:
 		v := Vault{
 			DefaultTokenFile: VaultDefaultTokenPath(),

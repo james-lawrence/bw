@@ -5,12 +5,27 @@ import (
 	"crypto/x509"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
+
+// AgentCertificateCache initializes the certificate cache manager.
+func AgentCertificateCache(ctx Context) (err error) {
+	config := ctx.Config
+	client := acme.NewClient(ctx.Cluster)
+	fallback := certificatecache.NewRefreshAgent(config.CredentialsDir, client)
+
+	return certificatecache.FromConfig(
+		config.CredentialsDir,
+		config.CredentialsMode,
+		ctx.ConfigurationFile,
+		fallback,
+	)
+}
 
 // TLSGenServer generate tls config for the agent.
 func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, err error) {
@@ -57,7 +72,7 @@ func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.Transpor
 	if tlscreds, err = TLSGenServer(c, options...); err != nil {
 		return nil, err
 	}
-	tlscreds = certificatecache.NewALPN(tlscreds)
+	// tlscreds = certificatecache.NewALPN(tlscreds)
 
 	return credentials.NewTLS(tlscreds), nil
 }

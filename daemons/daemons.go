@@ -39,16 +39,18 @@ type dialer interface {
 
 // Context common information passed to all daemons.
 type Context struct {
-	Context        context.Context
-	Shutdown       context.CancelFunc
-	Cleanup        *sync.WaitGroup
-	Upload         storage.UploadProtocol
-	Download       storage.DownloadProtocol
-	Raft           raftutil.Protocol
-	Cluster        cluster
-	RPCCredentials credentials.TransportCredentials
-	RPCKeepalive   keepalive.ServerParameters
-	Results        chan deployment.DeployResult
+	ConfigurationFile string
+	Config            agent.Config
+	Context           context.Context
+	Shutdown          context.CancelFunc
+	Cleanup           *sync.WaitGroup
+	Upload            storage.UploadProtocol
+	Download          storage.DownloadProtocol
+	Raft              raftutil.Protocol
+	Cluster           cluster
+	RPCCredentials    credentials.TransportCredentials
+	RPCKeepalive      keepalive.ServerParameters
+	Results           chan deployment.DeployResult
 }
 
 func (t *Context) grpc(name string, server *grpc.Server, listeners ...net.Listener) {
