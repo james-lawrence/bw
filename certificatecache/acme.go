@@ -40,23 +40,23 @@ type ACMEConfig struct {
 	DNSNames           []string `yaml:"dns"` // alternative dns names
 }
 
-type acme interface {
+type challenger interface {
 	Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error)
 }
 
 // NewACME certificate refresh.
-func NewACME(dir string, a acme) ACME {
+func NewACME(dir string, a challenger) ACME {
 	return ACME{
 		CertificateDir: dir,
 		Config:         defaultConfig(),
-		acme:           a,
+		c:              a,
 	}
 }
 
 // ACME provides the ability to generate certificates using the acme protocol.
 type ACME struct {
-	acme
-	CertificateDir string
+	c              challenger
+	CertificateDir string     `yaml:"credentialsDir"`
 	CommonName     string     `yaml:"servername"` // common name for certificate, usually a domain name. pulls from the servername of the configuration.
 	Config         ACMEConfig `yaml:"acme"`
 }
@@ -68,15 +68,6 @@ func (t ACME) Refresh() (err error) {
 		authority []byte
 		priv      *rsa.PrivateKey
 	)
-
-	// if len(t.Config.PrivateKey) == 0 {
-	// 	// acme only accepts a max of 4096.
-	// 	if encoded, err = sshx.CachedGenerate(filepath.Join(t.CertificateDir, DefaultACMEKey), 4096); err != nil {
-	// 		return err
-	// 	}
-	//
-	// 	t.Config.PrivateKey = string(encoded)
-	// }
 
 	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
 		return err
@@ -112,7 +103,7 @@ func (t ACME) Refresh() (err error) {
 	}
 
 	log.Println("obtaining certificate")
-	if cert, authority, err = t.acme.Challenge(context.Background(), csr); err != nil {
+	if cert, authority, err = t.c.Challenge(context.Background(), csr); err != nil {
 		return errors.Wrap(err, "failed to obtain certificates")
 	}
 	log.Println("obtained certificate")

@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -46,7 +47,7 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		pooldir:    filepath.Join(dir, "authorities"),
 		pool:       pool,
 		watcher:    w,
-		cachedCert: &tls.Certificate{}, // prevent nil exception if something goes wrong on initial load.
+		cachedCert: &tls.Certificate{},
 		initialize: &sync.Once{},
 		m:          &sync.Mutex{},
 	}
@@ -135,7 +136,7 @@ func (t Directory) cert() (cert *tls.Certificate, err error) {
 	t.m.Unlock()
 
 	if cert == nil {
-		return nil, errors.Errorf("certificate missing in: %s", t.dir)
+		return nil, logx.MaybeLog(errors.Errorf("$$$$$$$$$$$$$$$$$$$$$$$$ certificate missing in: %s", t.dir))
 	}
 
 	return cert, nil

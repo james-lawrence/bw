@@ -33,8 +33,6 @@ func (t ALPN) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, erro
 
 	for _, proto := range hello.SupportedProtos {
 		if proto == tlsalpn01.ACMETLS1Protocol {
-			// https://github.com/caddyserver/caddy/pull/2201/files
-			log.Println("$$$$$$$$$$$$$$$$$$$$$ ACME DETECTED", hello.SupportedProtos)
 			return t.cache.GetCertificate(hello)
 		}
 	}

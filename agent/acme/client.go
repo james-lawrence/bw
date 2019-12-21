@@ -2,22 +2,50 @@ package acme
 
 import (
 	"context"
+	"log"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/backoff"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
+// this value is entirely arbitrary, because of the consistent hashing algorithms
+// work we just need a constant shared value.
+const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
+
 type dialer interface {
 	Dial(agent.Peer) (agent.Client, error)
+}
+
+// Dialer for connecting to a given peer.
+type _Dialer struct {
+	options []grpc.DialOption
+}
+
+// Dial connects to the provided peer.
+func (t _Dialer) Dial(p agent.Peer) (zeroc agent.Client, err error) {
+	var (
+		addr string
+	)
+
+	if addr = agent.AutocertAddress(p); addr == "" {
+		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
+	}
+
+	log.Println("dialing", agent.AutocertAddress(p))
+	return agent.Dial(addr, t.options...)
 }
 
 // NewClient create a new Client
 func NewClient(r rendezvous) Client {
 	return Client{
 		rendezvous: r,
-		d: agent.NewDialer(
-			agent.DefaultDialerOptions(grpc.WithInsecure())...,
-		),
+		d: _Dialer{
+			options: agent.DefaultDialerOptions(grpc.WithTransportCredentials(grpcx.InsecureTLS())),
+		},
 	}
 }
 
@@ -29,9 +57,22 @@ type Client struct {
 
 // Challenge initiate a challenge.
 func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
-	// this value is entirely arbitrary, because of the consistent hashing algorithms
-	// work we just need a constant shared value.
-	const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
+	bo := backoff.Maximum(10*time.Second, backoff.Exponential(64*time.Millisecond))
+	for i := 0; ; i++ {
+		if cert, authority, err = t.challenge(ctx, csr); err == nil {
+			return cert, authority, err
+		}
+		log.Println("failed to complete acme challenge", err)
+
+		select {
+		case <-ctx.Done():
+			return cert, authority, err
+		case <-time.After(bo.Backoff(i)):
+		}
+	}
+}
+
+func (t Client) challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
 	var (
 		conn *grpc.ClientConn
 		p    agent.Peer
@@ -62,5 +103,28 @@ func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authori
 
 // Resolution retrieve a resolution.
 func (t Client) Resolution(ctx context.Context) (c Challenge, err error) {
-	return c, err
+	var (
+		conn *grpc.ClientConn
+		p    agent.Peer
+		resp *ResolutionResponse
+	)
+
+	// here we select a node based on the a disciminator. that node is responsible
+	// for managing the acme account key, registration, etc.
+	if p, err = agent.NodeToPeer(t.Get([]byte(discriminator))); err != nil {
+		return c, err
+	}
+
+	if conn, err = agent.MaybeConn(t.d.Dial(p)); err != nil {
+		return c, err
+	}
+	defer conn.Close()
+
+	req := ResolutionRequest{}
+	log.Println("resolution requested")
+	if resp, err = NewACMEClient(conn).Resolution(ctx, &req); err != nil {
+		return c, err
+	}
+
+	return *resp.Challenge, err
 }

@@ -57,6 +57,10 @@ const (
 	// DefaultDiscoveryPort default port for the public service.
 	// discovery is special because it expects to be accessed globally.
 	DefaultDiscoveryPort = 2004
+	// DefaultAutocertPort port for automatic certificate generation.
+	// hopefully will be able to drop this port once RPC credentials are used
+	// instead of client certificates.
+	DefaultAutocertPort = 2005
 	// DefaultDirAgentCredentials ...
 	DefaultDirAgentCredentials = "tls"
 	// DefaultNotaryKey ...

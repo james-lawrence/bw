@@ -42,6 +42,7 @@ func NewLocal(p agent.Peer, options ...localOption) Local {
 		SWIMPort:      l.Peer.SWIMPort,
 		TorrentPort:   l.Peer.TorrentPort,
 		DiscoveryPort: l.Peer.DiscoveryPort,
+		AutocertPort:  l.Peer.AutocertPort,
 	}
 
 	if l.metadata, err = proto.Marshal(&m); err != nil {

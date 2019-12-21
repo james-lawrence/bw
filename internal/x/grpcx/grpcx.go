@@ -1,13 +1,20 @@
 package grpcx
 
 import (
+	"crypto/tls"
 	"log"
 	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
+
+// InsecureTLS generate insecure transport credentials.
+func InsecureTLS() credentials.TransportCredentials {
+	return credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+}
 
 // IgnoreShutdownErrors ignores common (safe) shutdown errors.
 func IgnoreShutdownErrors(err error) error {

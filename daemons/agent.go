@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
@@ -29,6 +30,7 @@ func Agent(ctx Context) (err error) {
 		observersdir observers.Directory
 		bind         net.Listener
 		dlreg        = storage.New(storage.OptionProtocols(ctx.Download))
+		acmesvc      acme.Service
 	)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
@@ -36,6 +38,10 @@ func Agent(ctx Context) (err error) {
 	}
 
 	if observersdir, err = observers.NewDirectory(filepath.Join(ctx.Config.Root, "observers")); err != nil {
+		return err
+	}
+
+	if acmesvc, err = acme.ReadConfig(ctx.Config, ctx.ConfigurationFile); err != nil {
 		return err
 	}
 
@@ -87,11 +93,11 @@ func Agent(ctx Context) (err error) {
 	)
 
 	aq := agent.NewQuorum(&q)
-
 	server := grpc.NewServer(grpc.Creds(ctx.RPCCredentials), keepalive)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
 	agent.RegisterConfigurationServer(server, configurationsvc)
+	acme.RegisterACMEServer(server, acmesvc)
 
 	if bind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)

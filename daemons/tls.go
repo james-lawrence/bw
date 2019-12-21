@@ -3,6 +3,7 @@ package daemons
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"os"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
@@ -32,6 +33,10 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 	var (
 		pool *x509.CertPool
 	)
+
+	if err = os.MkdirAll(c.CredentialsDir, 0700); err != nil {
+		return creds, errors.WithStack(err)
+	}
 
 	if pool, err = x509.SystemCertPool(); err != nil {
 		return creds, errors.WithStack(err)
@@ -72,7 +77,6 @@ func GRPCGenServer(c agent.Config, options ...tlsx.Option) (credentials.Transpor
 	if tlscreds, err = TLSGenServer(c, options...); err != nil {
 		return nil, err
 	}
-	// tlscreds = certificatecache.NewALPN(tlscreds)
 
 	return credentials.NewTLS(tlscreds), nil
 }

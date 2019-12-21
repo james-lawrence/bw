@@ -12,9 +12,12 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 // X509Option ...
@@ -158,9 +161,35 @@ func WritePrivateKey(dst io.Writer, key *rsa.PrivateKey) error {
 	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}))
 }
 
+// WritePrivateKeyFile ...
+func WritePrivateKeyFile(path string, key *rsa.PrivateKey) (err error) {
+	var (
+		dst *os.File
+	)
+
+	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+		return err
+	}
+
+	return errorsx.Compact(WritePrivateKey(dst, key), dst.Close())
+}
+
 // WriteCertificate ...
 func WriteCertificate(dst io.Writer, cert []byte) error {
 	return errors.WithStack(pem.Encode(dst, &pem.Block{Type: "CERTIFICATE", Bytes: cert}))
+}
+
+// WriteCertificateFile ...
+func WriteCertificateFile(path string, cert []byte) (err error) {
+	var (
+		dst *os.File
+	)
+
+	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0600); err != nil {
+		return err
+	}
+
+	return errorsx.Compact(WriteCertificate(dst, cert), dst.Close())
 }
 
 // Option tls config options

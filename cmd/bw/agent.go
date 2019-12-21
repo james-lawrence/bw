@@ -163,6 +163,11 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
+	// this is a blocking operation until a certificate is acquired.
+	if err = daemons.Autocert(dctx); err != nil {
+		return err
+	}
+
 	if err = daemons.Agent(dctx); err != nil {
 		return err
 	}

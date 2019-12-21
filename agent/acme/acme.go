@@ -3,7 +3,10 @@ package acme
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
+	"io/ioutil"
 	"log"
+	"path/filepath"
 	"sync/atomic"
 
 	"github.com/go-acme/lego/certcrypto"
@@ -13,15 +16,41 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
 type rendezvous interface {
 	Get([]byte) *memberlist.Node
 }
 
+// ReadConfig ...
+func ReadConfig(c agent.Config, path string) (svc Service, err error) {
+	type config struct {
+		ACME certificatecache.ACMEConfig `yaml:"acme"`
+	}
+
+	var (
+		cc = &config{
+			ACME: certificatecache.ACMEConfig{
+				CAURL: lego.LEDirectoryProduction,
+			},
+		}
+	)
+
+	if err = bw.ExpandAndDecodeFile(path, cc); err != nil {
+		return svc, err
+	}
+
+	a := account{ACMEConfig: cc.ACME, Config: c}
+
+	return newService(c, a), nil
+}
+
 // NewService new acme service from an agent.Configuration.
-func NewService(c agent.Config, u registration.User) Service {
+func newService(c agent.Config, u account) Service {
 	return Service{
 		c: c,
 		u: u,
@@ -32,7 +61,7 @@ func NewService(c agent.Config, u registration.User) Service {
 // Service is responsible for generating and resolving ACME protocol certificates.
 type Service struct {
 	c agent.Config
-	u registration.User
+	u account
 	m *int64
 }
 
@@ -49,14 +78,21 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	defer atomic.CompareAndSwapInt64(t.m, 1, 0)
 
 	config := lego.NewConfig(t.u)
-	// config.CADirURL = t.Config.CAURL
+	config.CADirURL = t.u.CAURL
 	config.Certificate.KeyType = certcrypto.RSA8192
 
 	if client, err = lego.NewClient(config); err != nil {
+		log.Println("lego client failure", err)
+		return resp, status.Error(codes.Internal, "acme setup failure")
+	}
+
+	if err = autogenRegistration(t.c, client); err != nil {
+		log.Println("acme registration failure", err)
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
 	if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
+		log.Println("lego provider failure", err)
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
@@ -80,4 +116,62 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 // Resolution to a challenge.
 func (t Service) Resolution(ctx context.Context, req *ResolutionRequest) (resp *ResolutionResponse, err error) {
 	return resp, status.Error(codes.Unimplemented, "resolution not yet implemented")
+}
+
+func autogenRegistration(c agent.Config, client *lego.Client) error {
+	if readRegistration(c) == nil {
+		_, err := genRegistration(c, client)
+		return err
+	}
+
+	return nil
+}
+
+func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Resource, err error) {
+	var (
+		encoded []byte
+		reg     *registration.Resource
+	)
+
+	regp := filepath.Join(c.CredentialsDir, "acme.registration.json")
+
+	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
+		return zreg, err
+	}
+
+	if encoded, err = json.Marshal(reg); err != nil {
+		return zreg, err
+	}
+
+	if err = ioutil.WriteFile(regp, encoded, 0600); err != nil {
+		return zreg, err
+	}
+
+	return *reg, nil
+}
+
+func readRegistration(c agent.Config) (reg *registration.Resource) {
+	var (
+		err     error
+		encoded []byte
+	)
+
+	reg = new(registration.Resource)
+	regp := filepath.Join(c.CredentialsDir, "acme.registration.json")
+
+	if !systemx.FileExists(regp) {
+		return nil
+	}
+
+	if encoded, err = ioutil.ReadFile(regp); err != nil {
+		log.Println("failed to read existing registration", err)
+		return nil
+	}
+
+	if err = json.Unmarshal(encoded, &reg); err != nil {
+		log.Println("failed to read existing registration", err)
+		return nil
+	}
+
+	return reg
 }

@@ -57,9 +57,18 @@ func NewRefreshClient(dir string) *Notary {
 }
 
 // NewRefreshAgent default tls credentials refresh strategy for agents.
-func NewRefreshAgent(dir string, a acme) *ACME {
+func NewRefreshAgent(dir string, a challenger) *ACME {
 	x := NewACME(dir, a)
 	return &x
+}
+
+// AutomaticTLSAgent generate a self signed certificate if necessary, this allows the agents
+// to communicate with temporary credentials while acme is bootstrapping.
+func AutomaticTLSAgent(domain, dir string) (err error) {
+	return RefreshExpired(filepath.Join(dir, DefaultTLSCertServer), time.Now(), selfsigned{
+		domain:         domain,
+		credentialsDir: dir,
+	})
 }
 
 // FromConfig will automatically refresh credentials in the provided directory
