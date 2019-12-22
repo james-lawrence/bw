@@ -34,7 +34,7 @@ func (t _Dialer) Dial(p agent.Peer) (zeroc agent.Client, err error) {
 	if addr = agent.AutocertAddress(p); addr == "" {
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
-	log.Println("$$$$$$$$$ DIALING", addr)
+
 	return agent.Dial(addr, t.options...)
 }
 
@@ -60,10 +60,10 @@ func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authori
 	for i := 0; ; i++ {
 		if cert, authority, err = t.challenge(ctx, csr); err == nil {
 			log.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ SUCCESS")
-			return cert, authority, err
+			return cert, authority, nil
 		}
 
-		log.Println("$$$$$$ failed to complete acme challenge", i, bo.Backoff(i), err)
+		log.Println("failed to complete acme challenge", i, bo.Backoff(i), err)
 
 		select {
 		case <-ctx.Done():
