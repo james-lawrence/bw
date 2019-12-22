@@ -164,12 +164,10 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	log.Println("$$$$$$$$ STARTING AgentCertificateCache")
 	if err = daemons.AgentCertificateCache(dctx); err != nil {
 		return err
 	}
-	// time.Sleep(time.Hour)
-	log.Println("$$$$$$$$ STARTING AGENT")
+
 	if err = daemons.Agent(dctx); err != nil {
 		return err
 	}

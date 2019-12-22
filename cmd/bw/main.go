@@ -29,6 +29,7 @@ type global struct {
 }
 
 func init() {
+	// export GRPC_GO_LOG_VERBOSITY_LEVEL=99; export GRPC_GO_LOG_SEVERITY_LEVEL=info
 	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
 		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99"))
 		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info"))
