@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/go-acme/lego/challenge/tlsalpn01"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 
@@ -21,6 +20,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 func mustWatcher(dir string) *fsnotify.Watcher {
@@ -38,9 +38,8 @@ func mustWatcher(dir string) *fsnotify.Watcher {
 
 // NewDirectory maintains a certificate config by watching a directory.
 func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Directory) {
-	log.Println("WATCHING", dir)
 	w := mustWatcher(dir)
-	return Directory{
+	d := Directory{
 		serverName: serverName,
 		caFile:     ca,
 		dir:        dir,
@@ -51,6 +50,8 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		initialize: &sync.Once{},
 		m:          &sync.Mutex{},
 	}
+
+	return d
 }
 
 // Directory manages the certificates by watching a directory
@@ -84,22 +85,25 @@ func (t Directory) init() (err error) {
 
 // GetCertificate for use by tls.Config.
 func (t Directory) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	for _, proto := range hello.SupportedProtos {
-		if proto == tlsalpn01.ACMETLS1Protocol {
-			// https://github.com/caddyserver/caddy/pull/2201/files
-			log.Println("$$$$$$$$$$$$$$$$$$$$$ ACME DETECTED")
-		}
-	}
+	t.init()
 
+	log.Println("GET SERVER CERT", hello.ServerName, hello.Conn.RemoteAddr())
+	// x, _ := t.cert()
+	// log.Println("SERVER CERT", tlsx.Print(x))
 	return t.cert()
 }
 
 // GetClientCertificate for use by tls.Config.
 func (t Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+	t.init()
+
+	// x, _ := t.cert()
+	// log.Println("GET CLIENT CERT", tlsx.Print(x))
 	return t.cert()
 }
 
 func (t Directory) background() {
+	log.Println("WATCHING", t.dir)
 	limit := rate.NewLimiter(rate.Every(10*time.Second), 1)
 	debounce := make(chan struct{})
 	go func() {
@@ -115,13 +119,16 @@ func (t Directory) background() {
 	}()
 
 	for {
+		log.Println("$$$$$ AWAITING EVENT")
 		select {
 		case _ = <-t.watcher.Events:
+			log.Println("watch event")
 			select {
 			case debounce <- struct{}{}:
 			default:
 			}
 		case err := <-t.watcher.Errors:
+			log.Println("watch error", err)
 			if limit.Allow() {
 				log.Println("watch error", err)
 			}
@@ -130,13 +137,12 @@ func (t Directory) background() {
 }
 
 func (t Directory) cert() (cert *tls.Certificate, err error) {
-	t.init()
 	t.m.Lock()
 	cert = t.cachedCert
 	t.m.Unlock()
 
 	if cert == nil {
-		return nil, logx.MaybeLog(errors.Errorf("$$$$$$$$$$$$$$$$$$$$$$$$ certificate missing in: %s", t.dir))
+		return nil, logx.MaybeLog(errors.Errorf("certificate missing in: %s", t.dir))
 	}
 
 	return cert, nil
@@ -162,10 +168,11 @@ func (t Directory) refresh() (err error) {
 		cert              tls.Certificate
 	)
 
-	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSCertClient)
+	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSCertClient, DefaultTLSBootstrapCert)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer, DefaultTLSKeyClient)
 
 	debugx.Println("loading", certpath, keypath)
+	log.Println("##################### loading", certpath, keypath)
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {
 		return errors.WithStack(err)
@@ -173,7 +180,7 @@ func (t Directory) refresh() (err error) {
 
 	t.m.Lock()
 	defer t.m.Unlock()
-
+	log.Println("SERVER CERT", certpath, tlsx.Print(&cert))
 	*t.cachedCert = cert
 
 	if systemx.FileExists(t.caFile) {

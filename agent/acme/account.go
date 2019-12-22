@@ -33,7 +33,7 @@ func (t account) GetPrivateKey() (priv crypto.PrivateKey) {
 		err error
 	)
 
-	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.Config.CredentialsDir, certificatecache.DefaultTLSKeyServer))); err != nil {
+	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey))); err != nil {
 		log.Println("failed to load private key", err)
 		return nil
 	}

@@ -47,7 +47,7 @@ func Agent(ctx Context) (err error) {
 
 	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
 
-	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(ctx.RPCCredentials))...)
+	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(ctx.GRPCCreds()))...)
 	qdialer := agent.NewQuorumDialer(dialer)
 	dispatcher := agentutil.NewDispatcher(ctx.Cluster, qdialer)
 
@@ -93,7 +93,7 @@ func Agent(ctx Context) (err error) {
 	)
 
 	aq := agent.NewQuorum(&q)
-	server := grpc.NewServer(grpc.Creds(ctx.RPCCredentials), keepalive)
+	server := grpc.NewServer(grpc.Creds(ctx.GRPCCreds()), keepalive)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
 	agent.RegisterConfigurationServer(server, configurationsvc)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"path/filepath"
 	"time"
@@ -16,7 +17,6 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/storage"
 
-	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 
 	"github.com/alecthomas/kingpin"
@@ -38,6 +38,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
 	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(t.config.DiscoveryBind.String()).TCPVar(&t.config.DiscoveryBind)
+	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(t.config.AutocertBind.String()).TCPVar(&t.config.AutocertBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
@@ -46,7 +47,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind() (err error) {
 	var (
 		c             clustering.Cluster
-		tlscreds      credentials.TransportCredentials
+		tlscreds      *tls.Config
 		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
 		deployResults []chan deployment.DeployResult
@@ -96,7 +97,7 @@ func (t *agentCmd) bind() (err error) {
 		clustering.SnapshotOptionContext(t.global.ctx),
 	)
 
-	if tlscreds, err = daemons.GRPCGenServer(t.config); err != nil {
+	if tlscreds, err = daemons.TLSGenServer(t.config); err != nil {
 		return err
 	}
 
@@ -133,11 +134,6 @@ func (t *agentCmd) bind() (err error) {
 		}
 	}()
 
-	// go timex.Every(time.Minute, func() {
-	// 	log.Println("PID", os.Getpid())
-	// 	tcu.PrintTorrentInfo(tc)
-	// })
-
 	deployResults = append(deployResults, tdr)
 
 	dctx := daemons.Context{
@@ -168,12 +164,13 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if err = daemons.Agent(dctx); err != nil {
+	log.Println("$$$$$$$$ STARTING AgentCertificateCache")
+	if err = daemons.AgentCertificateCache(dctx); err != nil {
 		return err
 	}
-
-	log.Println("$$$$$$$ initializing certificate cache")
-	if err = daemons.AgentCertificateCache(dctx); err != nil {
+	// time.Sleep(time.Hour)
+	log.Println("$$$$$$$$ STARTING AGENT")
+	if err = daemons.Agent(dctx); err != nil {
 		return err
 	}
 

@@ -4,6 +4,7 @@ package daemons
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"sync"
@@ -48,9 +49,14 @@ type Context struct {
 	Download          storage.DownloadProtocol
 	Raft              raftutil.Protocol
 	Cluster           cluster
-	RPCCredentials    credentials.TransportCredentials
+	RPCCredentials    *tls.Config
 	RPCKeepalive      keepalive.ServerParameters
 	Results           chan deployment.DeployResult
+}
+
+// GRPCCreds ...
+func (t *Context) GRPCCreds() credentials.TransportCredentials {
+	return credentials.NewTLS(t.RPCCredentials)
 }
 
 func (t *Context) grpc(name string, server *grpc.Server, listeners ...net.Listener) {

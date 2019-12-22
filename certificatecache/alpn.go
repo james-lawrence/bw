@@ -2,7 +2,6 @@ package certificatecache
 
 import (
 	"crypto/tls"
-	"log"
 
 	"github.com/go-acme/lego/challenge/tlsalpn01"
 )
@@ -28,9 +27,6 @@ type ALPN struct {
 
 // GetCertificate for use by tls.Config.
 func (t ALPN) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	log.Println("ALPN GetCertificate INITIATED")
-	defer log.Println("ALPN GetCertificate COMPLETED")
-
 	for _, proto := range hello.SupportedProtos {
 		if proto == tlsalpn01.ACMETLS1Protocol {
 			return t.cache.GetCertificate(hello)

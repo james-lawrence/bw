@@ -5,6 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
@@ -24,12 +25,12 @@ func Autocert(ctx Context) (err error) {
 
 	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
 
-	creds, err := GRPCGenServer(ctx.Config, tlsx.OptionVerifyClientIfGiven)
+	creds, err := tlsx.Clone(ctx.RPCCredentials, tlsx.OptionVerifyClientIfGiven)
 	if err != nil {
 		return err
 	}
 
-	server := grpc.NewServer(grpc.Creds(creds), keepalive)
+	server := grpc.NewServer(grpc.Creds(credentials.NewTLS(creds)), keepalive)
 	acme.RegisterACMEServer(server, acmesvc)
 
 	if bind, err = net.Listen(ctx.Config.AutocertBind.Network(), ctx.Config.AutocertBind.String()); err != nil {

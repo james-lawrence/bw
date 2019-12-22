@@ -9,12 +9,14 @@ import (
 	"crypto/x509/pkix"
 	"encoding/hex"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
 	"os"
 	"time"
 
+	"github.com/grantae/certinfo"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
@@ -131,6 +133,15 @@ func SelfSignedRSAGen(bits int, template x509.Certificate) (priv *rsa.PrivateKey
 	return priv, derBytes, errors.WithStack(err)
 }
 
+// SelfSigned signs its own certificate ..
+func SelfSigned(priv *rsa.PrivateKey, template x509.Certificate) (_ *rsa.PrivateKey, derBytes []byte, err error) {
+	if derBytes, err = x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv); err != nil {
+		return priv, derBytes, errors.WithStack(err)
+	}
+
+	return priv, derBytes, nil
+}
+
 // WriteTLS ...
 func WriteTLS(key *rsa.PrivateKey, derBytes []byte, err error) func(io.Writer, io.Writer, error) error {
 	if err != nil {
@@ -199,4 +210,57 @@ type Option func(*tls.Config) error
 func OptionVerifyClientIfGiven(c *tls.Config) error {
 	c.ClientAuth = tls.VerifyClientCertIfGiven
 	return nil
+}
+
+// Clone ...
+func Clone(c *tls.Config, options ...Option) (updated *tls.Config, err error) {
+	updated = c.Clone()
+
+	for _, opt := range options {
+		if err = opt(updated); err != nil {
+			return updated, err
+		}
+	}
+
+	return updated, nil
+}
+
+// PrintEncoded certificate
+func PrintEncoded(cx []byte) (s string) {
+	cc, err := x509.ParseCertificate(cx)
+	if err != nil {
+		return fmt.Sprintf("failed : %s\n", err)
+	}
+
+	ss, err := certinfo.CertificateText(cc)
+	if err != nil {
+		return fmt.Sprintf("failed index: %s\n", err)
+	}
+
+	return ss
+}
+
+// Print tls certificate.
+func Print(c *tls.Certificate) (s string) {
+	if c == nil {
+		return ""
+	}
+
+	for idx, cx := range c.Certificate {
+		cc, err := x509.ParseCertificate(cx)
+		if err != nil {
+			s += fmt.Sprintf("failed index: %d - %s\n", idx, err)
+			continue
+		}
+
+		ss, err := certinfo.CertificateText(cc)
+		if err != nil {
+			s += fmt.Sprintf("failed index: %d - %s\n", idx, err)
+			continue
+		}
+
+		s += fmt.Sprintf("%d - %s\n", idx, ss)
+	}
+
+	return s
 }

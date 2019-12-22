@@ -1,3 +1,7 @@
+// Package acme implements the acme protocol. specifically for the alpn for the cluster.
+// this forces a couple requirements, the discovery service must be exposed on port 443.
+// another reference implementation can be seen at:
+// https://github.com/caddyserver/caddy/pull/2201/files
 package acme
 
 import (
@@ -6,6 +10,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"sync/atomic"
 
@@ -77,6 +82,13 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	}
 	defer atomic.CompareAndSwapInt64(t.m, 1, 0)
 
+	// LEGO is retarded in its API. and we need to delete the registration so it
+	// is not loaded prematurely by lego (i.e. before the new registration is generated)
+	if err = clearRegistration(t.c); !os.IsNotExist(err) && err != nil {
+		log.Println("unable to clear registration", err)
+		return resp, status.Error(codes.Internal, "registration reset failure")
+	}
+
 	config := lego.NewConfig(t.u)
 	config.CADirURL = t.u.CAURL
 	config.Certificate.KeyType = certcrypto.RSA8192
@@ -86,7 +98,7 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
-	if err = autogenRegistration(t.c, client); err != nil {
+	if _, err = genRegistration(t.c, client); err != nil {
 		log.Println("acme registration failure", err)
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
@@ -115,16 +127,19 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 
 // Resolution to a challenge.
 func (t Service) Resolution(ctx context.Context, req *ResolutionRequest) (resp *ResolutionResponse, err error) {
-	return resp, status.Error(codes.Unimplemented, "resolution not yet implemented")
+	c, err := readChallenge(t.challengeFile())
+	if err != nil {
+		return nil, err
+	}
+	return &ResolutionResponse{Challenge: &c}, nil
 }
 
-func autogenRegistration(c agent.Config, client *lego.Client) error {
-	if readRegistration(c) == nil {
-		_, err := genRegistration(c, client)
-		return err
-	}
+func (t Service) challengeFile() string {
+	return filepath.Join(t.c.Root, "acme.challenge.proto")
+}
 
-	return nil
+func clearRegistration(c agent.Config) (err error) {
+	return os.Remove(filepath.Join(c.Root, "acme.registration.json"))
 }
 
 func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Resource, err error) {
@@ -133,8 +148,9 @@ func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Res
 		reg     *registration.Resource
 	)
 
-	regp := filepath.Join(c.CredentialsDir, "acme.registration.json")
+	regp := filepath.Join(c.Root, "acme.registration.json")
 
+	log.Println("$$$$$$$ new registration", regp)
 	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
 		return zreg, err
 	}
@@ -157,7 +173,7 @@ func readRegistration(c agent.Config) (reg *registration.Resource) {
 	)
 
 	reg = new(registration.Resource)
-	regp := filepath.Join(c.CredentialsDir, "acme.registration.json")
+	regp := filepath.Join(c.Root, "acme.registration.json")
 
 	if !systemx.FileExists(regp) {
 		return nil

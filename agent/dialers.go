@@ -73,7 +73,8 @@ func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error)
 	var (
 		conn *grpc.ClientConn
 	)
-
+	// log.Println("DIALING", address, string(debug.Stack()))
+	log.Println("DIALING", address)
 	if conn, err = grpc.Dial(address, options...); err != nil {
 		return _ignored, errors.Wrap(err, "failed to connect to peer")
 	}

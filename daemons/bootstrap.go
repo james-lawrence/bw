@@ -13,7 +13,7 @@ func Bootstrap(ctx Context) (err error) {
 	cx := ctx.Cluster
 	dialer := agent.NewDialer(
 		agent.DefaultDialerOptions(
-			grpc.WithTransportCredentials(ctx.RPCCredentials),
+			grpc.WithTransportCredentials(ctx.GRPCCreds()),
 		)...,
 	)
 

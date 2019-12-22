@@ -4,11 +4,18 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"log"
 	"path/filepath"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/x/sshx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
+
+// minimumExpiration is used to force a certificate refresh of self signed certificates.
+func minimumExpiration() time.Duration {
+	return time.Hour
+}
 
 // generates a self signed certificate iff the current certificate is missing or
 // expired. this is used to allow the cluster to bootstrap correctly.
@@ -24,23 +31,24 @@ func (t selfsigned) Refresh() (err error) {
 		template x509.Certificate
 	)
 
+	log.Println("refreshing self signed certificate")
 	subject := tlsx.X509OptionSubject(pkix.Name{
 		CommonName: t.domain,
 	})
 
-	if template, err = tlsx.X509Template(10*time.Minute, subject); err != nil {
+	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.credentialsDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
 
-	if priv, cert, err = tlsx.SelfSignedRSAGen(8096, template); err != nil {
+	if template, err = tlsx.X509Template(minimumExpiration(), subject, tlsx.X509OptionCA()); err != nil {
 		return err
 	}
 
-	if err = tlsx.WritePrivateKeyFile(filepath.Join(t.credentialsDir, DefaultTLSKeyServer), priv); err != nil {
+	if _, cert, err = tlsx.SelfSigned(priv, template); err != nil {
 		return err
 	}
 
-	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSCertServer), cert); err != nil {
+	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSBootstrapCert), cert); err != nil {
 		return err
 	}
 

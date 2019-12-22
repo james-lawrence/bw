@@ -3,8 +3,11 @@ package acme
 import (
 	"context"
 	"crypto/tls"
-	"errors"
-	"log"
+
+	"github.com/go-acme/lego/challenge/tlsalpn01"
+	"github.com/pkg/errors"
+
+	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
 type resolution interface {
@@ -24,7 +27,13 @@ type ALPNCertCache struct {
 
 // GetCertificate returns a certificate based on the challenge.
 func (t ALPNCertCache) GetCertificate(hello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
-	// https://github.com/caddyserver/caddy/pull/2201/files
-	log.Println("$$$$$$$$$$$$$$$$$$$$$ ACME DETECTED", hello.SupportedProtos)
-	return nil, errors.New("not implemented")
+	var (
+		cc Challenge
+	)
+
+	if cc, err = t.r.Resolution(context.Background()); err != nil {
+		return nil, logx.MaybeLog(errors.Wrap(err, "failed to retrieve challenge"))
+	}
+
+	return tlsalpn01.ChallengeCert(cc.Domain, cc.Digest)
 }

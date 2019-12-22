@@ -1,23 +1,29 @@
 package acme
 
 import (
-	"log"
-	"time"
+	"os"
+
+	"github.com/james-lawrence/bw/internal/x/protox"
 )
 
 type solver Service
 
-func (t solver) Present(domain, token, keyAuth string) error {
-	log.Println("PRESENT INITIATED", domain, token, keyAuth)
-	defer log.Println("PRESENT COMPLETED", domain, token, keyAuth)
-	time.Sleep(time.Second)
-	return nil
+func (t solver) Present(domain, token, keyAuth string) (err error) {
+	c := Challenge{Domain: domain, Token: token, Digest: keyAuth}
+	return writeChallenge(Service(t).challengeFile(), c)
 }
 
 func (t solver) CleanUp(domain, token, keyAuth string) error {
-	log.Println("CLEANUP INTIATED", domain, token, keyAuth)
-	defer log.Println("CLEANUP COMPLETED", domain, token, keyAuth)
+	return os.Remove(Service(t).challengeFile())
+}
 
-	time.Sleep(5 * time.Second)
-	return nil
+func writeChallenge(path string, c Challenge) error {
+	return protox.WriteFile(path, 0600, &c)
+}
+
+func readChallenge(path string) (c Challenge, err error) {
+	if err = protox.ReadFile(path, &c); err != nil {
+		return c, err
+	}
+	return c, err
 }

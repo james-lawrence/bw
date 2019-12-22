@@ -34,8 +34,7 @@ func (t _Dialer) Dial(p agent.Peer) (zeroc agent.Client, err error) {
 	if addr = agent.AutocertAddress(p); addr == "" {
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
-
-	log.Println("dialing", agent.AutocertAddress(p))
+	log.Println("$$$$$$$$$ DIALING", addr)
 	return agent.Dial(addr, t.options...)
 }
 
@@ -57,12 +56,14 @@ type Client struct {
 
 // Challenge initiate a challenge.
 func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
-	bo := backoff.Maximum(10*time.Second, backoff.Exponential(64*time.Millisecond))
+	bo := backoff.Maximum(10*time.Second, backoff.Exponential(time.Second))
 	for i := 0; ; i++ {
 		if cert, authority, err = t.challenge(ctx, csr); err == nil {
+			log.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ SUCCESS")
 			return cert, authority, err
 		}
-		log.Println("failed to complete acme challenge", err)
+
+		log.Println("$$$$$$ failed to complete acme challenge", i, bo.Backoff(i), err)
 
 		select {
 		case <-ctx.Done():
@@ -121,7 +122,7 @@ func (t Client) Resolution(ctx context.Context) (c Challenge, err error) {
 	defer conn.Close()
 
 	req := ResolutionRequest{}
-	log.Println("resolution requested")
+
 	if resp, err = NewACMEClient(conn).Resolution(ctx, &req); err != nil {
 		return c, err
 	}
