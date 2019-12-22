@@ -128,7 +128,7 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 	var (
 		due time.Duration
 	)
-	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
+	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertClient, DefaultTLSCertServer)
 
 	if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
 		return err
@@ -136,8 +136,9 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 
 	go func() {
 		for {
-			log.Println("$$$$$$$$$$$$$$$$$ next attempt", due)
+			log.Println("next refresh", due)
 			time.Sleep(due)
+
 			if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
 				logx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
@@ -175,7 +176,6 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (due time.Duratio
 	// set the next refresh to be a minute from now, forces a hopefully successful
 	// iteration where it'll use the certicates actual expiration to compute the next iteration.
 	if _, err = os.Stat(certpath); os.IsNotExist(err) {
-		log.Println("certpath not exist", certpath)
 		return due, r.Refresh()
 	}
 
@@ -186,7 +186,6 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (due time.Duratio
 	// check once a day, unless the expiration / 4 is sooner.
 	due = timex.DurationMin(24*time.Hour, expiration.Sub(t)/4)
 
-	log.Println("next expiration check in", due)
 	if t.Equal(expiration) || t.After(expiration) {
 		return due, r.Refresh()
 	}

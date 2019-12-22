@@ -200,7 +200,7 @@ func WriteCertificateFile(path string, cert []byte) (err error) {
 		return err
 	}
 
-	return errorsx.Compact(WriteCertificate(dst, cert), dst.Close())
+	return errorsx.Compact(WriteCertificate(dst, cert), dst.Sync(), dst.Close())
 }
 
 // Option tls config options
@@ -227,17 +227,20 @@ func Clone(c *tls.Config, options ...Option) (updated *tls.Config, err error) {
 
 // PrintEncoded certificate
 func PrintEncoded(cx []byte) (s string) {
-	cc, err := x509.ParseCertificate(cx)
+	ccc, err := x509.ParseCertificates(cx)
 	if err != nil {
-		return fmt.Sprintf("failed : %s\n", err)
+		return fmt.Sprintf("failed : %s - %s\n", err, string(cx))
 	}
 
-	ss, err := certinfo.CertificateText(cc)
-	if err != nil {
-		return fmt.Sprintf("failed index: %s\n", err)
+	for _, cc := range ccc {
+		ss, err := certinfo.CertificateText(cc)
+		if err != nil {
+			return fmt.Sprintf("failed index: %s - %s\n", err, string(cx))
+		}
+		s += ss + "\n"
 	}
 
-	return ss
+	return s
 }
 
 // Print tls certificate.

@@ -150,7 +150,6 @@ func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Res
 
 	regp := filepath.Join(c.Root, "acme.registration.json")
 
-	log.Println("$$$$$$$ new registration", regp)
 	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
 		return zreg, err
 	}

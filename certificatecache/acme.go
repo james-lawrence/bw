@@ -14,6 +14,7 @@ import (
 	"github.com/go-acme/lego/lego"
 	"github.com/pkg/errors"
 
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
@@ -113,36 +114,13 @@ func (t ACME) Refresh() (err error) {
 
 	log.Println("writing authority certificate", capath)
 	if err = ioutil.WriteFile(capath, authority, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
+		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate authority to %s", capath))
 	}
 
 	log.Println("writing certificate", certpath)
 	if err = ioutil.WriteFile(certpath, cert, 0600); err != nil {
-		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
+		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate to %s", certpath))
 	}
 
 	return nil
 }
-
-// func (t ACME) loadRegistration(client *lego.Client) (zreg registration.Resource, err error) {
-// 	var (
-// 		encoded []byte
-// 		reg     *registration.Resource
-// 	)
-//
-// 	regp := filepath.Join(t.CertificateDir, "acme.registration.json")
-//
-// 	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
-// 		return zreg, err
-// 	}
-//
-// 	if encoded, err = json.Marshal(reg); err != nil {
-// 		return zreg, err
-// 	}
-//
-// 	if err = ioutil.WriteFile(regp, encoded, 0600); err != nil {
-// 		return zreg, err
-// 	}
-//
-// 	return *reg, nil
-// }

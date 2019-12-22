@@ -59,7 +59,6 @@ func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authori
 	bo := backoff.Maximum(10*time.Second, backoff.Exponential(time.Second))
 	for i := 0; ; i++ {
 		if cert, authority, err = t.challenge(ctx, csr); err == nil {
-			log.Println("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ SUCCESS")
 			return cert, authority, nil
 		}
 

@@ -20,7 +20,6 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 func mustWatcher(dir string) *fsnotify.Watcher {
@@ -50,7 +49,9 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		initialize: &sync.Once{},
 		m:          &sync.Mutex{},
 	}
-
+	if err := d.init(); err != nil {
+		panic(err)
+	}
 	return d
 }
 
@@ -70,10 +71,10 @@ type Directory struct {
 
 func (t Directory) init() (err error) {
 	t.initialize.Do(func() {
-		err = errorsx.Compact(
+		err = logx.MaybeLog(errorsx.Compact(
 			os.MkdirAll(t.pooldir, 0700),
-			t.refresh(),
-		)
+			t.watcher.Add(t.pooldir),
+		))
 
 		if err == nil {
 			go t.background()
@@ -85,26 +86,16 @@ func (t Directory) init() (err error) {
 
 // GetCertificate for use by tls.Config.
 func (t Directory) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	t.init()
-
-	log.Println("GET SERVER CERT", hello.ServerName, hello.Conn.RemoteAddr())
-	// x, _ := t.cert()
-	// log.Println("SERVER CERT", tlsx.Print(x))
 	return t.cert()
 }
 
 // GetClientCertificate for use by tls.Config.
 func (t Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
-	t.init()
-
-	// x, _ := t.cert()
-	// log.Println("GET CLIENT CERT", tlsx.Print(x))
 	return t.cert()
 }
 
 func (t Directory) background() {
-	log.Println("WATCHING", t.dir)
-	limit := rate.NewLimiter(rate.Every(10*time.Second), 1)
+	limit := rate.NewLimiter(rate.Every(10*time.Second), 2)
 	debounce := make(chan struct{})
 	go func() {
 		for _ = range debounce {
@@ -119,16 +110,13 @@ func (t Directory) background() {
 	}()
 
 	for {
-		log.Println("$$$$$ AWAITING EVENT")
 		select {
 		case _ = <-t.watcher.Events:
-			log.Println("watch event")
 			select {
 			case debounce <- struct{}{}:
 			default:
 			}
 		case err := <-t.watcher.Errors:
-			log.Println("watch error", err)
 			if limit.Allow() {
 				log.Println("watch error", err)
 			}
@@ -172,7 +160,6 @@ func (t Directory) refresh() (err error) {
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer, DefaultTLSKeyClient)
 
 	debugx.Println("loading", certpath, keypath)
-	log.Println("##################### loading", certpath, keypath)
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {
 		return errors.WithStack(err)
@@ -180,7 +167,7 @@ func (t Directory) refresh() (err error) {
 
 	t.m.Lock()
 	defer t.m.Unlock()
-	log.Println("SERVER CERT", certpath, tlsx.Print(&cert))
+
 	*t.cachedCert = cert
 
 	if systemx.FileExists(t.caFile) {
