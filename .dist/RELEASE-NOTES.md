@@ -1,3 +1,21 @@
+commit 8937bc73cb6b7a5c8571b5af8f555a3cf2a10be4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Dec 23 16:06:22 2019 -0500
+
+    fix build
+
+commit 90f8d49c1f56ead03ac285602781edb0c5402414
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 19 18:33:57 2019 -0500
+
+    work towards alpn working in production
+
+commit b5e572ff5c136d1e49f97e3e8275f3c8ebb8a956
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 19 06:55:41 2019 -0500
+
+    release 0.1.1576756381-fa38f081
+
 commit fa38f0817261c336c29a8454b86d44edcae2edbc
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Dec 19 06:53:01 2019 -0500
