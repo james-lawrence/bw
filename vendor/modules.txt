@@ -146,6 +146,8 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/snappy
 # github.com/google/btree v1.0.0
 github.com/google/btree
+# github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
+github.com/grantae/certinfo
 # github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
 github.com/gutengo/fil
 # github.com/hashicorp/errwrap v1.0.0
