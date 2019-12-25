@@ -51,23 +51,25 @@ func ReadConfig(c agent.Config, path string) (svc Service, err error) {
 
 	a := account{ACMEConfig: cc.ACME, Config: c}
 
-	return newService(c, a), nil
+	return newService(c, cc.ACME, a), nil
 }
 
 // NewService new acme service from an agent.Configuration.
-func newService(c agent.Config, u account) Service {
+func newService(c agent.Config, ac certificatecache.ACMEConfig, u account) Service {
 	return Service{
-		c: c,
-		u: u,
-		m: new(int64),
+		c:  c,
+		ac: ac,
+		u:  u,
+		m:  new(int64),
 	}
 }
 
 // Service is responsible for generating and resolving ACME protocol certificates.
 type Service struct {
-	c agent.Config
-	u account
-	m *int64
+	c  agent.Config
+	ac certificatecache.ACMEConfig
+	u  account
+	m  *int64
 }
 
 // Challenge initiate a challenge.
@@ -103,9 +105,18 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
-	if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
-		log.Println("lego provider failure", err)
-		return resp, status.Error(codes.Internal, "acme setup failure")
+	if t.ac.Challenges.ALPN {
+		if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
+			log.Println("lego provider failure", err)
+			return resp, status.Error(codes.Internal, "acme setup alpn failure")
+		}
+	}
+
+	if t.ac.Challenges.DNS {
+		if err = client.Challenge.SetDNS01Provider(solver(t)); err != nil {
+			log.Println("lego provider failure", err)
+			return resp, status.Error(codes.Internal, "acme setup dns failure")
+		}
 	}
 
 	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {

@@ -23,22 +23,32 @@ import (
 
 func defaultConfig() ACMEConfig {
 	return ACMEConfig{
-		// CAURL: lego.LEDirectoryProduction,
-		CAURL: lego.LEDirectoryStaging,
+		CAURL: lego.LEDirectoryProduction,
+		// CAURL: lego.LEDirectoryStaging,
+		Challenges: challenges{
+			ALPN: true,
+			// DNS:  true,
+		},
 	}
+}
+
+type challenges struct {
+	DNS  bool
+	ALPN bool
 }
 
 // ACMEConfig configuration for ACME credentials
 type ACMEConfig struct {
-	CAURL              string   `yaml:"caurl"`
-	Email              string   `yaml:"email"`
-	Network            string   `yaml:"network"`
-	Country            []string `yaml:"country"`  // Country Codes for the CSR
-	Province           []string `yaml:"province"` // Provinces for the CSR
-	Locality           []string `yaml:"locality"`
-	Organization       []string `yaml:"organization"`
-	OrganizationalUnit []string `yaml:"organizationalUnit"`
-	DNSNames           []string `yaml:"dns"` // alternative dns names
+	Challenges         challenges `yaml:"challenges"`
+	CAURL              string     `yaml:"caurl"`
+	Email              string     `yaml:"email"`
+	Network            string     `yaml:"network"`
+	Country            []string   `yaml:"country"`  // Country Codes for the CSR
+	Province           []string   `yaml:"province"` // Provinces for the CSR
+	Locality           []string   `yaml:"locality"`
+	Organization       []string   `yaml:"organization"`
+	OrganizationalUnit []string   `yaml:"organizationalUnit"`
+	DNSNames           []string   `yaml:"dns"` // alternative dns names
 }
 
 type challenger interface {
