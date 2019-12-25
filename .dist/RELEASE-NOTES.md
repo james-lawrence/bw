@@ -1,3 +1,21 @@
+commit f5ba67835091b59048fb83c232be7e84b64ebff3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 25 13:02:35 2019 -0500
+
+    work towards dns challenge
+
+commit 899543b70588527f161c31f0b625beead28c4470
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 25 12:39:56 2019 -0500
+
+    support gcloud load balancers
+
+commit ff208fde491157c1ac77d883afa591aca5a3b813
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Dec 23 16:06:27 2019 -0500
+
+    release 0.1.1577135182-8937bc73
+
 commit 8937bc73cb6b7a5c8571b5af8f555a3cf2a10be4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Dec 23 16:06:22 2019 -0500
