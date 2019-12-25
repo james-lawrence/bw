@@ -108,7 +108,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 	conn := newConnect(options...)
 	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
 	if cl, err = agent.AddressProxyDialQuorum(config.Address, dopts...); err != nil {
-		return cl, d, c, errors.Wrap(err, "proxy dial quorum failed")
+		return cl, d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
 	}
 
 	if details, err = cl.Connect(); err != nil {

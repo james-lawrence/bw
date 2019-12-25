@@ -45,9 +45,11 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		initialize: &sync.Once{},
 		m:          &sync.Mutex{},
 	}
+
 	if err := d.init(); err != nil {
 		panic(err)
 	}
+
 	return d
 }
 
@@ -71,6 +73,7 @@ func (t Directory) init() (err error) {
 			os.MkdirAll(t.pooldir, 0700),
 			t.watcher.Add(t.dir),
 			t.watcher.Add(t.pooldir),
+			t.refresh(),
 		))
 
 		if err == nil {
@@ -153,8 +156,8 @@ func (t Directory) refresh() (err error) {
 		cert              tls.Certificate
 	)
 
-	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSCertClient, DefaultTLSBootstrapCert)
-	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer, DefaultTLSKeyClient)
+	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSBootstrapCert)
+	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
 	debugx.Println("loading", certpath, keypath)
 

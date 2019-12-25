@@ -1,6 +1,7 @@
 package daemons
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"path/filepath"
@@ -99,7 +100,7 @@ func Agent(ctx Context) (err error) {
 	agent.RegisterConfigurationServer(server, configurationsvc)
 	acme.RegisterACMEServer(server, acmesvc)
 
-	if bind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
+	if bind, err = net.Listen(ctx.Config.RPCBind.Network(), fmt.Sprintf(":%d", ctx.Config.RPCBind.Port)); err != nil {
 		return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)
 	}
 
