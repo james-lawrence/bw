@@ -1,0 +1,18 @@
+# keepN controls how many previous deployments to keep around.
+keepN: 5
+# minimumNodes controls how many nodes are required for bootstrapping to consider continuing.
+# defaults to 3.
+minimumNodes: 0
+# servername is the name used for TLS credentials.
+servername: "${bearded_wookie_server}"
+# cluster tokens are keys to ensure the gossip protocol only talks with other servers
+# who are part of the same cluster.
+clusterTokens:
+  - "${bearded_wookie_server}"
+# acme section is for configuring lets encrypt's ACME protocol.
+# only an email is required, bearded wookie only supports DNS and ALPN strategies.
+acme:
+  challenges:
+    dns: true
+    alpn: false
+  email: "soandso@example.com"
