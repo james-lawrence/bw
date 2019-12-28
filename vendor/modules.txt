@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.26.0
+# cloud.google.com/go v0.38.0
 cloud.google.com/go/compute/metadata
 # github.com/RoaringBitmap/roaring v0.4.21
 github.com/RoaringBitmap/roaring
@@ -56,7 +56,7 @@ github.com/anacrolix/upnp
 github.com/anacrolix/utp
 # github.com/armon/go-metrics v0.3.0
 github.com/armon/go-metrics
-# github.com/aws/aws-sdk-go v1.15.24
+# github.com/aws/aws-sdk-go v1.23.0
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
 github.com/aws/aws-sdk-go/aws/awsutil
@@ -66,6 +66,7 @@ github.com/aws/aws-sdk-go/aws/corehandlers
 github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
 github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/aws/credentials/processcreds
 github.com/aws/aws-sdk-go/aws/credentials/stscreds
 github.com/aws/aws-sdk-go/aws/csm
 github.com/aws/aws-sdk-go/aws/defaults
@@ -74,12 +75,14 @@ github.com/aws/aws-sdk-go/aws/endpoints
 github.com/aws/aws-sdk-go/aws/request
 github.com/aws/aws-sdk-go/aws/session
 github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/ini
 github.com/aws/aws-sdk-go/internal/sdkio
 github.com/aws/aws-sdk-go/internal/sdkrand
 github.com/aws/aws-sdk-go/internal/sdkuri
 github.com/aws/aws-sdk-go/internal/shareddefaults
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/ec2query
+github.com/aws/aws-sdk-go/private/protocol/json/jsonutil
 github.com/aws/aws-sdk-go/private/protocol/query
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/rest
@@ -91,6 +94,7 @@ github.com/aws/aws-sdk-go/service/elb
 github.com/aws/aws-sdk-go/service/elbv2
 github.com/aws/aws-sdk-go/service/route53
 github.com/aws/aws-sdk-go/service/sts
+github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/boltdb/bolt v1.3.1
 github.com/boltdb/bolt
 # github.com/bradfitz/iter v0.0.0-20190303215204-33e6a9893b0c
@@ -113,7 +117,7 @@ github.com/fsnotify/fsnotify
 github.com/gizak/termui
 # github.com/glycerine/go-unsnap-stream v0.0.0-20190901134440-81cf024a9e0a
 github.com/glycerine/go-unsnap-stream
-# github.com/go-acme/lego v2.5.0+incompatible
+# github.com/go-acme/lego v2.7.2+incompatible
 github.com/go-acme/lego/acme
 github.com/go-acme/lego/acme/api
 github.com/go-acme/lego/acme/api/internal/nonces
@@ -128,13 +132,13 @@ github.com/go-acme/lego/challenge/resolver
 github.com/go-acme/lego/challenge/tlsalpn01
 github.com/go-acme/lego/lego
 github.com/go-acme/lego/log
+github.com/go-acme/lego/platform/config/env
 github.com/go-acme/lego/platform/wait
+github.com/go-acme/lego/providers/dns/gcloud
 github.com/go-acme/lego/registration
-# github.com/go-ini/ini v1.32.0
-github.com/go-ini/ini
 # github.com/godbus/dbus v4.1.0+incompatible
 github.com/godbus/dbus
-# github.com/gofrs/uuid v3.0.0+incompatible
+# github.com/gofrs/uuid v3.2.0+incompatible
 github.com/gofrs/uuid
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
@@ -146,6 +150,8 @@ github.com/golang/protobuf/ptypes/timestamp
 github.com/golang/snappy
 # github.com/google/btree v1.0.0
 github.com/google/btree
+# github.com/googleapis/gax-go/v2 v2.0.5
+github.com/googleapis/gax-go/v2
 # github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 github.com/grantae/certinfo
 # github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
@@ -208,7 +214,7 @@ github.com/huin/goupnp/soap
 github.com/huin/goupnp/ssdp
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 github.com/icrowley/fake
-# github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8
+# github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af
 github.com/jmespath/go-jmespath
 # github.com/joho/godotenv v1.2.0
 github.com/joho/godotenv
@@ -222,13 +228,13 @@ github.com/maruel/panicparse/stack
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.10
 github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.2
+# github.com/mattn/go-runewidth v0.0.4
 github.com/mattn/go-runewidth
 # github.com/mattn/go-sqlite3 v1.11.0
 github.com/mattn/go-sqlite3
-# github.com/miekg/dns v1.0.14
+# github.com/miekg/dns v1.1.15
 github.com/miekg/dns
-# github.com/mitchellh/go-homedir v1.0.0
+# github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7
 github.com/mitchellh/go-wordwrap
@@ -243,7 +249,7 @@ github.com/naoina/toml
 github.com/naoina/toml/ast
 # github.com/nsf/termbox-go v0.0.0-20171104162316-aa4a75b1c20a
 github.com/nsf/termbox-go
-# github.com/onsi/ginkgo v1.6.0
+# github.com/onsi/ginkgo v1.7.0
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
 github.com/onsi/ginkgo/extensions/table
@@ -263,7 +269,7 @@ github.com/onsi/ginkgo/reporters/stenographer
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
 github.com/onsi/ginkgo/reporters/stenographer/support/go-isatty
 github.com/onsi/ginkgo/types
-# github.com/onsi/gomega v1.4.2
+# github.com/onsi/gomega v1.4.3
 github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/internal/assertion
@@ -296,6 +302,23 @@ github.com/tinylib/msgp/msgp
 github.com/willf/bitset
 # github.com/willf/bloom v2.0.3+incompatible
 github.com/willf/bloom
+# go.opencensus.io v0.21.0
+go.opencensus.io
+go.opencensus.io/internal
+go.opencensus.io/internal/tagencoding
+go.opencensus.io/metric/metricdata
+go.opencensus.io/metric/metricproducer
+go.opencensus.io/plugin/ochttp
+go.opencensus.io/plugin/ochttp/propagation/b3
+go.opencensus.io/resource
+go.opencensus.io/stats
+go.opencensus.io/stats/internal
+go.opencensus.io/stats/view
+go.opencensus.io/tag
+go.opencensus.io/trace
+go.opencensus.io/trace/internal
+go.opencensus.io/trace/propagation
+go.opencensus.io/trace/tracestate
 # golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/ed25519
@@ -325,7 +348,7 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
@@ -361,12 +384,17 @@ golang.org/x/time/rate
 # golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
-# google.golang.org/api v0.0.0-20180829000535-087779f1d2c9
+# google.golang.org/api v0.8.0
 google.golang.org/api/dns/v1
 google.golang.org/api/gensupport
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/internal/uritemplates
-# google.golang.org/appengine v1.4.0
+google.golang.org/api/googleapi/transport
+google.golang.org/api/internal
+google.golang.org/api/option
+google.golang.org/api/transport/http
+google.golang.org/api/transport/http/internal/propagation
+# google.golang.org/appengine v1.5.0
 google.golang.org/appengine
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity

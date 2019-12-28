@@ -8,6 +8,32 @@ resource "google_compute_target_pool" "default" {
   session_affinity = "CLIENT_IP"
 }
 
+resource "google_project_iam_custom_role" "default" {
+  role_id     = "${var.cluster}_role"
+  title       = "${var.cluster} role"
+  description = "provides the permissions necessary to run bearded-wookie"
+  permissions = [
+    "dns.managedZones.get",
+    "dns.managedZones.list",
+    "dns.resourceRecordSets.create",
+    "dns.resourceRecordSets.delete",
+    "dns.resourceRecordSets.list",
+    "dns.resourceRecordSets.update",
+  ]
+}
+
+resource "google_service_account" "default" {
+  account_id   = "${var.cluster}-account"
+  display_name = "${var.cluster} service account"
+}
+
+resource "google_service_account_iam_binding" "default" {
+  service_account_id = google_service_account.default.name
+  role               = google_project_iam_custom_role.default.id
+  members            = []
+}
+
+
 resource "google_compute_instance_template" "default" {
   lifecycle {
     create_before_destroy = true
@@ -41,7 +67,7 @@ resource "google_compute_instance_template" "default" {
   }
 
   service_account {
-    email = "deploy-agent@c647ec1e.iam.gserviceaccount.com"
+    email = google_service_account.default.email
     scopes = [
       "cloud-platform",
       "https://www.googleapis.com/auth/ndev.clouddns.readwrite",

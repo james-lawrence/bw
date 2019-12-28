@@ -46,10 +46,6 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		m:          &sync.Mutex{},
 	}
 
-	if err := d.init(); err != nil {
-		panic(err)
-	}
-
 	return d
 }
 
@@ -125,6 +121,10 @@ func (t Directory) background() {
 }
 
 func (t Directory) cert() (cert *tls.Certificate, err error) {
+	if err = t.init(); err != nil {
+		return nil, err
+	}
+
 	t.m.Lock()
 	cert = t.cachedCert
 	t.m.Unlock()

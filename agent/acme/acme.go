@@ -13,10 +13,14 @@ import (
 	"os"
 	"path/filepath"
 	"sync/atomic"
+	"errors"
 
 	"github.com/go-acme/lego/certcrypto"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/registration"
+	"github.com/go-acme/lego/challenge"
+	"github.com/go-acme/lego/providers/dns/gcloud"
+	"cloud.google.com/go/compute/metadata"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -113,7 +117,13 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	}
 
 	if t.ac.Challenges.DNS {
-		if err = client.Challenge.SetDNS01Provider(solver(t)); err != nil {
+		p, err := t.autoDNS()
+		if err != nil {
+			log.Println("failed to detect dns provider", err)
+			return resp, status.Error(codes.Internal, "acme setup dns failure")
+		}
+
+		if err = client.Challenge.SetDNS01Provider(p); err != nil {
 			log.Println("lego provider failure", err)
 			return resp, status.Error(codes.Internal, "acme setup dns failure")
 		}
@@ -134,6 +144,27 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		Certificate: certificates.Certificate,
 		Authority:   certificates.IssuerCertificate,
 	}, nil
+}
+
+func googleProvider() (p *gcloud.DNSProvider, err error) {
+	var (
+		pid string
+	)
+
+	if pid, err = metadata.ProjectID(); err != nil {
+		return nil, err
+	}
+
+	return gcloud.NewDNSProviderCredentials(pid)
+}
+
+func (t Service) autoDNS() (p challenge.Provider, err error) {
+	if p, err =  googleProvider(); err == nil {
+		return p, nil
+	}
+
+	log.Println("google dns provider failed", err)
+	return nil, errors.New("unable to detect dns resolver")
 }
 
 // Resolution to a challenge.
