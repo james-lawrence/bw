@@ -13,6 +13,9 @@ resource "google_project_iam_custom_role" "default" {
   title       = "${var.cluster} role"
   description = "provides the permissions necessary to run bearded-wookie"
   permissions = [
+    "dns.changes.create",
+    "dns.changes.get",
+    "dns.changes.list",
     "dns.managedZones.get",
     "dns.managedZones.list",
     "dns.resourceRecordSets.create",

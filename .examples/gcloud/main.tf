@@ -6,6 +6,10 @@ variable "deployment_fqdn" {
   description = "dns name used to deploy"
 }
 
+variable "acme-email" {
+  description = "email use to register with lets encrypt"
+}
+
 variable "region" {
   description = "data center region to provision within"
   default     = "us-east1"

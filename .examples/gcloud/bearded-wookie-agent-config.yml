@@ -15,4 +15,4 @@ acme:
   challenges:
     dns: true
     alpn: false
-  email: "soandso@example.com"
+  email: "${acme_email}"

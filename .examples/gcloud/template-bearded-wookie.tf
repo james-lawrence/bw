@@ -1,6 +1,7 @@
 data "template_file" "bearded-wookie-config" {
   template = file("bearded-wookie-agent-config.yml")
   vars = {
+    acme_email            = var.acme-email
     bearded_wookie_server = "${var.deployment_fqdn}"
   }
 }
