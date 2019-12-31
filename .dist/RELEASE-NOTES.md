@@ -1,3 +1,27 @@
+commit fee028533d187e94bf4dddd8fb0723943ff1f472
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 28 15:27:00 2019 -0500
+
+    minor example fixes
+
+commit dd5c326be1416e4c85d9fe30e26d8d7d31c6d453
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 28 14:55:26 2019 -0500
+
+    allow for DNS ACME challenge on google cloud
+
+commit c86b03ea2207bfe1a30529cdd5b01e35ccc421a3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 28 13:00:54 2019 -0500
+
+    gcloud example
+
+commit dc54a2e9c3675ce82158cf4764ef5ac71fc9ffd0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Dec 25 13:03:08 2019 -0500
+
+    release 0.1.1577296955-f5ba6783
+
 commit f5ba67835091b59048fb83c232be7e84b64ebff3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Dec 25 13:02:35 2019 -0500
