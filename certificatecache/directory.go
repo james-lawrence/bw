@@ -46,6 +46,9 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Direct
 		m:          &sync.Mutex{},
 	}
 
+	// this is necessary to initialize the clients with the correct CAs
+	logx.MaybeLog(d.init())
+
 	return d
 }
 

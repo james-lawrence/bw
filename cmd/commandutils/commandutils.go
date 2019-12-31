@@ -74,22 +74,25 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		cc.DefaultTLSCertClient,
 	)
 
-	if err = discovery.CheckCredentials(config.Discovery, certpath, grpc.WithTransportCredentials(creds)); err != nil && !grpcx.IsUnimplemented(err) {
-		if !grpcx.IsNotFound(err) {
-			return config, err
-		}
+	if len(config.Discovery) > 0 {
+		if err = discovery.CheckCredentials(config.Discovery, certpath, grpc.WithTransportCredentials(creds)); err != nil && !grpcx.IsUnimplemented(err) {
+			log.Println("check credentials", err)
+			if !grpcx.IsNotFound(err) {
+				return config, err
+			}
 
-		logx.MaybeLog(os.Remove(filepath.Join(config.CredentialsDir, cc.DefaultTLSCertCA)))
-		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
-			config.CredentialsDir,
-			cc.DefaultTLSCertServer,
-			cc.DefaultTLSCertClient,
-		)))
-		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
-			config.CredentialsDir,
-			cc.DefaultTLSKeyServer,
-			cc.DefaultTLSKeyClient,
-		)))
+			logx.MaybeLog(os.Remove(filepath.Join(config.CredentialsDir, cc.DefaultTLSCertCA)))
+			logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+				config.CredentialsDir,
+				cc.DefaultTLSCertServer,
+				cc.DefaultTLSCertClient,
+			)))
+			logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+				config.CredentialsDir,
+				cc.DefaultTLSKeyServer,
+				cc.DefaultTLSKeyClient,
+			)))
+		}
 	}
 
 	// load or create credentials.

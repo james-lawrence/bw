@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	nsvc "github.com/james-lawrence/bw/notary"
 
 	"github.com/pkg/errors"
@@ -66,7 +67,7 @@ func (t Notary) Refresh() (err error) {
 
 	log.Println("dialing discovery service", t.CommonName, t.Discovery)
 	if d, err = discovery.NewQuorumDialer(t.Discovery); err != nil {
-		return err
+		return logx.MaybeLog(errors.Wrap(err, "failed to dial quorum"))
 	}
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
