@@ -12,7 +12,7 @@ with one caveat - archive transfer between agents is done via torrents, they'll 
 - support different deployment strategies. %age, batch, one at a time.
 - ease of use. mainly around deployment and initial setup.
 
-### quick start - assumes you have a gcloud project. (aws works as well, just havent setup an example terraform)
+### quick start - assumes you have a gcloud project. (aws works as well)
 IMPORTANT: quickstart example doesn't include a VPN, a VPN is highly recommended.
 ```bash
 pushd .examples/gcloud && terraform init && terraform apply && bw deploy example
@@ -31,10 +31,10 @@ example commands:
 bearded-wookie is built off 4 main protocols.
 - SWIM - a gossip protocol for discovering peers and agent health checks.
 - RAFT - consensus algorithm for shared state, such as current deployment and user credentials.
-- Bit torrent - for deployment transfer between nodes.
+- Bit torrent - for archive transfer between nodes.
 - ACME protocol - for bootstrapping TLS.
 
-by using these 4 protocols bearded-wookie avoids needing a centralized server, while remaining fairly durable.
+by using these 4 protocols bearded-wookie avoids needing a centralized server, while remaining durable.
 it also makes bearded-wookie easy to operate.
 
 Benefits of bearded-wookie:

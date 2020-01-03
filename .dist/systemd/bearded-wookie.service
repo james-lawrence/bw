@@ -5,16 +5,12 @@ After=network.target
 [Service]
 Type=simple
 Restart=always
+# Load the environment variables specified by agent.env.
+# to see all available environment variables and their uses
+# see https://github.com/james-lawrence/bw/blob/master/environment.go.
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+# specify the shell used for running commands.
 Environment=SHELL=/bin/bash
-# enable verbose logging. enables all of the BEARDED_WOOKIE_LOGS_ switches.
-#Environment=BEARDED_WOOKIE_LOGS_VERBOSE=1
-# enable verbose logging for the gossip service.
-#Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
-# enable verbose logging for the raft service.
-#Environment=BEARDED_WOOKIE_LOGS_RAFT=1
-# enable verbose logging for grpc
-#Environment=BEARDED_WOOKIE_LOGS_GRPC=1
 ExecStart=/usr/local/bin/bw agent --cluster-dns-enable
 
 [Install]

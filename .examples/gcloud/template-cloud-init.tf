@@ -21,5 +21,10 @@ write_files:
     owner: root:root
     path: /etc/bearded-wookie/default/agent.config
     permissions: '0644'
+  - encoding: b64
+    content: ${base64encode(file("bearded-wookie-agent.env"))}
+    owner: root:root
+    path: /etc/bearded-wookie/default/agent.env
+    permissions: '0600'
 EOF
 }

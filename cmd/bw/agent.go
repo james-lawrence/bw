@@ -35,9 +35,21 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	t.global.cluster.configure(parent, &t.config)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
-	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(t.config.RPCBind.String()).TCPVar(&t.config.RPCBind)
-	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(t.config.TorrentBind.String()).TCPVar(&t.config.TorrentBind)
-	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(t.config.DiscoveryBind.String()).TCPVar(&t.config.DiscoveryBind)
+	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(
+		t.config.RPCBind.String(),
+	).Envar(
+		bw.EnvAgentRPCBind,
+	).TCPVar(&t.config.RPCBind)
+	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(
+		t.config.DiscoveryBind.String(),
+	).Envar(
+		bw.EnvAgentDiscoveryBind,
+	).TCPVar(&t.config.DiscoveryBind)
+	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(
+		t.config.TorrentBind.String(),
+	).Envar(
+		bw.EnvAgentTorrentBind,
+	).TCPVar(&t.config.TorrentBind)
 	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(t.config.AutocertBind.String()).TCPVar(&t.config.AutocertBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)

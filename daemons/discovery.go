@@ -2,7 +2,6 @@ package daemons
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net"
 	"path/filepath"
 
@@ -38,7 +37,7 @@ func Discovery(ctx Context) (err error) {
 	}
 	tlsconfig = certificatecache.NewALPN(tlsconfig, acme.NewALPNCertCache(acme.NewClient(ctx.Cluster)))
 
-	if bind, err = net.Listen(ctx.Config.DiscoveryBind.Network(), fmt.Sprintf("0.0.0.0:%d", ctx.Config.DiscoveryBind.Port)); err != nil {
+	if bind, err = net.Listen(ctx.Config.DiscoveryBind.Network(), ctx.Config.DiscoveryBind.String()); err != nil {
 		return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Config.DiscoveryBind)
 	}
 

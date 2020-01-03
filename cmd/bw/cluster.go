@@ -7,6 +7,7 @@ import (
 	"net"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -24,9 +25,25 @@ type clusterCmd struct {
 
 func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) {
 	t.config = config
-	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.SWIMBind.String()).TCPListVar(&t.bootstrap)
-	parent.Flag("cluster-bind", "address for the swim protocol (cluster membership) to bind to").PlaceHolder(t.config.SWIMBind.String()).TCPVar(&t.config.SWIMBind)
-	parent.Flag("cluster-bind-raft", "address for the raft protocol to bind to").PlaceHolder(t.config.RaftBind.String()).TCPVar(&t.config.RaftBind)
+	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(
+		t.config.SWIMBind.String(),
+	).TCPListVar(&t.bootstrap)
+	parent.Flag(
+		"cluster-bind",
+		"address for the swim protocol (cluster membership) to bind to",
+	).PlaceHolder(
+		t.config.SWIMBind.String(),
+	).Envar(
+		bw.EnvAgentSWIMBind,
+	).TCPVar(&t.config.SWIMBind)
+	parent.Flag(
+		"cluster-bind-raft",
+		"address for the raft protocol to bind to",
+	).PlaceHolder(
+		t.config.RaftBind.String(),
+	).Envar(
+		bw.EnvAgentRAFTBind,
+	).TCPVar(&t.config.RaftBind)
 	parent.Flag("cluster-dns-enable", "enable dns bootstrap").BoolVar(&t.dnsEnabled)
 	parent.Flag("cluster-aws-enable", "enable aws autoscale group bootstrap").BoolVar(&t.awsEnabled)
 }
