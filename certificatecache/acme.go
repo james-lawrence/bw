@@ -21,10 +21,10 @@ import (
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
 // cd ${HOME}/go/src/github.com/letsencrypt/pebble; pebble -config ./test/config/pebble-config.json
 
-func defaultConfig() ACMEConfig {
+// DefaultACMEConfig ...
+func DefaultACMEConfig() ACMEConfig {
 	return ACMEConfig{
 		CAURL: lego.LEDirectoryProduction,
-		// CAURL: lego.LEDirectoryStaging,
 		Challenges: challenges{
 			ALPN: true,
 			// DNS:  true,
@@ -59,7 +59,7 @@ type challenger interface {
 func NewACME(dir string, a challenger) ACME {
 	return ACME{
 		CertificateDir: dir,
-		Config:         defaultConfig(),
+		Config:         DefaultACMEConfig(),
 		c:              a,
 	}
 }

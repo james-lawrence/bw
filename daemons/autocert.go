@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw/agent/acme"
-	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
@@ -39,5 +38,5 @@ func Autocert(ctx Context) (err error) {
 
 	ctx.grpc("autocert", server, bind)
 
-	return certificatecache.AutomaticTLSAgent(ctx.Config.ServerName, ctx.Config.CredentialsDir)
+	return nil
 }

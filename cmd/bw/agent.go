@@ -8,6 +8,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -78,6 +79,10 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	if keyring, err = t.config.Keyring(); err != nil {
+		return err
+	}
+
+	if err = certificatecache.AutomaticTLSAgent(t.config.ServerName, t.config.CredentialsDir); err != nil {
 		return err
 	}
 

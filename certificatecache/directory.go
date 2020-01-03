@@ -1,7 +1,6 @@
 package certificatecache
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
@@ -32,16 +31,15 @@ func mustWatcher(dir string) *fsnotify.Watcher {
 }
 
 // NewDirectory maintains a certificate config by watching a directory.
-func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache Directory) {
+func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache *Directory) {
 	w := mustWatcher(dir)
-	d := Directory{
+	d := &Directory{
 		serverName: serverName,
 		caFile:     ca,
 		dir:        dir,
 		pooldir:    filepath.Join(dir, "authorities"),
 		pool:       pool,
 		watcher:    w,
-		cachedCert: &tls.Certificate{},
 		initialize: &sync.Once{},
 		m:          &sync.Mutex{},
 	}
@@ -66,55 +64,39 @@ type Directory struct {
 	m          *sync.Mutex
 }
 
-func (t Directory) init() (err error) {
+func (t *Directory) init() (err error) {
 	t.initialize.Do(func() {
-		err = logx.MaybeLog(errorsx.Compact(
-			os.MkdirAll(t.pooldir, 0700),
-			t.watcher.Add(t.dir),
-			t.watcher.Add(t.pooldir),
-			t.refresh(),
-		))
-
-		if err == nil {
-			go t.background()
-		}
+		err = errorsx.Compact(
+			errors.Wrap(os.MkdirAll(t.pooldir, 0700), "failed to create authority directory"),
+			errors.Wrap(t.watcher.Add(t.dir), "failed to watch tls directory"),
+			errors.Wrap(t.watcher.Add(t.pooldir), "failed to watch authority directory"),
+			errors.Wrap(t.refresh(), "failed to refresh"),
+		)
+		go t.background()
 	})
 
-	return errors.Wrap(err, "failed to initialize certificate cache")
+	return logx.MaybeLog(errors.Wrap(err, "failed to initialize certificate cache"))
 }
 
 // GetCertificate for use by tls.Config.
-func (t Directory) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+func (t *Directory) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	return t.cert()
 }
 
 // GetClientCertificate for use by tls.Config.
-func (t Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
+func (t *Directory) GetClientCertificate(*tls.CertificateRequestInfo) (*tls.Certificate, error) {
 	return t.cert()
 }
 
-func (t Directory) background() {
+func (t *Directory) background() {
+	debounce := time.NewTimer(time.Second)
 	limit := rate.NewLimiter(rate.Every(10*time.Second), 2)
-	debounce := make(chan struct{})
-	go func() {
-		for _ = range debounce {
-			if err := limit.Wait(context.Background()); err != nil {
-				log.Println("debounce wait failed", err)
-				continue
-			}
-
-			log.Println("refreshing certificates")
-			t.refresh()
-		}
-	}()
-
 	for {
 		select {
+		case <-debounce.C:
+			logx.MaybeLog(t.refresh())
 		case _ = <-t.watcher.Events:
-			select {
-			case debounce <- struct{}{}:
-			default:
-			}
+			debounce.Reset(time.Second)
 		case err := <-t.watcher.Errors:
 			if limit.Allow() {
 				log.Println("watch error", err)
@@ -123,7 +105,7 @@ func (t Directory) background() {
 	}
 }
 
-func (t Directory) cert() (cert *tls.Certificate, err error) {
+func (t *Directory) cert() (cert *tls.Certificate, err error) {
 	if err = t.init(); err != nil {
 		return nil, err
 	}
@@ -153,7 +135,7 @@ func (t Directory) load(path string) (err error) {
 	return nil
 }
 
-func (t Directory) refresh() (err error) {
+func (t *Directory) refresh() (err error) {
 	var (
 		certpath, keypath string
 		cert              tls.Certificate
@@ -171,7 +153,7 @@ func (t Directory) refresh() (err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	*t.cachedCert = cert
+	t.cachedCert = &cert
 
 	if systemx.FileExists(t.caFile) {
 		if err = t.load(t.caFile); err != nil {

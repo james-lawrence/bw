@@ -8,19 +8,19 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"sync/atomic"
-	"errors"
 
-	"github.com/go-acme/lego/certcrypto"
-	"github.com/go-acme/lego/lego"
-	"github.com/go-acme/lego/registration"
-	"github.com/go-acme/lego/challenge"
-	"github.com/go-acme/lego/providers/dns/gcloud"
 	"cloud.google.com/go/compute/metadata"
+	"github.com/go-acme/lego/certcrypto"
+	"github.com/go-acme/lego/challenge"
+	"github.com/go-acme/lego/lego"
+	"github.com/go-acme/lego/providers/dns/gcloud"
+	"github.com/go-acme/lego/registration"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,9 +43,7 @@ func ReadConfig(c agent.Config, path string) (svc Service, err error) {
 
 	var (
 		cc = &config{
-			ACME: certificatecache.ACMEConfig{
-				CAURL: lego.LEDirectoryProduction,
-			},
+			ACME: certificatecache.DefaultACMEConfig(),
 		}
 	)
 
@@ -159,7 +157,7 @@ func googleProvider() (p *gcloud.DNSProvider, err error) {
 }
 
 func (t Service) autoDNS() (p challenge.Provider, err error) {
-	if p, err =  googleProvider(); err == nil {
+	if p, err = googleProvider(); err == nil {
 		return p, nil
 	}
 
