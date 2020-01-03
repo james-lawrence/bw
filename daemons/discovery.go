@@ -20,7 +20,7 @@ import (
 // Discovery initiates the discovery backend.
 func Discovery(ctx Context) (err error) {
 	var (
-		ns        notary.Storage
+		ns        notary.Composite
 		bind      net.Listener
 		tlsconfig *tls.Config
 		server    *grpc.Server

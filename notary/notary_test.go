@@ -15,7 +15,7 @@ import (
 var _ = Describe("Notary", func() {
 	Describe("Grant", func() {
 		It("should fail without credentials", func() {
-			notary := New("", nil, NewStorage(testingx.TempDir()))
+			notary := New("", nil, NewDirectory(testingx.TempDir()))
 			conn, server := testingx.NewGRPCServer(func(s *grpc.Server) {
 				notary.Bind(s)
 			})
@@ -40,7 +40,7 @@ var _ = Describe("Notary", func() {
 
 	Describe("Revoke", func() {
 		It("should fail without credentials", func() {
-			notary := New("", nil, NewStorage(testingx.TempDir()))
+			notary := New("", nil, NewDirectory(testingx.TempDir()))
 			conn, server := testingx.NewGRPCServer(func(s *grpc.Server) {
 				notary.Bind(s)
 			})

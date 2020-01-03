@@ -38,13 +38,13 @@ func QuickService() (notary.Client, func()) {
 }
 
 // QuickStorage ...
-func QuickStorage() (encoded []byte, s notary.Storage) {
+func QuickStorage() (encoded []byte, s notary.Directory) {
 	pkey, err := sshx.Generate(1024)
 	Expect(err).To(Succeed())
 	pubkey, err := sshx.PublicKey(pkey)
 	Expect(err).To(Succeed())
 
-	storage := notary.NewStorage(testingx.TempDir())
+	storage := notary.NewDirectory(testingx.TempDir())
 	_, err = storage.Insert(notary.Grant{Authorization: pubkey, Permission: notary.PermAll()})
 	Expect(err).To(Succeed())
 

@@ -10,9 +10,9 @@ import (
 	. "github.com/james-lawrence/bw/notary"
 )
 
-var _ = Describe("Storage", func() {
+var _ = Describe("Directory", func() {
 	It("should be able to read/write/delete grants", func() {
-		s := NewStorage(
+		s := NewDirectory(
 			testingx.TempDir(),
 		)
 
@@ -31,7 +31,7 @@ var _ = Describe("Storage", func() {
 	})
 
 	It("should be able able to overwrite a grant", func() {
-		s := NewStorage(
+		s := NewDirectory(
 			testingx.TempDir(),
 		)
 
