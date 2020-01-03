@@ -9,8 +9,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -21,7 +19,6 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
@@ -177,12 +174,9 @@ func (t Signer) RequireTransportSecurity() bool {
 
 // NewAuth authorization
 func newAuth(s storage) auth {
-	roots, err := loadAuthorizedKeys()
-	logx.MaybeLog(errors.Wrap(err, "failed to load root credentials, may not be able to run notary service"))
-
 	return auth{
 		storage: s,
-		roots:   roots,
+		roots:   map[string]Grant{},
 	}
 }
 
@@ -308,47 +302,4 @@ func DecodeAuthorization(encoded string) (a Authorization, err error) {
 	}
 
 	return a, nil
-}
-
-func loadAuthorizedKeys() (roots map[string]Grant, err error) {
-	var (
-		encoded []byte
-		u       *user.User
-	)
-	roots = map[string]Grant{}
-
-	if u, err = user.Current(); err != nil {
-		return roots, err
-	}
-
-	authorizedKeysPath := filepath.Join(u.HomeDir, ".ssh", "authorized_keys")
-
-	if encoded, err = ioutil.ReadFile(authorizedKeysPath); err != nil {
-		return roots, err
-	}
-
-	for len(encoded) != 0 {
-		var (
-			key ssh.PublicKey
-		)
-
-		if key, _, _, encoded, err = ssh.ParseAuthorizedKey(encoded); err != nil {
-			if sshx.IsNoKeyFound(err) {
-				continue
-			}
-			log.Println(err)
-			continue
-		}
-
-		g := Grant{
-			Permission:    ptr(all()),
-			Authorization: ssh.MarshalAuthorizedKey(key),
-		}.EnsureDefaults()
-		log.Println("loaded", g.Fingerprint)
-		roots[g.Fingerprint] = g
-	}
-
-	log.Println("loaded", len(roots), "key(s)", authorizedKeysPath)
-
-	return roots, nil
 }
