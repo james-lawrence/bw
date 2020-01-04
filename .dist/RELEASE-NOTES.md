@@ -1,3 +1,51 @@
+commit ab6a042361a66ea7b39d5da0289ba67a8c159ea8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 4 11:20:54 2020 -0500
+
+    update documentation
+
+commit 8338695a79734859a940b38bb90cc57061417525
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 3 17:30:53 2020 -0500
+
+    cleanup initialization of the agent
+
+commit d932e440d285f6982f5d2bceea9565ac3bd1a6d6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 3 17:29:41 2020 -0500
+
+    update notary service to be more flexible
+
+commit fcb9ef79ec6ad097a6b4fe8d833a81837e177f80
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 3 17:26:29 2020 -0500
+
+    documentation updates
+
+commit 462cd39bd29b6b0e1729677537b0a636909e56d1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 2 21:09:58 2020 -0500
+
+    make ssh authorizations configurable
+
+commit 6fc2421c40fb521b935958d7b98a52415100df1f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 2 20:16:18 2020 -0500
+
+    support specifying network addresses from environment.
+
+commit 1b68c91496fabbd159a5d8162d23f2ade1dd0fe6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 31 10:36:21 2019 -0500
+
+    fix up client
+
+commit 433ab832111cfc696fcafd26799387df59988f86
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 31 08:25:18 2019 -0500
+
+    release 0.1.1577564820-fee02853
+
 commit fee028533d187e94bf4dddd8fb0723943ff1f472
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 28 15:27:00 2019 -0500
