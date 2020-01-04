@@ -10,16 +10,20 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/timex"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 )
 
@@ -31,6 +35,7 @@ func Agent(ctx Context) (err error) {
 		bind         net.Listener
 		dlreg        = storage.New(storage.OptionProtocols(ctx.Download))
 		acmesvc      acme.Service
+		ns           notary.Composite
 	)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
@@ -42,6 +47,10 @@ func Agent(ctx Context) (err error) {
 	}
 
 	if acmesvc, err = acme.ReadConfig(ctx.Config, ctx.ConfigurationFile); err != nil {
+		return err
+	}
+
+	if ns, err = notary.NewFromFile(filepath.Join(ctx.Config.Root, bw.DirAuthorizations), ctx.ConfigurationFile); err != nil {
 		return err
 	}
 
@@ -65,6 +74,11 @@ func Agent(ctx Context) (err error) {
 		deployment.CoordinatorOptionStorage(dlreg),
 	)
 
+	server := grpc.NewServer(
+		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		grpc.Creds(ctx.GRPCCreds()),
+		keepalive,
+	)
 	authority := quorum.NewAuthority(ctx.Config)
 
 	configuration := quorum.NewConfiguration(authority, ctx.Cluster, dialer)
@@ -93,7 +107,11 @@ func Agent(ctx Context) (err error) {
 	)
 
 	aq := agent.NewQuorum(&q)
-	server := grpc.NewServer(grpc.Creds(ctx.GRPCCreds()), keepalive)
+	notary.New(
+		ctx.Config.ServerName,
+		certificatecache.NewAuthorityCache(ctx.Config.CredentialsDir),
+		ns,
+	).Bind(server)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
 	agent.RegisterConfigurationServer(server, configurationsvc)

@@ -1,6 +1,7 @@
 package grpcx
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"sync"
@@ -10,6 +11,20 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/status"
 )
+
+// DebugIntercepter prints when each request is initiated and completed
+func DebugIntercepter(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	log.Printf("%T %s initiated", info.Server, info.FullMethod)
+	defer log.Printf("%T %s completed", info.Server, info.FullMethod)
+	return handler(ctx, req)
+}
+
+// DebugStreamIntercepter prints when each stream is initiated and completed
+func DebugStreamIntercepter(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	log.Printf("%T %s initiated", srv, info.FullMethod)
+	defer log.Printf("%T %s completed", srv, info.FullMethod)
+	return handler(srv, ss)
+}
 
 // InsecureTLS generate insecure transport credentials.
 func InsecureTLS() credentials.TransportCredentials {

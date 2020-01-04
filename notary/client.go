@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
-	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -64,35 +63,17 @@ type dialer interface {
 // NewClient consumes a dialer
 func NewClient(d dialer) Client {
 	return Client{
-		dialer: d,
-		m:      &sync.RWMutex{},
+		c: newCached(d),
 	}
 }
 
 // Client for interacting with the notary service.
 type Client struct {
-	dialer
-	conn *grpc.ClientConn
-	m    *sync.RWMutex
+	c cached
 }
 
-func (t Client) cached() (_ NotaryClient, err error) {
-	t.m.RLock()
-	c := t.conn
-	t.m.RUnlock()
-
-	if c != nil {
-		return NewNotaryClient(c), nil
-	}
-
-	t.m.Lock()
-	defer t.m.Unlock()
-
-	if t.conn, err = t.dialer.Dial(); err != nil {
-		return nil, err
-	}
-
-	return NewNotaryClient(t.conn), nil
+func (t Client) cached() (c NotaryClient, err error) {
+	return maybeNotaryClient(t.c.cached())
 }
 
 // Grant the given key access to the system.

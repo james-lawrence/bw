@@ -3,16 +3,17 @@ package daemons
 import (
 	"crypto/tls"
 	"net"
-	"path/filepath"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
 )
@@ -20,17 +21,12 @@ import (
 // Discovery initiates the discovery backend.
 func Discovery(ctx Context) (err error) {
 	var (
-		ns        notary.Composite
 		bind      net.Listener
 		tlsconfig *tls.Config
 		server    *grpc.Server
 	)
 
 	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
-
-	if ns, err = notary.NewFromFile(filepath.Join(ctx.Config.Root, bw.DirAuthorizations), ctx.ConfigurationFile); err != nil {
-		return err
-	}
 
 	if tlsconfig, err = TLSGenServer(ctx.Config, tlsx.OptionVerifyClientIfGiven); err != nil {
 		return err
@@ -41,13 +37,21 @@ func Discovery(ctx Context) (err error) {
 		return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Config.DiscoveryBind)
 	}
 
-	server = grpc.NewServer(grpc.Creds(credentials.NewTLS(tlsconfig)), keepalive)
+	server = grpc.NewServer(
+		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		grpc.Creds(credentials.NewTLS(tlsconfig)),
+		keepalive,
+	)
 
-	notary.New(
-		ctx.Config.ServerName,
-		certificatecache.NewAuthorityCache(ctx.Config.CredentialsDir),
-		ns,
-	).Bind(server)
+	dialer := dialers.NewQuorum(
+		ctx.Cluster,
+		agent.DefaultDialerOptions(
+			grpc.WithTransportCredentials(ctx.GRPCCreds()),
+		)...,
+	)
+
+	notary.NewProxy(dialer).Bind(server)
+	// discovery.NewAuthorityProxy(dialer).Bind(server)
 	discovery.New(ctx.Cluster).Bind(server)
 
 	// used to validate client certificates.
