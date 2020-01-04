@@ -117,7 +117,7 @@ func BootstrapPeers(peers ...*Peer) peering.Static {
 func NewConfig(options ...ConfigOption) Config {
 	c := Config{
 		Name:              systemx.HostnameOrLocalhost(),
-		Root:              filepath.Join("/", "var", "cache", bw.DefaultDir),
+		Root:              bw.DefaultCacheDirectory(),
 		KeepN:             3,
 		SnapshotFrequency: time.Hour,
 		MinimumNodes:      3,

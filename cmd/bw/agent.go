@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -51,7 +52,11 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	).Envar(
 		bw.EnvAgentTorrentBind,
 	).TCPVar(&t.config.TorrentBind)
-	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(t.config.AutocertBind.String()).TCPVar(&t.config.AutocertBind)
+	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(
+		t.config.AutocertBind.String(),
+	).Envar(
+		bw.EnvAgentAutocertBind,
+	).TCPVar(&t.config.AutocertBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
@@ -66,7 +71,7 @@ func (t *agentCmd) bind() (err error) {
 		deployResults []chan deployment.DeployResult
 	)
 
-	log.SetPrefix("[AGENT] ")
+	log.SetPrefix(fmt.Sprintf("[AGENT - %s] ", t.config.Name))
 
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
 		return err

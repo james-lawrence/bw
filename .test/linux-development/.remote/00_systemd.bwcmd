@@ -1,0 +1,7 @@
+- command: mkdir -p %h/.cache/bearded-wookie
+- command: rsync --quiet --checksum --recursive --progress agent1/* %h/.cache/bearded-wookie/agent1/
+- command: rsync --quiet --checksum --recursive --progress agent2/* %h/.cache/bearded-wookie/agent2/
+- command: rsync --quiet --checksum --recursive --progress agent3/* %h/.cache/bearded-wookie/agent3/
+- command: rsync --quiet --checksum --recursive --progress agent4/* %h/.cache/bearded-wookie/agent4/
+- command: ls systemd/* | xargs -I {} systemctl --user link --force ${WORKING_DIR}/.test/linux-development/{}
+- command: systemctl --user daemon-reload

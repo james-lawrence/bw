@@ -32,7 +32,7 @@ func decode(path string) *ast.Table {
 func deferredExpand(s string) string {
 	return os.Expand(s, func(key string) string {
 		switch key {
-		case envDeployInitiator, envDeployID, envDeployResult:
+		case EnvDeployInitiator, EnvDeployID, EnvDeployResult:
 			return fmt.Sprintf("${%s}", key)
 		default:
 			return os.Getenv(key)

@@ -12,4 +12,5 @@ const (
 	EnvAgentSWIMBind      = "BEARDED_WOOKIE_AGENT_CLUSTER_BIND"   // environment variable to specify the network address to listen to. e.g.) 0.0.0.0:2003
 	EnvAgentRAFTBind      = "BEARDED_WOOKIE_AGENT_RAFT_BIND"      // environment variable to specify the network address to listen to. e.g.) 0.0.0.0:2004
 	EnvAgentTorrentBind   = "BEARDED_WOOKIE_AGENT_TORRENT_BIND"   // environment variable to specify the network address to listen to. e.g.) 0.0.0.0:2005
+	EnvAgentAutocertBind  = "BEARDED_WOOKIE_AGENT_AUTOCERT_BIND"  // environment variable to specify the network address to listen to. e.g.) 0.0.0.0:2006
 )

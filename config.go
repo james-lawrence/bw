@@ -108,7 +108,13 @@ func DefaultDirLocation(rel string) string {
 
 // DefaultCacheDirectory cache directory for storing data.
 func DefaultCacheDirectory() string {
-	return DefaultDirLocation("")
+	user := systemx.CurrentUserOrDefault(fallbackUser)
+
+	cachedir := os.Getenv("CACHE_DIRECTORY")
+	env := filepath.Join(os.Getenv("XDG_CACHE_HOME"), DefaultDir)
+	home := filepath.Join(user.HomeDir, ".cache", DefaultDir)
+	system := filepath.Join("/", "var", "cache", DefaultDir)
+	return DefaultDirectory("", cachedir, env, home, system)
 }
 
 // DefaultDirectory finds the first directory root that exists and then returns

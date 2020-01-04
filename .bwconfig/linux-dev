@@ -1,0 +1,4 @@
+deployDataDir: ".test/linux-development"
+deployTimeout: "20m"
+environment: |
+  WORKING_DIR=${PWD}

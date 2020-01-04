@@ -10,7 +10,7 @@ import (
 // New ...
 func New() *Stderr {
 	return &Stderr{
-		Message: fmt.Sprintf("deploy ${%s} - ${%s} - ${%s}", envDeployInitiator, envDeployID, envDeployResult),
+		Message: fmt.Sprintf("deploy ${%s} - ${%s} - ${%s}", EnvDeployInitiator, EnvDeployID, EnvDeployResult),
 	}
 }
 

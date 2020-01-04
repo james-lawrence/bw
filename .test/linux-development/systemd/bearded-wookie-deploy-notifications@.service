@@ -1,0 +1,13 @@
+[Unit]
+Description=bearded-wookie notifications
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+CacheDirectory=bearded-wookie/%i
+EnvironmentFile=-%C/bearded-wookie/%i/agent.env
+ExecStart=%h/go/bin/bw notify --agent-address=127.0.0.1:2002 --agent-config="%C/bearded-wookie/%i/agent.config"
+
+[Install]
+WantedBy=default.target

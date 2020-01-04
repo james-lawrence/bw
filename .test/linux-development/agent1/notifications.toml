@@ -1,7 +1,9 @@
 [[notifications.default]]
   message = "${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT}"
 
+[[notifications.desktop]]
+
 # [[notifications.slack]]
-#   channel = "#private-testing-group"
+#   channel = "#general"
 #   webhook = "${WEBHOOK_URL}"
 #   message = "${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT}"

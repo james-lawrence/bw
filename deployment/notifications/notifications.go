@@ -10,10 +10,11 @@ import (
 	"github.com/naoina/toml/ast"
 )
 
+// notification environment variables.
 const (
-	envDeployID        = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID"
-	envDeployResult    = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT"
-	envDeployInitiator = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR"
+	EnvDeployID        = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID"
+	EnvDeployResult    = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT"
+	EnvDeployInitiator = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR"
 )
 
 // Creator ...
@@ -64,11 +65,11 @@ func DecodeConfig(path string, creators map[string]Creator) (n []Notifier, err e
 func ExpandEnv(s string, dc agent.DeployCommand) string {
 	return os.Expand(s, func(key string) string {
 		switch key {
-		case envDeployID:
+		case EnvDeployID:
 			return bw.RandomID(dc.Archive.DeploymentID).String()
-		case envDeployResult:
+		case EnvDeployResult:
 			return dc.Command.String()
-		case envDeployInitiator:
+		case EnvDeployInitiator:
 			if dc.Archive == nil {
 				log.Println("deploy command missing archive, initiator will be blank")
 				return ""

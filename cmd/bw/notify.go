@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment/notifications"
+	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -49,6 +50,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	n, err := notifications.DecodeConfig(filepath.Join(filepath.Dir(t.configPath), t.nconfigPath), map[string]notifications.Creator{
 		"default": func() notifications.Notifier { return notifications.New() },
+		"desktop": func() notifications.Notifier { return native.New() },
 		"slack":   func() notifications.Notifier { return slack.New() },
 	})
 	if err != nil {
