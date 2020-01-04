@@ -1,5 +1,7 @@
 # cloud.google.com/go v0.38.0
 cloud.google.com/go/compute/metadata
+# github.com/0xAX/notificator v0.0.0-20191016112426-3962a5ea8da1
+github.com/0xAX/notificator
 # github.com/RoaringBitmap/roaring v0.4.21
 github.com/RoaringBitmap/roaring
 # github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
@@ -135,6 +137,7 @@ github.com/go-acme/lego/log
 github.com/go-acme/lego/platform/config/env
 github.com/go-acme/lego/platform/wait
 github.com/go-acme/lego/providers/dns/gcloud
+github.com/go-acme/lego/providers/dns/route53
 github.com/go-acme/lego/registration
 # github.com/godbus/dbus v4.1.0+incompatible
 github.com/godbus/dbus
