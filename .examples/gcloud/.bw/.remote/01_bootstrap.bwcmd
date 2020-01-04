@@ -1,4 +1,0 @@
-- command: "echo hello world"
-- command: "echo %H %h %m"
-  lenient: true # allows the command to fail.
-  timeout: 10m

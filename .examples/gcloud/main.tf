@@ -2,10 +2,6 @@ variable "project" {
   description = "project ID to provision within"
 }
 
-variable "deployment_fqdn" {
-  description = "dns name used to deploy"
-}
-
 variable "acme-email" {
   description = "email use to register with lets encrypt"
 }
@@ -38,15 +34,3 @@ provider "google" {
   project = var.project
   region  = var.region
 }
-
-# output "instances" {
-#   value = module.dht.instances
-# }
-#
-# output "private-ips" {
-#   value = module.dht.private
-# }
-#
-# output "endpoint" {
-#   value = module.dht.endpoint
-# }

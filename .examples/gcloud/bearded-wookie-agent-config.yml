@@ -16,3 +16,11 @@ acme:
     dns: true
     alpn: false
   email: "${acme_email}"
+# notary service controls access to the agent. it uses ssh authorized_key files.
+notary:
+  # where to load default authority from. defaults to the agent's user's ssh authorized_keys file.
+  # by overriding this you can load keys from other files, or none.
+  authorization: [
+    "/root/.ssh/authorized_keys",
+    "/etc/bearded-wookie/default/authorized.keys",
+  ]

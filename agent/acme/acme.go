@@ -20,6 +20,7 @@ import (
 	"github.com/go-acme/lego/challenge"
 	"github.com/go-acme/lego/lego"
 	"github.com/go-acme/lego/providers/dns/gcloud"
+	"github.com/go-acme/lego/providers/dns/route53"
 	"github.com/go-acme/lego/registration"
 	"github.com/hashicorp/memberlist"
 	"google.golang.org/grpc/codes"
@@ -144,6 +145,10 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	}, nil
 }
 
+func route53Provider() (p *route53.DNSProvider, err error) {
+	return route53.NewDNSProvider()
+}
+
 func googleProvider() (p *gcloud.DNSProvider, err error) {
 	var (
 		pid string
@@ -162,6 +167,13 @@ func (t Service) autoDNS() (p challenge.Provider, err error) {
 	}
 
 	log.Println("google dns provider failed", err)
+
+	if p, err = route53Provider(); err == nil {
+		return p, nil
+	}
+
+	log.Println("route53 dns provider failed", err)
+
 	return nil, errors.New("unable to detect dns resolver")
 }
 
