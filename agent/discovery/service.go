@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"context"
+	"sync/atomic"
 
 	"google.golang.org/grpc"
 )
@@ -33,4 +34,32 @@ func (t Discovery) Quorum(ctx context.Context, req *QuorumRequest) (resp *Quorum
 	}
 
 	return resp, err
+}
+
+// Agents returns nodes of the cluster.
+func (t Discovery) Agents(req *AgentsRequest, dst Discovery_AgentsServer) (err error) {
+	atomic.CompareAndSwapInt64(&req.Maximum, 0, 100)
+
+	resp := &AgentsResponse{}
+
+	for idx, p := range t.c.Peers() {
+		n := peerToNode(p)
+		resp.Nodes = append(resp.Nodes, &n)
+
+		if int64(idx)%req.Maximum == 0 {
+			if err = dst.Send(resp); err != nil {
+				return err
+			}
+
+			resp = &AgentsResponse{}
+		}
+	}
+
+	if len(resp.Nodes) > 0 {
+		if err = dst.Send(resp); err != nil {
+			return err
+		}
+	}
+
+	return err
 }

@@ -17,9 +17,7 @@ import (
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/pkg/errors"
 )
 
 type actlCmd struct {
@@ -70,9 +68,8 @@ func (t *actlCmd) all(ctx *kingpin.ParseContext) error {
 
 func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	var (
-		client agent.Client
 		config agent.ConfigClient
-		dialer dialers.Quorum
+		dialer dialers.Defaults
 		c      clustering.Cluster
 	)
 
@@ -100,11 +97,10 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		),
 	}
 
-	if client, dialer, c, err = daemons.Connect(config, coptions...); err != nil {
+	if dialer, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
 
-	logx.MaybeLog(errors.WithMessage(client.Close(), "failed to close client"))
 	log.Println("connected to cluster")
 	debugx.Printf("configuration:\n%#v\n", config)
 

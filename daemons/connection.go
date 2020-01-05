@@ -3,10 +3,12 @@ package daemons
 import (
 	"context"
 	"io/ioutil"
+	"log"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/logx"
 
@@ -54,45 +56,46 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...ConnectOption) (cl agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
+func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Defaults, c clustering.Cluster, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
 
 	if creds, err = GRPCGenClient(config); err != nil {
-		return cl, d, c, err
+		return d, c, err
 	}
 
-	return connect(config, creds, options...)
+	return deprecatedConnect(config, creds, options...)
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config agent.ConfigClient, onRetry func(error), options ...ConnectOption,
-) (client agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
+) (d dialers.Defaults, c clustering.C, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
 
 	if creds, err = GRPCGenClient(config); err != nil {
-		return client, d, c, err
+		return d, c, err
 	}
 
 	for i := 0; ; i++ {
-		if client, d, c, err = connect(config, creds, options...); err == nil {
-			return client, d, c, err
+		if d, c, err = connect(config, creds, options...); err == nil {
+			return d, c, err
+		}
+		log.Println("discovery connect failed", err)
+		if d, c, err = deprecatedConnect(config, creds, options...); err == nil {
+			return d, c, err
 		}
 
 		// when an error occurs, cleanup any resources.
 		logx.MaybeLog(errors.WithMessage(c.Shutdown(), "failed to cleanup cluster"))
-		if client != nil {
-			logx.MaybeLog(errors.WithMessage(client.Close(), "failed to cleanup client"))
-		}
 
 		select {
 		case <-ctx.Done():
-			return client, d, c, ctx.Err()
+			return d, c, ctx.Err()
 		default:
 		}
 
@@ -101,27 +104,46 @@ func ConnectClientUntilSuccess(
 	}
 }
 
-func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (cl agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
+// connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
+func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Static, err error) {
+	var (
+		nodes []*memberlist.Node
+	)
+
+	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
+
+	if nodes, err = discovery.Snapshot(config.Discovery, dopts...); err != nil {
+		return d, c, err
+	}
+
+	c = clustering.NewStatic(nodes...)
+
+	return dialers.NewDirect(config.Discovery, dopts...), c, err
+}
+
+func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Cluster, err error) {
 	var (
 		details agent.ConnectResponse
+		cl      agent.Client
 	)
 
 	conn := newConnect(options...)
 	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
 
 	if cl, err = agent.AddressProxyDialQuorum(config.Address, dopts...); err != nil {
-		return cl, d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
+		return d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
 	}
+	defer cl.Close()
 
 	if details, err = cl.Connect(); err != nil {
-		return cl, d, c, err
+		return d, c, err
 	}
 
 	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
-		return cl, d, c, err
+		return d, c, err
 	}
 
-	return cl, dialers.NewQuorum(c, dopts...), c, nil
+	return dialers.NewQuorum(c, dopts...), c, nil
 }
 
 func clusterConnect(details agent.ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {

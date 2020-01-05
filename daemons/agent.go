@@ -70,6 +70,7 @@ func Agent(ctx Context) (err error) {
 
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.Creds(ctx.GRPCCreds()),
 		keepalive,
 	)

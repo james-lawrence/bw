@@ -18,6 +18,19 @@ type cluster interface {
 	Members() []*memberlist.Node
 }
 
+// C interface to a cluster.
+type C interface {
+	Get(key []byte) *memberlist.Node
+	GetN(n int, key []byte) []*memberlist.Node
+	Members() []*memberlist.Node
+	Shutdown() error
+	// deprecated methods
+	Config() *memberlist.Config
+	Join(...string) (int, error)
+	Leave(time.Duration) (err error)
+	LocalNode() *memberlist.Node
+}
+
 // snapshotter is used to persist the peers within a cluster.
 type snapshotter interface {
 	Snapshot([]string) error

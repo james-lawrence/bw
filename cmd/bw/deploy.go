@@ -13,10 +13,14 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/deployclient"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/agentutil"
 	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
@@ -27,8 +31,8 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
-	"github.com/pkg/errors"
 )
 
 type deployCmd struct {
@@ -116,12 +120,17 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		err     error
 		dst     *os.File
 		dstinfo os.FileInfo
-		d       dialers.Quorum
-		client  agent.Client
+		d       dialers.Defaults
+		client  agent.DeployClient
 		config  agent.ConfigClient
-		c       clustering.Cluster
+		c       clustering.C
+		ss      notary.Signer
 		archive agent.Archive
 	)
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
@@ -141,6 +150,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events := make(chan agent.Message, 100)
 
+	// BEGIN deprecated: remove, cluster should no longer be accessed by the deploy client.
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
 			agent.PeerOptionName("local"),
@@ -158,13 +168,20 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 			clustering.OptionLogOutput(ioutil.Discard),
 		),
 	}
+	// END deprecated
 
 	logRetryError := func(err error) {
 		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+
+	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+
+	if client, err = discovery.NewDeploy(config.Discovery, qd); err != nil {
 		return err
 	}
 
@@ -177,8 +194,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	cx := cluster.New(local, c)
-	go agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -217,10 +233,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
-	max := int64(config.Partitioner().Partition(len(cx.Members())))
-	peers := deployment.ApplyFilter(filter, cx.Peers()...)
+	max := int64(config.Partitioner().Partition(len(c.Members())))
+	peers := deployment.ApplyFilter(filter, agent.NodesToPeers(c.Members()...)...)
 	dopts := agent.DeployOptions{
-		Concurrency:       int64(config.Partitioner().Partition(len(cx.Members()))),
+		Concurrency:       int64(config.Partitioner().Partition(len(c.Members()))),
 		Timeout:           int64(config.DeployTimeout),
 		IgnoreFailures:    t.ignoreFailures,
 		SilenceDeployLogs: t.silenceLogs,
@@ -244,8 +260,8 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	var (
 		client agent.Client
 		config agent.ConfigClient
-		d      dialers.Quorum
-		c      clustering.Cluster
+		d      dialers.Defaults
+		c      clustering.C
 	)
 	defer t.global.shutdown()
 
@@ -278,7 +294,13 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+
+	qd := dialers.NewQuorum(c, d.Defaults()...)
+
+	if client, err = agent.MaybeClient(qd.Dial()); err != nil {
 		return err
 	}
 
@@ -407,10 +429,10 @@ func (t *deployCmd) redeploy(ctx *kingpin.ParseContext) error {
 func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	var (
 		err     error
-		d       dialers.Quorum
+		d       dialers.Defaults
 		client  agent.Client
 		config  agent.ConfigClient
-		c       clustering.Cluster
+		c       clustering.C
 		located agent.Deploy
 		archive agent.Archive
 	)
@@ -447,7 +469,13 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if client, d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+		return err
+	}
+
+	qd := dialers.NewQuorum(c, d.Defaults()...)
+
+	if client, err = agent.MaybeClient(qd.Dial()); err != nil {
 		return err
 	}
 
@@ -460,7 +488,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	go agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
 
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {

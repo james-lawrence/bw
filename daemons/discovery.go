@@ -40,6 +40,7 @@ func Discovery(ctx Context) (err error) {
 
 	server = grpc.NewServer(
 		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.Creds(credentials.NewTLS(tlsconfig)),
 		keepalive,
 	)

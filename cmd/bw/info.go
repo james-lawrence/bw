@@ -60,8 +60,7 @@ func (t *agentInfo) checkCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	var (
 		c      clustering.Cluster
-		client agent.Client
-		d      dialers.Quorum
+		d      dialers.Defaults
 		config agent.ConfigClient
 		latest agent.Deploy
 	)
@@ -87,11 +86,9 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		),
 	}
 
-	if client, d, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
-
-	logx.MaybeLog(errors.Wrap(client.Close(), "failed to close unused client"))
 
 	cx := cluster.New(local, c)
 	if latest, err = agentutil.DetermineLatestDeployment(cx, agent.NewDialer(d.Defaults()...)); err != nil {
@@ -123,8 +120,7 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 func (t *agentInfo) _info() (err error) {
 	var (
 		c      clustering.Cluster
-		client agent.Client
-		d      dialers.Quorum
+		d      dialers.Defaults
 		config agent.ConfigClient
 	)
 	defer t.global.shutdown()
@@ -148,11 +144,9 @@ func (t *agentInfo) _info() (err error) {
 		),
 	}
 
-	if client, d, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = daemons.Connect(config, coptions...); err != nil {
 		return err
 	}
-
-	logx.MaybeLog(errors.Wrap(client.Close(), "failed to close unused client"))
 
 	cx := cluster.New(local, c)
 	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
@@ -180,7 +174,7 @@ func (t *agentInfo) _info() (err error) {
 	t.global.cleanup.Add(1)
 	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
+	agentutil.WatchClusterEvents(t.global.ctx, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
 
 	return nil
 }

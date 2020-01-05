@@ -42,6 +42,15 @@ type Client interface {
 	Logs(context.Context, []byte) io.ReadCloser
 }
 
+// DeployClient - facade interface.
+type DeployClient interface {
+	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)
+	RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) error
+	Watch(ctx context.Context, out chan<- Message) error
+	Logs(context.Context, []byte) io.ReadCloser
+	Close() error
+}
+
 type cluster interface {
 	Local() Peer
 	Peers() []Peer
