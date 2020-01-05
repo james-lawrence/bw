@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// NewProxy new proxy service. NewDialer(d, DialOptionTLS(c))
+// NewProxy new proxy service.
 func NewProxy(d dialer) Proxy {
 	return Proxy{
 		c: newCached(

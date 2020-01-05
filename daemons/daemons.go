@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 
@@ -47,6 +48,7 @@ type Context struct {
 	Cleanup           *sync.WaitGroup
 	Upload            storage.UploadProtocol
 	Download          storage.DownloadProtocol
+	NotaryStorage     notary.Composite
 	Raft              raftutil.Protocol
 	Cluster           cluster
 	RPCCredentials    *tls.Config

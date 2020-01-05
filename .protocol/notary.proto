@@ -23,6 +23,7 @@ message Permission {
   bool search = 2;
   bool grant = 3;
   bool revoke = 4;
+  bool deploy = 5;
 }
 
 message Grant {

@@ -173,20 +173,24 @@ func (t Signer) RequireTransportSecurity() bool {
 }
 
 // NewAuth authorization
-func newAuth(s storage) auth {
-	return auth{
+func NewAuth(s storage) Auth {
+	return newAuth(s)
+}
+
+func newAuth(s storage) Auth {
+	return Auth{
 		storage: s,
 		roots:   map[string]Grant{},
 	}
 }
 
 // Auth returns authorization.
-type auth struct {
+type Auth struct {
 	storage storage
 	roots   map[string]Grant
 }
 
-func (t auth) lookup(fingerprint string) (g Grant, ok bool) {
+func (t Auth) lookup(fingerprint string) (g Grant, ok bool) {
 	var (
 		err error
 	)
@@ -203,7 +207,7 @@ func (t auth) lookup(fingerprint string) (g Grant, ok bool) {
 }
 
 // Authorize the given request context.
-func (t auth) Authorize(ctx context.Context) Permission {
+func (t Auth) Authorize(ctx context.Context) Permission {
 	var (
 		err     error
 		ok      bool

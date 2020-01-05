@@ -176,7 +176,7 @@ func FilterDeployID(id string) func(d agent.Deploy) bool {
 }
 
 // LocateDeployment returns the deployment info based on the provided filter.
-func LocateDeployment(c cluster, d dialer, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
+func LocateDeployment(c cluster, d dialer2, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
 	const done = errorsx.String("done")
 
 	locate := func(c agent.Client) (err error) {
@@ -204,7 +204,7 @@ func LocateDeployment(c cluster, d dialer, filter func(agent.Deploy) bool) (late
 		return nil
 	}
 
-	if err = NewClusterOperation(Operation(locate))(c, d); errors.Cause(err) == done {
+	if err = NewClusterOperation(Operation(locate))(c, agent.NewDialer(d.Defaults()...)); errors.Cause(err) == done {
 		return latest, nil
 	}
 

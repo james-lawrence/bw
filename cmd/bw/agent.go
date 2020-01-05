@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 
 	"google.golang.org/grpc/keepalive"
@@ -69,6 +70,7 @@ func (t *agentCmd) bind() (err error) {
 		keyring       *memberlist.Keyring
 		p             raftutil.Protocol
 		deployResults []chan deployment.DeployResult
+		ns            notary.Composite
 	)
 
 	log.SetPrefix(fmt.Sprintf("[AGENT - %s] ", t.config.Name))
@@ -88,6 +90,10 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	if err = certificatecache.AutomaticTLSAgent(t.config.ServerName, t.config.CredentialsDir); err != nil {
+		return err
+	}
+
+	if ns, err = notary.NewFromFile(filepath.Join(t.config.Root, bw.DirAuthorizations), t.configFile); err != nil {
 		return err
 	}
 
@@ -166,6 +172,7 @@ func (t *agentCmd) bind() (err error) {
 		Cleanup:           t.global.cleanup,
 		Upload:            tc.Uploader(),
 		Download:          tc.Downloader(),
+		NotaryStorage:     ns,
 		RPCCredentials:    tlscreds,
 		RPCKeepalive: keepalive.ServerParameters{
 			MaxConnectionIdle: 1 * time.Hour,

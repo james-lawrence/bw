@@ -64,7 +64,7 @@ func (t Notary) Refresh() (err error) {
 	}
 
 	log.Println("dialing discovery service", t.CommonName, t.Discovery)
-	d := dialers.NewDiscovery(t.Discovery)
+	d := dialers.NewDirect(t.Discovery)
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 

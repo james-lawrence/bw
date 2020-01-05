@@ -31,6 +31,10 @@ type addressProdvider interface {
 	RaftAddr(*memberlist.Node) (raft.Server, error)
 }
 
+type rendezvous interface {
+	GetN(int, []byte) []*memberlist.Node
+}
+
 type cluster interface {
 	Members() []*memberlist.Node
 	LocalNode() *memberlist.Node
@@ -453,15 +457,6 @@ func (t BacklogQueue) NotifyUpdate(n *memberlist.Node) {
 	}
 }
 
-// key used for determining possible candidates for the raft protocol
-// within the cluster.
-var leaderKey = []byte("leaders")
-
-// Quorum - returns the leader of the cluster.
-func Quorum(n int, c cluster) []*memberlist.Node {
-	return quorumPeers(c)
-}
-
 // maybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
 // returns true if it left the raft protocol.
@@ -502,19 +497,18 @@ func leave(current state, sm stateMeta) state {
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
 func isMember(c cluster) bool {
-	return isPossiblePeer(c.LocalNode(), quorumPeers(c)...)
+	return isPossiblePeer(c.LocalNode(), agent.QuorumNodes(c)...)
 }
 
 // possiblePeers utility function for locating N possible peers for the raft protocol.
 func possiblePeers(n int, c cluster) []*memberlist.Node {
-
-	return c.GetN(n, leaderKey)
+	return c.GetN(n, []byte(agent.QuorumKey))
 }
 
-// quorumPeers utility function for locating N possible peers for the raft protocol.
-func quorumPeers(c cluster) []*memberlist.Node {
-	return c.GetN(3, leaderKey)
-}
+// // quorumPeers utility function for locating N possible peers for the raft protocol.
+// func quorumPeers(c rendezvous) []*memberlist.Node {
+// 	return c.GetN(3, []byte(agent.QuorumKey))
+// }
 
 func configuration(provider addressProdvider, c cluster) (conf raft.Configuration) {
 	var (
@@ -522,7 +516,7 @@ func configuration(provider addressProdvider, c cluster) (conf raft.Configuratio
 		rs  raft.Server
 	)
 
-	for _, peer := range quorumPeers(c) {
+	for _, peer := range agent.QuorumNodes(c) {
 		if rs, err = provider.RaftAddr(peer); err != nil {
 			log.Println("ignoring peer, unable to compute address", peer.String(), err)
 			continue

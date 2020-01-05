@@ -16,10 +16,6 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-type dialer interface {
-	Dial(p agent.Peer) (agent.Client, error)
-}
-
 // Option ...
 type Option func(*cState)
 

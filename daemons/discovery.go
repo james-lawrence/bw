@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -50,8 +51,8 @@ func Discovery(ctx Context) (err error) {
 		)...,
 	)
 
+	proxy.NewDeployment(notary.NewAuth(ctx.NotaryStorage), dialer).Bind(server)
 	notary.NewProxy(dialer).Bind(server)
-	// discovery.NewAuthorityProxy(dialer).Bind(server)
 	discovery.New(ctx.Cluster).Bind(server)
 
 	// used to validate client certificates.

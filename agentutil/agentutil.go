@@ -13,8 +13,10 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
+	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 )
@@ -32,6 +34,10 @@ const (
 
 type dialer interface {
 	Dial(agent.Peer) (zeroc agent.Client, err error)
+}
+
+type dialer2 interface {
+	Defaults(...grpc.DialOption) []grpc.DialOption
 }
 
 type cluster interface {
@@ -160,7 +166,7 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 }
 
 // WatchClusterEvents pushes events into the provided channel for the given cluster.
-func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events chan agent.Message) {
+func WatchClusterEvents(ctx context.Context, d dialers.Dialer, c cluster, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
 		err error
@@ -187,7 +193,7 @@ func WatchClusterEvents(ctx context.Context, d agent.Dialer, c cluster, events c
 			continue
 		}
 
-		if qc, err = agent.NewQuorumDialer(d).Dial(c); err != nil {
+		if qc, err = agent.MaybeClient(d.Dial()); err != nil {
 			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
 			continue
 		}

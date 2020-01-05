@@ -16,6 +16,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/deployclient"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
@@ -59,7 +60,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
-func (t *deployCmd) initializeUX(d agent.Dialer, events chan agent.Message) {
+func (t *deployCmd) initializeUX(d dialers.Defaults, events chan agent.Message) {
 	t.global.cleanup.Add(1)
 	go func() {
 		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
@@ -115,7 +116,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		err     error
 		dst     *os.File
 		dstinfo os.FileInfo
-		d       agent.Dialer
+		d       dialers.Quorum
 		client  agent.Client
 		config  agent.ConfigClient
 		c       clustering.Cluster
@@ -243,7 +244,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	var (
 		client agent.Client
 		config agent.ConfigClient
-		d      agent.Dialer
+		d      dialers.Quorum
 		c      clustering.Cluster
 	)
 	defer t.global.shutdown()
@@ -406,7 +407,7 @@ func (t *deployCmd) redeploy(ctx *kingpin.ParseContext) error {
 func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	var (
 		err     error
-		d       agent.Dialer
+		d       dialers.Quorum
 		client  agent.Client
 		config  agent.ConfigClient
 		c       clustering.Cluster

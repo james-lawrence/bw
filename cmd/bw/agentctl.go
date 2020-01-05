@@ -9,6 +9,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
@@ -71,7 +72,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	var (
 		client agent.Client
 		config agent.ConfigClient
-		dialer agent.Dialer
+		dialer dialers.Quorum
 		c      clustering.Cluster
 	)
 
@@ -117,5 +118,6 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		}
 		return nil
 	}
-	return agentutil.Shutdown(peers, dialer)
+
+	return agentutil.Shutdown(peers, agent.NewDialer(dialer.Defaults()...))
 }

@@ -6,8 +6,12 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/clustering/raftutil"
 )
+
+type rendezvous interface {
+	Get([]byte) *memberlist.Node
+	GetN(n int, key []byte) []*memberlist.Node
+}
 
 type cluster interface {
 	Leave(time.Duration) error
@@ -55,7 +59,7 @@ func (t Cluster) Peers() []agent.Peer {
 
 // Quorum ...
 func (t Cluster) Quorum() []agent.Peer {
-	return agent.Shuffle(agent.NodesToPeers(raftutil.Quorum(3, t.cluster)...))
+	return agent.QuorumPeers(t)
 }
 
 // Connect connection information for the cluster.

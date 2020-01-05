@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/logx"
 
@@ -53,7 +54,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...ConnectOption) (cl agent.Client, d agent.Dialer, c clustering.Cluster, err error) {
+func Connect(config agent.ConfigClient, options ...ConnectOption) (cl agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -69,7 +70,7 @@ func Connect(config agent.ConfigClient, options ...ConnectOption) (cl agent.Clie
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config agent.ConfigClient, onRetry func(error), options ...ConnectOption,
-) (client agent.Client, d agent.Dialer, c clustering.Cluster, err error) {
+) (client agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -100,13 +101,14 @@ func ConnectClientUntilSuccess(
 	}
 }
 
-func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (cl agent.Client, d agent.Dialer, c clustering.Cluster, err error) {
+func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (cl agent.Client, d dialers.Quorum, c clustering.Cluster, err error) {
 	var (
 		details agent.ConnectResponse
 	)
 
 	conn := newConnect(options...)
 	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
+
 	if cl, err = agent.AddressProxyDialQuorum(config.Address, dopts...); err != nil {
 		return cl, d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
 	}
@@ -119,7 +121,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		return cl, d, c, err
 	}
 
-	return cl, agent.NewDialer(dopts...), c, nil
+	return cl, dialers.NewQuorum(c, dopts...), c, nil
 }
 
 func clusterConnect(details agent.ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {

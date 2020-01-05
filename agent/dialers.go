@@ -6,10 +6,15 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
+
+type rendezvous interface {
+	GetN(int, []byte) []*memberlist.Node
+}
 
 type dialer interface {
 	Dial(p Peer) (Client, error)
@@ -28,6 +33,16 @@ func Random(peers ...Peer) (p Peer) {
 // Shuffle the peers
 func Shuffle(q []Peer) []Peer {
 	return shuffleQuorum(q)
+}
+
+// QuorumPeers helper method.
+func QuorumPeers(c rendezvous) []Peer {
+	return Shuffle(NodesToPeers(QuorumNodes(c)...))
+}
+
+// QuorumNodes return the quorum nodes.
+func QuorumNodes(c rendezvous) []*memberlist.Node {
+	return c.GetN(3, []byte(QuorumKey))
 }
 
 func shuffleQuorum(q []Peer) []Peer {

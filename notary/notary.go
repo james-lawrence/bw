@@ -26,6 +26,7 @@ func all() Permission {
 		Revoke:  true,
 		Search:  true,
 		Refresh: true,
+		Deploy:  true,
 	}
 }
 
@@ -73,7 +74,7 @@ type Service struct {
 	servername string
 	authority  authority
 	storage    storage
-	auth       auth
+	auth       Auth
 }
 
 func (t Service) merge(options ...option) Service {

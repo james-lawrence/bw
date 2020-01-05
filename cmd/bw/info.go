@@ -11,6 +11,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
@@ -60,7 +61,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	var (
 		c      clustering.Cluster
 		client agent.Client
-		d      agent.Dialer
+		d      dialers.Quorum
 		config agent.ConfigClient
 		latest agent.Deploy
 	)
@@ -93,11 +94,11 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	logx.MaybeLog(errors.Wrap(client.Close(), "failed to close unused client"))
 
 	cx := cluster.New(local, c)
-	if latest, err = agentutil.DetermineLatestDeployment(cx, d); err != nil {
+	if latest, err = agentutil.DetermineLatestDeployment(cx, agent.NewDialer(d.Defaults()...)); err != nil {
 		return err
 	}
 
-	logs := agentutil.DeploymentLogs(cx, d, latest.Archive.DeploymentID)
+	logs := agentutil.DeploymentLogs(cx, agent.NewDialer(d.Defaults()...), latest.Archive.DeploymentID)
 	return iox.Error(io.Copy(os.Stderr, logs))
 }
 
@@ -123,7 +124,7 @@ func (t *agentInfo) _info() (err error) {
 	var (
 		c      clustering.Cluster
 		client agent.Client
-		d      agent.Dialer
+		d      dialers.Quorum
 		config agent.ConfigClient
 	)
 	defer t.global.shutdown()
@@ -170,7 +171,7 @@ func (t *agentInfo) _info() (err error) {
 		}
 
 		return nil
-	}))(cx, d)
+	}))(cx, agent.NewDialer(d.Defaults()...))
 
 	logx.MaybeLog(err)
 

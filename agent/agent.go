@@ -9,6 +9,10 @@ import (
 	"google.golang.org/grpc"
 )
 
+// QuorumKey used for determining possible candidates for the quorum nodes
+// within the cluster.
+const QuorumKey = "leaders"
+
 // Dispatcher - interface for dispatching messages.
 type Dispatcher interface {
 	Dispatch(context.Context, ...Message) error

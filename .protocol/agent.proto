@@ -155,6 +155,13 @@ message InfoResponse {
   Peer leader = 4;
 }
 
+// Deployments service
+service Deployments {
+  rpc Upload(stream UploadChunk) returns (UploadResponse) {}
+  rpc Watch(WatchRequest) returns (stream Message) {}
+  rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
+}
+
 service Quorum {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
   rpc Watch(WatchRequest) returns (stream Message) {}

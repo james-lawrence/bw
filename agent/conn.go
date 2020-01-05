@@ -30,6 +30,20 @@ func MaybeConn(c Client, err error) (*grpc.ClientConn, error) {
 	return nil, errorsx.String("invalid client, missing connection")
 }
 
+// MaybeClient create a client from a grpc client conn.
+func MaybeClient(c *grpc.ClientConn, err error) (Client, error) {
+	if err != nil {
+		return nil, err
+	}
+
+	return NewConn(c), nil
+}
+
+// NewConn create a new connection.
+func NewConn(c *grpc.ClientConn) Conn {
+	return Conn{conn: c}
+}
+
 // Conn a connection to the cluster. implements the Client interface.
 type Conn struct {
 	conn *grpc.ClientConn

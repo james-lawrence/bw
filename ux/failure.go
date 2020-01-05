@@ -12,11 +12,17 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
+
+type dialer interface {
+	Defaults(...grpc.DialOption) []grpc.DialOption
+}
 
 // gathers up failures
 type failure struct {
@@ -85,7 +91,7 @@ func (t FailureDisplayPrint) Display(s cState, m agent.Message) {
 		return
 	}
 
-	if c, err = t.Dialer.Dial(*m.Peer); err != nil {
+	if c, err = agent.MaybeClient(dialers.NewDirect(agent.RPCAddress(*m.Peer)).Dial(t.Dialer.Defaults()...)); err != nil {
 		log.Println(errors.Wrapf(err, "unable to retrieve logs, failed to connect to peer: %s", spew.Sdump(m.Peer)))
 		return
 	}

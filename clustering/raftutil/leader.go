@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 )
 
@@ -29,7 +30,7 @@ func (t leader) Update(c cluster) state {
 		// IMPORTANT: an active leader should never leave the raft cluster. changes in leadership
 		// are fairly disruptive, but this means the raft cluster can potentially
 		// be a single node larger than expected.
-		if t.cleanupPeers(c.LocalNode(), quorumPeers(c)...) {
+		if t.cleanupPeers(c.LocalNode(), agent.QuorumNodes(c)...) {
 			refresh := time.Second
 			log.Println("peers unstable, will refresh in", refresh)
 			return delayedTransition{
