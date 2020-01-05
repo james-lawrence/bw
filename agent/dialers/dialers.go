@@ -45,3 +45,22 @@ func (t Quorum) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error)
 
 	return nil, errors.WithMessage(err, "failed to connect to a member of the quorum")
 }
+
+// NewDiscovery dials the discovery service at the provided address.
+func NewDiscovery(address string, defaults ...grpc.DialOption) Discovery {
+	return Discovery{
+		address:  address,
+		defaults: defaults,
+	}
+}
+
+// Discovery ...
+type Discovery struct {
+	address  string
+	defaults []grpc.DialOption
+}
+
+// Dial given the options
+func (t Discovery) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
+	return grpc.Dial(t.address, append(t.defaults, options...)...)
+}

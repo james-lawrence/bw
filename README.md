@@ -14,7 +14,9 @@ with one caveat - archive transfer between agents is done via torrents, they'll 
 
 ### quick start - assumes you have a gcloud project. (aws works as well)
 IMPORTANT: quickstart example doesn't include a VPN, a VPN is highly recommended.
+IMPORTANT: each example has a README.md file, please consult.
 ```bash
+bw me init -- create user credentials.
 pushd .examples/gcloud && terraform init && terraform apply && bw deploy example
 ```
 

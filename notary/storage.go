@@ -74,7 +74,7 @@ type notary struct {
 }
 
 type nconfig struct {
-	Authority []string `yaml:"authority"`
+	Authority []string `yaml:"authorization"`
 }
 
 func genKey(root, fingerprint string) string {

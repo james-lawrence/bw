@@ -39,20 +39,6 @@ resource "google_project_iam_binding" "default" {
   ]
 }
 
-// resource "google_service_account_iam_binding" "default" {
-//   service_account_id = google_service_account.default.name
-//   role               = google_project_iam_custom_role.default.id
-//   members            = [
-//     "serviceAccount:${google_service_account.default.email}",
-//   ]
-// }
-
-// resource "google_service_account_iam_member" "default" {
-//   service_account_id = google_service_account.default.name
-//   role               = google_project_iam_custom_role.default.id # "roles/iam.serviceAccountUser"
-//   member             = "serviceAccount:${google_service_account.default.email}"
-// }
-
 resource "google_compute_instance_template" "default" {
   lifecycle {
     create_before_destroy = true

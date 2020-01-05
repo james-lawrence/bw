@@ -9,9 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/internal/x/logx"
 	nsvc "github.com/james-lawrence/bw/notary"
 
 	"github.com/pkg/errors"
@@ -35,7 +34,6 @@ func (t Notary) Refresh() (err error) {
 		cert []byte
 		ca   []byte
 		pool *x509.CertPool
-		d    discovery.QuorumDialer
 		ss   nsvc.Signer
 	)
 
@@ -66,13 +64,12 @@ func (t Notary) Refresh() (err error) {
 	}
 
 	log.Println("dialing discovery service", t.CommonName, t.Discovery)
-	if d, err = discovery.NewQuorumDialer(t.Discovery); err != nil {
-		return logx.MaybeLog(errors.Wrap(err, "failed to dial quorum"))
-	}
+	d := dialers.NewDiscovery(t.Discovery)
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 
 	if ca, key, cert, err = client.Refresh(); err != nil {
+		log.Println("refresh failed", err)
 		// backwards compatibility code, for now only consider permission errors
 		// as hard failures, not all agents have the discovery service.
 		if grpcx.IsUnauthorized(err) {

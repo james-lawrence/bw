@@ -26,5 +26,10 @@ write_files:
     owner: root:root
     path: /etc/bearded-wookie/default/agent.env
     permissions: '0600'
+  - encoding: b64
+    content: ${base64encode(file(pathexpand("~/.config/bearded-wookie/private.key.pub")))}
+    owner: root:root
+    path: /etc/bearded-wookie/default/authorized.keys
+    permissions: '0600'
 EOF
 }
