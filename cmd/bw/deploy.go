@@ -178,7 +178,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}()
 
 	cx := cluster.New(local, c)
-	go agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -460,9 +460,9 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	cx := cluster.New(local, c)
-	go agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
 
+	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive retrieval failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment failed")

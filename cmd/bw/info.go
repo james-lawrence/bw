@@ -180,7 +180,7 @@ func (t *agentInfo) _info() (err error) {
 	t.global.cleanup.Add(1)
 	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(t.global.ctx, d, cx, events)
+	agentutil.WatchClusterEvents(t.global.ctx, d, local.Peer, events)
 
 	return nil
 }

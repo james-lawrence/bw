@@ -4,12 +4,13 @@ package discovery
 
 import (
 	"context"
-	"errors"
 
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/pkg/errors"
 )
 
 // cluster interface for the package.
@@ -50,7 +51,6 @@ func nodeToPeer(n Node) agent.Peer {
 func CheckCredentials(address string, path string, options ...grpc.DialOption) (err error) {
 	var (
 		cc *grpc.ClientConn
-		d  QuorumDialer
 	)
 
 	if !systemx.FileExists(path) {
@@ -62,12 +62,7 @@ func CheckCredentials(address string, path string, options ...grpc.DialOption) (
 		return errors.New("failed to generate fingerprint")
 	}
 
-	if d, err = NewQuorumDialer(address); err != nil {
-		return err
-	}
-	defer d.Close()
-
-	if cc, err = d.Dial(options...); err != nil {
+	if cc, err = dialers.NewDirect(address, options...).Dial(); err != nil {
 		return err
 	}
 	defer cc.Close()

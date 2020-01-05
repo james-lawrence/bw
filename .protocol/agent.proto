@@ -155,7 +155,7 @@ message InfoResponse {
   Peer leader = 4;
 }
 
-// Deployments service
+// Deployments service public facing endpoints for deployments.
 service Deployments {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
   rpc Watch(WatchRequest) returns (stream Message) {}

@@ -166,7 +166,7 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 }
 
 // WatchClusterEvents pushes events into the provided channel for the given cluster.
-func WatchClusterEvents(ctx context.Context, d dialers.Dialer, c cluster, events chan agent.Message) {
+func WatchClusterEvents(ctx context.Context, d dialers.Dialer, local agent.Peer, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
 		err error
@@ -174,10 +174,6 @@ func WatchClusterEvents(ctx context.Context, d dialers.Dialer, c cluster, events
 	)
 
 	for {
-		var (
-			local = c.Local()
-		)
-
 		if qc != nil {
 			logx.MaybeLog(qc.Close())
 		}

@@ -26,6 +26,13 @@ func DebugStreamIntercepter(srv interface{}, ss grpc.ServerStream, info *grpc.St
 	return handler(srv, ss)
 }
 
+// DebugClientIntercepter prints each rpc invoked.
+func DebugClientIntercepter(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	log.Printf("%s initiated", method)
+	defer log.Printf("%s completed", method)
+	return invoker(ctx, method, req, reply, cc, opts...)
+}
+
 // InsecureTLS generate insecure transport credentials.
 func InsecureTLS() credentials.TransportCredentials {
 	return credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
