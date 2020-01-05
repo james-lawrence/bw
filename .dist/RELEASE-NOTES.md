@@ -1,3 +1,27 @@
+commit dfdc8191f548efd00748c3f27f41bab0812e1484
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 4 18:24:24 2020 -0500
+
+    cleanup local development environment
+
+commit 6608e210893993bf7f9d7ee4f542efcdd26811b5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 4 18:21:41 2020 -0500
+
+    tidy/vendor
+
+commit fa1dc0448e6eb223d14e856b1b05789151e28e31
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 4 14:10:52 2020 -0500
+
+    ensure notary works when discovery is public
+
+commit 0a0909e326938255310c4fbf5721e32d9ae1eaa1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 4 11:28:53 2020 -0500
+
+    release 0.1.1578154854-ab6a0423
+
 commit ab6a042361a66ea7b39d5da0289ba67a8c159ea8
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 4 11:20:54 2020 -0500
