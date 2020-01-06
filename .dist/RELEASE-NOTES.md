@@ -1,3 +1,45 @@
+commit 1ce533b54ec370eb6c28c3f9582f2cbc8d607d2d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 6 08:56:35 2020 -0500
+
+    cleanup documentation
+
+commit f1281d9191b687bba4e88c26a58d04792d31d5ca
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 6 08:15:44 2020 -0500
+
+    fully working proxy deployments
+
+commit 4f8a4e7d0be27e32b4b02188046ab52153cb98b1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 5 18:09:10 2020 -0500
+
+    work todays fully proxied deployments
+
+commit dd2beebea93ac85d654a013321d00de6640113fa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 5 15:25:43 2020 -0500
+
+    start the removal of the cluster from the client
+
+commit 3756c40aa50e5acce61aa98e10f5d598de074576
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 5 14:35:40 2020 -0500
+
+    start building proxy layer, with a better dialing interface
+
+commit 39229e017982669dcbf45f5ce1b6cd36e7b3c2cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 5 12:27:47 2020 -0500
+
+    fix up authorization setup
+
+commit 6701f4037231271af88f0f31e3156b46f318c058
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 5 08:19:43 2020 -0500
+
+    release 0.1.1578180264-dfdc8191
+
 commit dfdc8191f548efd00748c3f27f41bab0812e1484
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 4 18:24:24 2020 -0500
