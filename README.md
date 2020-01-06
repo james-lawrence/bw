@@ -53,10 +53,12 @@ example commands:
  - `bw environment create {name} {address}`  
  - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.  
  - `bw deploy {environment}` deploy to the specified environment  
- - `bw deploy filtered --ip='10.142.0.1' {environment}` to the servers that match the given filters.  
- - `bw info check {address}:2001` checks if the cluster is reachable.  
+ - `bw deploy --ip='127.0.0.1' {environment}` to the servers that match the given filters.  
+ - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive  
+ - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers  
+ - `bw info check {address}:{port}` checks if the cluster is reachable.  
 
-commands available inside of a vpn:  
+commands only available inside of a vpn:  
  - `bw info {environment}` display information and receive events about the environment.  
 
 ### architecture overview

@@ -56,8 +56,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.deployCmd(deployOptions(common(parent.Command("all", "deploy to all nodes within the cluster").Default())))
-	t.filteredCmd(deployOptions(common(parent.Command("filtered", "deploy to all the nodes that match one of the provided filters"))))
+	t.deployCmd(deployOptions(common(parent.Command("default", "deploy to nodes within the cluster").Default())))
 	t.redeployCmd(deployOptions(common(parent.Command("archive", "redeploy an archive to nodes within the cluster"))))
 	t.localCmd(common(parent.Command("local", "deploy to the local system")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
@@ -81,26 +80,9 @@ func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	return parent.Action(t.deploy)
-}
-
-func (t *deployCmd) filteredCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
-	return parent.Action(t.filtered)
-}
-
-func (t *deployCmd) filtered(ctx *kingpin.ParseContext) error {
-	filters := make([]deployment.Filter, 0, len(t.filteredRegex))
-	for _, n := range t.filteredRegex {
-		filters = append(filters, deployment.Named(n))
-	}
-
-	for _, n := range t.filteredIP {
-		filters = append(filters, deployment.IP(n))
-	}
-
-	return t._deploy(deployment.Or(filters...), false)
+	return parent.Action(t.deploy)
 }
 
 func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -111,7 +93,16 @@ func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
-	return t._deploy(deployment.NeverMatch, true)
+	filters := make([]deployment.Filter, 0, len(t.filteredRegex))
+	for _, n := range t.filteredRegex {
+		filters = append(filters, deployment.Named(n))
+	}
+
+	for _, n := range t.filteredIP {
+		filters = append(filters, deployment.IP(n))
+	}
+
+	return t._deploy(deployment.Or(filters...), len(filters) == 0)
 }
 
 func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
