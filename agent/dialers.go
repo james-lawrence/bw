@@ -8,7 +8,6 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -103,7 +102,7 @@ func DefaultDialerOptions(options ...grpc.DialOption) (results []grpc.DialOption
 	results = append(
 		results,
 		grpc.WithBackoffMaxDelay(5*time.Second),
-		grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
+		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
 	)
 
 	return append(results, options...)

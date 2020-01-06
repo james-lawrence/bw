@@ -14,7 +14,6 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
 )
@@ -39,8 +38,8 @@ func Discovery(ctx Context) (err error) {
 	}
 
 	server = grpc.NewServer(
-		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.Creds(credentials.NewTLS(tlsconfig)),
 		keepalive,
 	)

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 
 	yaml "gopkg.in/yaml.v2"
@@ -169,6 +170,10 @@ func ExpandAndDecode(raw []byte, dst interface{}) (err error) {
 func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) string) (err error) {
 	m := func(in string) string {
 		return normalizeEnv(mapping(in))
+	}
+
+	if envx.Boolean(false, EnvLogsConfiguration, EnvLogsVerbose) {
+		log.Println(os.Expand(string(raw), m))
 	}
 	return yaml.Unmarshal([]byte(os.Expand(string(raw), m)), dst)
 }

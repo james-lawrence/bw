@@ -139,11 +139,6 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 	var (
 		resp RefreshResponse
 	)
-	defer func() {
-		if r := recover(); r != nil {
-			log.Println("recovered", r)
-		}
-	}()
 
 	log.Println("Notary.Refresh initated")
 	defer log.Println("Notary.Refresh completed")

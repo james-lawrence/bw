@@ -53,7 +53,7 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 	}
 
 	buckets := make([]storage, 0, len(nc.Config.Authority))
-
+	log.Println("loading authorizations", nc.Config.Authority)
 	for _, p := range nc.Config.Authority {
 		var (
 			b storage
@@ -74,7 +74,7 @@ type notary struct {
 }
 
 type nconfig struct {
-	Authority []string `yaml:"authorization"`
+	Authority []string `yaml:"authority"`
 }
 
 func genKey(root, fingerprint string) string {
