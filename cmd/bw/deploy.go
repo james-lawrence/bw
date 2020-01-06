@@ -20,7 +20,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/deployclient"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/agentutil"
 	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
@@ -64,10 +63,10 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
-func (t *deployCmd) initializeUX(d dialers.Defaults, events chan agent.Message) {
+func (t *deployCmd) initializeUX(c agent.DeployClient, events chan agent.Message) {
 	t.global.cleanup.Add(1)
 	go func() {
-		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
+		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(c)))
 		t.global.shutdown()
 	}()
 }
@@ -181,12 +180,9 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
 
-	if client, err = discovery.NewDeploy(config.Discovery, qd); err != nil {
+	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
 		return err
 	}
-
-	t.initializeUX(d, events)
-	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
 		if err = client.Close(); err != nil {
@@ -194,7 +190,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	go agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
+	t.initializeUX(client, events)
+	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+
+	go agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, qd, local.Peer, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -258,14 +257,20 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	var (
-		client agent.Client
+		client agent.DeployClient
 		config agent.ConfigClient
 		d      dialers.Defaults
 		c      clustering.C
+		ss     notary.Signer
 	)
+
 	defer t.global.shutdown()
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
 		return err
 	}
 
@@ -298,13 +303,13 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults()...)
+	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
 
-	if client, err = agent.MaybeClient(qd.Dial()); err != nil {
+	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
 		return err
 	}
 
-	t.initializeUX(d, events)
+	t.initializeUX(client, events)
 	logx.MaybeLog(c.Shutdown())
 
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
@@ -430,7 +435,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	var (
 		err     error
 		d       dialers.Defaults
-		client  agent.Client
+		client  agent.DeployClient
 		config  agent.ConfigClient
 		c       clustering.C
 		located agent.Deploy
@@ -475,11 +480,11 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if client, err = agent.MaybeClient(qd.Dial()); err != nil {
+	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
 		return err
 	}
 
-	t.initializeUX(d, events)
+	t.initializeUX(client, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
@@ -488,7 +493,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	go agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, qd, local.Peer, events)
 
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {

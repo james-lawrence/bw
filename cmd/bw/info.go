@@ -21,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 
 	"github.com/pkg/errors"
@@ -122,12 +123,19 @@ func (t *agentInfo) _info() (err error) {
 		c      clustering.Cluster
 		d      dialers.Defaults
 		config agent.ConfigClient
+		client agent.DeployClient
+		ss     notary.Signer
 	)
 	defer t.global.shutdown()
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
+
 	log.Println("configuration", spew.Sdump(config))
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(),
@@ -145,6 +153,10 @@ func (t *agentInfo) _info() (err error) {
 	}
 
 	if d, c, err = daemons.Connect(config, coptions...); err != nil {
+		return err
+	}
+
+	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)); err != nil {
 		return err
 	}
 
@@ -172,9 +184,9 @@ func (t *agentInfo) _info() (err error) {
 	events := make(chan agent.Message, 100)
 
 	t.global.cleanup.Add(1)
-	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(d)))
+	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(client)))
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(t.global.ctx, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
+	agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
 
 	return nil
 }

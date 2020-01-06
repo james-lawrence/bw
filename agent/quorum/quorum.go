@@ -178,22 +178,16 @@ func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
 
 // Info return current info from the leader.
 func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
-	debugx.Println("info invoked")
-	defer debugx.Println("info completed")
 	return t.deployment.getInfo(t.sm.Leader()), nil
 }
 
 // Cancel any active deploys
 func (t *Quorum) Cancel(ctx context.Context) (err error) {
-	debugx.Println("cancel invoked")
-	defer debugx.Println("cancel completed")
 	return t.deployment.cancel(ctx, t.dialer, t.proxy())
 }
 
 // Deploy ...
 func (t *Quorum) Deploy(dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
-	debugx.Println("deploy invoked")
-	defer debugx.Println("deploy completed")
 	return logx.MaybeLog(t.deployment.deploy(t.dialer, dopts, a, peers...))
 }
 

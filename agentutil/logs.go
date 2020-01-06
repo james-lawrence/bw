@@ -10,10 +10,8 @@ import (
 )
 
 // PrintLogs for the given deployment ID.
-func PrintLogs(ctx context.Context, did []byte, dst io.Writer) Operation {
-	return func(c agent.Client) error {
-		return iox.Error(io.Copy(dst, c.Logs(ctx, did)))
-	}
+func PrintLogs(ctx context.Context, c agent.DeployClient, p *agent.Peer, did []byte, dst io.Writer) error {
+	return iox.Error(io.Copy(dst, c.Logs(ctx, p, did)))
 }
 
 // DeploymentLogs retrieves the logs for the given deployment ID from each server in the cluster.
@@ -22,7 +20,11 @@ func DeploymentLogs(c cluster, d dialer, deploymentID []byte) io.ReadCloser {
 	go func() {
 		b, done := context.WithTimeout(context.Background(), 20*time.Second)
 		defer done()
-		w.CloseWithError(NewClusterOperation(PrintLogs(b, deploymentID, w))(c, d))
+
+		w.CloseWithError(NewClusterOperation(Operation(func(c agent.Client) error {
+			// TODO: change cluster operation to provide peer.
+			return PrintLogs(b, c, nil, deploymentID, w)
+		}))(c, d))
 	}()
 	return r
 }

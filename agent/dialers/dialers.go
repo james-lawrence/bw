@@ -25,6 +25,12 @@ type Defaults interface {
 	Defaults(combined ...grpc.DialOption) []grpc.DialOption
 }
 
+// DefaultsDialer combines both defaults and dialer.
+type DefaultsDialer interface {
+	Dialer
+	Defaults
+}
+
 // NewQuorum dialer.
 func NewQuorum(c rendezvous, defaults ...grpc.DialOption) Quorum {
 	return Quorum{c: c, defaults: defaults}

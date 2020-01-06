@@ -165,12 +165,12 @@ func WatchEvents(local, proxy agent.Peer, d dialer, events chan agent.Message) {
 	}
 }
 
-// WatchClusterEvents pushes events into the provided channel for the given cluster.
-func WatchClusterEvents(ctx context.Context, d dialers.Dialer, local agent.Peer, events chan agent.Message) {
+// WatchClusterEvents pushes events into the provided channel for the given dialer.
+func WatchClusterEvents(ctx context.Context, proxy string, d dialers.DefaultsDialer, local agent.Peer, events chan agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
 		err error
-		qc  agent.Client
+		qc  agent.DeployClient
 	)
 
 	for {
@@ -189,7 +189,7 @@ func WatchClusterEvents(ctx context.Context, d dialers.Dialer, local agent.Peer,
 			continue
 		}
 
-		if qc, err = agent.MaybeClient(d.Dial()); err != nil {
+		if qc, err = DeprecatedNewDeploy(proxy, d); err != nil {
 			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
 			continue
 		}
@@ -225,4 +225,14 @@ func IsActiveDeployment(err error) bool {
 // IsNoDeployments checks if the error is no deployments.
 func IsNoDeployments(err error) bool {
 	return errors.Cause(err) == ErrNoDeployments
+}
+
+// DeprecatedNewDeploy deploy client.
+func DeprecatedNewDeploy(proxy string, d dialers.DefaultsDialer) (_ agent.DeployClient, err error) {
+	// deprecated code path.
+	if len(proxy) == 0 {
+		return agent.MaybeClient(d.Dial())
+	}
+
+	return agent.MaybeDeployConn(dialers.NewDirect(proxy).Dial(d.Defaults()...))
 }

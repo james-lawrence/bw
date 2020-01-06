@@ -12,11 +12,9 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -66,33 +64,23 @@ type FailureDisplayNoop struct{}
 func (t FailureDisplayNoop) Display(cState, agent.Message) {}
 
 // NewFailureDisplayPrint ...
-func NewFailureDisplayPrint(d dialer) FailureDisplayPrint {
+func NewFailureDisplayPrint(c agent.DeployClient) FailureDisplayPrint {
 	return FailureDisplayPrint{
-		n:      new(int64),
-		Dialer: d,
+		n: new(int64),
+		c: c,
 	}
 }
 
 // FailureDisplayPrint prints the logs for each unique error encountered
 type FailureDisplayPrint struct {
-	n      *int64
-	Dialer dialer
+	n *int64
+	c agent.DeployClient
 }
 
 // Display prints the logs for each message
 func (t FailureDisplayPrint) Display(s cState, m agent.Message) {
-	var (
-		err error
-		c   agent.Client
-	)
-
 	if m.Peer == nil {
 		log.Println("unexpected nil peer skipping", spew.Sdump(m))
-		return
-	}
-
-	if c, err = agent.MaybeClient(dialers.NewDirect(agent.RPCAddress(*m.Peer)).Dial(t.Dialer.Defaults()...)); err != nil {
-		log.Println(errors.Wrapf(err, "unable to retrieve logs, failed to connect to peer: %s", spew.Sdump(m.Peer)))
 		return
 	}
 
@@ -104,8 +92,8 @@ func (t FailureDisplayPrint) Display(s cState, m agent.Message) {
 	b, done := context.WithTimeout(context.Background(), 20*time.Second)
 	logx.MaybeLog(
 		errorsx.Compact(
-			agentutil.PrintLogs(b, m.GetDeploy().Archive.DeploymentID, os.Stderr)(c),
-			c.Close(),
+			agentutil.PrintLogs(b, t.c, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
+			t.c.Close(),
 		),
 	)
 	done()

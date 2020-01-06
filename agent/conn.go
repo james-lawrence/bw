@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/pkg/errors"
 )
 
@@ -131,14 +133,12 @@ func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archiv
 
 	// send initial empty chunk with metadata.
 	if err = stream.Send(initialChunk); err != nil {
-		stream.CloseSend()
-		return info, err
+		return info, errorsx.Compact(err, stream.CloseSend())
 	}
 
 	checksum := sha256.New()
-	if err = t.streamArchive(io.TeeReader(src, checksum), stream); err != nil {
-		stream.CloseSend()
-		return info, err
+	if err = streamArchive(io.TeeReader(src, checksum), stream); err != nil {
+		return info, errorsx.Compact(err, stream.CloseSend())
 	}
 
 	if _info, err = stream.CloseAndRecv(); err != nil {
@@ -254,7 +254,54 @@ func (t Conn) Dispatch(ctx context.Context, messages ...Message) (err error) {
 	return nil
 }
 
-func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err error) {
+// Logs return the logs for the given deployment.
+func (t Conn) Logs(ctx context.Context, p *Peer, did []byte) io.ReadCloser {
+	var (
+		err error
+		c   Agent_LogsClient
+	)
+
+	rpc := NewAgentClient(t.conn)
+	if c, err = rpc.Logs(ctx, &LogRequest{Peer: p, DeploymentID: did}); err != nil {
+		return ioutil.NopCloser(iox.ErrReader(err))
+	}
+
+	return readLogs(c)
+}
+
+type logsClient interface {
+	Recv() (*LogResponse, error)
+}
+
+func readLogs(c logsClient) io.ReadCloser {
+	r, w := io.Pipe()
+	go func() {
+		for {
+			var (
+				werr error
+				resp *LogResponse
+			)
+
+			if resp, werr = c.Recv(); werr != nil {
+				w.CloseWithError(werr)
+				return
+			}
+
+			if _, werr = w.Write(resp.Content); werr != nil {
+				w.CloseWithError(werr)
+				return
+			}
+		}
+	}()
+
+	return r
+}
+
+type archiveWriter interface {
+	Send(*UploadChunk) error
+}
+
+func streamArchive(src io.Reader, stream archiveWriter) (err error) {
 	buf := make([]byte, 0, 1024*1024)
 	emit := func(chunk, checksum []byte) error {
 		return errors.Wrap(stream.Send(&UploadChunk{
@@ -278,40 +325,4 @@ func (t Conn) streamArchive(src io.Reader, stream Quorum_UploadClient) (err erro
 			return err
 		}
 	}
-}
-
-// Logs return the logs for the given deployment.
-func (t Conn) Logs(ctx context.Context, did []byte) io.ReadCloser {
-	var (
-		err error
-		c   Agent_LogsClient
-	)
-
-	r, w := io.Pipe()
-	rpc := NewAgentClient(t.conn)
-	if c, err = rpc.Logs(ctx, &LogRequest{DeploymentID: did}); err != nil {
-		w.CloseWithError(err)
-		return r
-	}
-
-	go func() {
-		for {
-			var (
-				werr error
-				resp *LogResponse
-			)
-
-			if resp, werr = c.Recv(); werr != nil {
-				w.CloseWithError(werr)
-				return
-			}
-
-			if _, werr = w.Write(resp.Content); werr != nil {
-				w.CloseWithError(werr)
-				return
-			}
-		}
-	}()
-
-	return r
 }

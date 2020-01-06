@@ -158,8 +158,12 @@ message InfoResponse {
 // Deployments service public facing endpoints for deployments.
 service Deployments {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
-  rpc Watch(WatchRequest) returns (stream Message) {}
   rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
+  rpc Cancel(CancelRequest) returns (CancelResponse) {}
+  rpc Logs(LogRequest) returns (stream LogResponse) {}
+  rpc Watch(WatchRequest) returns (stream Message) {}
+  // TODO: drop dispatch from deployments, believe it should be internal.
+  rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
 }
 
 service Quorum {
@@ -200,6 +204,7 @@ message CancelResponse{}
 
 message LogRequest {
   bytes deploymentID = 1;
+  Peer peer = 2;
 }
 
 message LogResponse {

@@ -6,11 +6,13 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/ioutil"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/iox"
 )
 
 // MaybeDeployConn ...
@@ -43,9 +45,8 @@ func (t DeployConn) Close() error {
 // Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
 func (t DeployConn) Cancel() error {
-	return errors.New("not implemented")
-	// _, err := NewDeploymentsClient(t.conn).Cancel(context.Background(), &CancelRequest{})
-	// return errors.WithStack(err)
+	_, err := NewDeploymentsClient(t.conn).Cancel(context.Background(), &CancelRequest{})
+	return errors.WithStack(err)
 }
 
 // Upload ...
@@ -73,14 +74,12 @@ func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info 
 
 	// send initial empty chunk with metadata.
 	if err = stream.Send(initialChunk); err != nil {
-		stream.CloseSend()
-		return info, err
+		return info, errorsx.Compact(err, stream.CloseSend())
 	}
 
 	checksum := sha256.New()
-	if err = t.streamArchive(io.TeeReader(src, checksum), stream); err != nil {
-		stream.CloseSend()
-		return info, err
+	if err = streamArchive(io.TeeReader(src, checksum), stream); err != nil {
+		return info, errorsx.Compact(err, stream.CloseSend())
 	}
 
 	if _info, err = stream.CloseAndRecv(); err != nil {
@@ -130,64 +129,34 @@ func (t DeployConn) Watch(ctx context.Context, out chan<- Message) (err error) {
 	return errorsx.Compact(errors.WithStack(err), src.CloseSend())
 }
 
-func (t DeployConn) streamArchive(src io.Reader, stream Deployments_UploadClient) (err error) {
-	buf := make([]byte, 0, 1024*1024)
-	emit := func(chunk, checksum []byte) error {
-		return errors.Wrap(stream.Send(&UploadChunk{
-			Checksum:             checksum,
-			Data:                 chunk,
-			InitialChunkMetadata: &UploadChunk_None{},
-		}), "failed to write chunk")
+// Dispatch messages to the leader.
+func (t DeployConn) Dispatch(ctx context.Context, messages ...Message) (err error) {
+	var (
+		out = DispatchRequest{
+			Messages: MessagesToPtr(messages...),
+		}
+	)
+
+	c := NewDeploymentsClient(t.conn)
+
+	if _, err = c.Dispatch(ctx, &out); err != nil {
+		return errors.WithStack(err)
 	}
 
-	for {
-		buffer := bytes.NewBuffer(buf)
-		checksum := sha256.New()
-
-		if _, err = io.CopyN(buffer, io.TeeReader(src, checksum), int64(buffer.Cap())); err == io.EOF {
-			return emit(buffer.Bytes(), checksum.Sum(nil))
-		} else if err != nil {
-			return errors.Wrap(err, "failed to copy chunk")
-		}
-
-		if err = emit(buffer.Bytes(), checksum.Sum(nil)); err != nil {
-			return err
-		}
-	}
+	return nil
 }
 
 // Logs return the logs for the given deployment.
-func (t DeployConn) Logs(ctx context.Context, did []byte) io.ReadCloser {
+func (t DeployConn) Logs(ctx context.Context, p *Peer, did []byte) io.ReadCloser {
 	var (
 		err error
-		c   Agent_LogsClient
+		c   Deployments_LogsClient
 	)
 
-	r, w := io.Pipe()
-	rpc := NewAgentClient(t.conn)
-	if c, err = rpc.Logs(ctx, &LogRequest{DeploymentID: did}); err != nil {
-		w.CloseWithError(err)
-		return r
+	rpc := NewDeploymentsClient(t.conn)
+	if c, err = rpc.Logs(ctx, &LogRequest{Peer: p, DeploymentID: did}); err != nil {
+		return ioutil.NopCloser(iox.ErrReader(err))
 	}
 
-	go func() {
-		for {
-			var (
-				werr error
-				resp *LogResponse
-			)
-
-			if resp, werr = c.Recv(); werr != nil {
-				w.CloseWithError(werr)
-				return
-			}
-
-			if _, werr = w.Write(resp.Content); werr != nil {
-				w.CloseWithError(werr)
-				return
-			}
-		}
-	}()
-
-	return r
+	return readLogs(c)
 }
