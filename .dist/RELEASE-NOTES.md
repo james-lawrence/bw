@@ -1,3 +1,15 @@
+commit 72e88d6c8f001d221a5978500f8378449685b0ce
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 7 14:20:14 2020 -0500
+
+    add fallback to handle deprecated port
+
+commit 9f116c3320d63915dc4cc401b5488f407c7288bb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 7 14:15:13 2020 -0500
+
+    release 0.1.1578424283-549f9ba2
+
 commit 549f9ba29cd0f3c3ed4c4629f7ae7e5ecb3b3fa5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Jan 7 14:03:34 2020 -0500
