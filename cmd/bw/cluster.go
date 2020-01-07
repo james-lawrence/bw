@@ -52,14 +52,16 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 
 func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.Dialer, snap peering.File) (clustering.Cluster, error) {
 	var (
-		awspeers clustering.Source = peering.NewStaticTCP()
-		dnspeers clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
-		clipeers clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		awspeers           clustering.Source = peering.NewStaticTCP()
+		dnspeers           clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
+		clipeers           clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		dnspeersDeprecated clustering.Source
 	)
 
 	if t.dnsEnabled {
 		log.Println("dns peering enabled")
 		dnspeers = peering.NewDNS(t.config.SWIMBind.Port, append(t.config.DNSBootstrap, t.config.ServerName)...)
+		dnspeersDeprecated = peering.NewDNS(2001, append(t.config.DNSBootstrap, t.config.ServerName)...)
 	}
 
 	if t.awsEnabled {
@@ -70,7 +72,7 @@ func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.D
 		}
 	}
 
-	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, awspeers, snap)
+	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, dnspeersDeprecated, awspeers, snap)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
