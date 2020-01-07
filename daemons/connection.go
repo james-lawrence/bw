@@ -3,7 +3,6 @@ package daemons
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
@@ -85,7 +84,7 @@ func ConnectClientUntilSuccess(
 		if d, c, err = connect(config, creds, options...); err == nil {
 			return d, c, err
 		}
-		log.Println("discovery connect failed", err)
+
 		if d, c, err = deprecatedConnect(config, creds, options...); err == nil {
 			return d, c, err
 		}
