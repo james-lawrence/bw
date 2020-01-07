@@ -1,3 +1,21 @@
+commit 549f9ba29cd0f3c3ed4c4629f7ae7e5ecb3b3fa5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 7 14:03:34 2020 -0500
+
+    add environment variable for bootstrapping peers
+
+commit 3f9755655ac09fac1ac8118107cf256c1faf06d3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 6 09:11:03 2020 -0500
+
+    merge filtered deploy into standard deploy
+
+commit 3681fe14f9055ca2750587b51d67f2b429bc9ce9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 6 08:56:45 2020 -0500
+
+    release 0.1.1578318995-1ce533b5
+
 commit 1ce533b54ec370eb6c28c3f9582f2cbc8d607d2d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jan 6 08:56:35 2020 -0500
