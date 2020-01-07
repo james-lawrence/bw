@@ -27,6 +27,8 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	t.config = config
 	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(
 		t.config.SWIMBind.String(),
+	).Envar(
+		bw.EnvAgentClusterBootstrap,
 	).TCPListVar(&t.bootstrap)
 	parent.Flag(
 		"cluster-bind",
