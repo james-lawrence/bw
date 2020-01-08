@@ -1,3 +1,21 @@
+commit 2484577be27924aa1eb0df2f6fd3353e5351628c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 8 12:25:25 2020 -0500
+
+    support gcloud instance managers
+
+commit 62c32d58352e140c349093400e628a7d02ed55a9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 7 16:18:18 2020 -0500
+
+    fix it
+
+commit 7faa495020092c32037e8792768758aa8f87b18c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 7 15:02:01 2020 -0500
+
+    release 0.1.1578424814-72e88d6c
+
 commit 72e88d6c8f001d221a5978500f8378449685b0ce
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Jan 7 14:20:14 2020 -0500
