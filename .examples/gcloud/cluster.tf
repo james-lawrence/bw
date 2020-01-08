@@ -22,6 +22,8 @@ resource "google_project_iam_custom_role" "default" {
     "dns.resourceRecordSets.delete",
     "dns.resourceRecordSets.list",
     "dns.resourceRecordSets.update",
+    "compute.instanceGroupManagers.get",
+    "compute.instances.get",
   ]
 }
 
@@ -89,7 +91,7 @@ resource "google_compute_instance_group_manager" "default" {
 
   base_instance_name = var.cluster
   zone               = var.zone
-  target_size        = 1
+  target_size        = var.cluster_size
   target_pools       = ["${google_compute_target_pool.default.self_link}"]
 
   named_port {

@@ -56,18 +56,19 @@ type Client struct {
 
 // Challenge initiate a challenge.
 func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
-	bo := backoff.Maximum(10*time.Second, backoff.Exponential(time.Second))
+	bo := backoff.Jitter(time.Second, backoff.Maximum(time.Minute, backoff.Exponential(time.Second)))
 	for i := 0; ; i++ {
 		if cert, authority, err = t.challenge(ctx, csr); err == nil {
 			return cert, authority, nil
 		}
 
-		log.Println("failed to complete acme challenge", i, bo.Backoff(i), err)
+		delay := bo.Backoff(i).Round(50 * time.Millisecond)
+		log.Println("failed to complete acme challenge", i, delay, err)
 
 		select {
 		case <-ctx.Done():
 			return cert, authority, err
-		case <-time.After(bo.Backoff(i)):
+		case <-time.After(delay):
 		}
 	}
 }

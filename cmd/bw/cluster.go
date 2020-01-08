@@ -18,9 +18,9 @@ import (
 )
 
 type clusterCmd struct {
-	config                 *agent.Config
-	bootstrap              []*net.TCPAddr
-	dnsEnabled, awsEnabled bool
+	config                                *agent.Config
+	bootstrap                             []*net.TCPAddr
+	dnsEnabled, awsEnabled, gcloudEnabled bool
 }
 
 func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) {
@@ -46,13 +46,16 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	).Envar(
 		bw.EnvAgentRAFTBind,
 	).TCPVar(&t.config.RaftBind)
+
 	parent.Flag("cluster-dns-enable", "enable dns bootstrap").BoolVar(&t.dnsEnabled)
-	parent.Flag("cluster-aws-enable", "enable aws autoscale group bootstrap").BoolVar(&t.awsEnabled)
+	parent.Flag("cluster-aws-enable", "enable/disable aws autoscale group bootstrap").Default("true").BoolVar(&t.awsEnabled)
+	parent.Flag("cluster-gcloud-enable", "enable/disable gcloud target pools bootstrap").Default("true").BoolVar(&t.gcloudEnabled)
 }
 
 func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.Dialer, snap peering.File) (clustering.Cluster, error) {
 	var (
 		awspeers           clustering.Source = peering.NewStaticTCP()
+		gcloudpeers        clustering.Source = peering.NewStaticTCP()
 		dnspeers           clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
 		clipeers           clustering.Source = peering.NewStaticTCP(t.bootstrap...)
 		dnspeersDeprecated clustering.Source
@@ -72,7 +75,15 @@ func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.D
 		}
 	}
 
-	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, dnspeersDeprecated, awspeers, snap)
+	if t.gcloudEnabled {
+		log.Println("gcloud target pool peering enabled")
+		gcloudpeers = peering.GCloudTargetPool{
+			Port:    conf.SWIMBind.Port,
+			Maximum: conf.MinimumNodes,
+		}
+	}
+
+	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, dnspeersDeprecated, awspeers, gcloudpeers, snap)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {

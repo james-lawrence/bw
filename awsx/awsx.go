@@ -27,7 +27,14 @@ func AutoscalingPeers(supplimental ...string) (peers []ec2.Instance, err error) 
 		return peers, errors.WithStack(err)
 	}
 
-	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocument(); err != nil {
+	md := ec2metadata.New(sess)
+
+	// if unavailable just return an empty set.
+	if !md.Available() {
+		return peers, nil
+	}
+
+	if ident, err = md.GetInstanceIdentityDocument(); err != nil {
 		return peers, errors.WithStack(err)
 	}
 

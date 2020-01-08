@@ -2,6 +2,7 @@ package backoff
 
 import (
 	"math"
+	"math/rand"
 	"time"
 )
 
@@ -18,6 +19,15 @@ func Maximum(d time.Duration, s Strategy) Strategy {
 		}
 
 		return d
+	})
+}
+
+// Jitter set a jitter frame for the strategy.
+// rounds to 250 milliseconds
+func Jitter(maximum time.Duration, s Strategy) Strategy {
+	return StrategyFunc(func(attempt int) time.Duration {
+		x := s.Backoff(attempt)
+		return x + time.Duration(rand.Intn(int(maximum)))
 	})
 }
 

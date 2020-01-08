@@ -26,6 +26,11 @@ variable "cluster" {
   default     = "example"
 }
 
+variable "cluster_size" {
+  description = "number of servers to build"
+  default     = 3
+}
+
 variable "dns-managed-zone" {
   description = "dns managed zone for creating dns records"
 }
