@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 )
@@ -38,6 +39,7 @@ func DefaultContext() (ctx Context, err error) {
 		Domain:    _domain(_fqdn),
 		MachineID: machineID(),
 		Environ:   os.Environ(),
+		timeout:   5 * time.Minute,
 		output:    ioutil.Discard,
 	}, nil
 }
@@ -66,6 +68,25 @@ func OptionDir(l string) Option {
 	}
 }
 
+// OptionAppendEnviron append to the environment for shell commands.
+func OptionAppendEnviron(l ...string) Option {
+	return func(ctx *Context) {
+		ctx.Environ = append(ctx.Environ, l...)
+	}
+}
+
+// OptionLenient mark the context as lenient, allowing commands to fail.
+func OptionLenient(ctx *Context) {
+	ctx.lenient = true
+}
+
+// OptionTimeout set the timeout for the context.
+func OptionTimeout(d time.Duration) Option {
+	return func(ctx *Context) {
+		ctx.timeout = d
+	}
+}
+
 // NewContext creates a new context using the provided context as a base and then applies options.
 func NewContext(tmp Context, options ...Option) Context {
 	for _, opt := range options {
@@ -86,6 +107,8 @@ type Context struct {
 	Environ   []string
 	output    io.Writer
 	dir       string
+	timeout   time.Duration
+	lenient   bool
 }
 
 // %H hostname

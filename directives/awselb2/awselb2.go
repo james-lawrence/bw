@@ -30,6 +30,11 @@ func LoadbalancersDetach(ctx context.Context) (err error) {
 		return errors.WithStack(err)
 	}
 
+	// if we're not on an ec2 instance, nothing to do.
+	if !ec2metadata.New(sess).Available() {
+		return nil
+	}
+
 	if lbs, err = loadbalancers(sess); err != nil {
 		return errors.WithStack(err)
 	}
@@ -55,6 +60,11 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 
 	if sess, err = session.NewSession(); err != nil {
 		return errors.WithStack(err)
+	}
+
+	// if we're not on an ec2 instance, nothing to do.
+	if !ec2metadata.New(sess).Available() {
+		return nil
 	}
 
 	if lbs, err = loadbalancers(sess); err != nil {

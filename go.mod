@@ -3,6 +3,7 @@ module github.com/james-lawrence/bw
 // replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
 
 require (
+	bitbucket.org/jatone/genieql v0.0.0-20190910180604-40b468c6dcf4
 	cloud.google.com/go v0.38.0
 	github.com/0xAX/notificator v0.0.0-20191016112426-3962a5ea8da1
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
@@ -25,6 +26,7 @@ require (
 	github.com/aws/aws-sdk-go v1.23.0
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
+	github.com/containous/yaegi v0.7.2
 	github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/denisenkom/go-mssqldb v0.0.0-20190912031109-19fca521dbdf // indirect
@@ -40,6 +42,7 @@ require (
 	github.com/go-ldap/ldap v3.0.2+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-test/deep v1.0.2 // indirect
+	github.com/go-yaml/yaml v2.1.0+incompatible // indirect
 	github.com/gocql/gocql v0.0.0-20190910075112-d63913db787c // indirect
 	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
@@ -97,6 +100,7 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/serenize/snaker v0.0.0-20171204205717-a683aaf2d516 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/subosito/gotenv v1.1.0
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
@@ -104,6 +108,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
+	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
 	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/api v0.8.0
 	google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51 // indirect

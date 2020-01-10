@@ -10,6 +10,7 @@ import (
 )
 
 type logger interface {
+	Output(depth int, msg string) error
 	Print(...interface{})
 	Printf(string, ...interface{})
 	Println(...interface{})

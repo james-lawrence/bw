@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -72,7 +73,7 @@ func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a ag
 		ArchiveFile:   filepath.Join(root, bw.ArchiveFile),
 		MetadataFile:  filepath.Join(root, deployMetadataName),
 		LogFile:       filepath.Join(root, bw.DeployLog),
-		Log:           dlog{log: log.New(ioutil.Discard, "", 0)},
+		Log:           dlog{Logger: log.New(ioutil.Discard, "", 0)},
 		Archive:       a,
 		DeployOptions: dopts,
 		dispatcher:    agentutil.LogDispatcher{},
@@ -118,9 +119,9 @@ func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOpti
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
 
-	logger = dlog{log: log.New(ioutil.Discard, "", 0)}
+	logger = dlog{Logger: log.New(ioutil.Discard, "", 0)}
 	if !dopts.SilenceDeployLogs {
-		if logger, err = newLogger(id, root, "[DEPLOY] "); err != nil {
+		if logger, err = newLogger(id, root, fmt.Sprintf("[DEPLOY] [%s] ", id)); err != nil {
 			return _did, err
 		}
 	}
@@ -208,10 +209,12 @@ func (t DeployContext) reset() (err error) {
 }
 
 type logger interface {
+	Output(int, string) error
 	Print(...interface{})
 	Printf(string, ...interface{})
 	Println(...interface{})
 	Close() error
+	Write([]byte) (int, error)
 }
 
 func newCancelDeployContext() DeployContext {

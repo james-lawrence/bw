@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -13,21 +12,13 @@ import (
 )
 
 type dlog struct {
+	*log.Logger
 	uid string
-	log *log.Logger
 	dst *os.File
 }
 
-func (t dlog) Print(v ...interface{}) {
-	t.log.Output(2, fmt.Sprintf("%s: %s", t.uid, fmt.Sprint(v...)))
-}
-
-func (t dlog) Printf(format string, v ...interface{}) {
-	t.log.Output(2, fmt.Sprintf("%s: %s", t.uid, fmt.Sprintf(format, v...)))
-}
-
-func (t dlog) Println(v ...interface{}) {
-	t.log.Output(2, fmt.Sprintf("%s: %s", t.uid, fmt.Sprintln(v...)))
+func (t dlog) Write(b []byte) (n int, err error) {
+	return t.Logger.Writer().Write(b)
 }
 
 func (t dlog) Close() error {
@@ -47,10 +38,10 @@ func newLogger(uid bw.RandomID, root, prefix string) (_dlog dlog, err error) {
 		return _dlog, errors.WithStack(err)
 	}
 
-	return dlog{dst: dst, uid: uid.String(), log: log.New(io.MultiWriter(os.Stderr, dst), prefix, log.Flags()^log.Lshortfile)}, nil
+	return dlog{dst: dst, uid: uid.String(), Logger: log.New(io.MultiWriter(os.Stderr, dst), prefix, log.Flags()^log.Lshortfile)}, nil
 }
 
 // StdErrLogger ...
 func StdErrLogger(prefix string) dlog {
-	return dlog{uid: "", log: log.New(os.Stderr, prefix, log.Flags()^log.Lshortfile)}
+	return dlog{uid: "", Logger: log.New(os.Stderr, prefix, log.Flags()^log.Lshortfile^log.Ldate^log.Ltime)}
 }

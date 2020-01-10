@@ -34,7 +34,7 @@ type Exec struct {
 }
 
 func (t Exec) execute(ctx context.Context, sctx Context) error {
-	timeout := timex.DurationOrDefault(t.Timeout, 5*time.Minute)
+	timeout := timex.DurationOrDefault(t.Timeout, sctx.timeout)
 	deadline, done := context.WithTimeout(ctx, timeout)
 	defer done()
 
@@ -49,7 +49,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 }
 
 func (t Exec) lenient(ctx Context, err error) error {
-	if t.Lenient {
+	if t.Lenient || ctx.lenient && err != nil {
 		fmt.Fprintln(ctx.output, "command failed, ignoring", t.Command, err)
 		return nil
 	}

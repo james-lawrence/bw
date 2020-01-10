@@ -57,8 +57,8 @@ func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.D
 		awspeers           clustering.Source = peering.NewStaticTCP()
 		gcloudpeers        clustering.Source = peering.NewStaticTCP()
 		dnspeers           clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
+		dnspeersDeprecated clustering.Source = peering.NewStaticTCP()
 		clipeers           clustering.Source = peering.NewStaticTCP(t.bootstrap...)
-		dnspeersDeprecated clustering.Source
 	)
 
 	if t.dnsEnabled {

@@ -62,6 +62,7 @@ func (t Directive) Deploy(dctx DeployContext) {
 func (t Directive) deploy(dctx DeployContext) {
 	var (
 		err     error
+		dinterp directives.InterpLoader
 		dfs     directives.ArchiveLoader
 		dshell  directives.ShellLoader
 		dpkg    directives.PackageLoader
@@ -96,8 +97,15 @@ func (t Directive) deploy(dctx DeployContext) {
 		Context: dc,
 	}
 
+	dinterp = directives.InterpLoader{
+		Context:      dc,
+		Environ:      dshell.Context.Environ,
+		ShellContext: dshell.Context,
+	}
+
 	loaders := []directives.Loader{
 		dshell,
+		dinterp,
 		dpkg,
 		dfs,
 		directives.NewAWSELBAttach(),
