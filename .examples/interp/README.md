@@ -33,8 +33,8 @@ func main() {
   err := shell.Run(
     ctx, // context is used to control the executed process, cancelling a context kills the process.
     "systemd restart foo.service", // the command to be executed.
-    shell.Environ("Foo", "Bar"), // supply additional environment variables.
-    shell.Lenient(), // allow the command to fail, this means run will always return nil
+    shell.Environ("Foo=bar"), // supply additional environment variables.
+    shell.Lenient, // allow the command to fail, this means run will always return nil
     shell.Timeout(time.Minute), // use shell.Timeout to specify maximum execution time allowed if ctx is too long.
   )
 
@@ -46,4 +46,7 @@ func main() {
 
 ### changes to the runtime
 - `os.Getwd()` is overridden to be the root of unpacked archive.
-- `os.Chdir(dir)` is overriden to always return an error.
+- `os.Chdir(dir)` is overridden to always return an error.
+- `context.Background()` is overridden to provide the context from the deploy.
+- `log.Fatal*` functions are changed to not completely exit the program thereby killing the agent, instead they panic causing the interpreter to fail.
+- `log.SetOutput/SetFlags/SetPrefix` are all disabled for the time being. they are noops.
