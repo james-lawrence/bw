@@ -8,6 +8,7 @@ import (
 	"go/build"
 	"go/format"
 	"io"
+	"log"
 	"reflect"
 
 	"github.com/containous/yaegi/interp"
@@ -16,6 +17,7 @@ import (
 	"golang.org/x/tools/imports"
 
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/directives/systemd"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
@@ -65,6 +67,24 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 		"bw/interp/env":     exportEnviron(t.Environ...),
 		"bw/interp/aws/elb": elb(),
 	})
+
+	if conn, exports, err := systemd.Export(); err == nil {
+		defer conn.Close()
+		i.Use(interp.Exports{
+			"bw/interp/systemd": exports,
+		})
+	} else {
+		log.Println("systemd disabled, unable to establish a connection")
+	}
+
+	if conn, exports, err := systemd.ExportUser(); err == nil {
+		defer conn.Close()
+		i.Use(interp.Exports{
+			"bw/interp/systemdu": exports,
+		})
+	} else {
+		log.Println("systemd disabled, unable to establish a user connection")
+	}
 
 	if err = panicSafe(func() error { return eval(ctx, i, formatted) }); err != nil {
 		return errors.Wrap(err, "failed to compile")
