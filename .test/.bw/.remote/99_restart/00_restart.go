@@ -14,17 +14,17 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if err := shell.Run(ctx, "echo ${EXAMPLE1}", shell.Lenient, shell.Environ("EXAMPLE1=foobar")); err != nil {
+	if err := shell.Run(ctx, "echo ${EXAMPLE1}", shell.Environ("EXAMPLE1=foobar")); err != nil {
 		log.Fatalln(err)
-	}
-
-	restart := func(ctx context.Context) error {
-		log.Println("application restart initiated")
-		defer log.Println("application restart completed")
-		return shell.Run(ctx, "sleep 1")
 	}
 
 	if err := elb.Restart(ctx, restart); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func restart(ctx context.Context) error {
+	log.Println("application restart initiated")
+	defer log.Println("application restart completed")
+	return shell.Run(ctx, "sleep 1")
 }

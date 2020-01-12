@@ -14,13 +14,13 @@ import (
 )
 
 func main() {
-  // restart a user service
-  if err := systemdu.RestartUnit(context.Background(), "user-service.service"); err != nil {
+  // restart a system service
+  if err := systemd.RestartUnit(context.Background(), "system-service.service"); err != nil {
     log.Fatalln(err)
   }
 
-  // restart a system service
-  if err := systemd.RestartUnit(context.Background(), "system-service.service"); err != nil {
+  // restart a user service
+  if err := systemdu.RestartUnit(context.Background(), "user-service.service"); err != nil {
     log.Fatalln(err)
   }
 }
