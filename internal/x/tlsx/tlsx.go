@@ -267,3 +267,20 @@ func Print(c *tls.Certificate) (s string) {
 
 	return s
 }
+
+// DecodePEMCertificate decode a pem encoded x509 certiciate.
+func DecodePEMCertificate(encoded []byte) (cert *x509.Certificate, err error) {
+	var (
+		p *pem.Block
+	)
+
+	if p, _ = pem.Decode(encoded); p == nil {
+		return cert, errors.Wrap(err, "unable to decode pem certificate")
+	}
+
+	if cert, err = x509.ParseCertificate(p.Bytes); err != nil {
+		return cert, errors.Wrap(err, "failed parse certificate")
+	}
+
+	return cert, nil
+}

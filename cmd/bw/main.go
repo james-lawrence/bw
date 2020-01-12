@@ -90,7 +90,7 @@ func main() {
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
-		log.Printf("%+v\n", err)
+		log.Printf("%T - [%+v]\n", err, err)
 		cancel()
 	}
 

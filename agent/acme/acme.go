@@ -6,14 +6,18 @@ package acme
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
+	"time"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/go-acme/lego/certcrypto"
@@ -22,13 +26,17 @@ import (
 	"github.com/go-acme/lego/providers/dns/gcloud"
 	"github.com/go-acme/lego/providers/dns/route53"
 	"github.com/go-acme/lego/registration"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/protox"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -108,6 +116,17 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
+	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
+		log.Println("invalid certificate", err)
+		return resp, status.Error(codes.FailedPrecondition, "invalid certificate request")
+	}
+
+	// Lets encrypt has rate limits on certificates generated per domain per month.
+	// lets cache the generated certificates if possible.
+	if resp, err = t.cachedCertificate(template); err == nil {
+		return resp, nil
+	}
+
 	if t.ac.Challenges.ALPN {
 		if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
 			log.Println("lego provider failure", err)
@@ -128,21 +147,18 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		}
 	}
 
-	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
-		log.Println("invalid certificate", err)
-		return resp, status.Error(codes.FailedPrecondition, "invalid certificate request")
-	}
-
 	certificates, err := client.Certificate.ObtainForCSR(*template, true)
 	if err != nil {
 		log.Println("unable to retrieve certificate", err)
 		return resp, status.Error(codes.Aborted, "acme certificate signature request failed")
 	}
 
-	return &ChallengeResponse{
+	resp = &ChallengeResponse{
 		Certificate: certificates.Certificate,
 		Authority:   certificates.IssuerCertificate,
-	}, nil
+	}
+
+	return t.cacheCertificate(template, resp)
 }
 
 func route53Provider() (p *route53.DNSProvider, err error) {
@@ -188,6 +204,66 @@ func (t Service) Resolution(ctx context.Context, req *ResolutionRequest) (resp *
 
 func (t Service) challengeFile() string {
 	return filepath.Join(t.c.Root, "acme.challenge.proto")
+}
+
+func (t Service) cachedCertificate(csr *x509.CertificateRequest) (cresp *ChallengeResponse, err error) {
+	var (
+		encoded []byte
+	)
+	cresp = &ChallengeResponse{}
+	digest := t.digestCertificate(csr)
+	dir := filepath.Join(t.c.Root, "cached.certs")
+	defer t.clearCertCache(dir)
+	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))
+
+	if encoded, err = ioutil.ReadFile(path); err != nil {
+		return cresp, err
+	}
+
+	if err = proto.Unmarshal(encoded, cresp); err != nil {
+		return cresp, err
+	}
+
+	return cresp, err
+}
+
+func (t Service) cacheCertificate(csr *x509.CertificateRequest, c *ChallengeResponse) (_ *ChallengeResponse, err error) {
+	digest := t.digestCertificate(csr)
+	dir := filepath.Join(t.c.Root, "cached.certs")
+	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))
+
+	if err = os.MkdirAll(dir, 0700); err != nil {
+		return c, err
+	}
+
+	return c, protox.WriteFile(path, 0600, c)
+}
+
+func (t Service) clearCertCache(dir string) {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if dir == path {
+			return nil
+		}
+
+		// clear cache after 8 hours
+		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(8*time.Hour).Before(time.Now()) {
+			logx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
+		} else if err != nil {
+			log.Println("failed to clear cached certificates", err)
+		}
+
+		return nil
+	})
+	logx.MaybeLog(errors.Wrap(err, "clear cert cache failed"))
+}
+
+func (t Service) digestCertificate(csr *x509.CertificateRequest) (digest string) {
+	d := md5.Sum([]byte(csr.Subject.CommonName + strings.Join(csr.DNSNames, "")))
+	return hex.EncodeToString(d[:])
 }
 
 func clearRegistration(c agent.Config) (err error) {
