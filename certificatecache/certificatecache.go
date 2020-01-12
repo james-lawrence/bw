@@ -5,7 +5,6 @@ package certificatecache
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/pem"
 	"io/ioutil"
 	"log"
 	"os"
@@ -197,7 +196,6 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (due time.Duratio
 func expiredCert(path string) (expiration time.Time, err error) {
 	var (
 		data []byte
-		p    *pem.Block
 		cert *x509.Certificate
 	)
 
@@ -206,14 +204,8 @@ func expiredCert(path string) (expiration time.Time, err error) {
 		return expiration, errors.WithStack(err)
 	}
 
-	if p, _ = pem.Decode(data); p == nil {
-		log.Println("unable to pem decode certificate")
-		return expiration, errors.WithStack(err)
-	}
-
-	if cert, err = x509.ParseCertificate(p.Bytes); err != nil {
-		log.Println("failed parse certificate", err)
-		return expiration, errors.WithStack(err)
+	if cert, err = tlsx.DecodePEMCertificate(data); err != nil {
+		return expiration, err
 	}
 
 	log.Println("cert expires at", cert.NotAfter)
