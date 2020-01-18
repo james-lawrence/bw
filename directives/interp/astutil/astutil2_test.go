@@ -8,7 +8,7 @@ import (
 	"go/parser"
 	"go/token"
 
-	. "bitbucket.org/jatone/genieql"
+	. "github.com/james-lawrence/bw/directives/interp/astutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

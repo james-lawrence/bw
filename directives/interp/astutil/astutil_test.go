@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 
-	. "bitbucket.org/jatone/genieql/astutil"
+	. "github.com/james-lawrence/bw/directives/interp/astutil"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

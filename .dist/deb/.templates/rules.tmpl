@@ -19,7 +19,7 @@ override_dh_auto_build:
 	echo "DH AUTO BUILD OVERRIDE"
 	echo "$(CURDIR)"
 	GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) go env
-	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) go install -ldflags=$(BW_LDFLAGS) github.com/james-lawrence/bw/cmd/...
+	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) go install -ldflags="$(BW_LDFLAGS)" github.com/james-lawrence/bw/cmd/...
 
 	ls -lha
 	ls -lha bin

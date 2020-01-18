@@ -2,18 +2,19 @@
 set -e
 
 release() {
-  VERSION=$2
   DISTRO=$1
+  VERSION=$2
+  BUILDFLAGS=$3
   DEBDIR=debian
 
-  echo "DISTRO ${DISTRO} VERSION ${VERSION}"
+  echo "DISTRO ${DISTRO} VERSION ${VERSION} - ${BUILDFLAGS}"
   mkdir -p ${DEBDIR}
   mkdir -p ${DEBDIR}/source
 
   cat .templates/control.tmpl | envsubst > ${DEBDIR}/control
   cat .templates/changelog.tmpl | env DISTRO=${DISTRO} VERSION=${VERSION} envsubst > ${DEBDIR}/changelog
   cat .templates/install.tmpl > ${DEBDIR}/install
-  cat .templates/rules.tmpl > ${DEBDIR}/rules
+  cat .templates/rules.tmpl | env BW_LDFLAGS=${BUILDFLAGS} envsubst > ${DEBDIR}/rules
 
   echo "9" > ${DEBDIR}/compat
   echo "3.0 (native)" > ${DEBDIR}/source/format
@@ -40,5 +41,5 @@ for distro in "$@"
 do
   i=$(( i + 1 ))
   # append the index here to ensure unique versions per distro.
-  release "$distro" "${BW_VERSION}${i}"
+  release "$distro" "${BW_VERSION}${i}" "${BW_LDFLAGS}"
 done

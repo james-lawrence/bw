@@ -52,7 +52,7 @@ type ACMEConfig struct {
 }
 
 type challenger interface {
-	Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error)
+	Challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error)
 }
 
 // NewACME certificate refresh.
@@ -75,6 +75,7 @@ type ACME struct {
 // Refresh the credentials if necessary.
 func (t ACME) Refresh() (err error) {
 	var (
+		key       []byte
 		cert      []byte
 		authority []byte
 		priv      *rsa.PrivateKey
@@ -114,13 +115,14 @@ func (t ACME) Refresh() (err error) {
 	}
 
 	log.Println("obtaining certificate")
-	if cert, authority, err = t.c.Challenge(context.Background(), csr); err != nil {
+	if key, cert, authority, err = t.c.Challenge(context.Background(), csr); err != nil {
 		return errors.Wrap(err, "failed to obtain certificates")
 	}
 	log.Println("obtained certificate")
 
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
+	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
 
 	log.Println("writing authority certificate", capath)
 	if err = ioutil.WriteFile(capath, authority, 0600); err != nil {
@@ -132,5 +134,9 @@ func (t ACME) Refresh() (err error) {
 		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate to %s", certpath))
 	}
 
+	log.Println("writing private key", keypath)
+	if err = ioutil.WriteFile(keypath, key, 0600); err != nil {
+		return logx.MaybeLog(errors.Wrapf(err, "failed to write private key to %s", keypath))
+	}
 	return nil
 }

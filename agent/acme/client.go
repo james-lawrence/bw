@@ -55,11 +55,11 @@ type Client struct {
 }
 
 // Challenge initiate a challenge.
-func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
+func (t Client) Challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
 	bo := backoff.Jitter(time.Second, backoff.Maximum(time.Minute, backoff.Exponential(time.Second)))
 	for i := 0; ; i++ {
-		if cert, authority, err = t.challenge(ctx, csr); err == nil {
-			return cert, authority, nil
+		if key, cert, authority, err = t.challenge(ctx, csr); err == nil {
+			return key, cert, authority, nil
 		}
 
 		delay := bo.Backoff(i).Round(50 * time.Millisecond)
@@ -67,13 +67,13 @@ func (t Client) Challenge(ctx context.Context, csr []byte) (cert []byte, authori
 
 		select {
 		case <-ctx.Done():
-			return cert, authority, err
+			return key, cert, authority, err
 		case <-time.After(delay):
 		}
 	}
 }
 
-func (t Client) challenge(ctx context.Context, csr []byte) (cert []byte, authority []byte, err error) {
+func (t Client) challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
 	var (
 		conn *grpc.ClientConn
 		p    agent.Peer
@@ -87,19 +87,19 @@ func (t Client) challenge(ctx context.Context, csr []byte) (cert []byte, authori
 	// here we select a node based on the a disciminator. that node is responsible
 	// for managing the acme account key, registration, etc.
 	if p, err = agent.NodeToPeer(t.Get([]byte(discriminator))); err != nil {
-		return cert, authority, err
+		return key, cert, authority, err
 	}
 
 	if conn, err = agent.MaybeConn(t.d.Dial(p)); err != nil {
-		return cert, authority, err
+		return key, cert, authority, err
 	}
 	defer conn.Close()
 
 	if resp, err = NewACMEClient(conn).Challenge(ctx, &req); err != nil {
-		return cert, authority, err
+		return key, cert, authority, err
 	}
 
-	return resp.Certificate, resp.Authority, nil
+	return resp.Private, resp.Certificate, resp.Authority, nil
 }
 
 // Resolution retrieve a resolution.

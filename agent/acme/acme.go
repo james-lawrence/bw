@@ -7,6 +7,8 @@ package acme
 import (
 	"context"
 	"crypto/md5"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -15,6 +17,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -37,6 +40,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/protox"
+	"github.com/james-lawrence/bw/internal/x/sshx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -68,19 +72,21 @@ func ReadConfig(c agent.Config, path string) (svc Service, err error) {
 // NewService new acme service from an agent.Configuration.
 func newService(c agent.Config, ac certificatecache.ACMEConfig, u account) Service {
 	return Service{
-		c:  c,
-		ac: ac,
-		u:  u,
-		m:  new(int64),
+		cachedir: "cached.certs",
+		c:        c,
+		ac:       ac,
+		u:        u,
+		m:        new(int64),
 	}
 }
 
 // Service is responsible for generating and resolving ACME protocol certificates.
 type Service struct {
-	c  agent.Config
-	ac certificatecache.ACMEConfig
-	u  account
-	m  *int64
+	c        agent.Config
+	ac       certificatecache.ACMEConfig
+	u        account
+	cachedir string
+	m        *int64
 }
 
 // Challenge initiate a challenge.
@@ -88,6 +94,9 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	var (
 		template *x509.CertificateRequest
 		client   *lego.Client
+		csr      []byte
+		priv     []byte
+		privrsa  *rsa.PrivateKey
 	)
 
 	if !atomic.CompareAndSwapInt64(t.m, 0, 1) {
@@ -127,6 +136,36 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 		return resp, nil
 	}
 
+	// cache the private key used to generate the certificate for CSR.
+	if priv, err = sshx.CachedAuto(filepath.Join(t.c.Root, t.cachedir, t.digestCertificate(template)+".pem")); err != nil {
+		log.Println("cache failure unable to generate or retrieve the private key for the csr", err)
+		return resp, status.Error(codes.Internal, "cache failure")
+	}
+
+	if privrsa, err = sshx.DecodeRSA(priv); err != nil {
+		log.Println("cache failure", err)
+		return resp, status.Error(codes.Internal, "cache failure")
+	}
+
+	// BEGIN song and dance around resigning the CSR with the private key generated
+	// above. this allows the certificate and key to be cached preventing rate limits
+	template = &x509.CertificateRequest{
+		SignatureAlgorithm: x509.SHA256WithRSA,
+		Subject:            template.Subject,
+		DNSNames:           template.DNSNames,
+	}
+
+	if csr, err = x509.CreateCertificateRequest(rand.Reader, template, privrsa); err != nil {
+		log.Println("cache failure", err)
+		return resp, status.Error(codes.Internal, "cache failure - generated csr")
+	}
+
+	if template, err = x509.ParseCertificateRequest(csr); err != nil {
+		log.Println("cache failure", err)
+		return resp, status.Error(codes.Internal, "cache failure - generated csr")
+	}
+	// END song and dance.
+
 	if t.ac.Challenges.ALPN {
 		if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
 			log.Println("lego provider failure", err)
@@ -154,6 +193,7 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 	}
 
 	resp = &ChallengeResponse{
+		Private:     priv,
 		Certificate: certificates.Certificate,
 		Authority:   certificates.IssuerCertificate,
 	}
@@ -240,6 +280,11 @@ func (t Service) cacheCertificate(csr *x509.CertificateRequest, c *ChallengeResp
 }
 
 func (t Service) clearCertCache(dir string) {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		log.Println(errors.Wrap(err, "failed to create cache dir"))
+		return
+	}
+
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -250,7 +295,7 @@ func (t Service) clearCertCache(dir string) {
 		}
 
 		// clear cache after 8 hours
-		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(8*time.Hour).Before(time.Now()) {
+		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(20*time.Hour).Before(time.Now()) {
 			logx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
 		} else if err != nil {
 			log.Println("failed to clear cached certificates", err)
@@ -262,6 +307,7 @@ func (t Service) clearCertCache(dir string) {
 }
 
 func (t Service) digestCertificate(csr *x509.CertificateRequest) (digest string) {
+	sort.Strings(csr.DNSNames)
 	d := md5.Sum([]byte(csr.Subject.CommonName + strings.Join(csr.DNSNames, "")))
 	return hex.EncodeToString(d[:])
 }

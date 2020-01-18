@@ -14,6 +14,7 @@ message ChallengeRequest {
 message ChallengeResponse {
   bytes certificate = 1;
   bytes authority = 2;
+  bytes private = 3;
 }
 
 message ResolutionRequest {}
