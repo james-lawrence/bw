@@ -1,3 +1,42 @@
+commit ff755cc07cfdd0390b67c63da04edc1e87bcbd43
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 12 11:16:02 2020 -0500
+
+    minor cleanups
+
+commit 744dfc1abd330e113cec186c94157513e3a5f0f5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 11 09:49:13 2020 -0500
+
+    enable systemd interp module
+
+commit 1ba4e4c6d7ea71953f5278c50a6ff1f5ee3b272f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 11 08:56:18 2020 -0500
+
+    fix invalid documentation
+
+commit ce02b6c70cf8dd4abcd20c113a9e5b54ccec8868
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 10 18:08:27 2020 -0500
+
+    implement golang interpreter
+    
+    - enables using golang to control the deployment.
+    - simplifies some interactions where file or bash script are painful (such as detaching/attaching to a loadbalancer).
+
+commit 1edc1cdc7347787557f3b8df6312188829e02ca2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 10 18:08:53 2020 -0500
+
+    update vendor
+
+commit 7e5c07a68d328e2b98a66bff3fe7d273e7f938dc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 8 12:25:50 2020 -0500
+
+    release 0.1.1578504325-2484577b
+
 commit 2484577be27924aa1eb0df2f6fd3353e5351628c
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jan 8 12:25:25 2020 -0500
