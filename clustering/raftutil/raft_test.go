@@ -129,7 +129,7 @@ func overlayRaft(ctx context.Context, q BacklogQueueWorker, tmpdir string, p clu
 			}
 
 			networkTransport := raft.NewNetworkTransportWithConfig(&raft.NetworkTransportConfig{
-				Logger:  log.New(ioutil.Discard, "", log.LstdFlags),
+				// Logger:  log.New(ioutil.Discard, "", log.LstdFlags),
 				Stream:  NewUnixStreamLayer(l),
 				MaxPool: 1,
 				Timeout: time.Second,
