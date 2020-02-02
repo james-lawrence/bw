@@ -3,36 +3,34 @@ package torrent
 import (
 	"time"
 
-	"github.com/anacrolix/log"
+	alog "github.com/anacrolix/log"
 	"github.com/anacrolix/upnp"
+	"github.com/pkg/errors"
 )
 
-func (cl *Client) addPortMapping(d upnp.Device, proto upnp.Protocol, internalPort int) {
-	externalPort, err := d.AddPortMapping(proto, internalPort, internalPort, "anacrolix/torrent", 0)
+func (cl *Client) addPortMapping(d upnp.Device, proto upnp.Protocol, internalPort int, upnpID string) {
+	externalPort, err := d.AddPortMapping(proto, internalPort, internalPort, upnpID, 0)
 	if err != nil {
-		cl.logger.WithValues(log.Warning).Printf("error adding %s port mapping: %s", proto, err)
+		cl.config.warn().Println(errors.Wrapf(err, "error adding %s port mapping", proto))
 	} else if externalPort != internalPort {
-		cl.logger.WithValues(log.Warning).Printf("external port %d does not match internal port %d in port mapping", externalPort, internalPort)
+		cl.config.warn().Printf("external port %d does not match internal port %d in port mapping\n", externalPort, internalPort)
 	} else {
-		cl.logger.WithValues(log.Info).Printf("forwarded external %s port %d", proto, externalPort)
+		cl.config.debug().Printf("forwarded external %s port %d\n", proto, externalPort)
 	}
 }
 
 func (cl *Client) forwardPort() {
-	cl.lock()
-	defer cl.unlock()
 	if cl.config.NoDefaultPortForwarding {
 		return
 	}
-	cl.unlock()
-	ds := upnp.Discover(0, 2*time.Second, cl.logger.WithValues("upnp-discover"))
+	ds := upnp.Discover(0, 2*time.Second, alog.Discard)
+	cl.config.debug().Printf("discovered %d upnp devices\n", len(ds))
 	cl.lock()
-	cl.logger.Printf("discovered %d upnp devices", len(ds))
 	port := cl.incomingPeerPort()
+	id := cl.config.UpnpID
 	cl.unlock()
 	for _, d := range ds {
-		go cl.addPortMapping(d, upnp.TCP, port)
-		go cl.addPortMapping(d, upnp.UDP, port)
+		go cl.addPortMapping(d, upnp.TCP, port, id)
+		go cl.addPortMapping(d, upnp.UDP, port, id)
 	}
-	cl.lock()
 }

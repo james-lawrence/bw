@@ -1,6 +1,7 @@
 package torrent
 
 import (
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -8,10 +9,7 @@ import (
 
 	"github.com/anacrolix/dht/v2"
 	"github.com/anacrolix/dht/v2/krpc"
-	"github.com/anacrolix/log"
-	"github.com/anacrolix/missinggo"
-	"github.com/anacrolix/missinggo/conntrack"
-	"github.com/anacrolix/missinggo/expect"
+	"github.com/anacrolix/missinggo/v2/conntrack"
 	"golang.org/x/time/rate"
 
 	"github.com/anacrolix/torrent/iplist"
@@ -19,19 +17,17 @@ import (
 	"github.com/anacrolix/torrent/storage"
 )
 
-var DefaultHTTPUserAgent = "Go-Torrent/1.0"
+// DefaultHTTPUserAgent ...
+const DefaultHTTPUserAgent = "Go-Torrent/1.0"
 
-// Probably not safe to modify this after it's given to a Client.
+// ClientConfig not safe to modify this after it's given to a Client.
 type ClientConfig struct {
 	// Store torrent file data in this directory unless .DefaultStorage is
 	// specified.
 	DataDir string `long:"data-dir" description:"directory to store downloaded torrent data"`
-	// The address to listen for new uTP and TCP bittorrent protocol
-	// connections. DHT shares a UDP socket with uTP unless configured
-	// otherwise.
-	ListenHost              func(network string) string
-	ListenPort              int
+
 	NoDefaultPortForwarding bool
+	UpnpID                  string
 	// Don't announce to trackers. This only leaves DHT to discover peers.
 	DisableTrackers bool `long:"disable-trackers"`
 	DisablePEX      bool `long:"disable-pex"`
@@ -85,9 +81,9 @@ type ClientConfig struct {
 	DisableIPv6      bool `long:"disable-ipv6"`
 	DisableIPv4      bool
 	DisableIPv4Peers bool
-	// Perform logging and any other behaviour that will help debug.
-	Debug  bool `help:"enable debugging"`
-	Logger log.Logger
+	Logger           logger // standard logging for errors, defaults to stderr
+	Warn             logger // warn logging
+	Debug            logger // debug logging, defaults to discard
 
 	// HTTPProxy defines proxy for HTTP requests.
 	// Format: func(*Request) (*url.URL, error),
@@ -124,8 +120,8 @@ type ClientConfig struct {
 
 	// The IP addresses as our peers should see them. May differ from the
 	// local interfaces due to NAT or other network configurations.
-	PublicIp4 net.IP
-	PublicIp6 net.IP
+	PublicIP4 net.IP
+	PublicIP6 net.IP
 
 	DisableAcceptRateLimiting bool
 	// Don't add connections that have the same peer ID as an existing
@@ -138,19 +134,49 @@ type ClientConfig struct {
 	DHTOnQuery func(query *krpc.Msg, source net.Addr) (propagate bool)
 }
 
-func (cfg *ClientConfig) SetListenAddr(addr string) *ClientConfig {
-	host, port, err := missinggo.ParseHostPort(addr)
-	expect.Nil(err)
-	cfg.ListenHost = func(string) string { return host }
-	cfg.ListenPort = port
-	return cfg
+func (cfg *ClientConfig) errors() llog {
+	return llog{logger: cfg.Logger}
 }
 
+func (cfg *ClientConfig) warn() llog {
+	return llog{logger: cfg.Warn}
+}
+
+func (cfg *ClientConfig) info() llog {
+	return llog{logger: cfg.Logger}
+}
+
+func (cfg *ClientConfig) debug() llog {
+	return llog{logger: cfg.Debug}
+}
+
+func (cfg *ClientConfig) listenOnNetwork(n network) bool {
+	if n.Ipv4 && cfg.DisableIPv4 {
+		return false
+	}
+
+	if n.Ipv6 && cfg.DisableIPv6 {
+		return false
+	}
+
+	if n.TCP && cfg.DisableTCP {
+		return false
+	}
+
+	if n.UDP && cfg.DisableUTP && cfg.NoDHT {
+		return false
+	}
+
+	return true
+}
+
+// NewDefaultClientConfig default client configuration.
 func NewDefaultClientConfig() *ClientConfig {
 	cc := &ClientConfig{
 		HTTPUserAgent:                  DefaultHTTPUserAgent,
 		ExtendedHandshakeClientVersion: "go.torrent dev 20181121",
 		Bep20:                          "-GT0002-",
+		UpnpID:                         "anacrolix/torrent",
 		NominalDialTimeout:             20 * time.Second,
 		MinDialTimeout:                 3 * time.Second,
 		EstablishedConnsPerTorrent:     50,
@@ -159,24 +185,25 @@ func NewDefaultClientConfig() *ClientConfig {
 		TorrentPeersLowWater:           50,
 		HandshakesTimeout:              4 * time.Second,
 		DhtStartingNodes:               dht.GlobalBootstrapAddrs,
-		ListenHost:                     func(string) string { return "" },
 		UploadRateLimiter:              unlimited,
 		DownloadRateLimiter:            unlimited,
 		ConnTracker:                    conntrack.NewInstance(),
+		DisableAcceptRateLimiting:      true,
 		HeaderObfuscationPolicy: HeaderObfuscationPolicy{
 			Preferred:        true,
 			RequirePreferred: false,
 		},
 		CryptoSelector: mse.DefaultCryptoSelector,
 		CryptoProvides: mse.AllSupportedCrypto,
-		ListenPort:     42069,
-		Logger:         log.Default,
+		Logger:         log.New(log.Writer(), "[torrent] ", log.Flags()),
+		Warn:           discard{},
+		Debug:          discard{},
 	}
-	cc.ConnTracker.SetNoMaxEntries()
-	cc.ConnTracker.Timeout = func(conntrack.Entry) time.Duration { return 0 }
+
 	return cc
 }
 
+// HeaderObfuscationPolicy ...
 type HeaderObfuscationPolicy struct {
 	RequirePreferred bool // Whether the value of Preferred is a strict requirement.
 	Preferred        bool // Whether header obfuscation is preferred.

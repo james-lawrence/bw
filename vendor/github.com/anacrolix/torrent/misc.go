@@ -1,10 +1,13 @@
 package torrent
 
 import (
+	"encoding/binary"
 	"errors"
+	"hash/fnv"
 	"net"
+	"time"
 
-	"github.com/anacrolix/missinggo"
+	"github.com/anacrolix/missinggo/v2"
 	"golang.org/x/time/rate"
 
 	"github.com/anacrolix/torrent/metainfo"
@@ -16,8 +19,25 @@ type chunkSpec struct {
 }
 
 type request struct {
-	Index pp.Integer
+	Digest   uint64
+	Index    pp.Integer
+	Reserved time.Time
+	Priority int
 	chunkSpec
+}
+
+func (r request) rDigest(i, b, l uint32) uint64 {
+	bs := make([]byte, 12)
+	binary.LittleEndian.PutUint32(bs[:4], uint32(i))
+	binary.LittleEndian.PutUint32(bs[4:8], uint32(b))
+	binary.LittleEndian.PutUint32(bs[8:], uint32(l))
+	digest := fnv.New64a()
+	digest.Write(bs)
+	return digest.Sum64()
+}
+
+func (r request) digest() uint64 {
+	return r.rDigest(uint32(r.Index), uint32(r.Begin), uint32(r.Length))
 }
 
 func (r request) ToMsg(mt pp.MessageType) pp.Message {
@@ -30,7 +50,21 @@ func (r request) ToMsg(mt pp.MessageType) pp.Message {
 }
 
 func newRequest(index, begin, length pp.Integer) request {
-	return request{index, chunkSpec{begin, length}}
+	return request{
+		Digest:    request{}.rDigest(uint32(index), uint32(begin), uint32(length)),
+		Index:     index,
+		chunkSpec: chunkSpec{begin, length},
+	}
+}
+
+func newRequest2(index, begin, length pp.Integer, prio int) request {
+	return request{
+		Digest:    request{}.rDigest(uint32(index), uint32(begin), uint32(length)),
+		Index:     index,
+		Priority:  prio,
+		chunkSpec: chunkSpec{begin, length},
+		Reserved:  time.Now(),
+	}
 }
 
 func newRequestFromMessage(msg *pp.Message) request {
@@ -59,6 +93,7 @@ func torrentOffsetRequest(torrentLength, pieceSize, chunkSize, offset int64) (
 	if offset < 0 || offset >= torrentLength {
 		return
 	}
+
 	r.Index = pp.Integer(offset / pieceSize)
 	r.Begin = pp.Integer(offset % pieceSize / chunkSize * chunkSize)
 	r.Length = pp.Integer(chunkSize)
@@ -70,6 +105,8 @@ func torrentOffsetRequest(torrentLength, pieceSize, chunkSize, offset int64) (
 	if int64(r.Length) > torrentLeft {
 		r.Length = pp.Integer(torrentLeft)
 	}
+
+	r = newRequest(r.Index, r.Begin, r.Length)
 	ok = true
 	return
 }
@@ -107,7 +144,7 @@ func chunkIndexSpec(index pp.Integer, pieceLength, chunkSize pp.Integer) chunkSp
 }
 
 func connLessTrusted(l, r *connection) bool {
-	return l.netGoodPiecesDirtied() < r.netGoodPiecesDirtied()
+	return l.trust().Less(r.trust())
 }
 
 func connIsIpv6(nc interface {
@@ -155,6 +192,5 @@ var unlimited = rate.NewLimiter(rate.Inf, 0)
 
 type (
 	pieceIndex = int
-	InfoHash   = metainfo.Hash
 	IpPort     = missinggo.IpPort
 )

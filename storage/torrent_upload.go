@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/metainfo"
 	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
@@ -26,7 +25,7 @@ func (t torrentU) Upload(r io.Reader) (hash.Hash, error) {
 func (t torrentU) Info() (hash.Hash, string, error) {
 	var (
 		err  error
-		mi   metainfo.MetaInfo
+		mi   torrent.Metadata
 		util TorrentUtil
 	)
 
@@ -49,5 +48,7 @@ func (t torrentU) Info() (hash.Hash, string, error) {
 		return nil, "", err
 	}
 
-	return t.sha, mi.Magnet(uid, mi.HashInfoBytes()).String(), nil
+	// mi.DisplayName = uid
+
+	return t.sha, util.magnet(mi).String(), nil
 }

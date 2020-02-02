@@ -124,27 +124,6 @@ var _ = Describe("Astutil", func() {
 		})
 	})
 
-	Describe("PrintPackage", func() {
-		It("should return any error that occurred", func() {
-			fset := token.NewFileSet()
-			pkg, err := LocatePackage("go/ast", build.Default, StrictPackageName("ast"))
-			Expect(err).ToNot(HaveOccurred())
-			p := ASTPrinter{}
-			w := errWriter{err: fmt.Errorf("boom")}
-			Expect(PrintPackage(p, w, fset, pkg, []string{})).To(MatchError("failed to print the package header: boom"))
-		})
-
-		It("should write out the package name and the preface", func() {
-			fset := token.NewFileSet()
-			pkg, err := LocatePackage("go/ast", build.Default, StrictPackageName("ast"))
-			Expect(err).ToNot(HaveOccurred())
-			p := ASTPrinter{}
-			w := bytes.NewBuffer([]byte{})
-			Expect(PrintPackage(p, w, fset, pkg, []string{})).ToNot(HaveOccurred())
-			Expect(w.String()).To(Equal(fmt.Sprintf("package ast\n%s\n\n", fmt.Sprintf(Preface, ""))))
-		})
-	})
-
 	Describe("ASTPrinter", func() {
 		Describe("FprintAST", func() {
 			It("should print the ast node into the buffer", func() {

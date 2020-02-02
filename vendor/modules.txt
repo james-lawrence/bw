@@ -11,17 +11,16 @@ github.com/alecthomas/template
 github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
 github.com/alecthomas/units
-# github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
+# github.com/anacrolix/dht/v2 v2.5.0
 github.com/anacrolix/dht/v2
 github.com/anacrolix/dht/v2/krpc
 # github.com/anacrolix/go-libutp v1.0.2
 github.com/anacrolix/go-libutp
-# github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
+# github.com/anacrolix/log v0.6.0
 github.com/anacrolix/log
 # github.com/anacrolix/missinggo v1.2.1
 github.com/anacrolix/missinggo
 github.com/anacrolix/missinggo/bitmap
-github.com/anacrolix/missinggo/conntrack
 github.com/anacrolix/missinggo/expect
 github.com/anacrolix/missinggo/httptoo
 github.com/anacrolix/missinggo/inproc
@@ -36,14 +35,28 @@ github.com/anacrolix/missinggo/slices
 github.com/anacrolix/missinggo/x
 # github.com/anacrolix/missinggo/perf v1.0.0
 github.com/anacrolix/missinggo/perf
-# github.com/anacrolix/mmsg v1.0.0
+# github.com/anacrolix/missinggo/v2 v2.3.1
+github.com/anacrolix/missinggo/v2
+github.com/anacrolix/missinggo/v2/conntrack
+github.com/anacrolix/missinggo/v2/iter
+# github.com/anacrolix/mmsg v0.0.0-20180515031531-a4a3ba1fc8bb
 github.com/anacrolix/mmsg
 github.com/anacrolix/mmsg/socket
+# github.com/anacrolix/multiless v0.0.0-20191223025854-070b7994e841
+github.com/anacrolix/multiless
+# github.com/anacrolix/stm v0.2.0
+github.com/anacrolix/stm
+github.com/anacrolix/stm/rate
+github.com/anacrolix/stm/stmutil
 # github.com/anacrolix/sync v0.2.0
 github.com/anacrolix/sync
-# github.com/anacrolix/torrent v1.8.3-0.20191017064635-289293f3cc0c
+# github.com/anacrolix/torrent v1.11.0 => github.com/james-lawrence/torrent v0.0.0-20200202143322-8878160be721
 github.com/anacrolix/torrent
 github.com/anacrolix/torrent/bencode
+github.com/anacrolix/torrent/internal/x/bitmapx
+github.com/anacrolix/torrent/internal/x/bytesx
+github.com/anacrolix/torrent/internal/x/debugx
+github.com/anacrolix/torrent/internal/x/stringsx
 github.com/anacrolix/torrent/iplist
 github.com/anacrolix/torrent/logonce
 github.com/anacrolix/torrent/metainfo
@@ -97,9 +110,9 @@ github.com/aws/aws-sdk-go/service/elbv2
 github.com/aws/aws-sdk-go/service/route53
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/boltdb/bolt v1.3.1
-github.com/boltdb/bolt
-# github.com/bradfitz/iter v0.0.0-20190303215204-33e6a9893b0c
+# github.com/benbjohnson/immutable v0.2.0
+github.com/benbjohnson/immutable
+# github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
 github.com/bradfitz/iter
 # github.com/cenkalti/backoff v2.1.1+incompatible
 github.com/cenkalti/backoff
@@ -116,6 +129,8 @@ github.com/davecgh/go-spew/spew
 github.com/dustin/go-humanize
 # github.com/edsrzf/mmap-go v1.0.0
 github.com/edsrzf/mmap-go
+# github.com/etcd-io/bbolt v1.3.3
+github.com/etcd-io/bbolt
 # github.com/fatih/color v1.7.0
 github.com/fatih/color
 # github.com/fsnotify/fsnotify v1.4.7
@@ -213,7 +228,7 @@ github.com/hpcloud/tail/ratelimiter
 github.com/hpcloud/tail/util
 github.com/hpcloud/tail/watch
 github.com/hpcloud/tail/winfile
-# github.com/huandu/xstrings v1.2.0
+# github.com/huandu/xstrings v1.3.0
 github.com/huandu/xstrings
 # github.com/huin/goupnp v0.0.0-20171109214107-dceda08e705b
 github.com/huin/goupnp
@@ -236,11 +251,11 @@ github.com/manveru/faker
 github.com/maruel/panicparse/stack
 # github.com/mattn/go-colorable v0.1.4
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.10
+# github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.4
 github.com/mattn/go-runewidth
-# github.com/mattn/go-sqlite3 v1.11.0
+# github.com/mattn/go-sqlite3 v2.0.3+incompatible
 github.com/mattn/go-sqlite3
 # github.com/miekg/dns v1.1.15
 github.com/miekg/dns
@@ -294,7 +309,7 @@ github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
 # github.com/philhofer/fwd v1.0.0
 github.com/philhofer/fwd
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/ryanuber/go-glob v1.0.0
 github.com/ryanuber/go-glob
@@ -306,7 +321,7 @@ github.com/sean-/seed
 github.com/spaolacci/murmur3
 # github.com/subosito/gotenv v1.1.0
 github.com/subosito/gotenv
-# github.com/tinylib/msgp v1.1.0
+# github.com/tinylib/msgp v1.1.1
 github.com/tinylib/msgp/msgp
 # github.com/willf/bitset v1.1.10
 github.com/willf/bitset
@@ -339,7 +354,7 @@ golang.org/x/crypto/ocsp
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/ssh
-# golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
+# golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
@@ -364,7 +379,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab
+# golang.org/x/sys v0.0.0-20200124204421-9fbb57f87de9
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -389,7 +404,7 @@ golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
+# golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 golang.org/x/time/rate
 # golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
 golang.org/x/tools/go/ast/astutil
@@ -403,7 +418,7 @@ golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/module
 golang.org/x/tools/internal/semver
-# golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898
+# golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/api v0.8.0

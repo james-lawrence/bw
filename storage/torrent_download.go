@@ -6,7 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/anacrolix/dht/v2/krpc"
 	"github.com/anacrolix/torrent"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
@@ -19,47 +18,37 @@ type torrentD struct {
 	util   TorrentUtil
 }
 
-func peerToNode(p agent.Peer) krpc.NodeInfo {
-	udp := &net.UDPAddr{IP: net.ParseIP(p.Ip), Port: int(p.TorrentPort)}
-	na := krpc.NodeAddr{}
-	na.FromUDPAddr(udp)
-
-	return krpc.NodeInfo{
-		Addr: na,
+func peerToNode(p agent.Peer) torrent.Peer {
+	return torrent.Peer{
+		IP:     net.ParseIP(p.Ip),
+		Port:   int(p.TorrentPort),
+		Source: "Hg",
 	}
 }
 
-func peersToNode(peers ...agent.Peer) (r []krpc.NodeInfo) {
+func peersToNode(peers ...agent.Peer) (r []torrent.Peer) {
 	for _, p := range peers {
 		r = append(r, peerToNode(p))
 	}
 	return r
 }
 
-func (t torrentD) Download(ctx context.Context, archive agent.Archive) io.ReadCloser {
+func (t torrentD) Download(ctx context.Context, archive agent.Archive) (r io.ReadCloser) {
 	var (
-		err error
-		tt  *torrent.Torrent
+		err      error
+		metadata torrent.Metadata
 	)
 
-	for _, s := range t.client.DhtServers() {
-		s.Bootstrap()
+	if metadata, err = torrent.NewFromMagnet(archive.Location); err != nil {
+		return newErrReader(errors.WithStack(err))
 	}
 
 	wait, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	if tt, err = t.client.AddMagnet(archive.Location); err != nil {
+	if r, err = t.client.Download(wait, metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...)); err != nil {
 		return newErrReader(errors.WithStack(err))
 	}
 
-	select {
-	case <-tt.GotInfo():
-	case <-wait.Done():
-		return newErrReader(errors.New("timed out waiting for torrent info"))
-	}
-
-	tt.DownloadAll()
-
-	return tt.NewReader()
+	return r
 }

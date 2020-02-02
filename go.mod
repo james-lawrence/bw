@@ -1,7 +1,5 @@
 module github.com/james-lawrence/bw
 
-// replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20191020122317-78654f2d0e25
-
 require (
 	cloud.google.com/go v0.38.0
 	github.com/0xAX/notificator v0.0.0-20191016112426-3962a5ea8da1
@@ -9,16 +7,15 @@ require (
 	github.com/Microsoft/go-winio v0.4.3 // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/RoaringBitmap/roaring v0.4.21 // indirect
 	github.com/SAP/go-hdb v0.14.1 // indirect
 	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
-	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/anacrolix/dht/v2 v2.1.1-0.20191017060219-221f300f6ea8
-	github.com/anacrolix/log v0.3.1-0.20191001111012-13cede988bcd
+	github.com/anacrolix/dht v1.0.1
+	github.com/anacrolix/dht/v2 v2.5.0
+	github.com/anacrolix/log v0.6.0
 	github.com/anacrolix/missinggo v1.2.1
-	github.com/anacrolix/torrent v1.8.3-0.20191017064635-289293f3cc0c
+	github.com/anacrolix/mmsg v1.0.0 // indirect
+	github.com/anacrolix/torrent v1.13.0
 	github.com/armon/go-metrics v0.3.0 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
@@ -79,7 +76,6 @@ require (
 	github.com/maruel/panicparse v1.0.2 // indirect
 	github.com/maruel/ut v1.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/miekg/dns v1.1.15
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
@@ -97,17 +93,16 @@ require (
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/ory/dockertest v3.3.4+incompatible // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/subosito/gotenv v1.1.0
+	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-	golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582 // indirect
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab // indirect
-	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
-	golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898 // indirect
 	google.golang.org/api v0.8.0
 	google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51 // indirect
 	google.golang.org/grpc v1.23.1
@@ -120,3 +115,5 @@ require (
 )
 
 go 1.12
+
+replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20200202170000-801110691f05

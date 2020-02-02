@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bw/interp/aws/elb"
 	"bw/interp/shell"
 	"context"
 	"log"
@@ -18,9 +17,9 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if err := elb.Restart(ctx, restart); err != nil {
-		log.Fatalln(err)
-	}
+	// if err := elb.Restart(ctx, restart); err != nil {
+	// 	log.Fatalln(err)
+	// }
 }
 
 func restart(ctx context.Context) error {

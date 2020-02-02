@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"net"
@@ -9,9 +10,7 @@ import (
 
 	"github.com/anacrolix/dht/v2"
 	"github.com/anacrolix/dht/v2/krpc"
-	"github.com/anacrolix/missinggo"
 	"github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -51,7 +50,7 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 			for _, tf := range tt.Files() {
 				deployDir := filepath.Join(deploysDir, tf.Path())
 				if _, cause := os.Stat(deployDir); os.IsNotExist(cause) {
-					tt.Drop()
+					c.client.Stop(tt.Metadata())
 					logx.MaybeLog(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
 					dropped = dropped + 1
 				}
@@ -138,43 +137,39 @@ func (TorrentUtil) createFile(dir string) (*os.File, error) {
 	return dst, err
 }
 
-func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (mi metainfo.MetaInfo, err error) {
-	if mi, err = t.infoFromFile(path); err != nil {
-		return mi, err
+func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (m torrent.Metadata, err error) {
+	var (
+		tt torrent.Torrent
+	)
+
+	if tt, _, err = c.MaybeStart(torrent.NewFromFile(path)); err != nil {
+		return m, err
 	}
 
-	ts := torrent.TorrentSpecFromMetaInfo(&mi)
-	if _, _, err = c.AddTorrentSpec(ts); err != nil {
-		return mi, errors.WithStack(err)
+	if err = c.DownloadInto(context.Background(), tt.Metadata(), ioutil.Discard); err != nil {
+		return m, err
 	}
+	// if mi, err = t.infoFromFile(path); err != nil {
+	// 	return mi, err
+	// }
 
+	// if _, _, err = c.MaybeStart(torrent.NewFromMetaInfo(&mi)); err != nil {
+	// 	return mi, err
+	// }
 	for _, s := range c.DhtServers() {
-		_, err := s.Announce(mi.HashInfoBytes(), 0, true)
+		_, err := s.Announce(tt.Metadata().InfoHash, 0, true)
 		logx.MaybeLog(errors.Wrap(err, "announce failure"))
 	}
 
-	return mi, nil
+	return tt.Metadata(), nil
 }
 
-func (TorrentUtil) infoFromFile(path string) (mi metainfo.MetaInfo, err error) {
-	var (
-		b []byte
-	)
-
-	info := metainfo.Info{PieceLength: missinggo.MiB}
-
-	if err = info.BuildFromFilePath(path); err != nil {
-		return mi, errors.WithStack(err)
+func (TorrentUtil) magnet(meta torrent.Metadata) metainfo.Magnet {
+	// for t := range mi.UpvertedAnnounceList().DistinctValues() {
+	// 	m.Trackers = append(m.Trackers, t)
+	// }
+	return metainfo.Magnet{
+		DisplayName: meta.DisplayName,
+		InfoHash:    meta.InfoHash,
 	}
-
-	if b, err = bencode.Marshal(info); err != nil {
-		return mi, errors.WithStack(err)
-	}
-
-	mi = metainfo.MetaInfo{
-		InfoBytes: b,
-	}
-	mi.SetDefaults()
-
-	return mi, nil
 }

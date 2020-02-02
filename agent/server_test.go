@@ -90,8 +90,8 @@ var _ = Describe("Server", func() {
 		It("should return logs from the given deployer", func() {
 			h := testClient()
 			defer h.Cleanup()
-
-			pipe := h.client.Logs(context.Background(), []byte("fake"))
+			p := h.cluster.Local()
+			pipe := h.client.Logs(context.Background(), &p, []byte("fake"))
 			raw, err := ioutil.ReadAll(pipe)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(raw)).To(Equal("INFO: fake"))

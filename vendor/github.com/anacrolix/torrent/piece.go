@@ -41,9 +41,9 @@ const (
 type Piece struct {
 	// The completed piece SHA1 hash, from the metainfo "pieces" field.
 	hash  *metainfo.Hash
-	t     *Torrent
+	t     *torrent
 	index pieceIndex
-	files []*File
+
 	// Chunks we've written to since the last check. The chunk offset and
 	// length can be determined by the request chunkSize in use.
 	dirtyChunks bitmap.Bitmap
@@ -58,10 +58,6 @@ type Piece struct {
 	pendingWritesMutex sync.Mutex
 	pendingWrites      int
 	noPendingWrites    sync.Cond
-
-	// Connections that have written data to this piece since its last check.
-	// This can include connections that have closed.
-	dirtiers map[*connection]struct{}
 }
 
 func (p *Piece) String() string {
@@ -77,6 +73,9 @@ func (p *Piece) Storage() storage.Piece {
 }
 
 func (p *Piece) pendingChunkIndex(chunkIndex int) bool {
+	if p.dirtyChunks.IsEmpty() {
+		return true
+	}
 	return !p.dirtyChunks.Contains(chunkIndex)
 }
 
@@ -138,6 +137,14 @@ func (p *Piece) waitNoPendingWrites() {
 }
 
 func (p *Piece) chunkIndexDirty(chunk pp.Integer) bool {
+	if p.dirtyChunks.IsEmpty() {
+		return false
+	}
+
+	if p.dirtyChunks.Len() == 0 {
+		return false
+	}
+
 	return p.dirtyChunks.Contains(bitmap.BitIndex(chunk))
 }
 
@@ -179,28 +186,28 @@ func (p *Piece) bytesLeft() (ret pp.Integer) {
 	return p.length() - p.numDirtyBytes()
 }
 
-// Forces the piece data to be rehashed.
+// VerifyData forces the piece data to be rehashed.
 func (p *Piece) VerifyData() {
-	p.t.cl.lock()
-	defer p.t.cl.unlock()
+	p.t.lock()
+	defer p.t.unlock()
 	target := p.numVerifies + 1
 	if p.hashing {
 		target++
 	}
-	//log.Printf("target: %d", target)
-	p.t.queuePieceCheck(p.index)
+
+	p.t.digests.Enqueue(p.index)
+
 	for {
-		//log.Printf("got %d verifies", p.numVerifies)
 		if p.numVerifies >= target {
 			break
 		}
-		p.t.cl.event.Wait()
+
+		p.t.event.Wait()
 	}
-	// log.Print("done")
 }
 
 func (p *Piece) queuedForHash() bool {
-	return p.t.piecesQueuedForHash.Get(bitmap.BitIndex(p.index))
+	return p.t.piecesM.ChunksComplete(p.index)
 }
 
 func (p *Piece) torrentBeginOffset() int64 {
@@ -212,25 +219,21 @@ func (p *Piece) torrentEndOffset() int64 {
 }
 
 func (p *Piece) SetPriority(prio piecePriority) {
-	p.t.cl.lock()
-	defer p.t.cl.unlock()
+	p.t.lock()
+	defer p.t.unlock()
 	p.priority = prio
 	p.t.updatePiecePriority(p.index)
 }
 
 func (p *Piece) uncachedPriority() (ret piecePriority) {
-	if p.t.pieceComplete(p.index) || p.t.pieceQueuedForHash(p.index) || p.t.hashingPiece(p.index) {
+	if p.t.pieceComplete(p.index) || p.t.piecesM.ChunksComplete(p.index) {
 		return PiecePriorityNone
 	}
-	for _, f := range p.files {
-		ret.Raise(f.prio)
-	}
+
 	if p.t.readerNowPieces.Contains(int(p.index)) {
 		ret.Raise(PiecePriorityNow)
 	}
-	// if t.readerNowPieces.Contains(piece - 1) {
-	// 	return PiecePriorityNext
-	// }
+
 	if p.t.readerReadaheadPieces.Contains(bitmap.BitIndex(p.index)) {
 		ret.Raise(PiecePriorityReadahead)
 	}

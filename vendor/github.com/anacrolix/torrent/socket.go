@@ -2,18 +2,18 @@ package torrent
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/url"
 	"strconv"
 
 	"github.com/anacrolix/missinggo"
-	"github.com/anacrolix/missinggo/perf"
 	"github.com/pkg/errors"
 	"golang.org/x/net/proxy"
 )
 
 type dialer interface {
-	dial(_ context.Context, addr string) (net.Conn, error)
+	Dial(ctx context.Context, addr string) (net.Conn, error)
 }
 
 type socket interface {
@@ -32,16 +32,16 @@ func getProxyDialer(proxyURL string) (proxy.Dialer, error) {
 
 func listen(n network, addr, proxyURL string, f firewallCallback) (socket, error) {
 	switch {
-	case n.Tcp:
-		return listenTcp(n.String(), addr, proxyURL)
-	case n.Udp:
+	case n.TCP:
+		return listenTCP(n.String(), addr, proxyURL)
+	case n.UDP:
 		return listenUtp(n.String(), addr, proxyURL, f)
 	default:
 		panic(n)
 	}
 }
 
-func listenTcp(network, address, proxyURL string) (s socket, err error) {
+func listenTCP(network, address, proxyURL string) (s socket, err error) {
 	l, err := net.Listen(network, address)
 	if err != nil {
 		return
@@ -55,21 +55,27 @@ func listenTcp(network, address, proxyURL string) (s socket, err error) {
 	// If we don't need the proxy - then we should return default net.Dialer,
 	// otherwise, let's try to parse the proxyURL and return proxy.Dialer
 	if len(proxyURL) != 0 {
-		// TODO: The error should be propagated, as proxy may be in use for
-		// security or privacy reasons. Also just pass proxy.Dialer in from
-		// the Config.
-		if dialer, err := getProxyDialer(proxyURL); err == nil {
-			return tcpSocket{l, func(ctx context.Context, addr string) (conn net.Conn, err error) {
-				defer perf.ScopeTimerErr(&err)()
-				return dialer.Dial(network, addr)
-			}}, nil
+		dl := disabledListener{l}
+		dialer, err := getProxyDialer(proxyURL)
+		if err != nil {
+			return nil, err
 		}
+		return tcpSocket{dl, func(ctx context.Context, addr string) (conn net.Conn, err error) {
+			return dialer.Dial(network, addr)
+		}}, nil
 	}
 	dialer := net.Dialer{}
 	return tcpSocket{l, func(ctx context.Context, addr string) (conn net.Conn, err error) {
-		defer perf.ScopeTimerErr(&err)()
 		return dialer.DialContext(ctx, network, addr)
 	}}, nil
+}
+
+type disabledListener struct {
+	net.Listener
+}
+
+func (dl disabledListener) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("tcp listener disabled due to proxy")
 }
 
 type tcpSocket struct {
@@ -77,7 +83,7 @@ type tcpSocket struct {
 	d func(ctx context.Context, addr string) (net.Conn, error)
 }
 
-func (me tcpSocket) dial(ctx context.Context, addr string) (net.Conn, error) {
+func (me tcpSocket) Dial(ctx context.Context, addr string) (net.Conn, error) {
 	return me.d(ctx, addr)
 }
 
@@ -89,6 +95,7 @@ func listenAll(networks []network, getHost func(string) string, port int, proxyU
 	for _, n := range networks {
 		nahs = append(nahs, networkAndHost{n, getHost(n.String())})
 	}
+
 	for {
 		ss, retry, err := listenAllRetry(nahs, port, proxyURL, f)
 		if !retry {
@@ -141,12 +148,23 @@ func listenUtp(network, addr, proxyURL string, fc firewallCallback) (s socket, e
 	// If we don't need the proxy - then we should return default net.Dialer,
 	// otherwise, let's try to parse the proxyURL and return proxy.Dialer
 	if len(proxyURL) != 0 {
-		if dialer, err := getProxyDialer(proxyURL); err == nil {
-			return utpSocketSocket{us, network, dialer}, nil
+		ds := disabledUtpSocket{us}
+		dialer, err := getProxyDialer(proxyURL)
+		if err != nil {
+			return nil, err
 		}
+		return utpSocketSocket{ds, network, dialer}, nil
 	}
 
 	return utpSocketSocket{us, network, nil}, nil
+}
+
+type disabledUtpSocket struct {
+	utpSocket
+}
+
+func (ds disabledUtpSocket) Accept() (net.Conn, error) {
+	return nil, fmt.Errorf("utp listener disabled due to proxy")
 }
 
 type utpSocketSocket struct {
@@ -155,8 +173,7 @@ type utpSocketSocket struct {
 	d       proxy.Dialer
 }
 
-func (me utpSocketSocket) dial(ctx context.Context, addr string) (conn net.Conn, err error) {
-	defer perf.ScopeTimerErr(&err)()
+func (me utpSocketSocket) Dial(ctx context.Context, addr string) (conn net.Conn, err error) {
 	if me.d != nil {
 		return me.d.Dial(me.network, addr)
 	}

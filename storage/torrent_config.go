@@ -2,11 +2,12 @@ package storage
 
 import (
 	"crypto/sha256"
+	"io/ioutil"
+	"log"
 	"net"
 	"os"
 
 	"github.com/anacrolix/dht/v2"
-	"github.com/anacrolix/log"
 	"github.com/anacrolix/torrent"
 	"github.com/pkg/errors"
 )
@@ -14,17 +15,10 @@ import (
 // TorrentOption ...
 type TorrentOption func(*TorrentConfig)
 
-// TorrentOptionDebug debug the torrent server.
-func TorrentOptionDebug(a bool) TorrentOption {
-	return func(c *TorrentConfig) {
-		c.ClientConfig.Debug = a
-	}
-}
-
 // TorrentOptionBind set address to bind to.
 func TorrentOptionBind(a net.Addr) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.ClientConfig.SetListenAddr(a.String())
+		c.addr = a
 	}
 }
 
@@ -59,16 +53,15 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
 	c.ClientConfig.DisableIPv6 = true
-	c.ClientConfig.Logger = log.Discard
-	// c.ClientConfig.Debug = true
+	c.ClientConfig.Logger = log.New(ioutil.Discard, "", 0)
 	c.ClientConfig.Seed = true
-	// c.ClientConfig.NoDefaultPortForwarding = true
 
 	for _, opt := range options {
 		opt(&c)
 	}
 
-	if c.client, err = torrent.NewClient(c.ClientConfig); err != nil {
+	autobind := torrent.NewAutobindSpecified(c.addr.String())
+	if c.client, err = autobind.Bind(torrent.NewClient(c.ClientConfig)); err != nil {
 		return c, errors.WithStack(err)
 	}
 
@@ -83,7 +76,8 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 
 // TorrentConfig ...
 type TorrentConfig struct {
-	c cluster
+	addr net.Addr
+	c    cluster
 	*torrent.ClientConfig
 	client *torrent.Client
 }

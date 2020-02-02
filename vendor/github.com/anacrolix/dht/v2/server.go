@@ -7,19 +7,21 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"runtime/pprof"
 	"text/tabwriter"
 	"time"
 
 	"github.com/anacrolix/log"
 	"github.com/anacrolix/missinggo"
-	"github.com/anacrolix/missinggo/conntrack"
+	"github.com/anacrolix/missinggo/v2/conntrack"
 	"github.com/anacrolix/sync"
 	"github.com/anacrolix/torrent/bencode"
 	"github.com/anacrolix/torrent/iplist"
 	"github.com/anacrolix/torrent/logonce"
 	"github.com/anacrolix/torrent/metainfo"
 	"github.com/pkg/errors"
-	"golang.org/x/time/rate"
+
+	"github.com/anacrolix/stm"
 
 	"github.com/anacrolix/dht/v2/krpc"
 )
@@ -45,7 +47,11 @@ type Server struct {
 	tokenServer  tokenServer // Manages tokens we issue to our queriers.
 	config       ServerConfig
 	stats        ServerStats
-	sendLimit    *rate.Limiter
+	sendLimit    interface {
+		Wait(ctx context.Context) error
+		Allow() bool
+		AllowStm(tx *stm.Tx) bool
+	}
 }
 
 func (s *Server) numGoodNodes() (num int) {
@@ -126,15 +132,19 @@ func (s *Server) Addr() net.Addr {
 	return s.socket.LocalAddr()
 }
 
+func NewDefaultServerConfig() *ServerConfig {
+	return &ServerConfig{
+		Conn:               mustListen(":0"),
+		NoSecurity:         true,
+		StartingNodes:      GlobalBootstrapAddrs,
+		ConnectionTracking: conntrack.NewInstance(),
+	}
+}
+
 // NewServer initializes a new DHT node server.
 func NewServer(c *ServerConfig) (s *Server, err error) {
 	if c == nil {
-		c = &ServerConfig{
-			Conn:               mustListen(":0"),
-			NoSecurity:         true,
-			StartingNodes:      GlobalBootstrapAddrs,
-			ConnectionTracking: conntrack.NewInstance(),
-		}
+		c = NewDefaultServerConfig()
 	}
 	if c.Conn == nil {
 		return nil, errors.New("non-nil Conn required")
@@ -380,8 +390,6 @@ func (s *Server) setReturnNodes(r *krpc.Return, queryMsg krpc.Msg, querySource A
 	return nil
 }
 
-// TODO: Probably should write error messages back to senders if something is
-// wrong.
 func (s *Server) handleQuery(source Addr, m krpc.Msg) {
 	go func() {
 		expvars.Add(fmt.Sprintf("received query %q", m.Q), 1)
@@ -470,7 +478,7 @@ func (s *Server) sendError(addr Addr, t string, e krpc.Error) {
 		panic(err)
 	}
 	s.logger().Printf("sending error to %q: %v", addr, e)
-	_, err = s.writeToNode(context.Background(), b, addr, false)
+	_, err = s.writeToNode(context.Background(), b, addr, false, true)
 	if err != nil {
 		s.logger().Printf("error replying to %q: %v", addr, err)
 	}
@@ -489,7 +497,7 @@ func (s *Server) reply(addr Addr, t string, r krpc.Return) {
 		panic(err)
 	}
 	log.Fmsg("replying to %q", addr).Log(s.logger())
-	wrote, err := s.writeToNode(context.Background(), b, addr, false)
+	wrote, err := s.writeToNode(context.Background(), b, addr, false, true)
 	if err != nil {
 		s.config.Logger.Printf("error replying to %s: %s", addr, err)
 	}
@@ -556,7 +564,7 @@ func (s *Server) nodeErr(n *node) error {
 	return nil
 }
 
-func (s *Server) writeToNode(ctx context.Context, b []byte, node Addr, wait bool) (wrote bool, err error) {
+func (s *Server) writeToNode(ctx context.Context, b []byte, node Addr, wait, rate bool) (wrote bool, err error) {
 	if list := s.ipBlockList; list != nil {
 		if r, ok := list.Lookup(node.IP()); ok {
 			err = fmt.Errorf("write to %v blocked by %v", node, r)
@@ -564,18 +572,25 @@ func (s *Server) writeToNode(ctx context.Context, b []byte, node Addr, wait bool
 		}
 	}
 	//s.config.Logger.WithValues(log.Debug).Printf("writing to %s: %q", node.String(), b)
-	if wait {
-		err = s.sendLimit.Wait(ctx)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		if !s.sendLimit.Allow() {
-			return false, errors.New("rate limit exceeded")
+	if rate {
+		if wait {
+			err = s.sendLimit.Wait(ctx)
+			if err != nil {
+				return false, err
+			}
+		} else {
+			if !s.sendLimit.Allow() {
+				return false, errors.New("rate limit exceeded")
+			}
 		}
 	}
 	n, err := s.socket.WriteTo(b, node.Raw())
 	writes.Add(1)
+	if rate {
+		expvars.Add("rated writes", 1)
+	} else {
+		expvars.Add("unrated writes", 1)
+	}
 	if err != nil {
 		writeErrors.Add(1)
 		err = fmt.Errorf("error writing %d bytes to %s: %s", len(b), node, err)
@@ -629,12 +644,34 @@ func (s *Server) connTrackEntryForAddr(a Addr) conntrack.Entry {
 	}
 }
 
+type numWrites int
+
+func (s *Server) beginQuery(addr Addr, reason string, f func() numWrites) stm.Operation {
+	return func(tx *stm.Tx) interface{} {
+		tx.Assert(s.sendLimit.AllowStm(tx))
+		cteh := s.config.ConnectionTracking.Allow(tx, s.connTrackEntryForAddr(addr), reason, -1)
+		tx.Assert(cteh != nil)
+		return func() {
+			writes := f()
+			finalizeCteh(cteh, writes)
+		}
+	}
+}
+
 func (s *Server) query(addr Addr, q string, a *krpc.MsgArgs, callback func(krpc.Msg, error)) error {
 	if callback == nil {
 		callback = func(krpc.Msg, error) {}
 	}
 	go func() {
-		callback(s.queryContext(context.Background(), addr, q, a))
+		stm.Atomically(
+			s.beginQuery(addr, fmt.Sprintf("send dht query %q", q),
+				func() numWrites {
+					m, writes, err := s.queryContext(context.Background(), addr, q, a)
+					callback(m, err)
+					return writes
+				},
+			),
+		).(func())()
 	}()
 	return nil
 }
@@ -662,9 +699,11 @@ func (s *Server) makeQueryBytes(q string, a *krpc.MsgArgs, t string) []byte {
 	return b
 }
 
-func (s *Server) queryContext(ctx context.Context, addr Addr, q string, a *krpc.MsgArgs) (reply krpc.Msg, err error) {
+func (s *Server) queryContext(ctx context.Context, addr Addr, q string, a *krpc.MsgArgs) (reply krpc.Msg, writes numWrites, err error) {
 	defer func(started time.Time) {
-		s.logger().WithValues(log.Debug).Printf("queryContext returned after %v (err=%v, reply.Y=%v, reply.E=%v)", time.Since(started), err, reply.Y, reply.E)
+		s.logger().WithValues(log.Debug, q).Printf(
+			"queryContext(%v) returned after %v (err=%v, reply.Y=%v, reply.E=%v, writes=%v)",
+			q, time.Since(started), err, reply.Y, reply.E, writes)
 	}(time.Now())
 	replyChan := make(chan krpc.Msg, 1)
 	t := &Transaction{
@@ -681,20 +720,12 @@ func (s *Server) queryContext(ctx context.Context, addr Addr, q string, a *krpc.
 	tk.T = tid
 	s.addTransaction(tk, t)
 	s.mu.Unlock()
-	writes := 0
-	cteh := s.config.ConnectionTracking.Wait(ctx, s.connTrackEntryForAddr(addr), "send dht query", -1)
 	sendErr := make(chan error, 1)
-	defer func() {
-		<-sendErr
-		if writes > 0 {
-			cteh.Done()
-		} else {
-			cteh.Forget()
-		}
-	}()
 	sendCtx, cancelSend := context.WithCancel(ctx)
 	defer cancelSend()
-	go s.transactionQuerySender(sendCtx, sendErr, s.makeQueryBytes(q, a, tid), &writes, addr)
+	go pprof.Do(sendCtx, pprof.Labels("q", q), func(ctx context.Context) {
+		s.transactionQuerySender(ctx, sendErr, s.makeQueryBytes(q, a, tid), &writes, addr)
+	})
 	expvars.Add(fmt.Sprintf("outbound %s queries", q), 1)
 	select {
 	case reply = <-replyChan:
@@ -713,14 +744,14 @@ func (s *Server) queryContext(ctx context.Context, addr Addr, q string, a *krpc.
 	return
 }
 
-func (s *Server) transactionQuerySender(sendCtx context.Context, sendErr chan<- error, b []byte, writes *int, addr Addr) {
+func (s *Server) transactionQuerySender(sendCtx context.Context, sendErr chan<- error, b []byte, writes *numWrites, addr Addr) {
 	defer close(sendErr)
 	err := transactionSender(
 		sendCtx,
 		func() error {
-			wrote, err := s.writeToNode(sendCtx, b, addr, *writes == 0)
+			wrote, err := s.writeToNode(sendCtx, b, addr, *writes == 0, *writes != 0)
 			if wrote {
-				(*writes)++
+				*writes++
 			}
 			return err
 		},
@@ -742,8 +773,6 @@ func (s *Server) transactionQuerySender(sendCtx context.Context, sendErr chan<- 
 
 // Sends a ping query to the address given.
 func (s *Server) Ping(node *net.UDPAddr, callback func(krpc.Msg, error)) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	return s.ping(node, callback)
 }
 
@@ -751,27 +780,31 @@ func (s *Server) ping(node *net.UDPAddr, callback func(krpc.Msg, error)) error {
 	return s.query(NewAddr(node), "ping", nil, callback)
 }
 
-func (s *Server) announcePeer(node Addr, infoHash int160, port int, token string, impliedPort bool, callback func(krpc.Msg, error)) error {
+func (s *Server) announcePeer(node Addr, infoHash int160, port int, token string, impliedPort bool) (m krpc.Msg, writes numWrites, err error) {
 	if port == 0 && !impliedPort {
-		return errors.New("nothing to announce")
+		err = errors.New("no port specified")
+		return
 	}
-	return s.query(node, "announce_peer", &krpc.MsgArgs{
-		ImpliedPort: impliedPort,
-		InfoHash:    infoHash.AsByteArray(),
-		Port:        &port,
-		Token:       token,
-	}, func(m krpc.Msg, err error) {
-		if callback != nil {
-			go callback(m, err)
-		}
-		if err := m.Error(); err != nil {
-			announceErrors.Add(1)
-			return
-		}
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		s.stats.SuccessfulOutboundAnnouncePeerQueries++
-	})
+	m, writes, err = s.queryContext(
+		context.TODO(), node, "announce_peer",
+		&krpc.MsgArgs{
+			ImpliedPort: impliedPort,
+			InfoHash:    infoHash.AsByteArray(),
+			Port:        &port,
+			Token:       token,
+		},
+	)
+	if err != nil {
+		return
+	}
+	if err = m.Error(); err != nil {
+		announceErrors.Add(1)
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats.SuccessfulOutboundAnnouncePeerQueries++
+	return
 }
 
 // Add response nodes to node table.
@@ -785,67 +818,17 @@ func (s *Server) addResponseNodes(d krpc.Msg) {
 }
 
 // Sends a find_node query to addr. targetID is the node we're looking for.
-func (s *Server) findNode(addr Addr, targetID int160, callback func(krpc.Msg, error)) (err error) {
-	return s.query(addr, "find_node", &krpc.MsgArgs{
+func (s *Server) findNode(addr Addr, targetID int160) (krpc.Msg, numWrites, error) {
+	m, writes, err := s.queryContext(context.TODO(), addr, "find_node", &krpc.MsgArgs{
 		Target: targetID.AsByteArray(),
 		Want:   []krpc.Want{krpc.WantNodes, krpc.WantNodes6},
-	}, func(m krpc.Msg, err error) {
-		// Scrape peers from the response to put in the server's table before
-		// handing the response back to the caller.
-		s.mu.Lock()
-		s.addResponseNodes(m)
-		s.mu.Unlock()
-		callback(m, err)
 	})
-}
-
-type TraversalStats struct {
-	NumAddrsTried int
-	NumResponses  int
-}
-
-func (me TraversalStats) String() string {
-	return fmt.Sprintf("%#v", me)
-}
-
-// Populates the node table.
-func (s *Server) Bootstrap() (ts TraversalStats, err error) {
-	initialAddrs, err := s.traversalStartingNodes()
-	if err != nil {
-		return
-	}
-	var outstanding sync.WaitGroup
-	triedAddrs := newBloomFilterForTraversal()
-	var onAddr func(addr Addr)
-	onAddr = func(addr Addr) {
-		if triedAddrs.Test([]byte(addr.String())) {
-			return
-		}
-		ts.NumAddrsTried++
-		outstanding.Add(1)
-		triedAddrs.AddString(addr.String())
-		s.findNode(addr, s.id, func(m krpc.Msg, err error) {
-			defer outstanding.Done()
-			s.mu.Lock()
-			defer s.mu.Unlock()
-			if err != nil {
-				return
-			}
-			ts.NumResponses++
-			if r := m.R; r != nil {
-				r.ForAllNodes(func(ni krpc.NodeInfo) {
-					onAddr(NewAddr(ni.Addr.UDP()))
-				})
-			}
-		})
-	}
+	// Scrape peers from the response to put in the server's table before
+	// handing the response back to the caller.
 	s.mu.Lock()
-	for _, addr := range initialAddrs {
-		onAddr(NewAddr(addr.Addr.UDP()))
-	}
+	s.addResponseNodes(m)
 	s.mu.Unlock()
-	outstanding.Wait()
-	return
+	return m, writes, err
 }
 
 // Returns how many nodes are in the node table.
@@ -877,10 +860,11 @@ func (s *Server) Close() {
 	s.socket.Close()
 }
 
-func (s *Server) getPeers(ctx context.Context, addr Addr, infoHash int160) (krpc.Msg, error) {
-	m, err := s.queryContext(ctx, addr, "get_peers", &krpc.MsgArgs{
+func (s *Server) getPeers(ctx context.Context, addr Addr, infoHash int160) (krpc.Msg, numWrites, error) {
+	m, writes, err := s.queryContext(ctx, addr, "get_peers", &krpc.MsgArgs{
 		InfoHash: infoHash.AsByteArray(),
-		Want:     []krpc.Want{krpc.WantNodes, krpc.WantNodes6},
+		// TODO: Maybe IPv4-only Servers won't want IPv6 nodes?
+		Want: []krpc.Want{krpc.WantNodes, krpc.WantNodes6},
 	})
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -899,7 +883,7 @@ func (s *Server) getPeers(ctx context.Context, addr Addr, infoHash int160) (krpc
 			}
 		}
 	}
-	return m, err
+	return m, writes, err
 }
 
 func (s *Server) closestGoodNodeInfos(

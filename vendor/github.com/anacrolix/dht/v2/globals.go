@@ -1,7 +1,7 @@
 package dht
 
 import (
-	"golang.org/x/time/rate"
+	"github.com/anacrolix/stm/rate"
 )
 
-var defaultSendLimiter = rate.NewLimiter(100, 100)
+var defaultSendLimiter = rate.NewLimiter(25, 25)
