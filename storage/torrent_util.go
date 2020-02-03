@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"context"
 	"io/ioutil"
 	"log"
 	"net"
@@ -144,21 +143,6 @@ func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (m torrent.Meta
 
 	if tt, _, err = c.MaybeStart(torrent.NewFromFile(path)); err != nil {
 		return m, err
-	}
-
-	if err = c.DownloadInto(context.Background(), tt.Metadata(), ioutil.Discard); err != nil {
-		return m, err
-	}
-	// if mi, err = t.infoFromFile(path); err != nil {
-	// 	return mi, err
-	// }
-
-	// if _, _, err = c.MaybeStart(torrent.NewFromMetaInfo(&mi)); err != nil {
-	// 	return mi, err
-	// }
-	for _, s := range c.DhtServers() {
-		_, err := s.Announce(tt.Metadata().InfoHash, 0, true)
-		logx.MaybeLog(errors.Wrap(err, "announce failure"))
 	}
 
 	return tt.Metadata(), nil

@@ -307,6 +307,8 @@ github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204 h1:sDfxvavYvmIoUCpIS
 github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204/go.mod h1:uhpZMVGznybq1itEKXj6RYw9I71qK4kH+OGMjRC4KEo=
 github.com/james-lawrence/torrent v0.0.0-20200202170000-801110691f05 h1:ZN80Cdt95TT2XIgrTdxsWfshrcLraeZ8VenH1oY2htE=
 github.com/james-lawrence/torrent v0.0.0-20200202170000-801110691f05/go.mod h1:T0oMDLSiqU9CnJLiEuKU220kT7idaIXtYAEAkGsIgeU=
+github.com/james-lawrence/torrent v0.0.0-20200203124159-506896902d90 h1:o74zxC9Un6phZz/DAcR/AILl5tNkrTOXLVtMZ+l7UWo=
+github.com/james-lawrence/torrent v0.0.0-20200203124159-506896902d90/go.mod h1:T0oMDLSiqU9CnJLiEuKU220kT7idaIXtYAEAkGsIgeU=
 github.com/jefferai/jsonx v1.0.1 h1:GvWkLWihoLqDG0BSP45TUQJH9qsINX50PVrFULgpc/I=
 github.com/jefferai/jsonx v1.0.1/go.mod h1:yFo3l2fcm7cZVHGq3HKLXE+Pd4RWuRjNBDHksM7XekQ=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=

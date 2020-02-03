@@ -50,12 +50,11 @@ github.com/anacrolix/stm/rate
 github.com/anacrolix/stm/stmutil
 # github.com/anacrolix/sync v0.2.0
 github.com/anacrolix/sync
-# github.com/anacrolix/torrent v1.13.0 => github.com/james-lawrence/torrent v0.0.0-20200202170000-801110691f05
+# github.com/anacrolix/torrent v1.13.0 => github.com/james-lawrence/torrent v0.0.0-20200203124159-506896902d90
 github.com/anacrolix/torrent
 github.com/anacrolix/torrent/bencode
 github.com/anacrolix/torrent/internal/x/bitmapx
 github.com/anacrolix/torrent/internal/x/bytesx
-github.com/anacrolix/torrent/internal/x/debugx
 github.com/anacrolix/torrent/internal/x/stringsx
 github.com/anacrolix/torrent/iplist
 github.com/anacrolix/torrent/logonce

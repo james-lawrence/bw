@@ -116,4 +116,4 @@ require (
 
 go 1.12
 
-replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20200202170000-801110691f05
+replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20200203124159-506896902d90
