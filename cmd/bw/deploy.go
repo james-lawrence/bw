@@ -107,6 +107,11 @@ func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
 		filters = append(filters, deployment.IP(n))
 	}
 
+	// need a filter to be present for the canary to work.
+	if t.canary {
+		filters = append(filters, deployment.AlwaysMatch)
+	}
+
 	return t._deploy(deployment.Or(filters...), len(filters) == 0)
 }
 
@@ -442,6 +447,11 @@ func (t *deployCmd) redeploy(ctx *kingpin.ParseContext) error {
 
 	for _, n := range t.filteredIP {
 		filters = append(filters, deployment.IP(n))
+	}
+
+	// need a filter to be present for the canary to work.
+	if t.canary {
+		filters = append(filters, deployment.AlwaysMatch)
 	}
 
 	return t._redeploy(deployment.Or(filters...), len(filters) == 0)
