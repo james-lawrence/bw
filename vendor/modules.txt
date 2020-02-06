@@ -115,6 +115,8 @@ github.com/benbjohnson/immutable
 github.com/bradfitz/iter
 # github.com/cenkalti/backoff v2.1.1+incompatible
 github.com/cenkalti/backoff
+# github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
+github.com/chzyer/readline
 # github.com/containous/yaegi v0.7.2
 github.com/containous/yaegi/interp
 github.com/containous/yaegi/stdlib
@@ -242,8 +244,17 @@ github.com/icrowley/fake
 github.com/jmespath/go-jmespath
 # github.com/joho/godotenv v1.2.0
 github.com/joho/godotenv
+# github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
+github.com/juju/ansiterm
+github.com/juju/ansiterm/tabwriter
 # github.com/logrusorgru/aurora v0.0.0-20181002194514-a7b3b318ed4e
 github.com/logrusorgru/aurora
+# github.com/lunixbochs/vtclean v1.0.0
+github.com/lunixbochs/vtclean
+# github.com/manifoldco/promptui v0.7.0
+github.com/manifoldco/promptui
+github.com/manifoldco/promptui/list
+github.com/manifoldco/promptui/screenbuf
 # github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 github.com/manveru/faker
 # github.com/maruel/panicparse v1.0.2

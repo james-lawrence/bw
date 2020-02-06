@@ -81,6 +81,7 @@ type ConfigClient struct {
 	Concurrency     float64
 	DeployDataDir   string        `yaml:"deployDataDir"`
 	DeployTimeout   time.Duration `yaml:"deployTimeout"`
+	DeployPrompt    string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
 	CredentialsMode string        `yaml:"credentialsSource"`
 	CredentialsDir  string        `yaml:"credentialsDir"`
 	CA              string

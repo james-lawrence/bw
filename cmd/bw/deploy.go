@@ -13,6 +13,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
@@ -82,14 +83,14 @@ func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("canary", "deploy only to the canary server").BoolVar(&t.canary)
+	parent.Flag("canary", "deploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	return parent.Action(t.deploy)
 }
 
 func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("canary", "deploy only to the canary server").BoolVar(&t.canary)
+	parent.Flag("canary", "ddeploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	parent.Arg("archive", "deployment ID to redeploy").StringVar(&t.deploymentID)
@@ -133,6 +134,17 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	log.Println("pid", os.Getpid())
 	log.Println("configuration:", spew.Sdump(config))
+
+	if len(config.DeployPrompt) > 0 {
+		_, err := (&promptui.Prompt{
+			Label:     config.DeployPrompt,
+			IsConfirm: true,
+		}).Run()
+		// we're done.
+		if err != nil {
+			return nil
+		}
+	}
 
 	if err = commandutils.RunLocalDirectives(config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
@@ -453,6 +465,17 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 
 	log.Println("pid", os.Getpid())
 	log.Println("configuration:", spew.Sdump(config))
+
+	if len(config.DeployPrompt) > 0 {
+		_, err := (&promptui.Prompt{
+			Label:     config.DeployPrompt,
+			IsConfirm: true,
+		}).Run()
+		// we're done.
+		if err != nil {
+			return nil
+		}
+	}
 
 	events := make(chan agent.Message, 100)
 
