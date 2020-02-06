@@ -24,6 +24,7 @@ import (
 	packer "github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/clustering/rendezvous"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
@@ -40,6 +41,7 @@ type deployCmd struct {
 	deploymentID   string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
+	canary         bool
 	debug          bool
 	ignoreFailures bool
 	silenceLogs    bool
@@ -80,12 +82,14 @@ func (t *deployCmd) cancelCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("canary", "deploy only to the canary server").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	return parent.Action(t.deploy)
 }
 
 func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("canary", "deploy only to the canary server").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	parent.Arg("archive", "deployment ID to redeploy").StringVar(&t.deploymentID)
@@ -116,6 +120,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		c       clustering.C
 		ss      notary.Signer
 		archive agent.Archive
+		peers   []agent.Peer
 	)
 
 	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
@@ -224,9 +229,17 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(c.Members())))
-	peers := deployment.ApplyFilter(filter, agent.NodesToPeers(c.Members()...)...)
+
+	// only consider the canary node.
+	if t.canary {
+		peers = agent.NodesToPeers(c.Get(rendezvous.Auto()))
+	} else {
+		peers = agent.NodesToPeers(c.Members()...)
+	}
+
+	peers = deployment.ApplyFilter(filter, peers...)
 	dopts := agent.DeployOptions{
-		Concurrency:       int64(config.Partitioner().Partition(len(c.Members()))),
+		Concurrency:       max,
 		Timeout:           int64(config.DeployTimeout),
 		IgnoreFailures:    t.ignoreFailures,
 		SilenceDeployLogs: t.silenceLogs,
@@ -431,6 +444,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		c       clustering.C
 		located agent.Deploy
 		archive agent.Archive
+		peers   []agent.Peer
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
@@ -505,9 +519,17 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
-	peers := deployment.ApplyFilter(filter, cx.Peers()...)
+
+	// only consider the canary node.
+	if t.canary {
+		peers = agent.NodesToPeers(cx.Get(rendezvous.Auto()))
+	} else {
+		peers = cx.Peers()
+	}
+
+	peers = deployment.ApplyFilter(filter, peers...)
 	dopts := agent.DeployOptions{
-		Concurrency:       int64(config.Partitioner().Partition(len(cx.Members()))),
+		Concurrency:       max,
 		Timeout:           int64(config.DeployTimeout),
 		IgnoreFailures:    t.ignoreFailures,
 		SilenceDeployLogs: t.silenceLogs,

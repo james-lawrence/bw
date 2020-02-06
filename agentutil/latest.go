@@ -166,11 +166,6 @@ func AgentLatestDeployment(c agent.Client) (a agent.Deploy, err error) {
 // FilterDeployID check if the given deploy matches the provided ID.
 func FilterDeployID(id string) func(d agent.Deploy) bool {
 	return func(d agent.Deploy) bool {
-		if d.Archive != nil {
-			log.Println("checking", bw.RandomID(d.Archive.DeploymentID).String(), "==", id)
-		} else {
-			log.Println("archive is nil", id)
-		}
 		return d.Archive != nil && bw.RandomID(d.Archive.DeploymentID).String() == id
 	}
 }
