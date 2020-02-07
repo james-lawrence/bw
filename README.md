@@ -32,7 +32,7 @@ pushd .test && bw deploy && popd
 ```
 
 ### quick start - gcloud (assumes a gcloud project, and terraform).
-IMPORTANT: quickstart examples don't include a VPN, a VPN is highly recommended for production environments.
+IMPORTANT: quickstart examples don't configure a VPN, a VPN is highly recommended for production environments.
 
 ```bash
 # install bearded wookie
@@ -53,12 +53,13 @@ example commands:
  - `bw environment create {name} {address}`  
  - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.  
  - `bw deploy {environment}` deploy to the specified environment  
- - `bw deploy --ip='127.0.0.1' {environment}` to the servers that match the given filters.  
+ - `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters. 
+ - `bw deploy --canary {environment}` deploy to a single consistent server. 
  - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive  
  - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers  
  - `bw info check {address}:{port}` checks if the cluster is reachable.  
 
-commands only available inside of a vpn:  
+commands only available from rpc endpoint (should only be accessed from inside a secure network):  
  - `bw info {environment}` display information and receive events about the environment.  
 
 ### architecture overview

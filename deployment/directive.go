@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/directives"
@@ -66,7 +67,7 @@ func (t Directive) deploy(dctx DeployContext) {
 		dfs     directives.ArchiveLoader
 		dshell  directives.ShellLoader
 		dpkg    directives.PackageLoader
-		d       []directives.Directive
+		loaded  []directives.Loaded
 		environ []string
 	)
 
@@ -115,20 +116,23 @@ func (t Directive) deploy(dctx DeployContext) {
 	}
 
 	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")
-	if d, err = directives.Load(dctx.Log, filepath.Join(dctx.ArchiveRoot, t.directory), loaders...); err != nil {
+	root := filepath.Join(dctx.ArchiveRoot, t.directory)
+	if loaded, err = directives.Load(dctx.Log, root, loaders...); err != nil {
 		dctx.Dispatch()
 		dctx.Done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}
 
-	dctx.Log.Println("loaded", len(d), "directive(s)")
-	for _, l := range d {
-		dctx.Log.Println("running directive")
+	dctx.Log.Println("loaded", len(loaded), "directive(s) from", root)
+	for _, l := range loaded {
+		name := strings.TrimPrefix(l.Path, root+"/")
+		dctx.Log.Println("initiated directive:", name)
 		if err = l.Run(dctx.deadline); err != nil {
-			dctx.Log.Println("directive failed", err)
+			dctx.Log.Println("failed directive:", name, err)
 			dctx.Done(err)
 			return
 		}
+		dctx.Log.Println("completed directive:", name)
 	}
 
 	dctx.Done(err)

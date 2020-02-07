@@ -22,26 +22,33 @@ type Context struct {
 	RootDirectory string
 }
 
-// Directive ...
+// Directive represents a computation to execute as part of the
+// deployment.
 type Directive interface {
 	Run(context.Context) error
 }
 
+// Loaded a Directive with metadata about its original source.
+type Loaded struct {
+	Directive
+	Path string
+}
+
 // Load the directives from the provided directory.
-func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
+func Load(l logger, dir string, loaders ...Loader) ([]Loaded, error) {
 	var (
 		err error
 	)
 
 	extmap := loaderToExts(l, loaders...)
-	results := make([]Directive, 0, 64)
+	results := make([]Loaded, 0, 64)
 
 	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		var (
-			found     bool
-			loader    Loader
-			directive Directive
-			reader    *os.File
+			found  bool
+			loader Loader
+			d      Directive
+			reader *os.File
 		)
 
 		if err != nil {
@@ -65,11 +72,11 @@ func Load(l logger, dir string, loaders ...Loader) ([]Directive, error) {
 		}
 		defer reader.Close()
 
-		if directive, err = loader.Build(reader); err != nil {
+		if d, err = loader.Build(reader); err != nil {
 			return errors.Wrapf(err, "failed to build directive for: %s", path)
 		}
 
-		results = append(results, directive)
+		results = append(results, Loaded{Directive: d, Path: path})
 		return nil
 	})
 
