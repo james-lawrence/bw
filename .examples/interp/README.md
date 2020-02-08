@@ -1,4 +1,4 @@
-### BETA: Interpreter functionality
+### Interpreter functionality
 
 bearded wookie has a golang interpreter available for fully scripting
 deployments. it attempts to support fully the stdlib minus unsafe - see [yaegi](https://github.com/containous/yaegi) for issues/details.
@@ -8,9 +8,15 @@ deployments. it attempts to support fully the stdlib minus unsafe - see [yaegi](
 - access to aws elbv2 attach/detach (see AWSELBv2.md).
 - access to the BW shell, identical functionality to the bwcmd files.
 
+### changes to the runtime
+- `os.Getwd()` is overridden to be the root of unpacked archive.
+- `os.Chdir(dir)` is overridden to always return an error.
+- `context.Background()` is overridden to provide the context from the deploy.
+- `log.Fatal*` functions are changed to not completely exit the program thereby killing the agent, instead they panic causing the interpreter to fail.
+- `log.SetOutput/SetFlags/SetPrefix` are all disabled for the time being. they are noops.
+
 ### Planned Functionality
 - [ ] gcloud target pools
-- [ ] systemd services
 
 ### Basic Example - shell command
 
@@ -43,10 +49,3 @@ func main() {
   }
 }
 ```
-
-### changes to the runtime
-- `os.Getwd()` is overridden to be the root of unpacked archive.
-- `os.Chdir(dir)` is overridden to always return an error.
-- `context.Background()` is overridden to provide the context from the deploy.
-- `log.Fatal*` functions are changed to not completely exit the program thereby killing the agent, instead they panic causing the interpreter to fail.
-- `log.SetOutput/SetFlags/SetPrefix` are all disabled for the time being. they are noops.

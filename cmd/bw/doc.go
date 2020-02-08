@@ -27,5 +27,4 @@
 //  bw deploy
 //
 // Getting Started
-//  TODO: documentation around getting bearded wookie setup.
 package main

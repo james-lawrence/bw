@@ -47,9 +47,7 @@ func Environ(s string) (environ []string, err error) {
 		ir map[string]string
 	)
 
-	if ir = gotenv.Parse(strings.NewReader(string(s))); err != nil {
-		return environ, errors.WithStack(err)
-	}
+	ir = gotenv.Parse(strings.NewReader(string(s)))
 
 	environ = make([]string, 0, len(ir))
 	for k, v := range ir {

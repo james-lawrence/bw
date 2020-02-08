@@ -1,6 +1,7 @@
 package shell
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -111,14 +112,6 @@ type Context struct {
 	lenient   bool
 }
 
-// %H hostname
-// %m machine id.
-// %d domain name
-// %f FQDN
-// %u user name
-// %U user uid.
-// %h user home directory
-// %% percent symbol
 func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%H", t.Hostname, -1)
 	cmd = strings.Replace(cmd, "%m", t.MachineID, -1)
@@ -127,9 +120,24 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%u", t.User.Username, -1)
 	cmd = strings.Replace(cmd, "%U", t.User.Uid, -1)
 	cmd = strings.Replace(cmd, "%h", t.User.HomeDir, -1)
+	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
 	cmd = strings.Replace(cmd, "%%", "%", -1)
 
 	return cmd
+}
+
+func (t Context) environmentSubst() []string {
+	return append(
+		t.Environ,
+		fmt.Sprintf("BW_ENVIRONMENT_HOST=%s", t.Hostname),
+		fmt.Sprintf("BW_ENVIRONMENT_MACHINE_ID=%s", t.MachineID),
+		fmt.Sprintf("BW_ENVIRONMENT_DOMAIN=%s", t.Domain),
+		fmt.Sprintf("BW_ENVIRONMENT_FQDN=%s", t.FQDN),
+		fmt.Sprintf("BW_ENVIRONMENT_USERNAME=%s", t.User.Username),
+		fmt.Sprintf("BW_ENVIRONMENT_USERID=%s", t.User.Uid),
+		fmt.Sprintf("BW_ENVIRONMENT_USERHOME=%s", t.User.HomeDir),
+		fmt.Sprintf("BW_ENVIRONMENT_ROOT=%s", t.dir),
+	)
 }
 
 func _domain(fqdn string) string {

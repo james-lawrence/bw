@@ -40,7 +40,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 
 	command := sctx.variableSubst(t.Command)
 	cmd := exec.CommandContext(deadline, sctx.Shell, "-c", command)
-	cmd.Env = sctx.Environ
+	cmd.Env = sctx.environmentSubst()
 	cmd.Stderr = sctx.output
 	cmd.Stdout = sctx.output
 	cmd.Dir = sctx.dir
