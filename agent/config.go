@@ -74,6 +74,21 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	return NewConfigClient(config, options...)
 }
 
+// ExampleConfigClient creates an example configuration.
+func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
+	config := ConfigClient{
+		Address:       systemx.HostnameOrLocalhost(),
+		Discovery:     systemx.HostnameOrLocalhost(),
+		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
+		DeployPrompt:  "are you sure you want to deploy? (remove this field to disable the prompt)",
+		DeployTimeout: bw.DefaultDeployTimeout,
+	}
+
+	ConfigClientTLS(bw.DefaultEnvironmentName)(&config)
+
+	return NewConfigClient(config, options...)
+}
+
 // ConfigClient ...
 type ConfigClient struct {
 	Address         string // cluster address

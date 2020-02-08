@@ -33,8 +33,6 @@ func (t *workspaceCreate) configure(parent *kingpin.CmdClause) {
 
 func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
 	const (
-		skeletonPackageDirective = `- git;;;
-- vim;;;`
 		skeletonShellDirective = `- command: "echo hello world"
 - command: "echo hello ${USER}"
 - command: "echo 'Hostname(%H) | Machine ID(%m) | DN(%d) | FQDN(%f) | Username(%u) | User ID(%U) | Homedir(%h) | %%'" # substitution examples.
@@ -57,10 +55,6 @@ func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	if t.includeExamples {
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "00_packages.bwpkg"), []byte(skeletonPackageDirective), 0600); err != nil {
-			return errors.WithStack(err)
-		}
-
 		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "01_shell.bwcmd"), []byte(skeletonShellDirective), 0600); err != nil {
 			return errors.WithStack(err)
 		}

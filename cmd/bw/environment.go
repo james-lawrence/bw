@@ -50,11 +50,11 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	cc = agent.DefaultConfigClient(
+	cc = agent.ExampleConfigClient(
 		agent.CCOptionAddress(t.dialAddress),
 		agent.CCOptionConcurrency(1),
 		agent.CCOptionTLSConfig(t.name),
-		agent.CCOptionEnvironment("BEARDED_WOOKIE_EXAMPLE=ENVIRONMENT_VARIABLE\nFOO=BAR\n"),
+		agent.CCOptionEnvironment("FOO=BAR\n"),
 	)
 
 	if encoded, err = yaml.Marshal(cc); err != nil {
