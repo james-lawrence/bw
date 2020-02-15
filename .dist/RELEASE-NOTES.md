@@ -1,70 +1,73 @@
-commit d0ea1ccae301ef2ff2020d2c5302c8c0eb193efb
+commit 26aabbf863a8e54128865d4306c4651e91562dcb
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 10:26:20 2020 -0500
+Date:   Fri Feb 14 23:30:16 2020 -0500
 
-    release 0.1.1579361172-8694203a
+    update to golang-1.13
 
-commit 8694203aad91a008c1e4fa0698d28843db2e5d39
+commit 64a5a2e2b4424c56ed193ef05d8ccf7db5a36fbf
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 10:24:17 2020 -0500
+Date:   Sat Feb 8 13:58:56 2020 -0500
 
-    release 0.1.1579361051-969bb6e7
+    update documentation
 
-commit 969bb6e7ace42ebba0661d1d33b34aba74738ffd
+commit 345280c296967f20047bf9448c7f09294426f861
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 10:22:13 2020 -0500
+Date:   Fri Feb 7 19:08:13 2020 -0500
 
-    release 0.1.1579360901-bbd206a7
+    create example client config
 
-commit bbd206a70232f673c0595468af36ca138ccd805f
+commit 3dc29043c276a07fc38fe7136bd9f3772bed1f3f
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 10:21:41 2020 -0500
+Date:   Fri Feb 7 18:53:45 2020 -0500
 
-    wip build fixes
+    improve logging information for directives
 
-commit 7f4dac66de50973993fdfcc70a4ed098af000c74
+commit 55103c4f8900746649d418be1d9d71bf015b3d62
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:59:54 2020 -0500
+Date:   Thu Feb 6 18:39:17 2020 -0500
 
-    release 0.1.1579359591-ca63e857
+    minor fix to support canary
 
-commit ca63e857f360b22ccf41b16beeb208d8b9387746
+commit f8ec01dab8966141dd6b5a70686da025bfbe8807
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:52:39 2020 -0500
+Date:   Thu Feb 6 18:12:31 2020 -0500
 
-    release 0.1.1579359151-0b757cc4
+    learn to prompt prior to deploy if specified
 
-commit 0b757cc428b2fea51f66a768a6b46b8bee3cd82b
+commit 5293660574ff563b3bf4a7fa566bbacf1c4562a0
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:52:31 2020 -0500
+Date:   Thu Feb 6 17:59:42 2020 -0500
 
-    fixing build flags
+    learn the canary command line option
+    
+    deploys to a consistent server without having to manually specify the
+    filters.
 
-commit d6a0b02ed6e58be4abb2420a7559401db56f24d2
+commit e527abd0c5197c76f31f1aec1be43f2e5db623d0
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:40:05 2020 -0500
+Date:   Mon Feb 3 07:56:19 2020 -0500
 
-    release 0.1.1579358189-c3e57e36
+    fix bootstrapping
 
-commit c3e57e36bebd66323dbf2e01f48afcd4daa7dfa3
+commit 7c11dc09e22959c3685ac3d937f374426264f75b
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:36:29 2020 -0500
+Date:   Sun Feb 2 14:04:08 2020 -0500
 
-    release 0.1.1579358177-b86a7841
+    update raft library
 
-commit b86a7841f6f939cf532e9433db35f4a34487732b
+commit fa4352cedd65c6a25fa566b1d0d06f82bf6410a9
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 09:36:17 2020 -0500
+Date:   Sun Feb 2 13:51:41 2020 -0500
 
-    fix dependencies
+    update torrent library
 
-commit 310432f6e0407d3cb2659578b5e80361d2330148
+commit 4703f63352172a5dbd56aca8987d2a06efd5cb3b
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Sat Jan 18 08:53:26 2020 -0500
+Date:   Sun Jan 26 18:07:47 2020 -0500
 
-    release 0.1.1579355588-e0b0ebca
+    fix darwin builds
 
-commit e0b0ebca6b7195e45da43c5c69c2d44273233e4b
+commit e14e34872c28197cc37b43330f9d47e7b68ea13c
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 18 08:21:01 2020 -0500
 
