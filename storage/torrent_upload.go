@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anacrolix/torrent"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/torrent"
 	"github.com/pkg/errors"
 )
 

@@ -7,14 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/anacrolix/dht/v2"
-	"github.com/anacrolix/dht/v2/krpc"
-	"github.com/anacrolix/torrent"
-	"github.com/anacrolix/torrent/metainfo"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/torrent"
+	"github.com/james-lawrence/torrent/dht/v2"
+	"github.com/james-lawrence/torrent/dht/v2/krpc"
+	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/pkg/errors"
 )
 

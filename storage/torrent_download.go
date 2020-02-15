@@ -6,8 +6,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/anacrolix/torrent"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/torrent"
 	"github.com/pkg/errors"
 )
 
@@ -45,8 +45,10 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) (r io.Rea
 
 	wait, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-
-	if r, err = t.client.Download(wait, metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...)); err != nil {
+	
+	peers := peersToNode(t.c.Quorum()...)
+	log.Println("")
+	if r, err = t.client.Download(wait, metadata, torrent.TunePeers(peers...)); err != nil {
 		return newErrReader(errors.WithStack(err))
 	}
 
