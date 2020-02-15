@@ -1,3 +1,15 @@
+commit 393f935666e09278614a6d2ad6c6581f5a50dd79
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 06:48:17 2020 -0500
+
+    remove some extraneous logging
+
+commit e09327e451310453f4dc735045b90ccd5571edc7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Feb 14 23:39:14 2020 -0500
+
+    release 0.1.1581741545-26aabbf8
+
 commit 26aabbf863a8e54128865d4306c4651e91562dcb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Feb 14 23:30:16 2020 -0500
