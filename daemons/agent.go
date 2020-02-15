@@ -1,7 +1,6 @@
 package daemons
 
 import (
-	"log"
 	"net"
 	"path/filepath"
 	"time"
@@ -119,12 +118,13 @@ func Agent(ctx Context) (err error) {
 	// this can be removed once per request credentials is fully implemented.
 	go timex.NowAndEvery(1*time.Hour, func() {
 		if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
-			log.Println("tls request skipped")
+			// skip tls request
 			return
 		}
 
-		log.Println("tls request initiated")
-		defer log.Println("tls request completed")
+		// request the TLS certificate from the cluster.
+		// log.Println("tls request initiated")
+		// defer log.Println("tls request completed")
 
 		logx.MaybeLog(
 			errors.Wrap(
