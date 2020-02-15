@@ -1,3 +1,27 @@
+commit 4d9b077d506f670db2fc22378cf9be09dcebe693
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 10:41:29 2020 -0500
+
+    update torrent library - fixes deadlock in download
+
+commit 2e16b9a5317d674e3385091b133c2fab7b1d6b4f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 08:06:39 2020 -0500
+
+    remove dependency of anacrolix torrent lib
+
+commit a1335ac772e1c61c0027355a313f8546fa8ed843
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 07:03:53 2020 -0500
+
+    bugfix - ensure release has version properly set
+
+commit 9835821d018b5d6295fd878a8ed601d7be15ed6b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 06:57:45 2020 -0500
+
+    release 0.1.1581767305-393f9356
+
 commit 393f935666e09278614a6d2ad6c6581f5a50dd79
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Feb 15 06:48:17 2020 -0500
