@@ -14,7 +14,7 @@ release() {
   cat .templates/control.tmpl | envsubst > ${DEBDIR}/control
   cat .templates/changelog.tmpl | env DISTRO=${DISTRO} VERSION=${VERSION} envsubst > ${DEBDIR}/changelog
   cat .templates/install.tmpl > ${DEBDIR}/install
-  cat .templates/rules.tmpl | env BW_LDFLAGS=${BUILDFLAGS} envsubst > ${DEBDIR}/rules
+  cat .templates/rules.tmpl | env BW_LDFLAGS="${BUILDFLAGS}" envsubst > ${DEBDIR}/rules
 
   echo "9" > ${DEBDIR}/compat
   echo "3.0 (native)" > ${DEBDIR}/source/format
