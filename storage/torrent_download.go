@@ -20,9 +20,10 @@ type torrentD struct {
 
 func peerToNode(p agent.Peer) torrent.Peer {
 	return torrent.Peer{
-		IP:     net.ParseIP(p.Ip),
-		Port:   int(p.TorrentPort),
-		Source: "Hg",
+		IP:      net.ParseIP(p.Ip),
+		Port:    int(p.TorrentPort),
+		Source:  "X",
+		Trusted: true,
 	}
 }
 
@@ -45,10 +46,8 @@ func (t torrentD) Download(ctx context.Context, archive agent.Archive) (r io.Rea
 
 	wait, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
-	peers := peersToNode(t.c.Quorum()...)
-	log.Println("")
-	if r, err = t.client.Download(wait, metadata, torrent.TunePeers(peers...)); err != nil {
+
+	if r, err = t.client.Download(wait, metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...)); err != nil {
 		return newErrReader(errors.WithStack(err))
 	}
 

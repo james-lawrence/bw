@@ -58,7 +58,7 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/huin/goupnp v0.0.0-20171109214107-dceda08e705b
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
-	github.com/james-lawrence/torrent v0.0.0-20200215130404-27ea344086d5
+	github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
 	github.com/jefferai/jsonx v1.0.1 // indirect
 	github.com/joho/godotenv v1.2.0
 	github.com/keybase/go-crypto v0.0.0-20190828182435-a05457805304 // indirect

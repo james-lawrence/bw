@@ -223,7 +223,7 @@ github.com/huin/goupnp/soap
 github.com/huin/goupnp/ssdp
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 github.com/icrowley/fake
-# github.com/james-lawrence/torrent v0.0.0-20200215130404-27ea344086d5
+# github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode
 github.com/james-lawrence/torrent/dht/v2
