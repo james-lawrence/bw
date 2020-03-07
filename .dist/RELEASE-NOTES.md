@@ -1,3 +1,27 @@
+commit 3d98ef1f83f8a6e008654804056ccd41278eda1b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:06:15 2020 -0500
+
+    improvements to raft configuration
+    
+    1. stop using in memory store in non-test scenarios
+    2. set a maximum of 1 minute between checkins
+    3. allow leader to transfer leadership when its no longer a member of
+       the cluster.
+    4. only drop a single server from raft cluster per attempt.
+
+commit be473192bae34f5eb9db3ebbccf38563e6091ec5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:05:03 2020 -0500
+
+    update dependencies
+
+commit db22120becca48a43672640388ee7be048c868a8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 15 10:52:18 2020 -0500
+
+    release 0.1.1581781289-4d9b077d
+
 commit 4d9b077d506f670db2fc22378cf9be09dcebe693
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Feb 15 10:41:29 2020 -0500
