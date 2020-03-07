@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/james-lawrence/bw/clustering"
@@ -82,7 +83,7 @@ func findState(s raftStateFilter, peers ...*raft.Raft) []*raft.Raft {
 	return r
 }
 
-func getServers(rafts ...*raft.Raft) []raft.Server {
+func getServers(rafts ...*raft.Raft) (ss []raft.Server) {
 	for _, node := range findState(leaderFilter, rafts...) {
 		config := node.GetConfiguration()
 		Expect(config.Error()).ToNot(HaveOccurred())
@@ -91,8 +92,21 @@ func getServers(rafts ...*raft.Raft) []raft.Server {
 	return []raft.Server{}
 }
 
+func voters(sss ...raft.Server) (ss []raft.Server) {
+	for _, s := range sss {
+		if s.Suffrage == raft.Voter {
+			ss = append(ss, s)
+		}
+	}
+	return ss
+}
+
 func leaderFilter(i raft.RaftState) bool {
 	return i == raft.Leader
+}
+
+func notLeader(i raft.RaftState) bool {
+	return i != raft.Leader
 }
 
 func notShutdownFilter(i raft.RaftState) bool {
@@ -232,15 +246,23 @@ var _ = Describe("Raft", func() {
 				return firstRaft(findState(leaderFilter, rafts...)...)
 			}).ShouldNot(BeNil())
 
-			for _, p := range peers[:len(peers)-2] {
+			leader := firstRaft(findState(leaderFilter, rafts...)...)
+
+			for killed, i := 0, 0; i < len(peers) && killed < 2; i++ {
+				p := peers[i]
+				if strings.HasSuffix(string(leader.Leader()), p.c.LocalNode().Name) {
+					continue
+				}
+
 				Expect(p.c.Shutdown()).ToNot(HaveOccurred())
 				p.rc()
+				killed++
 			}
 
 			Eventually(func() []raft.Server {
 				rafts = gather(obsc, rafts...)
 				return getServers(rafts...)
-			}, 30*time.Second).Should(HaveLen(2))
+			}, 30*time.Second).Should(HaveLen(3))
 		})
 
 		It("should allow for a single node to join and depart repeatedly", func() {
@@ -271,14 +293,18 @@ var _ = Describe("Raft", func() {
 			for i := 0; i < 5; i++ {
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
-					return getServers(rafts...)
+					return voters(getServers(rafts...)...)
 				}, 30*time.Second).Should(HaveLen(3))
-				peer.rc()
+
 				Expect(peer.c.Shutdown()).ToNot(HaveOccurred())
+				peer.rc()
+
+				log.Println("ATTEMPT", i)
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
-					return getServers(rafts...)
+					return voters(getServers(rafts...)...)
 				}, 30*time.Second).Should(HaveLen(2))
+
 				peer.c, err = clusteringtestutil.NewPeerFromConfig(peer.c.Config(), clustering.OptionNodeID(peer.c.Config().Name))
 				Expect(err).ToNot(HaveOccurred())
 				_, err = clusteringtestutil.Connect(peer.c, clusters(peers...)...)

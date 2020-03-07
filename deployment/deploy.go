@@ -274,7 +274,16 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers
 			}
 
 			remaining = append(remaining, peer)
-			time.Sleep(b.Backoff(attempt))
+
+		}
+
+		if len(remaining) > 0 {
+			if d := b.Backoff(attempt); time.Now().Add(d).Before(deadline) {
+				log.Println("sleeping before next attempt", d, deadline)
+				time.Sleep(d)
+			} else {
+				time.Sleep(deadline.Sub(time.Now()))
+			}
 		}
 
 		peers = remaining

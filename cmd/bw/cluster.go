@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
+	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
+	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/clustering"
@@ -97,7 +99,15 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs *tls.Config
+		s  *raftboltdb.BoltStore
 	)
+
+	sopts := raftboltdb.Options{
+		Path: filepath.Join(conf.Root, "raft.db"),
+	}
+	if s, err = raftboltdb.New(sopts); err != nil {
+		return p, errors.WithStack(err)
+	}
 
 	if cs, err = daemons.TLSGenServer(conf); err != nil {
 		return p, errors.WithStack(err)
@@ -106,6 +116,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
 		raftutil.ProtocolOptionTCPTransport(conf.RaftBind, cs),
+		raftutil.ProtocolOptionStorage(s),
 	}
 
 	return raftutil.NewProtocol(

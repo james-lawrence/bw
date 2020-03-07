@@ -88,6 +88,13 @@ func ProtocolOptionSnapshotStorage(snaps raft.SnapshotStore) ProtocolOption {
 	}
 }
 
+// ProtocolOptionStorage specify the storage for the raft cluster.
+func ProtocolOptionStorage(s storage) ProtocolOption {
+	return func(p *Protocol) {
+		p.store = s
+	}
+}
+
 // ProtocolOptionTransport set the state machine for the protocol
 func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 	return func(p *Protocol) {
@@ -193,6 +200,11 @@ type stateMeta struct {
 	sgroup    *sync.WaitGroup
 }
 
+type storage interface {
+	raft.LogStore
+	raft.StableStore
+}
+
 // Protocol - utility data structure for holding information about a raft protocol
 // setup that are needed to connect, reconnect, and shutdown.
 //
@@ -202,7 +214,7 @@ type Protocol struct {
 	StabilityQueue   BacklogQueueWorker
 	ClusterChange    *sync.Cond
 	Snapshots        raft.SnapshotStore
-	store            *raft.InmemStore
+	store            storage
 	PassiveCheckin   time.Duration
 	getStateMachine  func() raft.FSM
 	getTransport     func() (raft.Transport, error)
@@ -212,7 +224,6 @@ type Protocol struct {
 	enableSingleNode bool
 	config           *raft.Config
 	leadershipGrace  time.Duration // how long to wait before a missing leader triggers a reset
-
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.

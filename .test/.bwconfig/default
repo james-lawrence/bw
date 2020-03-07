@@ -3,4 +3,6 @@ discovery: "localhost:2001"
 concurrency: 2
 servername: "example.com"
 ca: "${HOME}/.cache/bearded-wookie/agent1/tls/tlsca.cert"
-deployPrompt: "you're about to deploy to production are you sure?"
+deployTimeout: 30s
+# deployPrompt: "you're about to deploy to production are you sure?"
+

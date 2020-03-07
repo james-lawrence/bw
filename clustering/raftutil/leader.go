@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/pkg/errors"
 )
 
 type leader struct {
@@ -72,8 +74,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	voterCount := t.voterCount(peers)
 	allowRemoval := voterCount >= 3
 
-	// remove self from peer set.
-	peers = removePeer(raft.ServerID(local.Name), peers...)
+	// peers = removePeer(raft.ServerID(local.Name), peers...)
 
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
@@ -99,7 +100,11 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	// prevent peer removal if minimum number of voters are not allowed.
 	if allowRemoval {
 		for _, peer := range peers {
-			unstable = true
+			if peer.ID == raft.ServerID(local.Name) {
+				logx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
+				return true
+			}
+
 			switch peer.Suffrage {
 			case raft.Voter:
 				if err := t.r.DemoteVoter(peer.ID, 0, commitTimeout).Error(); err != nil {
@@ -110,10 +115,12 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 					log.Println("failed to demote peer", err)
 				}
 			}
+
+			return true
 		}
 	}
 
-	return unstable
+	return false
 }
 
 func (t leader) voterCount(peers []raft.Server) (c int) {

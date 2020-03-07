@@ -10,13 +10,22 @@ import (
 type conditionTransition struct {
 	next state
 	cond *sync.Cond
+	time.Duration
 }
 
 func (t conditionTransition) Update(c cluster) state {
+	xx := time.NewTimer(t.Duration)
+	defer xx.Stop()
+	go func() {
+		<-xx.C
+		t.cond.Broadcast()
+	}()
+
 	t.cond.L.Lock()
 	t.cond.Wait()
 	t.cond.L.Unlock()
-	debugx.Printf("CONDITION TRANSITION: %T\n", t.next)
+
+	debugx.Printf("CONDITION TRANSITION: %T %v\n", t.next, t.Duration)
 	return t.next
 }
 
