@@ -1,3 +1,15 @@
+commit a5c568bdf748d76766d45a6635c2907dd38e3ea6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:09:52 2020 -0500
+
+    increase peer checkin to 15minutes
+
+commit bb8c5d747ec68dc2baabf123ee20b5bb0d433479
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:08:08 2020 -0500
+
+    release 0.1.1583604375-3d98ef1f
+
 commit 3d98ef1f83f8a6e008654804056ccd41278eda1b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 7 13:06:15 2020 -0500
