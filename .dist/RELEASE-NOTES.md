@@ -1,3 +1,9 @@
+commit d860d338e9e1b6d81196bdd75a10a19a9770d21b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:12:37 2020 -0500
+
+    release 0.1.1583604592-a5c568bd
+
 commit a5c568bdf748d76766d45a6635c2907dd38e3ea6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 7 13:09:52 2020 -0500
