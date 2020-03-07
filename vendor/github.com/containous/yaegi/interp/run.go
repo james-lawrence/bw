@@ -24,6 +24,7 @@ var builtin = [...]bltnGenerator{
 	aAndAssign:    andAssign,
 	aAndNot:       andNot,
 	aAndNotAssign: andNotAssign,
+	aBitNot:       bitNot,
 	aCall:         call,
 	aCase:         _case,
 	aCompositeLit: arrayLit,
@@ -40,11 +41,12 @@ var builtin = [...]bltnGenerator{
 	aLowerEqual:   lowerEqual,
 	aMul:          mul,
 	aMulAssign:    mulAssign,
-	aNegate:       negate,
+	aNeg:          neg,
 	aNot:          not,
 	aNotEqual:     notEqual,
 	aOr:           or,
 	aOrAssign:     orAssign,
+	aPos:          pos,
 	aQuo:          quo,
 	aQuoAssign:    quoAssign,
 	aRange:        _range,
@@ -214,7 +216,7 @@ func convert(n *node) {
 	typ := n.child[0].typ.TypeOf()
 	next := getExec(n.tnext)
 
-	if c.kind == basicLit && !c.rval.IsValid() { // convert nil to type
+	if c.isNil() { // convert nil to type
 		n.exec = func(f *frame) bltn {
 			dest(f).Set(reflect.New(typ).Elem())
 			return next
@@ -262,7 +264,9 @@ func assign(n *node) {
 			svalue[i] = genValueInterface(src)
 		case (dest.typ.cat == valueT || dest.typ.cat == errorT) && dest.typ.rtype.Kind() == reflect.Interface:
 			svalue[i] = genInterfaceWrapper(src, dest.typ.rtype)
-		case dest.typ.cat == valueT && src.typ.cat == funcT:
+		case src.typ.cat == funcT && dest.typ.cat == valueT:
+			svalue[i] = genFunctionWrapper(src)
+		case src.typ.cat == funcT && isField(dest):
 			svalue[i] = genFunctionWrapper(src)
 		case dest.typ.cat == funcT && src.typ.cat == valueT:
 			svalue[i] = genValueNode(src)
@@ -291,12 +295,17 @@ func assign(n *node) {
 	}
 
 	if n.nleft == 1 {
-		if s, d, i := svalue[0], dvalue[0], ivalue[0]; i != nil {
+		switch s, d, i := svalue[0], dvalue[0], ivalue[0]; {
+		case n.child[0].ident == "_":
+			n.exec = func(f *frame) bltn {
+				return next
+			}
+		case i != nil:
 			n.exec = func(f *frame) bltn {
 				d(f).SetMapIndex(i(f), s(f))
 				return next
 			}
-		} else {
+		default:
 			n.exec = func(f *frame) bltn {
 				d(f).Set(s(f))
 				return next
@@ -314,7 +323,6 @@ func assign(n *node) {
 			default:
 				t = typ.TypeOf()
 			}
-			//types[i] = n.child[sbase+i].typ.TypeOf()
 			types[i] = t
 		}
 
@@ -324,10 +332,16 @@ func assign(n *node) {
 		n.exec = func(f *frame) bltn {
 			t := make([]reflect.Value, len(svalue))
 			for i, s := range svalue {
+				if n.child[i].ident == "_" {
+					continue
+				}
 				t[i] = reflect.New(types[i]).Elem()
 				t[i].Set(s(f))
 			}
 			for i, d := range dvalue {
+				if n.child[i].ident == "_" {
+					continue
+				}
 				if j := ivalue[i]; j != nil {
 					d(f).SetMapIndex(j(f), t[i]) // Assign a map entry
 				} else {
@@ -340,6 +354,7 @@ func assign(n *node) {
 }
 
 func not(n *node) {
+	dest := genValue(n)
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
 
@@ -347,14 +362,15 @@ func not(n *node) {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
 			if !value(f).Bool() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
-			f.data[i].SetBool(!value(f).Bool())
+			dest(f).SetBool(!value(f).Bool())
 			return tnext
 		}
 	}
@@ -374,17 +390,18 @@ func addr(n *node) {
 func deref(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).Elem().Bool() {
+			f.data[i] = value(f).Elem()
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).Elem()
 			return tnext
@@ -658,7 +675,7 @@ func call(n *node) {
 				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 			}
 		default:
-			if c.kind == basicLit {
+			if c.kind == basicLit || c.rval.IsValid() {
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
 					argType = n.child[0].typ.arg[variadic].val.TypeOf()
@@ -693,19 +710,24 @@ func call(n *node) {
 	}
 
 	n.exec = func(f *frame) bltn {
-		def := value(f).Interface().(*node)
+		var def *node
+		var ok bool
+		bf := value(f)
+		if def, ok = bf.Interface().(*node); ok {
+			bf = def.rval
+		}
 
 		// Call bin func if defined
-		if def.rval.IsValid() {
+		if bf.IsValid() {
 			in := make([]reflect.Value, len(values))
 			for i, v := range values {
 				in[i] = v(f)
 			}
 			if goroutine {
-				go def.rval.Call(in)
+				go bf.Call(in)
 				return tnext
 			}
-			out := def.rval.Call(in)
+			out := bf.Call(in)
 			for i, v := range rvalues {
 				if v != nil {
 					v(f).Set(out[i])
@@ -823,7 +845,9 @@ func callBin(n *node) {
 	// method signature obtained from reflect.Type include receiver as 1st arg, except for interface types
 	rcvrOffset := 0
 	if recv := n.child[0].recv; recv != nil && recv.node.typ.TypeOf().Kind() != reflect.Interface {
-		rcvrOffset = 1
+		if funcType.NumIn() > len(child) {
+			rcvrOffset = 1
+		}
 	}
 
 	for i, c := range child {
@@ -843,7 +867,7 @@ func callBin(n *node) {
 				values = append(values, func(f *frame) reflect.Value { return f.data[ind] })
 			}
 		default:
-			if c.kind == basicLit {
+			if c.kind == basicLit || c.rval.IsValid() {
 				// Convert literal value (untyped) to function argument type (if not an interface{})
 				var argType reflect.Type
 				if variadic >= 0 && i >= variadic {
@@ -862,7 +886,6 @@ func callBin(n *node) {
 			case interfaceT:
 				values = append(values, genValueInterfaceValue(c))
 			default:
-				//values = append(values, genValue(c))
 				values = append(values, genInterfaceWrapper(c, defType))
 			}
 		}
@@ -962,21 +985,21 @@ func getIndexBinPtrMethod(n *node) {
 func getIndexArray(n *node) {
 	tnext := getExec(n.tnext)
 	value0 := genValueArray(n.child[0]) // array
+	i := n.findex
 
 	if n.child[1].rval.IsValid() { // constant array index
 		ai := int(vInt(n.child[1].rval))
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if value0(f).Index(ai).Bool() {
+				f.data[i] = value0(f).Index(ai)
+				if f.data[i].Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
-				// Can not use .Set due to constraint of being able to assign an array element
 				f.data[i] = value0(f).Index(ai)
 				return tnext
 			}
@@ -988,16 +1011,15 @@ func getIndexArray(n *node) {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				if value0(f).Index(int(vi)).Bool() {
+				f.data[i] = value0(f).Index(int(vi))
+				if f.data[i].Bool() {
 					return tnext
 				}
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
 				_, vi := value1(f)
-				// Can not use .Set due to constraint of being able to assign an array element
 				f.data[i] = value0(f).Index(int(vi))
 				return tnext
 			}
@@ -1010,20 +1032,33 @@ func getIndexMap(n *node) {
 	dest := genValue(n)
 	value0 := genValue(n.child[0]) // map
 	tnext := getExec(n.tnext)
-	z := reflect.New(n.child[0].typ.TypeOf().Elem()).Elem()
+	z := reflect.New(n.child[0].typ.frameType().Elem()).Elem()
 
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
 
-		if n.fnext != nil {
+		switch {
+		case n.fnext != nil:
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() && v.Bool() {
+					dest(f).SetBool(true)
 					return tnext
 				}
+				dest(f).Set(z)
 				return fnext
 			}
-		} else {
+		case n.typ.cat == interfaceT:
+			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
+			n.exec = func(f *frame) bltn {
+				if v := value0(f).MapIndex(mi); v.IsValid() {
+					dest(f).Set(v.Elem())
+				} else {
+					dest(f).Set(z)
+				}
+				return tnext
+			}
+		default:
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(mi); v.IsValid() {
 					dest(f).Set(v)
@@ -1036,15 +1071,28 @@ func getIndexMap(n *node) {
 	} else {
 		value1 := genValue(n.child[1]) // map index
 
-		if n.fnext != nil {
+		switch {
+		case n.fnext != nil:
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() && v.Bool() {
+					dest(f).SetBool(true)
 					return tnext
 				}
+				dest(f).Set(z)
 				return fnext
 			}
-		} else {
+		case n.typ.cat == interfaceT:
+			z = reflect.New(n.child[0].typ.val.frameType()).Elem()
+			n.exec = func(f *frame) bltn {
+				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
+					dest(f).Set(v.Elem())
+				} else {
+					dest(f).Set(z)
+				}
+				return tnext
+			}
+		default:
 			n.exec = func(f *frame) bltn {
 				if v := value0(f).MapIndex(value1(f)); v.IsValid() {
 					dest(f).Set(v)
@@ -1063,26 +1111,49 @@ func getIndexMap2(n *node) {
 	value0 := genValue(n.child[0])     // map
 	value2 := genValue(n.anc.child[1]) // status
 	next := getExec(n.tnext)
+	typ := n.anc.child[0].typ
 
 	if n.child[1].rval.IsValid() { // constant map index
 		mi := n.child[1].rval
-		n.exec = func(f *frame) bltn {
-			v := value0(f).MapIndex(mi)
-			if v.IsValid() {
-				dest(f).Set(v)
+		if typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(mi)
+				if v.IsValid() {
+					dest(f).Set(v.Elem())
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
 			}
-			value2(f).SetBool(v.IsValid())
-			return next
+		} else {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(mi)
+				if v.IsValid() {
+					dest(f).Set(v)
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
 		}
 	} else {
 		value1 := genValue(n.child[1]) // map index
-		n.exec = func(f *frame) bltn {
-			v := value0(f).MapIndex(value1(f))
-			if v.IsValid() {
-				dest(f).Set(v)
+		if typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(value1(f))
+				if v.IsValid() {
+					dest(f).Set(v.Elem())
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
 			}
-			value2(f).SetBool(v.IsValid())
-			return next
+		} else {
+			n.exec = func(f *frame) bltn {
+				v := value0(f).MapIndex(value1(f))
+				if v.IsValid() {
+					dest(f).Set(v)
+				}
+				value2(f).SetBool(v.IsValid())
+				return next
+			}
 		}
 	}
 }
@@ -1139,17 +1210,28 @@ func getIndexSeq(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
 	tnext := getExec(n.tnext)
+	i := n.findex
+
+	// Note:
+	// Here we have to store the result using
+	//    f.data[i] = value(...)
+	// instead of normal
+	//    dest(f).Set(value(...)
+	// because the value returned by FieldByIndex() must be preserved
+	// for possible future Set operations on the struct field (avoid a
+	// dereference from Set, resulting in setting a copy of the
+	// original field).
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).FieldByIndex(index).Bool() {
+			f.data[i] = value(f).FieldByIndex(index)
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).FieldByIndex(index)
 			return tnext
@@ -1167,17 +1249,18 @@ func getPtrIndexSeq(n *node) {
 	} else {
 		value = genValue(n.child[0])
 	}
+	i := n.findex
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
-			if value(f).Elem().FieldByIndex(index).Bool() {
+			f.data[i] = value(f).Elem().FieldByIndex(index)
+			if f.data[i].Bool() {
 				return tnext
 			}
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
 			f.data[i] = value(f).Elem().FieldByIndex(index)
 			return tnext
@@ -1189,17 +1272,38 @@ func getIndexSeqField(n *node) {
 	value := genValue(n.child[0])
 	index := n.val.([]int)
 	i := n.findex
-	next := getExec(n.tnext)
+	tnext := getExec(n.tnext)
 
-	if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
-		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).Elem().FieldByIndex(index)
-			return next
+	if n.fnext != nil {
+		fnext := getExec(n.fnext)
+		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).Elem().FieldByIndex(index)
+				if f.data[i].Bool() {
+					return tnext
+				}
+				return fnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).FieldByIndex(index)
+				if f.data[i].Bool() {
+					return tnext
+				}
+				return fnext
+			}
 		}
 	} else {
-		n.exec = func(f *frame) bltn {
-			f.data[i] = value(f).FieldByIndex(index)
-			return next
+		if n.child[0].typ.TypeOf().Kind() == reflect.Ptr {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).Elem().FieldByIndex(index)
+				return tnext
+			}
+		} else {
+			n.exec = func(f *frame) bltn {
+				f.data[i] = value(f).FieldByIndex(index)
+				return tnext
+			}
 		}
 	}
 }
@@ -1246,7 +1350,7 @@ func getIndexSeqMethod(n *node) {
 	}
 }
 
-func negate(n *node) {
+func neg(n *node) {
 	dest := genValue(n)
 	value := genValue(n.child[0])
 	next := getExec(n.tnext)
@@ -1265,6 +1369,37 @@ func negate(n *node) {
 	case reflect.Complex64, reflect.Complex128:
 		n.exec = func(f *frame) bltn {
 			dest(f).SetComplex(-value(f).Complex())
+			return next
+		}
+	}
+}
+
+func pos(n *node) {
+	dest := genValue(n)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+
+	n.exec = func(f *frame) bltn {
+		dest(f).Set(value(f))
+		return next
+	}
+}
+
+func bitNot(n *node) {
+	dest := genValue(n)
+	value := genValue(n.child[0])
+	next := getExec(n.tnext)
+	typ := n.typ.TypeOf()
+
+	switch typ.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		n.exec = func(f *frame) bltn {
+			dest(f).SetInt(^value(f).Int())
+			return next
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		n.exec = func(f *frame) bltn {
+			dest(f).SetUint(^value(f).Uint())
 			return next
 		}
 	}
@@ -1414,7 +1549,7 @@ func arrayLit(n *node) {
 		if c.kind == keyValueExpr {
 			convertLiteralValue(c.child[1], rtype)
 			values[i] = genValue(c.child[1])
-			index[i] = int(c.child[0].rval.Int())
+			index[i] = int(vInt(c.child[0].rval))
 		} else {
 			convertLiteralValue(c, rtype)
 			values[i] = genValue(c)
@@ -1545,12 +1680,12 @@ func destType(n *node) *itype {
 	}
 }
 
-// compositeLit creates and populates a struct object
-func compositeLit(n *node) {
+// doCompositeLit creates and populates a struct object
+func doCompositeLit(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if hasType {
 		child = n.child[1:]
 	}
 	destInterface := destType(n).cat == interfaceT
@@ -1582,12 +1717,15 @@ func compositeLit(n *node) {
 	}
 }
 
-// compositeSparse creates a struct Object, filling fields from sparse key-values
-func compositeSparse(n *node) {
+func compositeLit(n *node)       { doCompositeLit(n, true) }
+func compositeLitNotype(n *node) { doCompositeLit(n, false) }
+
+// doCompositeSparse creates a struct Object, filling fields from sparse key-values
+func doCompositeSparse(n *node, hasType bool) {
 	value := valueGenerator(n, n.findex)
 	next := getExec(n.tnext)
 	child := n.child
-	if !n.typ.untyped {
+	if hasType {
 		child = n.child[1:]
 	}
 
@@ -1616,6 +1754,9 @@ func compositeSparse(n *node) {
 		return next
 	}
 }
+
+func compositeSparse(n *node)       { doCompositeSparse(n, true) }
+func compositeSparseNotype(n *node) { doCompositeSparse(n, false) }
 
 func empty(n *node) {}
 
@@ -1702,14 +1843,26 @@ func rangeMap(n *node) {
 	if len(n.child) == 4 {
 		index1 := n.child[1].findex  // map value location in frame
 		value = genValue(n.child[2]) // map
-		n.exec = func(f *frame) bltn {
-			iter := f.data[index2].Interface().(*reflect.MapIter)
-			if !iter.Next() {
-				return fnext
+		if n.child[1].typ.cat == interfaceT {
+			n.exec = func(f *frame) bltn {
+				iter := f.data[index2].Interface().(*reflect.MapIter)
+				if !iter.Next() {
+					return fnext
+				}
+				f.data[index0].Set(iter.Key())
+				f.data[index1].Set(iter.Value().Elem())
+				return tnext
 			}
-			f.data[index0].Set(iter.Key())
-			f.data[index1].Set(iter.Value())
-			return tnext
+		} else {
+			n.exec = func(f *frame) bltn {
+				iter := f.data[index2].Interface().(*reflect.MapIter)
+				if !iter.Next() {
+					return fnext
+				}
+				f.data[index0].Set(iter.Key())
+				f.data[index1].Set(iter.Value())
+				return tnext
+			}
 		}
 	} else {
 		value = genValue(n.child[1]) // map
@@ -1877,6 +2030,8 @@ func _append(n *node) {
 		values := make([]func(*frame) reflect.Value, l)
 		for i, arg := range args {
 			switch {
+			case n.typ.val.cat == interfaceT:
+				values[i] = genValueInterface(arg)
 			case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 				values[i] = genValueInterfacePtr(arg)
 			case arg.typ.untyped:
@@ -1897,6 +2052,8 @@ func _append(n *node) {
 	} else {
 		var value0 func(*frame) reflect.Value
 		switch {
+		case n.typ.val.cat == interfaceT:
+			value0 = genValueInterface(n.child[2])
 		case isRecursiveStruct(n.typ.val, n.typ.val.rtype):
 			value0 = genValueInterfacePtr(n.child[2])
 		case n.child[2].typ.untyped:
@@ -1946,7 +2103,7 @@ func _close(n *node) {
 }
 
 func _complex(n *node) {
-	i := n.findex
+	dest := genValue(n)
 	c1, c2 := n.child[1], n.child[2]
 	convertLiteralValue(c1, floatType)
 	convertLiteralValue(c2, floatType)
@@ -1956,38 +2113,38 @@ func _complex(n *node) {
 
 	if typ := n.typ.TypeOf(); isComplex(typ) {
 		n.exec = func(f *frame) bltn {
-			f.data[i].SetComplex(complex(value0(f).Float(), value1(f).Float()))
+			dest(f).SetComplex(complex(value0(f).Float(), value1(f).Float()))
 			return next
 		}
 	} else {
 		// Not a complex type: ignore imaginary part
 		n.exec = func(f *frame) bltn {
-			f.data[i].Set(value0(f).Convert(typ))
+			dest(f).Set(value0(f).Convert(typ))
 			return next
 		}
 	}
 }
 
 func _imag(n *node) {
-	i := n.findex
+	dest := genValue(n)
 	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		f.data[i].SetFloat(imag(value(f).Complex()))
+		dest(f).SetFloat(imag(value(f).Complex()))
 		return next
 	}
 }
 
 func _real(n *node) {
-	i := n.findex
+	dest := genValue(n)
 	convertLiteralValue(n.child[1], complexType)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		f.data[i].SetFloat(real(value(f).Complex()))
+		dest(f).SetFloat(real(value(f).Complex()))
 		return next
 	}
 }
@@ -2005,12 +2162,12 @@ func _delete(n *node) {
 }
 
 func _len(n *node) {
-	i := n.findex
+	dest := genValue(n)
 	value := genValue(n.child[1])
 	next := getExec(n.tnext)
 
 	n.exec = func(f *frame) bltn {
-		f.data[i].SetInt(int64(value(f).Len()))
+		dest(f).SetInt(int64(value(f).Len()))
 		return next
 	}
 }
@@ -2030,7 +2187,7 @@ func _new(n *node) {
 func _make(n *node) {
 	dest := genValue(n)
 	next := getExec(n.tnext)
-	typ := n.child[1].typ.TypeOf()
+	typ := n.child[1].typ.frameType()
 
 	switch typ.Kind() {
 	case reflect.Array, reflect.Slice:
@@ -2123,16 +2280,18 @@ func reset(n *node) {
 func recv(n *node) {
 	value := genValue(n.child[0])
 	tnext := getExec(n.tnext)
+	i := n.findex
 
 	if n.interp.cancelChan {
 		// Cancellable channel read
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				ch := value(f)
 				// Fast: channel read doesn't block
-				if x, ok := ch.TryRecv(); ok {
-					if x.Bool() {
+				var ok bool
+				ch := value(f)
+				if f.data[i], ok = ch.TryRecv(); ok {
+					if f.data[i].Bool() {
 						return tnext
 					}
 					return fnext
@@ -2148,7 +2307,6 @@ func recv(n *node) {
 				return fnext
 			}
 		} else {
-			i := n.findex
 			n.exec = func(f *frame) bltn {
 				// Fast: channel read doesn't block
 				var ok bool
@@ -2170,7 +2328,7 @@ func recv(n *node) {
 		if n.fnext != nil {
 			fnext := getExec(n.fnext)
 			n.exec = func(f *frame) bltn {
-				if v, _ := value(f).Recv(); v.Bool() {
+				if f.data[i], _ = value(f).Recv(); f.data[i].Bool() {
 					return tnext
 				}
 				return fnext
@@ -2222,13 +2380,16 @@ func recv2(n *node) {
 }
 
 func convertLiteralValue(n *node, t reflect.Type) {
-	if n.kind != basicLit || t == nil || t.Kind() == reflect.Interface {
+	// Skip non-constant values, undefined target type or interface target type.
+	if !(n.kind == basicLit || n.rval.IsValid()) || t == nil || t.Kind() == reflect.Interface {
 		return
 	}
 	if n.rval.IsValid() {
+		// Convert constant value to target type.
 		n.rval = n.rval.Convert(t)
 	} else {
-		n.rval = reflect.New(t).Elem() // convert to type nil value
+		// Create a zero value of target type.
+		n.rval = reflect.New(t).Elem()
 	}
 }
 
@@ -2420,19 +2581,21 @@ func isNil(n *node) {
 		value = genValue(n.child[0])
 	}
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
 			if value(f).IsNil() {
+				dest(f).SetBool(true)
 				return tnext
 			}
+			dest(f).SetBool(false)
 			return fnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
-			f.data[i].SetBool(value(f).IsNil())
+			dest(f).SetBool(value(f).IsNil())
 			return tnext
 		}
 	}
@@ -2446,19 +2609,21 @@ func isNotNil(n *node) {
 		value = genValue(n.child[0])
 	}
 	tnext := getExec(n.tnext)
+	dest := genValue(n)
 
 	if n.fnext != nil {
 		fnext := getExec(n.fnext)
 		n.exec = func(f *frame) bltn {
 			if value(f).IsNil() {
+				dest(f).SetBool(false)
 				return fnext
 			}
+			dest(f).SetBool(true)
 			return tnext
 		}
 	} else {
-		i := n.findex
 		n.exec = func(f *frame) bltn {
-			f.data[i].SetBool(!value(f).IsNil())
+			dest(f).SetBool(!value(f).IsNil())
 			return tnext
 		}
 	}

@@ -6,10 +6,10 @@ github.com/0xAX/notificator
 github.com/RoaringBitmap/roaring
 # github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
 github.com/alecthomas/kingpin
-# github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc
+# github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 github.com/alecthomas/template
 github.com/alecthomas/template/parse
-# github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf
+# github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 github.com/alecthomas/units
 # github.com/anacrolix/go-libutp v1.0.2
 github.com/anacrolix/go-libutp
@@ -51,7 +51,7 @@ github.com/anacrolix/sync
 github.com/anacrolix/upnp
 # github.com/anacrolix/utp v0.0.0-20180219060659-9e0e1d1d0572
 github.com/anacrolix/utp
-# github.com/armon/go-metrics v0.3.0
+# github.com/armon/go-metrics v0.3.3
 github.com/armon/go-metrics
 # github.com/aws/aws-sdk-go v1.23.0
 github.com/aws/aws-sdk-go/aws
@@ -94,13 +94,15 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/benbjohnson/immutable v0.2.0
 github.com/benbjohnson/immutable
+# github.com/boltdb/bolt v1.3.1
+github.com/boltdb/bolt
 # github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
 github.com/bradfitz/iter
 # github.com/cenkalti/backoff v2.1.1+incompatible
 github.com/cenkalti/backoff
 # github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 github.com/chzyer/readline
-# github.com/containous/yaegi v0.7.2
+# github.com/containous/yaegi v0.7.7-0.20200305132806-0ace9244c4da
 github.com/containous/yaegi/interp
 github.com/containous/yaegi/stdlib
 # github.com/coreos/go-systemd/v22 v22.0.0
@@ -169,7 +171,7 @@ github.com/gutengo/fil
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-cleanhttp v0.5.1
 github.com/hashicorp/go-cleanhttp
-# github.com/hashicorp/go-hclog v0.12.0
+# github.com/hashicorp/go-hclog v0.12.1
 github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-immutable-radix v1.1.0
 github.com/hashicorp/go-immutable-radix
@@ -199,6 +201,8 @@ github.com/hashicorp/hcl/json/token
 github.com/hashicorp/memberlist
 # github.com/hashicorp/raft v1.1.2
 github.com/hashicorp/raft
+# github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617
+github.com/hashicorp/raft-boltdb
 # github.com/hashicorp/vault v0.10.3
 github.com/hashicorp/vault/api
 github.com/hashicorp/vault/helper/compressutil
@@ -258,7 +262,7 @@ github.com/manifoldco/promptui/screenbuf
 github.com/manveru/faker
 # github.com/maruel/panicparse v1.0.2
 github.com/maruel/panicparse/stack
-# github.com/mattn/go-colorable v0.1.4
+# github.com/mattn/go-colorable v0.1.6
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
@@ -388,7 +392,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20200212091648-12a6c2dcc1e4
+# golang.org/x/sys v0.0.0-20200302150141-5c8b2ff67527
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows

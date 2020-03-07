@@ -17,7 +17,6 @@ const (
 	binPkgT
 	boolT
 	builtinT
-	byteT
 	chanT
 	complex64T
 	complex128T
@@ -33,7 +32,6 @@ const (
 	int64T
 	mapT
 	ptrT
-	runeT
 	srcPkgT
 	stringT
 	structT
@@ -54,7 +52,6 @@ var cats = [...]string{
 	arrayT:      "arrayT",
 	binT:        "binT",
 	binPkgT:     "binPkgT",
-	byteT:       "byteT",
 	boolT:       "boolT",
 	builtinT:    "builtinT",
 	chanT:       "chanT",
@@ -72,7 +69,6 @@ var cats = [...]string{
 	int64T:      "int64T",
 	mapT:        "mapT",
 	ptrT:        "ptrT",
-	runeT:       "runeT",
 	srcPkgT:     "srcPkgT",
 	stringT:     "stringT",
 	structT:     "structT",
@@ -103,22 +99,23 @@ type structField struct {
 
 // itype defines the internal representation of types in the interpreter
 type itype struct {
-	cat        tcat          // Type category
-	field      []structField // Array of struct fields if structT or interfaceT
-	key        *itype        // Type of key element if MapT or nil
-	val        *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
-	arg        []*itype      // Argument types if funcT or nil
-	ret        []*itype      // Return types if funcT or nil
-	method     []*node       // Associated methods or nil
-	name       string        // name of type within its package for a defined type
-	path       string        // for a defined type, the package import path
-	size       int           // Size of array if ArrayT
-	rtype      reflect.Type  // Reflection type if ValueT, or nil
-	incomplete bool          // true if type must be parsed again (out of order declarations)
-	untyped    bool          // true for a literal value (string or number)
-	sizedef    bool          // true if array size is computed from type definition
-	node       *node         // root AST node of type definition
-	scope      *scope        // type declaration scope (in case of re-parse incomplete type)
+	cat         tcat          // Type category
+	field       []structField // Array of struct fields if structT or interfaceT
+	key         *itype        // Type of key element if MapT or nil
+	val         *itype        // Type of value element if chanT, mapT, ptrT, aliasT, arrayT or variadicT
+	arg         []*itype      // Argument types if funcT or nil
+	ret         []*itype      // Return types if funcT or nil
+	method      []*node       // Associated methods or nil
+	name        string        // name of type within its package for a defined type
+	path        string        // for a defined type, the package import path
+	size        int           // Size of array if ArrayT
+	rtype       reflect.Type  // Reflection type if ValueT, or nil
+	incomplete  bool          // true if type must be parsed again (out of order declarations)
+	untyped     bool          // true for a literal value (string or number)
+	sizedef     bool          // true if array size is computed from type definition
+	isBinMethod bool          // true if the type refers to a bin method function
+	node        *node         // root AST node of type definition
+	scope       *scope        // type declaration scope (in case of re-parse incomplete type)
 }
 
 // nodeType returns a type definition for the corresponding AST subtree
@@ -142,7 +139,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 		}
 	}
 
-	var err cfgError
+	var err error
 	switch n.kind {
 	case addressExpr, starExpr:
 		t.cat = ptrT
@@ -175,7 +172,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 					}
 				} else {
 					// Evaluate constant array size expression
-					if _, err = interp.cfg(n.child[0]); err != nil {
+					if _, err = interp.cfg(n.child[0], sc.pkgID); err != nil {
 						return nil, err
 					}
 					t.incomplete = true
@@ -199,8 +196,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.cat = boolT
 			t.name = "bool"
 		case byte:
-			t.cat = byteT
-			t.name = "byte"
+			t.cat = uint8T
+			t.name = "uint8"
 			t.untyped = true
 		case complex64:
 			t.cat = complex64T
@@ -226,8 +223,8 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			t.name = "uint"
 			t.untyped = true
 		case rune:
-			t.cat = runeT
-			t.name = "rune"
+			t.cat = int32T
+			t.name = "int32"
 			t.untyped = true
 		case string:
 			t.cat = stringT
@@ -409,6 +406,20 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			sc.sym[n.ident] = &symbol{kind: typeSym, typ: t}
 		}
 
+	case indexExpr:
+		var lt *itype
+		if lt, err = nodeType(interp, sc, n.child[0]); err != nil {
+			return nil, err
+		}
+		if lt.incomplete {
+			t.incomplete = true
+			break
+		}
+		switch lt.cat {
+		case arrayT, mapT:
+			t = lt.val
+		}
+
 	case interfaceType:
 		t.cat = interfaceT
 		if sname := typeName(n); sname != "" {
@@ -433,6 +444,9 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 				t.incomplete = t.incomplete || typ.incomplete
 			}
 		}
+
+	case landExpr, lorExpr:
+		t.cat = boolT
 
 	case mapType:
 		t.cat = mapT
@@ -482,7 +496,7 @@ func nodeType(interp *Interpreter, sc *scope, n *node) (*itype, error) {
 			if m, _ := lt.lookupMethod(name); m != nil {
 				t, err = nodeType(interp, sc, m.child[2])
 			} else if bm, _, _, ok := lt.lookupBinMethod(name); ok {
-				t = &itype{cat: valueT, rtype: bm.Type}
+				t = &itype{cat: valueT, rtype: bm.Type, isBinMethod: true}
 			} else if ti := lt.lookupField(name); len(ti) > 0 {
 				t = lt.fieldSeq(ti)
 			} else if bs, _, ok := lt.lookupBinField(name); ok {
@@ -593,7 +607,6 @@ var zeroValues [maxT]reflect.Value
 
 func init() {
 	zeroValues[boolT] = reflect.ValueOf(false)
-	zeroValues[byteT] = reflect.ValueOf(byte(0))
 	zeroValues[complex64T] = reflect.ValueOf(complex64(0))
 	zeroValues[complex128T] = reflect.ValueOf(complex128(0))
 	zeroValues[errorT] = reflect.ValueOf(new(error)).Elem()
@@ -604,7 +617,6 @@ func init() {
 	zeroValues[int16T] = reflect.ValueOf(int16(0))
 	zeroValues[int32T] = reflect.ValueOf(int32(0))
 	zeroValues[int64T] = reflect.ValueOf(int64(0))
-	zeroValues[runeT] = reflect.ValueOf(rune(0))
 	zeroValues[stringT] = reflect.ValueOf("")
 	zeroValues[uintT] = reflect.ValueOf(uint(0))
 	zeroValues[uint8T] = reflect.ValueOf(uint8(0))
@@ -616,11 +628,13 @@ func init() {
 
 // if type is incomplete, re-parse it.
 func (t *itype) finalize() (*itype, error) {
-	var err cfgError
+	var err error
 	if t.incomplete {
 		sym, _, found := t.scope.lookup(t.name)
 		if found && !sym.typ.incomplete {
 			sym.typ.method = append(sym.typ.method, t.method...)
+			t.method = sym.typ.method
+			t.incomplete = false
 			return sym.typ, nil
 		}
 		m := t.method
@@ -809,6 +823,22 @@ func (t *itype) lookupBinField(name string) (s reflect.StructField, index []int,
 	return s, index, ok
 }
 
+// methodCallType returns a method function type without the receiver defined.
+// The input type must be a method function type with the receiver as the first input argument.
+func (t *itype) methodCallType() reflect.Type {
+	it := []reflect.Type{}
+	ni := t.rtype.NumIn()
+	for i := 1; i < ni; i++ {
+		it = append(it, t.rtype.In(i))
+	}
+	ot := []reflect.Type{}
+	no := t.rtype.NumOut()
+	for i := 0; i < no; i++ {
+		ot = append(ot, t.rtype.Out(i))
+	}
+	return reflect.FuncOf(it, ot, t.rtype.IsVariadic())
+}
+
 // getMethod returns a pointer to the method definition
 func (t *itype) getMethod(name string) *node {
 	for _, m := range t.method {
@@ -916,7 +946,7 @@ func (t *itype) refType(defined map[string]bool) reflect.Type {
 	case interfaceT:
 		t.rtype = interf
 	case mapT:
-		t.rtype = reflect.MapOf(t.key.TypeOf(), t.val.TypeOf())
+		t.rtype = reflect.MapOf(t.key.refType(defined), t.val.refType(defined))
 	case ptrT:
 		t.rtype = reflect.PtrTo(t.val.refType(defined))
 	case structT:
@@ -1003,7 +1033,17 @@ func isInterface(t *itype) bool {
 func isStruct(t *itype) bool {
 	// Test first for a struct category, because a recursive interpreter struct may be
 	// represented by an interface{} at reflect level.
-	return t.cat == structT || t.TypeOf().Kind() == reflect.Struct
+	switch t.cat {
+	case structT:
+		return true
+	case aliasT, ptrT:
+		return isStruct(t.val)
+	case valueT:
+		k := t.rtype.Kind()
+		return k == reflect.Struct || (k == reflect.Ptr && t.rtype.Elem().Kind() == reflect.Struct)
+	default:
+		return false
+	}
 }
 
 func isBool(t *itype) bool { return t.TypeOf().Kind() == reflect.Bool }
