@@ -30,7 +30,7 @@ func (t peer) Update(c cluster) state {
 		maintain state = conditionTransition{
 			next:     t,
 			cond:     t.protocol.ClusterChange,
-			Duration: t.protocol.PassiveCheckin,
+			Duration: 15 * time.Minute,
 		}
 	)
 
