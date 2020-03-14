@@ -1,3 +1,15 @@
+commit 72e186baeb493bc5694328cd0810204147885787
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 14 10:01:32 2020 -0400
+
+    more robust raft management
+
+commit ec2fcb06dd35e4ee3f51d60876397cadf83bfb49
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 7 13:53:14 2020 -0500
+
+    release 0.1.1583604757-d860d338
+
 commit d860d338e9e1b6d81196bdd75a10a19a9770d21b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 7 13:12:37 2020 -0500
