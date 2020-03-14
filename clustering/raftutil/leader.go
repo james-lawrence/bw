@@ -26,12 +26,9 @@ func (t leader) Update(c cluster) state {
 		}
 	)
 
-	debugx.Println("leader update invoked")
+	debugx.Printf("leader update invoked: %p\n", t.r)
 	switch t.r.State() {
 	case raft.Leader:
-		// IMPORTANT: an active leader should never leave the raft cluster. changes in leadership
-		// are fairly disruptive, but this means the raft cluster can potentially
-		// be a single node larger than expected.
 		if t.cleanupPeers(c.LocalNode(), agent.QuorumNodes(c)...) {
 			refresh := time.Second
 			log.Println("peers unstable, will refresh in", refresh)
@@ -43,8 +40,10 @@ func (t leader) Update(c cluster) state {
 
 		return maintainState
 	default:
-		log.Println("lost leadership: leaving")
-		return leave(t, t.stateMeta)
+		log.Println("lost leadership: demote to peer")
+		return peer{
+			stateMeta: t.stateMeta,
+		}.Update(c)
 	}
 }
 
@@ -71,10 +70,8 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	}
 
 	peers := config.Configuration().Servers
-	voterCount := t.voterCount(peers)
+	voterCount := voterCount(peers)
 	allowRemoval := voterCount >= 3
-
-	// peers = removePeer(raft.ServerID(local.Name), peers...)
 
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
@@ -97,33 +94,49 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		}
 	}
 
-	// prevent peer removal if minimum number of voters are not allowed.
-	if allowRemoval {
-		for _, peer := range peers {
-			if peer.ID == raft.ServerID(local.Name) {
-				logx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
-				return true
+	for _, peer := range peers {
+		if peer.ID == raft.ServerID(local.Name) {
+			continue
+		}
+
+		switch peer.Suffrage {
+		case raft.Voter:
+			if err := t.r.DemoteVoter(peer.ID, 0, commitTimeout).Error(); err != nil {
+				log.Println("failed to demote peer", err)
+			}
+		case raft.Nonvoter:
+			// prevent peer removal if minimum number of voters is not met.
+			if !allowRemoval {
+				log.Println("failed to remove peer, not enough voters")
+				continue
 			}
 
-			switch peer.Suffrage {
-			case raft.Voter:
-				if err := t.r.DemoteVoter(peer.ID, 0, commitTimeout).Error(); err != nil {
-					log.Println("failed to demote peer", err)
-				}
-			case raft.Nonvoter:
-				if err := t.r.RemoveServer(peer.ID, 0, commitTimeout).Error(); err != nil {
-					log.Println("failed to demote peer", err)
-				}
+			if err := t.r.RemoveServer(peer.ID, 0, commitTimeout).Error(); err != nil {
+				log.Println("failed to remove peer", err)
 			}
+		}
 
+		return true
+	}
+
+	if len(peers) > 1 {
+		log.Println(local.Name, "preventing leadership transfer too many peers being changed")
+		return true
+	}
+
+	for _, peer := range peers {
+		if peer.ID == raft.ServerID(local.Name) && allowRemoval {
+			log.Println(local.Name, "- transferring leadership")
+			logx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
 			return true
 		}
 	}
 
+	debugx.Println(local.Name, "cluster is stable")
 	return false
 }
 
-func (t leader) voterCount(peers []raft.Server) (c int) {
+func voterCount(peers []raft.Server) (c int) {
 	for _, p := range peers {
 		if p.Suffrage == raft.Voter {
 			c++

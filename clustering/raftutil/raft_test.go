@@ -299,7 +299,6 @@ var _ = Describe("Raft", func() {
 				Expect(peer.c.Shutdown()).ToNot(HaveOccurred())
 				peer.rc()
 
-				log.Println("ATTEMPT", i)
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
 					return voters(getServers(rafts...)...)
@@ -314,6 +313,59 @@ var _ = Describe("Raft", func() {
 				go r.Overlay(peer.c, ProtocolOptionObservers(obs))
 				peer.r, peer.rc = &r, rcancel
 			}
+		})
+
+		It("should handle leadership changes", func() {
+			var (
+				network memberlist.MockNetwork
+				rafts   []*raft.Raft
+				peers   []peer
+			)
+
+			tmpdir := testingx.TempDir()
+			obsc := make(chan raft.Observation, 100)
+			obs := raft.NewObserver(obsc, true, nil)
+			provider := UnixAddressProvider{Dir: tmpdir}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			for i := 0; i < 3; i++ {
+				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+			}
+
+			Eventually(func() *raft.Raft {
+				rafts = gather(obsc, rafts...)
+				return firstRaft(findState(leaderFilter, rafts...)...)
+			}).ShouldNot(BeNil())
+
+			leader := firstRaft(findState(leaderFilter, rafts...)...)
+			expected := leader.Leader()
+
+			Eventually(func() bool {
+				newPeer(ctx, provider, tmpdir, obs, &network, peers...)
+				time.Sleep(500 * time.Millisecond)
+				rafts = gather(obsc, rafts...)
+				if l2 := firstRaft(findState(leaderFilter, rafts...)...); l2 != nil && l2.Leader() != expected {
+					return true
+				}
+				return false
+			}, 30*time.Second).Should(BeTrue())
+
+			Eventually(func() *raft.Raft {
+				time.Sleep(200 * time.Millisecond)
+				rafts = gather(obsc, rafts...)
+				return firstRaft(findState(leaderFilter, rafts...)...)
+			}, 30*time.Second).ShouldNot(BeNil())
+
+			Eventually(func() bool {
+				time.Sleep(200 * time.Millisecond)
+				rafts = gather(obsc, rafts...)
+				if l2 := firstRaft(findState(leaderFilter, rafts...)...); l2 != nil {
+					log.Println("VERIFYING NEW LEADER", l2.Leader(), expected)
+					return l2.Leader() != expected
+				}
+				return false
+			}, 30*time.Second).Should(BeTrue())
 		})
 	})
 })
