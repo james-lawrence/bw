@@ -2,6 +2,7 @@ package agentutil
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -40,7 +41,7 @@ func ReliableDispatch(ctx context.Context, d dispatcher, m ...agent.Message) (er
 			return ctx.Err()
 		default:
 			s := bs.Backoff(i)
-			log.Printf("dispatch attempt %T - %d failed, retrying in %v: %s\n", d, i, s, err)
+			log.Output(2, fmt.Sprintf("dispatch attempt %T - %d failed, retrying in %v: %s\n", d, i, s, err))
 			time.Sleep(s)
 		}
 	}

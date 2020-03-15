@@ -1,6 +1,7 @@
 package daemons
 
 import (
+	"context"
 	"net"
 	"path/filepath"
 	"time"
@@ -117,24 +118,32 @@ func Agent(ctx Context) (err error) {
 	// hack to propagate TLS to agents who are not in the quorum.
 	// this can be removed once per request credentials is fully implemented.
 	go timex.NowAndEvery(1*time.Hour, func() {
-		if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
-			// skip tls request
-			return
-		}
+		attempt := func() error {
+			// request the TLS certificate from the cluster.
+			// log.Println("tls request initiated")
+			// defer log.Println("tls request completed")
 
-		// request the TLS certificate from the cluster.
-		// log.Println("tls request initiated")
-		// defer log.Println("tls request completed")
-
-		logx.MaybeLog(
-			errors.Wrap(
+			tctx, done := context.WithTimeout(ctx.Context, 10*time.Second)
+			defer done()
+			return errors.Wrap(
 				agentutil.ReliableDispatch(
-					ctx.Context, dispatcher,
+					tctx, dispatcher,
 					agentutil.TLSRequest(ctx.Cluster.Local()),
 				),
 				"failed to dispatch tls request",
-			),
-		)
+			)
+		}
+
+		for deadline := time.Now().Add(10 * time.Minute); deadline.After(time.Now()); {
+			if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
+				// skip tls request
+				return
+			}
+
+			if logx.MaybeLog(attempt()) == nil {
+				return
+			}
+		}
 	})
 
 	ctx.grpc("agent", server, bind)
