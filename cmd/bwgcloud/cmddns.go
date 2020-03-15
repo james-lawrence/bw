@@ -95,7 +95,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		return err
 	}
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	return dns.NewGoogleCloudDNS(
 		t.projectID,
 		t.zoneID,

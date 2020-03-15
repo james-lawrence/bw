@@ -104,7 +104,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	log.Println("connected to cluster")
 	debugx.Printf("configuration:\n%#v\n", config)
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 
 	peers := agentutil.PeerSet(deployment.ApplyFilter(filter, cx.Peers()...))
 	if !t.enabled {

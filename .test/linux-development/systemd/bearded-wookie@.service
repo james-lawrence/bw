@@ -12,6 +12,8 @@ CacheDirectory=%p/%i
 EnvironmentFile=-%C/%p/%i/agent.env
 Environment=HOME=%h
 Environment=LEGO_CA_CERTIFICATES="%h/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
+Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
+SyslogIdentifier=%p-%i
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
 ExecStart=%h/go/bin/bw agent --agent-name="%i" --agent-config="%C/%p/%i/agent.config" ${CLI_OPTIONS}
 

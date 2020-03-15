@@ -90,7 +90,7 @@ func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("canary", "ddeploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
+	parent.Flag("canary", "deploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	parent.Arg("archive", "deployment ID to redeploy").StringVar(&t.deploymentID)
@@ -533,7 +533,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 
 	go agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, qd, local.Peer, events)
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {
 		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive retrieval failed"))
 		events <- agentutil.LogEvent(local.Peer, "deployment failed")

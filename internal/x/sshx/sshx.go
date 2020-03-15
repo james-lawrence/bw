@@ -113,6 +113,16 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 	return ssh.MarshalAuthorizedKey(pubkey), nil
 }
 
+// MustPublicKey returns a public key from the pem encoded private key.
+// panics if creation of the public key fails.
+func MustPublicKey(pemkey []byte) []byte {
+	pub, err := PublicKey(pemkey)
+	if err != nil {
+		panic(err)
+	}
+	return pub
+}
+
 // IsNoKeyFound check if ssh key is not found.
 func IsNoKeyFound(err error) bool {
 	return err.Error() == "ssh: no key found"

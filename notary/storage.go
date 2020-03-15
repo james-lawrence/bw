@@ -19,32 +19,32 @@ import (
 )
 
 // NewFromFile load notary configuration from a file.
-func NewFromFile(root, path string) (c Composite, err error) {
+func NewFromFile(configpath, root string) (c Composite, err error) {
 	var (
-		in io.ReadCloser
+		config io.ReadCloser
 	)
 
-	if in, err = os.Open(path); err != nil {
-		return c, errors.Wrapf(err, "failed to read configuration from: %s", path)
+	if config, err = os.Open(configpath); err != nil {
+		return c, errors.Wrapf(err, "failed to read configuration from: %s", configpath)
 	}
-	defer in.Close()
+	defer config.Close()
 
-	if c, err = NewFrom(root, in); err != nil {
-		return c, errors.Wrapf(err, "failed to read configuration from: %s", path)
+	if c, err = NewFrom(config, root); err != nil {
+		return c, errors.Wrapf(err, "failed to read configuration from: %s", configpath)
 	}
 
 	return c, nil
 }
 
 // NewFrom parse the configuration from an io.Reader.
-func NewFrom(root string, in io.Reader) (c Composite, err error) {
+func NewFrom(config io.Reader, root string) (c Composite, err error) {
 	var (
 		nc        = notary{}
 		directory = NewDirectory(filepath.Join(root, "dynamic"))
 		bin       []byte
 	)
 
-	if bin, err = ioutil.ReadAll(in); err != nil {
+	if bin, err = ioutil.ReadAll(config); err != nil {
 		return c, err
 	}
 

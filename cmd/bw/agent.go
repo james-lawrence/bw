@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/sshx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 
@@ -71,9 +71,10 @@ func (t *agentCmd) bind() (err error) {
 		p             raftutil.Protocol
 		deployResults []chan deployment.DeployResult
 		ns            notary.Composite
+		private       []byte
 	)
 
-	log.SetPrefix(fmt.Sprintf("[AGENT - %s] ", t.config.Name))
+	log.SetPrefix("[AGENT] ")
 
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
 		return err
@@ -89,15 +90,23 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
+	if private, err = sshx.CachedAuto(filepath.Join(t.config.Root, "authorization.req.key")); err != nil {
+		return err
+	}
+
 	if err = certificatecache.AutomaticTLSAgent(t.config.ServerName, t.config.CredentialsDir); err != nil {
 		return err
 	}
 
-	if ns, err = notary.NewFromFile(filepath.Join(t.config.Root, bw.DirAuthorizations), t.configFile); err != nil {
+	if ns, err = notary.NewFromFile(t.configFile, filepath.Join(t.config.Root, bw.DirAuthorizations)); err != nil {
 		return err
 	}
 
-	local := cluster.NewLocal(t.config.Peer())
+	local := daemons.NewGossip(
+		t.config.Peer(),
+		daemons.GossipOptionAuthorization(sshx.MustPublicKey(private)),
+		daemons.GossipOptionNotary(ns),
+	)
 	bq := raftutil.BacklogQueue{Backlog: make(chan raftutil.QueuedEvent, 100)}
 
 	cdialer := commandutils.NewClusterDialer(
@@ -139,7 +148,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	var (
 		tc  storage.TorrentConfig
 		tcu storage.TorrentUtil

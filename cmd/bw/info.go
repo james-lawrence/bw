@@ -91,7 +91,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	if latest, err = agentutil.DetermineLatestDeployment(cx, agent.NewDialer(d.Defaults()...)); err != nil {
 		return err
 	}
@@ -160,7 +160,7 @@ func (t *agentInfo) _info() (err error) {
 		return err
 	}
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
 		var (
 			info agent.StatusResponse

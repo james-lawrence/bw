@@ -83,7 +83,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		return err
 	}
 
-	cx := cluster.New(local, c)
+	cx := cluster.New(local.Peer, c)
 	r53dns := dns.MaybeSample(
 		dns.NewRoute53(
 			t.hostedZoneID,

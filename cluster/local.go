@@ -3,11 +3,11 @@ package cluster
 import (
 	"log"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/envx"
-
-	"github.com/golang/protobuf/proto"
 )
 
 type localOption func(*Local)
@@ -61,9 +61,11 @@ type Local struct {
 
 // NodeMeta provides the metadata about the node.
 func (t Local) NodeMeta(limit int) []byte {
-	log.Println("NodeMeta invoked limit:", limit, len(t.metadata))
-	if limit < len(t.metadata) {
-		log.Println("insufficient room to send metadata")
+	if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
+		log.Println("NodeMeta:", len(t.metadata), ">", limit)
+	}
+
+	if len(t.metadata) > limit {
 		return []byte(nil)
 	}
 
@@ -72,7 +74,7 @@ func (t Local) NodeMeta(limit int) []byte {
 
 // LocalState ...
 func (t Local) LocalState(join bool) []byte {
-	return t.Capability
+	return []byte(nil)
 }
 
 // GetBroadcasts ...
