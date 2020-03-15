@@ -1,3 +1,27 @@
+commit 80cfa4f6cddaaf7609717075eaf7079791340fe2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 15 10:44:37 2020 -0400
+
+    fix test configuration
+
+commit 75979a738377d69a286a652347942c36610f3e25
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 15 10:34:01 2020 -0400
+
+    test configuration improvements
+
+commit 322d9bade1c16697f832c31e72aa04bc18d60b2e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 15 10:33:26 2020 -0400
+
+    prevent TLS request from spinning forever
+
+commit e82fe56685569d32770d21e9f2deeeff95054f76
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 14 10:16:07 2020 -0400
+
+    release 0.1.1584194492-72e186ba
+
 commit 72e186baeb493bc5694328cd0810204147885787
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 14 10:01:32 2020 -0400
