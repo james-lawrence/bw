@@ -44,20 +44,20 @@ func (t passive) Update(c cluster) state {
 		return maintainState
 	}
 
-	if r.LastIndex() == 0 {
-		if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
-			log.Println("raft bootstrap failed", r.LastIndex(), err)
-			t.protocol.maybeShutdown(c, r, network)
-			return maintainState
-		}
-	}
-
 	sm := stateMeta{
 		r:         r,
 		transport: network,
 		protocol:  t.protocol,
 		sgroup:    t.sgroup,
 		initTime:  time.Now(),
+	}
+
+	if r.LastIndex() == 0 {
+		if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
+			log.Println("raft bootstrap failed", r.LastIndex(), err)
+			t.protocol.maybeShutdown(c, sm.r, sm.transport)
+			return maintainState
+		}
 	}
 
 	// add this to the parent context waitgroup

@@ -320,6 +320,7 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 
 	if r, err = raft.NewRaft(&conf, t.getStateMachine(), t.store, t.store, t.Snapshots, network); err != nil {
+		autocloseTransport(network)
 		return nil, nil, errors.WithStack(err)
 	}
 
@@ -365,9 +366,18 @@ func (t *Protocol) maybeShutdown(c cluster, r *raft.Raft, transport raft.Transpo
 		return
 	}
 
-	if trans, ok := transport.(raft.WithClose); ok {
-		log.Println(c.LocalNode().Name, "closed transport", trans.Close())
+	if err := autocloseTransport(transport); err == nil {
+		log.Println(c.LocalNode().Name, "closed transport")
+	} else {
+		log.Println(c.LocalNode().Name, "failed to close transport", err)
 	}
+}
+
+func autocloseTransport(trans raft.Transport) error {
+	if trans, ok := trans.(raft.WithClose); ok {
+		return trans.Close()
+	}
+	return nil
 }
 
 func handleClusterEvent(e Event, obs ...clusterObserver) {

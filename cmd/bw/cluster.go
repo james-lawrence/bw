@@ -5,9 +5,11 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
+	"os"
 	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -100,10 +102,15 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 	var (
 		cs *tls.Config
 		s  *raftboltdb.BoltStore
+		ss raft.SnapshotStore
 	)
 
+	if err = os.MkdirAll(filepath.Join(conf.Root, "raft.d"), 0700); err != nil {
+		return p, err
+	}
+
 	sopts := raftboltdb.Options{
-		Path: filepath.Join(conf.Root, "raft.db"),
+		Path: filepath.Join(conf.Root, "raft.d", "state.bin"),
 	}
 	if s, err = raftboltdb.New(sopts); err != nil {
 		return p, errors.WithStack(err)
@@ -113,10 +120,15 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 		return p, errors.WithStack(err)
 	}
 
+	if ss, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft.d"), 5, os.Stderr); err != nil {
+		return p, errors.WithStack(err)
+	}
+
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
 		raftutil.ProtocolOptionTCPTransport(conf.RaftBind, cs),
 		raftutil.ProtocolOptionStorage(s),
+		raftutil.ProtocolOptionSnapshotStorage(ss),
 	}
 
 	return raftutil.NewProtocol(

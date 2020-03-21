@@ -177,7 +177,7 @@ func (t worker) DeployTo(peer agent.Peer) {
 			return
 		}
 
-		if failure := awaitCompletion(t.timeout, t.dispatcher, t.check, peer); failure != nil {
+		if failure := awaitCompletion(t.timeout, t.dispatcher, t.check, nil, peer); failure != nil {
 			atomic.AddInt64(t.failed, 1)
 			switch errors.Cause(failure).(type) {
 			case errorsx.Timeout:
@@ -210,7 +210,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 
 	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
-	if failure := awaitCompletion(t.worker.timeout, t.dispatcher, t.worker.check, nodes...); failure != nil {
+	if failure := awaitCompletion(t.worker.timeout, t.dispatcher, t.worker.check, c, nodes...); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
@@ -240,7 +240,7 @@ func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	return subset
 }
 
-func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers ...agent.Peer) error {
+func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c cluster, peers ...agent.Peer) error {
 	remaining := make([]agent.Peer, 0, len(peers))
 	failed := error(nil)
 
@@ -256,10 +256,7 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers
 				continue
 			}
 
-			deploy, err := check.Visit(peer)
-			if err != nil {
-				log.Printf("failed to check: %s - %T, %s\n", peer.Name, errors.Cause(err), err)
-			} else {
+			if deploy, err := check.Visit(peer); err == nil {
 				switch deploy.Stage {
 				case agent.Deploy_Completed:
 					continue
@@ -271,10 +268,16 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, peers
 					failed = errorsx.Compact(failed, errors.Errorf("%s: deployment has failed", did))
 					continue
 				}
+			} else {
+				log.Printf("failed to check: %s - %T, %s\n", peer.Name, errors.Cause(err), err)
 			}
 
 			remaining = append(remaining, peer)
+		}
 
+		// checking if the failed nodes are still within the cluster.
+		if c != nil {
+			remaining = ApplyFilter(Peers(c.Peers()...), remaining...)
 		}
 
 		if len(remaining) > 0 {

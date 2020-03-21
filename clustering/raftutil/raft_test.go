@@ -55,8 +55,8 @@ func gather(c chan raft.Observation, peers ...*raft.Raft) (results []*raft.Raft)
 }
 
 func printrafts(peers ...*raft.Raft) {
-	log.Println("checkpoint")
-	defer log.Println("checkpoint complete")
+	log.Println("checkpoint initiated")
+	defer log.Println("checkpoint completed")
 	for _, p := range peers {
 		log.Println(p.String())
 	}

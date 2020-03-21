@@ -112,6 +112,4 @@ require (
 	gotest.tools v2.2.0+incompatible // indirect
 )
 
-go 1.13
-
-replace github.com/anacrolix/torrent => github.com/james-lawrence/torrent v0.0.0-20200203124159-506896902d90
+go 1.14
