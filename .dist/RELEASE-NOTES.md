@@ -1,3 +1,27 @@
+commit d4e8f3a3b7a86f0f7d37dd4af022c810fe55f798
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 21 13:21:14 2020 -0400
+
+    cleans up agentctl commands.
+    
+    adds a new agent command to print the state of the raft cluster from
+    disk.
+
+commit 78fe45d3d5f8bbaa04e4fb1fc201d4171b6b0cdb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 21 12:15:26 2020 -0400
+
+    improve raft code.
+    
+    - prevent panics by switching to file backed snapshots.
+    - properly close the transport in failure cases.
+
+commit 6e2f4bc1491026c2256a0c8617fba10b25772157
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 15 10:48:31 2020 -0400
+
+    release 0.1.1584283477-80cfa4f6
+
 commit 80cfa4f6cddaaf7609717075eaf7079791340fe2
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Mar 15 10:44:37 2020 -0400
