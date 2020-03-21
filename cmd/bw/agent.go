@@ -21,10 +21,11 @@ import (
 	"github.com/james-lawrence/bw/storage"
 
 	"google.golang.org/grpc/keepalive"
-
+	"github.com/golang/protobuf/proto"
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
+	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +33,8 @@ type agentCmd struct {
 	*global
 	config     agent.Config
 	configFile string
+	raftFile string
+	raftVerbose bool
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
@@ -60,7 +63,10 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	).TCPVar(&t.config.AutocertBind)
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
+
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
+
+	t.displayCmd(parent.Command("quorum-state", "display the quorum state, only can be run on the server"))
 }
 
 func (t *agentCmd) bind() (err error) {
@@ -213,5 +219,84 @@ func (t *agentCmd) bind() (err error) {
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}
 
+	return nil
+}
+
+
+func (t *agentCmd) displayCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("verbose", "prints raft internal logs").Default("false").BoolVar(&t.raftVerbose)
+	parent.Arg("path", "path to the raft log database").StringVar(&t.raftFile)
+	return parent.Action(t.display)
+}
+
+func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
+	type stats struct {
+		barriers int
+		commands int
+		noops int
+		configurations int
+		unknown int
+	}
+	var (
+		lstats stats
+	)
+
+	store, err := raftStoreFilepath(t.raftFile)
+	if err != nil {
+		return err
+	}
+
+	i, err := store.FirstIndex()
+	if err != nil {
+		return err
+	}
+
+	l, err := store.LastIndex()
+	if err != nil {
+		return err
+	}
+
+	for ; i <= l; i++ {
+		var (
+			current raft.Log
+			decoded agent.Message
+		)
+
+		if err = store.GetLog(i, &current); err != nil {
+			fmt.Println("get log failed", i, err)
+			continue
+		}
+
+		switch current.Type {
+		case raft.LogBarrier:
+			lstats.barriers++
+			if t.raftVerbose {
+				fmt.Println("barrier invoked", current.Index, current.Term)
+			}
+			continue
+		case raft.LogCommand:
+			lstats.commands++
+			if err = proto.Unmarshal(current.Data, &decoded); err != nil {
+				fmt.Println("decode failed", i, err)
+				continue
+			}
+			fmt.Println("message", proto.MarshalTextString(&decoded))
+		case raft.LogNoop:
+			lstats.noops++
+			fmt.Println("noop invoked", current.Index, current.Term)
+			continue
+		case raft.LogConfiguration:
+			lstats.configurations++
+			if t.raftVerbose {
+				fmt.Println("log configuration", current.Index, current.Term)
+			}
+		default:
+			lstats.unknown++
+			fmt.Println("unexpected log message", current.Type)
+			continue
+		}
+	}
+
+	fmt.Printf("log metrics %#v\n", lstats)
 	return nil
 }

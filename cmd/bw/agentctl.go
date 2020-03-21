@@ -30,26 +30,21 @@ type actlCmd struct {
 
 func (t *actlCmd) configure(parent *kingpin.CmdClause) {
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-		cmd.Flag("force", "must be specified in order for the command to actual be sent").Default("false").BoolVar(&t.enabled)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
 
-	t.actlCmd(common(parent.Command("all", "restart all the nodes within the cluster").Default()))
-	t.filteredCmd(common(parent.Command("filtered", "restart all the nodes that match one of the provided filters")))
+	t.restartCmd(common(parent.Command("restart", "restart all the nodes within the cluster").Default()))
 }
 
-func (t *actlCmd) actlCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	return parent.Action(t.all)
-}
-
-func (t *actlCmd) filteredCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+func (t *actlCmd) restartCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
-	return parent.Action(t.filtered)
+	parent.Flag("force", "must be specified in order for the command to actual be sent").Default("false").BoolVar(&t.enabled)
+	return parent.Action(t.restart)
 }
 
-func (t *actlCmd) filtered(ctx *kingpin.ParseContext) error {
+func (t *actlCmd) restart(ctx *kingpin.ParseContext) error {
 	filters := make([]deployment.Filter, 0, len(t.filteredRegex))
 	for _, n := range t.filteredRegex {
 		filters = append(filters, deployment.Named(n))
@@ -60,10 +55,6 @@ func (t *actlCmd) filtered(ctx *kingpin.ParseContext) error {
 	}
 
 	return t.shutdown(deployment.Or(filters...))
-}
-
-func (t *actlCmd) all(ctx *kingpin.ParseContext) error {
-	return t.shutdown(deployment.AlwaysMatch)
 }
 
 func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {

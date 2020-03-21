@@ -109,10 +109,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 		return p, err
 	}
 
-	sopts := raftboltdb.Options{
-		Path: filepath.Join(conf.Root, "raft.d", "state.bin"),
-	}
-	if s, err = raftboltdb.New(sopts); err != nil {
+	if s, err = raftStore(conf); err != nil {
 		return p, errors.WithStack(err)
 	}
 
@@ -136,4 +133,15 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 		sq,
 		append(defaultOptions, options...)...,
 	)
+}
+
+func raftStore(c agent.Config) (*raftboltdb.BoltStore, error) {
+	return raftStoreFilepath(filepath.Join(c.Root, "raft.d", "state.bin"))
+}
+
+func raftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {
+	sopts := raftboltdb.Options{
+		Path: p,
+	}
+	return raftboltdb.New(sopts)
 }
