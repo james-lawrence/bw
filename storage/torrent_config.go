@@ -7,8 +7,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/james-lawrence/torrent"
+	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/pkg/errors"
 )
 

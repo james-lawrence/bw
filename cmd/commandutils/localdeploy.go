@@ -2,6 +2,7 @@ package commandutils
 
 import (
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -31,6 +32,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		dctx    deployment.DeployContext
 		archive agent.Archive
 		environ []string
+		cdir    string
 	)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
@@ -48,10 +50,14 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		return err
 	}
 
+	if cdir, err = filepath.Abs(config.DeployDataDir); err != nil {
+		return err
+	}
+
 	sctx = shell.NewContext(
 		sctx,
 		shell.OptionEnviron(append(environ, sctx.Environ...)),
-		shell.OptionDir(config.DeployDataDir),
+		shell.OptionDir(cdir),
 	)
 
 	archive = agent.Archive{}
@@ -65,7 +71,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		deployment.DeployContextOptionDisableReset,
 	}
 
-	if dctx, err = deployment.NewDeployContext(config.DeployDataDir, local, dopts, archive, opts...); err != nil {
+	if dctx, err = deployment.NewDeployContext(cdir, local, dopts, archive, opts...); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

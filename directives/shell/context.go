@@ -15,10 +15,15 @@ import (
 // DefaultContext creates the context for the current machine.
 func DefaultContext() (ctx Context, err error) {
 	var (
+		dir      string
 		hostname string
 		u        *user.User
 		_fqdn    string
 	)
+
+	if dir, err = os.Getwd(); err != nil {
+		return ctx, errors.Wrap(err, "failed to lookup current directory")
+	}
 
 	if u, err = user.Current(); err != nil {
 		return ctx, errors.Wrap(err, "failed to lookup current user")
@@ -33,15 +38,16 @@ func DefaultContext() (ctx Context, err error) {
 	}
 
 	return Context{
-		Shell:     os.Getenv("SHELL"),
-		User:      *u,
-		Hostname:  hostname,
-		FQDN:      _fqdn,
-		Domain:    _domain(_fqdn),
-		MachineID: machineID(),
-		Environ:   os.Environ(),
-		timeout:   5 * time.Minute,
-		output:    ioutil.Discard,
+		WorkDirectory: dir,
+		Shell:         os.Getenv("SHELL"),
+		User:          *u,
+		Hostname:      hostname,
+		FQDN:          _fqdn,
+		Domain:        _domain(_fqdn),
+		MachineID:     machineID(),
+		Environ:       os.Environ(),
+		timeout:       5 * time.Minute,
+		output:        ioutil.Discard,
 	}, nil
 }
 
@@ -99,17 +105,18 @@ func NewContext(tmp Context, options ...Option) Context {
 
 // Context ...
 type Context struct {
-	Shell     string
-	User      user.User
-	Hostname  string
-	MachineID string
-	Domain    string
-	FQDN      string
-	Environ   []string
-	output    io.Writer
-	dir       string
-	timeout   time.Duration
-	lenient   bool
+	Shell         string
+	User          user.User
+	Hostname      string
+	MachineID     string
+	Domain        string
+	FQDN          string
+	WorkDirectory string
+	Environ       []string
+	output        io.Writer
+	dir           string
+	timeout       time.Duration
+	lenient       bool
 }
 
 func (t Context) variableSubst(cmd string) string {
@@ -121,6 +128,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%U", t.User.Uid, -1)
 	cmd = strings.Replace(cmd, "%h", t.User.HomeDir, -1)
 	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
+	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, "%%", "%", -1)
 
 	return cmd
@@ -137,6 +145,7 @@ func (t Context) environmentSubst() []string {
 		fmt.Sprintf("BW_ENVIRONMENT_USERID=%s", t.User.Uid),
 		fmt.Sprintf("BW_ENVIRONMENT_USERHOME=%s", t.User.HomeDir),
 		fmt.Sprintf("BW_ENVIRONMENT_ROOT=%s", t.dir),
+		fmt.Sprintf("BW_ENVIRONMENT_WORK_DIRECTORY=%s", t.WorkDirectory),
 	)
 }
 

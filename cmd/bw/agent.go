@@ -20,20 +20,20 @@ import (
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 
-	"google.golang.org/grpc/keepalive"
-	"github.com/golang/protobuf/proto"
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/keepalive"
 )
 
 type agentCmd struct {
 	*global
-	config     agent.Config
-	configFile string
-	raftFile string
+	config      agent.Config
+	configFile  string
+	raftFile    string
 	raftVerbose bool
 }
 
@@ -222,7 +222,6 @@ func (t *agentCmd) bind() (err error) {
 	return nil
 }
 
-
 func (t *agentCmd) displayCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("verbose", "prints raft internal logs").Default("false").BoolVar(&t.raftVerbose)
 	parent.Arg("path", "path to the raft log database").StringVar(&t.raftFile)
@@ -231,11 +230,11 @@ func (t *agentCmd) displayCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 	type stats struct {
-		barriers int
-		commands int
-		noops int
+		barriers       int
+		commands       int
+		noops          int
 		configurations int
-		unknown int
+		unknown        int
 	}
 	var (
 		lstats stats

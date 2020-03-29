@@ -10,14 +10,15 @@ import (
 )
 
 var example1 = Context{
-	User:      user.User{Username: "USERNAME", Uid: "USERID", HomeDir: "HOMEDIR"},
-	Hostname:  "HOSTNAME",
-	MachineID: "MACHINEID",
-	Domain:    "DOMAIN",
-	FQDN:      "FQDN",
-	Environ:   []string{"FOO=BAR"},
-	dir:       "ROOT",
-	timeout:   time.Second,
+	WorkDirectory: "WORK DIRECTORY",
+	User:          user.User{Username: "USERNAME", Uid: "USERID", HomeDir: "HOMEDIR"},
+	Hostname:      "HOSTNAME",
+	MachineID:     "MACHINEID",
+	Domain:        "DOMAIN",
+	FQDN:          "FQDN",
+	Environ:       []string{"FOO=BAR"},
+	dir:           "ROOT",
+	timeout:       time.Second,
 }
 
 var _ = g.Describe("Context", func() {
@@ -26,7 +27,7 @@ var _ = g.Describe("Context", func() {
 			result := ctx.variableSubst(input)
 			Expect(result).To(Equal(expected))
 		},
-		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT %"),
+		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcmd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
 	)
 
 	gt.DescribeTable("environment variables",
