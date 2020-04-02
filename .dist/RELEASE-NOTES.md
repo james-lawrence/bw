@@ -1,3 +1,39 @@
+commit 35c2adbd65003488e32328c496350ad61f5ca1b5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 2 15:27:28 2020 -0400
+
+    release 0.1.1585855134-64a05247
+
+commit 64a052470c3328573dec3d18e64415387e5fc9ff
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 2 15:18:54 2020 -0400
+
+    release 0.1.1585855039-ee131892
+
+commit ee1318929cf806952aaefc15e51eff986a750d53
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 2 15:17:19 2020 -0400
+
+    implements reseting of the raft storage
+    
+    - fixes an issue where raft log errors would prevent promotion into
+      quorum.
+    - data isn't strictly necessary so its safe to do.
+    
+    also fixes a couple of tests.
+
+commit 718a9d4c0730bb31e6fa6de6adfdc5ca056b68b9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 29 12:35:42 2020 -0400
+
+    formatting cleanup
+
+commit 1b5daa2095d34ec64b078d340cab65fa13e93583
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 21 13:35:26 2020 -0400
+
+    release 0.1.1584811274-d4e8f3a3
+
 commit d4e8f3a3b7a86f0f7d37dd4af022c810fe55f798
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 21 13:21:14 2020 -0400
