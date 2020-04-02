@@ -27,7 +27,7 @@ var _ = g.Describe("Context", func() {
 			result := ctx.variableSubst(input)
 			Expect(result).To(Equal(expected))
 		},
-		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcmd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
+		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
 	)
 
 	gt.DescribeTable("environment variables",
@@ -47,6 +47,7 @@ var _ = g.Describe("Context", func() {
 			"BW_ENVIRONMENT_USERID=USERID",
 			"BW_ENVIRONMENT_USERHOME=HOMEDIR",
 			"BW_ENVIRONMENT_ROOT=ROOT",
+			"BW_ENVIRONMENT_WORK_DIRECTORY=WORK DIRECTORY",
 		),
 	)
 })

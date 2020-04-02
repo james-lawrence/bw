@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -101,31 +102,35 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		cs *tls.Config
-		s  *raftboltdb.BoltStore
-		ss raft.SnapshotStore
+		dir = filepath.Join(conf.Root, "raft.d")
 	)
 
-	if err = os.MkdirAll(filepath.Join(conf.Root, "raft.d"), 0700); err != nil {
+	if err = os.MkdirAll(dir, 0700); err != nil {
 		return p, err
-	}
-
-	if s, err = raftStore(conf); err != nil {
-		return p, errors.WithStack(err)
 	}
 
 	if cs, err = daemons.TLSGenServer(conf); err != nil {
 		return p, errors.WithStack(err)
 	}
 
-	if ss, err = raft.NewFileSnapshotStore(filepath.Join(conf.Root, "raft.d"), 5, os.Stderr); err != nil {
-		return p, errors.WithStack(err)
-	}
-
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
 		raftutil.ProtocolOptionTCPTransport(conf.RaftBind, cs),
-		raftutil.ProtocolOptionStorage(s),
-		raftutil.ProtocolOptionSnapshotStorage(ss),
+		raftutil.ProtocolOptionPassiveReset(func() (s raftutil.Storage, ss raft.SnapshotStore, err error) {
+			if err = errorsx.Compact(os.RemoveAll(dir), os.MkdirAll(dir, 0700)); err != nil {
+				return s, ss, errors.WithStack(err)
+			}
+
+			if s, err = raftStore(conf); err != nil {
+				return s, ss, errors.WithStack(err)
+			}
+
+			if ss, err = raft.NewFileSnapshotStore(dir, 5, os.Stderr); err != nil {
+				return s, ss, errors.WithStack(err)
+			}
+
+			return s, ss, nil
+		}),
 	}
 
 	return raftutil.NewProtocol(

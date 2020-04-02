@@ -2,7 +2,6 @@ package commandutils
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 

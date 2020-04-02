@@ -151,7 +151,6 @@ func overlayRaft(ctx context.Context, q BacklogQueueWorker, tmpdir string, p clu
 
 			return networkTransport, nil
 		}),
-		ProtocolOptionSnapshotStorage(raft.NewInmemSnapshotStore()),
 		ProtocolOptionConfig(testRaftConfig()),
 		ProtocolOptionEnableSingleNode(false),
 		ProtocolOptionPassiveCheckin(200*time.Millisecond),

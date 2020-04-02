@@ -81,20 +81,6 @@ func ProtocolOptionStateMachine(m func() raft.FSM) ProtocolOption {
 	}
 }
 
-// ProtocolOptionSnapshotStorage set the state machine for the protocol
-func ProtocolOptionSnapshotStorage(snaps raft.SnapshotStore) ProtocolOption {
-	return func(p *Protocol) {
-		p.Snapshots = snaps
-	}
-}
-
-// ProtocolOptionStorage specify the storage for the raft cluster.
-func ProtocolOptionStorage(s storage) ProtocolOption {
-	return func(p *Protocol) {
-		p.store = s
-	}
-}
-
 // ProtocolOptionTransport set the state machine for the protocol
 func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 	return func(p *Protocol) {
@@ -164,13 +150,18 @@ func ProtocolOptionLeadershipGrace(d time.Duration) ProtocolOption {
 	}
 }
 
+// ProtocolOptionPassiveReset reset when we enter the passive state.
+func ProtocolOptionPassiveReset(reset func() (Storage, raft.SnapshotStore, error)) ProtocolOption {
+	return func(p*Protocol) {
+		p.PassiveReset = reset
+	}
+}
+
 // NewProtocol ...
 func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
 		Context:        ctx,
 		StabilityQueue: q,
-		Snapshots:      raft.NewInmemSnapshotStore(),
-		store:          raft.NewInmemStore(),
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
 		},
@@ -183,6 +174,9 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 		config:           defaultRaftConfig(),
 		leadershipGrace:  time.Minute,
 		PassiveCheckin:   time.Minute,
+		PassiveReset: func() (Storage, raft.SnapshotStore, error) {
+			return raft.NewInmemStore(), raft.NewInmemSnapshotStore(), nil
+		},
 	}
 
 	for _, opt := range options {
@@ -200,7 +194,7 @@ type stateMeta struct {
 	sgroup    *sync.WaitGroup
 }
 
-type storage interface {
+type Storage interface {
 	raft.LogStore
 	raft.StableStore
 }
@@ -213,8 +207,7 @@ type Protocol struct {
 	Context          context.Context
 	StabilityQueue   BacklogQueueWorker
 	ClusterChange    *sync.Cond
-	Snapshots        raft.SnapshotStore
-	store            storage
+	PassiveReset func() (Storage, raft.SnapshotStore, error)
 	PassiveCheckin   time.Duration
 	getStateMachine  func() raft.FSM
 	getTransport     func() (raft.Transport, error)
@@ -310,6 +303,8 @@ func defaultRaftConfig() *raft.Config {
 func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err error) {
 	var (
 		conf raft.Config
+		store Storage
+		snapshots raft.SnapshotStore
 	)
 
 	if network, err = t.getTransport(); err != nil {
@@ -319,7 +314,11 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	conf = *t.config
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 
-	if r, err = raft.NewRaft(&conf, t.getStateMachine(), t.store, t.store, t.Snapshots, network); err != nil {
+	if store, snapshots, err = t.PassiveReset(); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+
+	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, snapshots, network); err != nil {
 		autocloseTransport(network)
 		return nil, nil, errors.WithStack(err)
 	}
