@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -79,7 +80,10 @@ func main() {
 	})
 
 	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
-
+	app.Command("version", "display the release version").Action(func(*kingpin.ParseContext) error {
+		fmt.Println(cmd.Version)
+		return nil
+	})
 	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
 	me.configure(app.Command("me", "commands revolving around the users profile"))
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
