@@ -63,3 +63,17 @@ type timeout struct {
 func (t timeout) Timedout() time.Duration {
 	return t.d
 }
+
+// UserFriendly represents an error that will be displayed to users.
+func UserFriendly(err error) error {
+	return userfriendly{
+		error: err,
+	}
+}
+
+type userfriendly struct {
+	error
+}
+
+// user friendly error
+func (t userfriendly) UserFriendly() {}

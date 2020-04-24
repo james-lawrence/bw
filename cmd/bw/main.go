@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"net"
 	"os"
@@ -90,7 +91,20 @@ func main() {
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
-		log.Printf("%T - [%+v]\n", err, err)
+		type ShortError interface {
+			UserFriendly()
+		}
+
+		var (
+			userErr ShortError
+		)
+
+		if errors.As(err, &userErr) {
+			log.Println(err)
+		} else {
+			log.Printf("%T - [%+v]\n", err, err)
+		}
+
 		cancel()
 	}
 

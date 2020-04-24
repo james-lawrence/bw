@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
@@ -39,6 +40,14 @@ func NewClientPeer(options ...agent.PeerOption) (p agent.Peer) {
 // ReadConfiguration reads the configuration for the given environment.
 func ReadConfiguration(environment string) (config agent.ConfigClient, err error) {
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	if _, err = os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return config, errorsx.UserFriendly(errors.Errorf("unknown environment: %s - %s", environment, path))
+		}
+
+		return config, err
+	}
+
 	log.Println("loading configuration", path)
 	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
@@ -58,6 +67,14 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	)
 
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	if _, err = os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return config, errorsx.UserFriendly(errors.Errorf("unknown environment: %s - %s", environment, path))
+		}
+
+		return config, err
+	}
+
 	log.Println("loading configuration", path, bw.DefaultCacheDirectory())
 	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
 		return config, errors.Wrap(err, "configuration load failed")
