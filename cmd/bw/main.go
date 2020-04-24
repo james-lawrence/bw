@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/logrusorgru/aurora"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -104,7 +105,7 @@ func main() {
 		)
 
 		if errors.As(err, &userErr) {
-			log.Println(err)
+			log.Println(aurora.NewAurora(true).Red("ERROR"), err)
 		} else {
 			log.Printf("%T - [%+v]\n", err, err)
 		}
