@@ -64,6 +64,20 @@ func (t timeout) Timedout() time.Duration {
 	return t.d
 }
 
+// Notification presents an error that will be displayed to the user
+// to provide notifications.
+func Notification(err error) error {
+	return notification{
+		error: err,
+	}
+}
+
+type notification struct {
+	error
+}
+
+func (t notification) Notification() {}
+
 // UserFriendly represents an error that will be displayed to users.
 func UserFriendly(err error) error {
 	return userfriendly{

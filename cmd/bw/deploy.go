@@ -13,6 +13,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -385,12 +386,16 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if root, err = ioutil.TempDir("", "bwlocal"); err != nil {
+	if root, err = ioutil.TempDir("", "bw-local-deploy-*"); err != nil {
 		return err
 	}
 
 	if t.debug {
-		log.Println("building in, directory will remain after exit", root)
+		log.Printf("building directory '%s' will remain after exit\n", root)
+		defer func() {
+			err = errorsx.Compact(err, errorsx.Notification(errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Brown("WARN"), root)))
+		}()
+		// defer log.Printf("%s build directory '%s' being left on disk\n", aurora.NewAurora(true).Brown("WARN"), root)
 	} else {
 		defer os.RemoveAll(root)
 	}
@@ -436,6 +441,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	deploy.Deploy(dctx)
 
 	result := deployment.AwaitDeployResult(dctx)
+
 	return result.Error
 }
 

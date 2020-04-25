@@ -96,15 +96,21 @@ func main() {
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
+		type NotificationError interface {
+			Notification()
+		}
+
 		type ShortError interface {
 			UserFriendly()
 		}
 
 		var (
-			userErr ShortError
+			nErr NotificationError
+			sErr ShortError
 		)
-
-		if errors.As(err, &userErr) {
+		if errors.As(err, &nErr) {
+			log.Println(err)
+		} else if errors.As(err, &sErr) {
 			log.Println(aurora.NewAurora(true).Red("ERROR"), err)
 		} else {
 			log.Printf("%T - [%+v]\n", err, err)
