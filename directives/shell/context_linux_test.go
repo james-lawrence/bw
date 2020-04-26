@@ -28,6 +28,7 @@ var _ = g.Describe("Context", func() {
 			Expect(result).To(Equal(expected))
 		},
 		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
+		gt.Entry("properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"),
 	)
 
 	gt.DescribeTable("environment variables",

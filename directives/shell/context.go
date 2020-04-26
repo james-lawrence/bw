@@ -120,6 +120,8 @@ type Context struct {
 }
 
 func (t Context) variableSubst(cmd string) string {
+	const escaped = "__BW_ESC__"
+	cmd = strings.Replace(cmd, "%%", escaped, -1)
 	cmd = strings.Replace(cmd, "%H", t.Hostname, -1)
 	cmd = strings.Replace(cmd, "%m", t.MachineID, -1)
 	cmd = strings.Replace(cmd, "%d", t.Domain, -1)
@@ -129,7 +131,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%h", t.User.HomeDir, -1)
 	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
-	cmd = strings.Replace(cmd, "%%", "%", -1)
+	cmd = strings.Replace(cmd, escaped, "%", -1)
 
 	return cmd
 }
