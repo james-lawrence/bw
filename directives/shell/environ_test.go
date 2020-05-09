@@ -32,8 +32,7 @@ func fromMap(m map[string]string) string {
 var _ = Describe("Environ", func() {
 	DescribeTable("Environment Parsing",
 		func(example string, expected ...string) {
-			result, err := shell.Environ(example)
-			Expect(err).ToNot(HaveOccurred())
+			result := shell.Environ(example)
 			sort.Strings(result)
 			sort.Strings(expected)
 			Expect(result).To(Equal(expected))

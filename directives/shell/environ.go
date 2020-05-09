@@ -38,11 +38,29 @@ func EnvironFromReader(r io.Reader) (environ []string, err error) {
 		return environ, errors.WithStack(err)
 	}
 
-	return Environ(string(raw))
+	return Environ(string(raw)), nil
+}
+
+// Subst converts a environment to a Getenv map.
+func Subst(inputs []string) func(string) string {
+	m := make(map[string]string, len(inputs))
+	for _, i := range inputs {
+		if idx := strings.IndexRune(i, '='); idx > -1 {
+			m[i[:idx]] = i[idx+1:]
+		}
+	}
+
+	return func(k string) string {
+		if v, ok := m[k]; ok {
+			return v
+		}
+
+		return k
+	}
 }
 
 // Environ loads an environment from a string.
-func Environ(s string) (environ []string, err error) {
+func Environ(s string) (environ []string) {
 	var (
 		ir map[string]string
 	)
@@ -62,7 +80,7 @@ func Environ(s string) (environ []string, err error) {
 		environ = append(environ, line)
 	}
 
-	return environ, nil
+	return environ
 }
 
 // MustEnviron panics if err is not nil.

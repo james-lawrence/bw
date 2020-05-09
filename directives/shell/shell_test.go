@@ -19,6 +19,9 @@ var _ = ginkgo.Describe("Shell", func() {
 - command: "echo %H %h %m"
   lenient: true
   timeout: 10m
+  environ: |
+    FOO=BAR
+    BIZZ=${BAZZ}
 `
 	DescribeTable("ParseYAML",
 		func(example string, expected ...Exec) {
@@ -33,6 +36,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				Command: "echo %H %h %m",
 				Lenient: true,
 				Timeout: 10 * time.Minute,
+				Environ: "FOO=BAR\nBIZZ=${BAZZ}\n",
 			},
 		),
 	)
