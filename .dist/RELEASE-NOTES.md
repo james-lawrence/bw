@@ -1,14 +1,60 @@
-commit 35c2adbd65003488e32328c496350ad61f5ca1b5
+commit 1ac4e2829cc38bb4c32c6facf1dbf12daf8da27b
 Author: James Lawrence <jljatone@gmail.com>
-Date:   Thu Apr 2 15:27:28 2020 -0400
+Date:   Sun May 17 07:24:57 2020 -0400
 
-    release 0.1.1585855134-64a05247
+    add elbv1 and renamed elbv2 in interp
 
-commit 64a052470c3328573dec3d18e64415387e5fc9ff
+commit 75af1a2c4f529eeb31a52d49d7b3366983b2d30b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 9 12:09:14 2020 -0400
+
+    add per command environment variables
+
+commit a204fe0e2995b65d42239b5bb08afcd28c220e02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 26 18:11:22 2020 -0400
+
+    properly escape percentage
+
+commit f79fa27ec223a73f0f0f3937aa7e09b4e9dbfc05
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 25 10:15:09 2020 -0400
+
+    improvement debug notification when building locally
+
+commit 496d079c1a12ce037cfbbe779316cf5aa899af83
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 24 19:34:48 2020 -0400
+
+    add some color to user friendly errors
+
+commit 4841c4cb178ace5d22cb7dfdd88ba8e618321823
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 24 19:30:47 2020 -0400
+
+    add a version command.
+    
+    `bw version` will now display the version.
+
+commit 44a3c4dc0a542d9a71f671eeb3c553c79eae2163
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 24 19:09:26 2020 -0400
+
+    implement check to ensure an environment exists
+    
+    returns a useful error message to the user.
+
+commit 833bc1d95a4cb831296311c23f014496f5ce1da0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 19 17:01:30 2020 -0400
+
+    add me show to display local user credentials
+
+commit 69f62d8a101ed00ebed6b3417d271fd085e9ad49
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Apr 2 15:18:54 2020 -0400
 
-    release 0.1.1585855039-ee131892
+    release 0.1.1585855648-35c2adbd
 
 commit ee1318929cf806952aaefc15e51eff986a750d53
 Author: James Lawrence <jljatone@gmail.com>
