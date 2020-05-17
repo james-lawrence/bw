@@ -4,12 +4,12 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/james-lawrence/bw/directives/awselb"
+	"github.com/james-lawrence/bw/directives/awselb2"
 )
 
-func elb() (exported map[string]reflect.Value) {
+func elb2() (exported map[string]reflect.Value) {
 	restart := func(ctx context.Context, do func(context.Context) error) (err error) {
-		if err = awselb.LoadbalancersDetach(ctx); err != nil {
+		if err = awselb2.LoadbalancersDetach(ctx); err != nil {
 			return err
 		}
 
@@ -17,7 +17,7 @@ func elb() (exported map[string]reflect.Value) {
 			return err
 		}
 
-		return awselb.LoadbalancersAttach(ctx)
+		return awselb2.LoadbalancersAttach(ctx)
 	}
 
 	exported = map[string]reflect.Value{
