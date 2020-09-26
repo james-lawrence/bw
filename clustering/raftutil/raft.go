@@ -152,7 +152,7 @@ func ProtocolOptionLeadershipGrace(d time.Duration) ProtocolOption {
 
 // ProtocolOptionPassiveReset reset when we enter the passive state.
 func ProtocolOptionPassiveReset(reset func() (Storage, raft.SnapshotStore, error)) ProtocolOption {
-	return func(p*Protocol) {
+	return func(p *Protocol) {
 		p.PassiveReset = reset
 	}
 }
@@ -207,7 +207,7 @@ type Protocol struct {
 	Context          context.Context
 	StabilityQueue   BacklogQueueWorker
 	ClusterChange    *sync.Cond
-	PassiveReset func() (Storage, raft.SnapshotStore, error)
+	PassiveReset     func() (Storage, raft.SnapshotStore, error)
 	PassiveCheckin   time.Duration
 	getStateMachine  func() raft.FSM
 	getTransport     func() (raft.Transport, error)
@@ -302,8 +302,8 @@ func defaultRaftConfig() *raft.Config {
 // connect - connect to the raft protocol overlay within the given cluster.
 func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err error) {
 	var (
-		conf raft.Config
-		store Storage
+		conf      raft.Config
+		store     Storage
 		snapshots raft.SnapshotStore
 	)
 
@@ -324,7 +324,7 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	}
 
 	r.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
+		// log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
 		t.ClusterChange.Broadcast()
 		return false
 	}))

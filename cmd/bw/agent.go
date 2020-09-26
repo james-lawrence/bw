@@ -79,12 +79,18 @@ func (t *agentCmd) bind() (err error) {
 		ns            notary.Composite
 	)
 
-	log.SetPrefix(fmt.Sprintf("[AGENT - %s] ", t.config.Name))
-
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
 		return err
 	}
 
+	// important to maintain the agent name overtime and restarts.
+	// otherwise raft will get upset over duplicate addresses for different.
+	// server names.
+	if t.config, err = commandutils.PersistAgentName(t.config); err != nil {
+		return err
+	}
+
+	log.SetPrefix(fmt.Sprintf("[AGENT - %s] ", t.config.Name))
 	log.Println("configuration:", spew.Sdump(t.config))
 
 	if err = bw.InitializeDeploymentDirectory(t.config.Root); err != nil {

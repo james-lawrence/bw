@@ -1,10 +1,10 @@
 package raftutil
 
 import (
-	"log"
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 )
 
 type peer struct {
@@ -40,11 +40,11 @@ func (t peer) Update(c cluster) state {
 			stateMeta: t.stateMeta,
 		}.Update(c)
 	default:
-		log.Println(c.LocalNode().Name, "peer current state", s)
+		debugx.Println(c.LocalNode().Name, "peer current state", s)
 		if maybeLeave(c) || t.protocol.deadlockedLeadership(c.LocalNode(), t.r, t.lastContact()) {
 			return leave(t, t.stateMeta)
 		}
-		log.Println(c.LocalNode().Name, "peer state updated", s)
+		debugx.Println(c.LocalNode().Name, "peer state updated", s)
 	}
 
 	return maintain

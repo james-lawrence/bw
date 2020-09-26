@@ -52,6 +52,24 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
 
+// PersistAgentName to disk to prevent name changes from impacting the cluster.
+func PersistAgentName(proto agent.Config) (c agent.Config, err error) {
+	var (
+		raw  []byte
+		path = filepath.Join(proto.Root, "agent.name")
+	)
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return proto, ioutil.WriteFile(path, []byte(proto.Name), 0600)
+	}
+
+	if raw, err = ioutil.ReadFile(path); err != nil {
+		return proto, errors.Wrap(err, "failed to read persisted agent name")
+	}
+
+	return proto.Clone(agent.ConfigOptionName(string(raw))), nil
+}
+
 // LoadAgentConfig - load the agent configuration from the provided file.
 func LoadAgentConfig(path string, proto agent.Config) (c agent.Config, err error) {
 	if err = bw.ExpandAndDecodeFile(path, &proto); err != nil {

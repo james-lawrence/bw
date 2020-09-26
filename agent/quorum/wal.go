@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -113,8 +114,8 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 
 	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
 
-	log.Println("WAL restoring")
-	defer log.Println("WAL restored")
+	log.Output(1, fmt.Sprintln("WAL restoring"))
+	defer log.Output(1, fmt.Sprintln("WAL restored"))
 
 	if encoded, err = ioutil.ReadAll(o); err != nil {
 		return errors.WithStack(err)

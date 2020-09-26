@@ -70,6 +70,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	}
 
 	peers := config.Configuration().Servers
+	unmodifiedPeers := config.Configuration().Servers
 	voterCount := voterCount(peers)
 	allowRemoval := voterCount >= 3
 
@@ -84,13 +85,14 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		peers = removePeer(rs.ID, peers...)
 
 		if len(strings.TrimSpace(string(rs.Address))) == 0 {
-			log.Println("skipping, detected empty address", spew.Sdump(peer), spew.Sdump(rs))
+			log.Println("skipping, detected empty address", spew.Sdump(unmodifiedPeers), spew.Sdump(rs))
 			continue
 		}
 
 		if err = t.r.AddVoter(rs.ID, rs.Address, 0, commitTimeout).Error(); err != nil {
-			log.Println("failed to add peer", err)
-			return true
+			log.Println("failed to add peer", spew.Sdump(rs), spew.Sdump(unmodifiedPeers), err)
+			unstable = true
+			continue
 		}
 	}
 
@@ -132,8 +134,8 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		}
 	}
 
-	debugx.Println(local.Name, "cluster is stable")
-	return false
+	debugx.Println(local.Name, "cluster stable", unstable)
+	return unstable
 }
 
 func voterCount(peers []raft.Server) (c int) {

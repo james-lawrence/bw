@@ -239,6 +239,13 @@ func ConfigOptionDiscovery(p *net.TCPAddr) ConfigOption {
 	}
 }
 
+// ConfigOptionName set the name of the agent.
+func ConfigOptionName(name string) ConfigOption {
+	return func(c *Config) {
+		c.Name = name
+	}
+}
+
 type bootstrap struct {
 	Attempts         int
 	ArchiveDirectory string `yaml:"archiveDirectory"`
@@ -286,6 +293,15 @@ func (t Config) EnsureDefaults() Config {
 type dnsBind struct {
 	TTL       uint32 // TTL for the generated records.
 	Frequency time.Duration
+}
+
+// Clone the config applying any provided options.
+func (t Config) Clone(options ...ConfigOption) Config {
+	for _, opt := range options {
+		opt(&t)
+	}
+
+	return t
 }
 
 // Peer - builds the Peer information from the configuration.
