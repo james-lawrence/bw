@@ -1,3 +1,35 @@
+commit e06a20e6b03578b01cb532103aa570557a30ed61
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 09:42:20 2020 -0400
+
+    update build to ubuntu 20.04 LTS
+
+commit b6b3c66fd6926c08cab6c83186321b27a7f0c78e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 08:56:35 2020 -0400
+
+    update makefile
+
+commit ac119229c00b7fbc2efcadec6f8dc793b43b0d26
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 08:48:50 2020 -0400
+
+    persist agent name to disk on first start.
+    
+    possible fix for duplicate address error in raft.
+
+commit 97f388efaae92d8975773e3b1fb177a7e10701f6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 06:34:59 2020 -0400
+
+    update yaegi
+
+commit 5b6c0458c857b759ae07abcf009a451eff3b0239
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 17 07:52:47 2020 -0400
+
+    release 0.1.1589714724-c8466fe1
+
 commit c8466fe149fd6a9625e49a8c353e8c8b05c3365e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun May 17 07:25:24 2020 -0400
