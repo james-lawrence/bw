@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"strings"
 
-	yaegi "github.com/traefik/yaegi/interp"
+	yaegi "github.com/containous/yaegi/interp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -5,7 +5,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/traefik/yaegi/stdlib"
+	"github.com/containous/yaegi/stdlib"
 )
 
 // osfix overrides the Exit function to convert it into a standard panic.
