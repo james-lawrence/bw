@@ -36,7 +36,6 @@ release: release-check
 	sudo rm -rf .dist/build/*
 
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
-	git add .dist/RELEASE-NOTES.md; git commit -m "release $(RELEASE)";
 
 	GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
 
@@ -58,6 +57,8 @@ release: release-check
 		-v $(CURDIR):/opt/bw \
 		-v $(HOME)/.gnupg:/root/.gnupg \
 		-it debian-build:latest
+
+	git add .dist/RELEASE-NOTES.md && git commit -m "release $(RELEASE)";
 
 release-clean:
 	rm -rf .dist/build
