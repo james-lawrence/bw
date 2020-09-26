@@ -18,6 +18,7 @@ import (
 
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/directives/systemd"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
@@ -84,7 +85,7 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 			"bw/interp/systemdu": exports,
 		})
 	} else {
-		log.Println("systemd disabled, unable to establish a user connection")
+		debugx.Println("systemd disabled, unable to establish a user connection")
 	}
 
 	if err = panicSafe(func() error { return eval(ctx, i, formatted) }); err != nil {

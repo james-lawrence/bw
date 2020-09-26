@@ -2,6 +2,7 @@ package interp
 
 import (
 	"context"
+	"log"
 	"reflect"
 
 	"github.com/james-lawrence/bw/directives/shell"
@@ -13,6 +14,7 @@ func exportShell(sctx shell.Context) (exported map[string]reflect.Value) {
 		"Environ": reflect.ValueOf(shell.OptionAppendEnviron),
 		"Timeout": reflect.ValueOf(shell.OptionTimeout),
 		"Run": reflect.ValueOf(func(ctx context.Context, cmd string, options ...shell.Option) error {
+			log.Println("executing", cmd)
 			return shell.Execute(ctx, shell.NewContext(sctx, options...), shell.Exec{Command: cmd})
 		}),
 	}
