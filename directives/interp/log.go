@@ -7,7 +7,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/containous/yaegi/stdlib"
+	"github.com/traefik/yaegi/stdlib"
 )
 
 // logfix overrides some basic logging, mainly changing the standard logger

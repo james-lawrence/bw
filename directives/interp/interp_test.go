@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	yaegi "github.com/containous/yaegi/interp"
+	yaegi "github.com/traefik/yaegi/interp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

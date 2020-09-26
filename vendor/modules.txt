@@ -126,10 +126,6 @@ github.com/cenkalti/backoff
 github.com/chzyer/readline
 # github.com/containerd/continuity v0.0.0-20181203112020-004b46473808
 ## explicit
-# github.com/containous/yaegi v0.7.7-0.20200305132806-0ace9244c4da
-## explicit
-github.com/containous/yaegi/interp
-github.com/containous/yaegi/stdlib
 # github.com/coreos/go-systemd/v22 v22.0.0
 ## explicit
 github.com/coreos/go-systemd/v22/dbus
@@ -473,6 +469,10 @@ github.com/spaolacci/murmur3
 github.com/subosito/gotenv
 # github.com/tinylib/msgp v1.1.1
 github.com/tinylib/msgp/msgp
+# github.com/traefik/yaegi v0.9.1
+## explicit
+github.com/traefik/yaegi/interp
+github.com/traefik/yaegi/stdlib
 # github.com/willf/bitset v1.1.10
 github.com/willf/bitset
 # github.com/willf/bloom v2.0.3+incompatible
