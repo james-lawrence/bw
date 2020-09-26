@@ -314,6 +314,7 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	conf = *t.config
 	conf.LocalID = raft.ServerID(c.LocalNode().Name)
 
+	log.Println("passive resetting raft state")
 	if store, snapshots, err = t.PassiveReset(); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
