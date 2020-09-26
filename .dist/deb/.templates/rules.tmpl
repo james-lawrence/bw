@@ -18,8 +18,8 @@ DH_VERBOSE = 1
 override_dh_auto_build:
 	echo "DH AUTO BUILD OVERRIDE"
 	echo "$(CURDIR)"
-	GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) /usr/lib/go-1.14/bin/go env
-	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) /usr/lib/go-1.14/bin/go install -ldflags="${BW_LDFLAGS}" github.com/james-lawrence/bw/cmd/...
+	GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) /usr/lib/go-1.13/bin/go env
+	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin GOPATH=$(CURDIR) /usr/lib/go-1.13/bin/go install -ldflags="${BW_LDFLAGS}" github.com/james-lawrence/bw/cmd/...
 
 override_dh_auto_test:
 	echo "DH AUTO TEST OVERRIDE"

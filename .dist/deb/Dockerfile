@@ -5,7 +5,5 @@ ARG DEBIAN_FRONTEND=noninteractive
 WORKDIR /opt/bw/.dist/deb
 
 RUN apt-get update
-RUN apt-get -y install dput devscripts dh-make golang-1.14 dput
-RUN cp /usr/lib/go-1.14/bin/go /usr/bin/go
-RUN go version
+RUN apt-get -y install dput devscripts dh-make golang-1.13 dput
 CMD /bin/bash build.sh focal
