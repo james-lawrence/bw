@@ -1,3 +1,35 @@
+commit 7eb04af3523dd3b783376d68e5a1e99e447c9dee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 15:45:56 2020 -0400
+
+    fix build
+
+commit d6d3413a973bef5ac1499172716865ce01b4993d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 13:07:44 2020 -0400
+
+    debug
+
+commit e8e2b1be092194e3308430f6827c615a8838776a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 13:54:23 2020 -0400
+
+    Revert "update yaegi"
+    
+    This reverts commit 97f388efaae92d8975773e3b1fb177a7e10701f6.
+
+commit e11af3b9b2f66e87693a2eab66a15e5bfaedbac5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 10:21:11 2020 -0400
+
+    add logging for passive cluster state reset
+
+commit 96821177c30b6f65d52dd851fb07b5a35067b035
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 09:48:10 2020 -0400
+
+    release 0.1.1601128035-e06a20e6
+
 commit e06a20e6b03578b01cb532103aa570557a30ed61
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 26 09:42:20 2020 -0400
