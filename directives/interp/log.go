@@ -41,8 +41,6 @@ func logfix(std logger) (exported map[string]reflect.Value) {
 	})
 
 	exported["Println"] = reflect.ValueOf(func(v ...interface{}) {
-		log.Println("Println initated")
-		defer log.Println("Println completed")
 		std.Output(2, fmt.Sprintln(v...))
 	})
 
