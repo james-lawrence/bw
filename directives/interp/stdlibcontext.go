@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/containous/yaegi/stdlib"
+	"github.com/traefik/yaegi/stdlib"
 )
 
 // contextfix overrides Background() function to return the context of the deployment.

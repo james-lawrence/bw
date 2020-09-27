@@ -11,9 +11,9 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/containous/yaegi/interp"
-	"github.com/containous/yaegi/stdlib"
 	"github.com/pkg/errors"
+	"github.com/traefik/yaegi/interp"
+	"github.com/traefik/yaegi/stdlib"
 	"golang.org/x/tools/imports"
 
 	"github.com/james-lawrence/bw/directives/shell"

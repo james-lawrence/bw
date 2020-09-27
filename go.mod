@@ -16,7 +16,6 @@ require (
 	github.com/aws/aws-sdk-go v1.23.0
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
-	github.com/containous/yaegi v0.7.7-0.20200305132806-0ace9244c4da
 	github.com/coreos/go-systemd/v22 v22.0.0
 	github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 // indirect
 	github.com/davecgh/go-spew v1.1.1
@@ -95,6 +94,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/subosito/gotenv v1.1.0
+	github.com/traefik/yaegi v0.9.1
 	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45

@@ -125,8 +125,6 @@ github.com/circonus-labs/circonusllhist v0.1.3/go.mod h1:kMXHVDlOchFAehlya5ePtbp
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 h1:4BX8f882bXEDKfWIf0wa8HRvpnBoPszJJXL+TVbBw4M=
 github.com/containerd/continuity v0.0.0-20181203112020-004b46473808/go.mod h1:GL3xCUCBDV3CZiTSEKksMWbLE66hEyuu9qyDOOqM47Y=
-github.com/containous/yaegi v0.7.7-0.20200305132806-0ace9244c4da h1:vhWUnYFMVcvQ3lhp00W1amImf+kkr1n0Zj90SrahqYw=
-github.com/containous/yaegi v0.7.7-0.20200305132806-0ace9244c4da/go.mod h1:Yj82MHpXQ9/h3ukzc2numJQ/Wr4+M3C9YLMzNjFtd3o=
 github.com/coreos/go-systemd/v22 v22.0.0 h1:XJIw/+VlJ+87J+doOxznsAWIdmWuViOVhkQamW5YV28=
 github.com/coreos/go-systemd/v22 v22.0.0/go.mod h1:xO0FLkIi5MaZafQlIrOotqXZ90ih+1atmu1JpKERPPk=
 github.com/corpix/uarand v0.0.0-20170903190822-2b8494104d86 h1:kRNlij/Yv/baHnXYdNqr+8ch5tLYAWS/VRaJ2ZvFgu0=
@@ -509,6 +507,8 @@ github.com/tinylib/msgp v1.1.0 h1:9fQd+ICuRIu/ue4vxJZu6/LzxN0HwMds2nq/0cFvxHU=
 github.com/tinylib/msgp v1.1.0/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
 github.com/tinylib/msgp v1.1.1 h1:TnCZ3FIuKeaIy+F45+Cnp+caqdXGy4z74HvwXN+570Y=
 github.com/tinylib/msgp v1.1.1/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=
+github.com/traefik/yaegi v0.9.1 h1:guHw/ssSWBkZFrSFHdMh96glsF6DnvtR8GdlQqdH2uU=
+github.com/traefik/yaegi v0.9.1/go.mod h1:FAYnRlZyuVlEkvnkHq3bvJ1lW5be6XuwgLdkYgYG6Lk=
 github.com/tv42/httpunix v0.0.0-20150427012821-b75d8614f926/go.mod h1:9ESjWnEqriFuLhtthL60Sar/7RFoluCcXsuvEwTV5KM=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c/go.mod h1:hzIxponao9Kjc7aWznkXaL4U4TWaDSs8zcsY4Ka08nM=
 github.com/willf/bitset v1.1.9 h1:GBtFynGY9ZWZmEC9sWuu41/7VBXPFCOAbCbqTflOg9c=
