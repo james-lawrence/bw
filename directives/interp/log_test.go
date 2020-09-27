@@ -8,7 +8,7 @@ import (
 	"log"
 	"strings"
 
-	yaegi "github.com/containous/yaegi/interp"
+	yaegi "github.com/traefik/yaegi/interp"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,7 +16,7 @@ import (
 	. "github.com/james-lawrence/bw/directives/interp"
 )
 
-var _ = FDescribe("log", func() {
+var _ = Describe("log", func() {
 	Describe("SetFlags", func() {
 		It("should error out", func() {
 			c := Compiler{
