@@ -1,0 +1,18 @@
+[Unit]
+Description=bearded-wookie agent
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+StateDirectory=%p/%i
+RuntimeDirectory=%p/%i
+CacheDirectory=%p/%i
+WorkingDirectory=%h/.config/%p
+SyslogIdentifier=%p
+ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY} runtime=${RUNTIME_DIRECTORY} - ${PWD}"
+ExecStartPre=go get -u github.com/letsencrypt/pebble/...
+ExecStart=%h/go/bin/pebble -config ${STATE_DIRECTORY}/config.json
+
+[Install]
+WantedBy=default.target

@@ -11,7 +11,7 @@ CacheDirectory=%p/%i
 # ${HOME}/.cache/bearded-wookie/agent1/agent.env
 EnvironmentFile=-%C/%p/%i/agent.env
 Environment=HOME=%h
-Environment=LEGO_CA_CERTIFICATES="%h/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
+Environment=LEGO_CA_CERTIFICATES="%h/.config/bearded-wookie-pebble/certs/pebble.minica.pem"
 Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
 SyslogIdentifier=%p-%i
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
