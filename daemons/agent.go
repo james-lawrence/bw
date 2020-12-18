@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/james-lawrence/bw/notary"
@@ -68,8 +69,8 @@ func Agent(ctx Context) (err error) {
 	)
 
 	server := grpc.NewServer(
-		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.Creds(ctx.GRPCCreds()),
 		keepalive,
 	)
