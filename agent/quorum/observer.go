@@ -23,9 +23,9 @@ type Observer struct {
 }
 
 // Observe consume the results of the observer by forwarding them to the ConnectableDispatcher
-func (t Observer) Observe(d agent.ConnectableDispatcher) {
+func (t Observer) Observe(ctx context.Context, d agent.ConnectableDispatcher) {
 	for m := range t.c {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		logx.MaybeLog(errors.Wrap(d.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
 		cancel()
 	}

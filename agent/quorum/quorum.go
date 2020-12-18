@@ -73,7 +73,7 @@ func OptionInitializers(inits ...Initializer) Option {
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, options ...Option) Quorum {
 	deployment := newDeployment(d, c)
 	obs := NewObserver(make(chan agent.Message, 100))
-	go obs.Observe(cd)
+	go obs.Observe(context.Background(), cd)
 	wal := NewWAL(
 		NewTranscoder(
 			deployment,

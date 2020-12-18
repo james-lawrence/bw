@@ -1,10 +1,8 @@
 package quorum
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -117,17 +115,6 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	log.Output(1, fmt.Sprintln("WAL restoring"))
 	defer log.Output(1, fmt.Sprintln("WAL restored"))
 
-	if encoded, err = ioutil.ReadAll(o); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// attempt v0 wal restore.
-	if err = t.deprecatedRestore(encoded); err == nil {
-		return nil
-	}
-
-	r := bytes.NewReader(encoded)
-
 	// reset the internal state of the write ahead log.
 	t.innerstate = innerstate{
 		ctx:  t.ctx,
@@ -135,12 +122,12 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	}
 
 	// read and discard version message, for future use.
-	if err = Decode(r, &version); err != nil && err != io.EOF {
+	if err = Decode(o, &version); err != nil && err != io.EOF {
 		return errors.WithStack(err)
 	}
 
 	for err != io.EOF {
-		if encoded, err = decodeRaw(r); err != nil && err != io.EOF {
+		if encoded, err = decodeRaw(o); err != nil && err != io.EOF {
 			return errors.WithStack(err)
 		}
 
@@ -150,33 +137,6 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	}
 
 	t.innerstate.ctx.State = StateHealthy
-
-	return nil
-}
-
-func (t *WAL) deprecatedRestore(encoded []byte) (err error) {
-	var (
-		decoded agent.WAL
-	)
-
-	if err = proto.Unmarshal(encoded, &decoded); err != nil {
-		return errors.WithStack(err)
-	}
-
-	// reset the internal state of the write ahead log.
-	t.innerstate = innerstate{
-		logs: make([]agent.Message, 0, len(decoded.Messages)),
-	}
-
-	for _, m := range decoded.Messages {
-		if encoded, err = proto.Marshal(m); err != nil {
-			return errors.WithStack(err)
-		}
-
-		if err = t.decode(t.ctx, encoded); err != nil {
-			return errors.WithStack(err)
-		}
-	}
 
 	return nil
 }

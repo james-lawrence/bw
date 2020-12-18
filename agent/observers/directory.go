@@ -98,11 +98,13 @@ func (t Directory) Connect(b chan agent.Message) (l net.Listener, s *grpc.Server
 // Dispatch messages to the observers.
 func (t Directory) Dispatch(ctx context.Context, messages ...agent.Message) error {
 	t.m.RLock()
+	log.Println("observer dispatch initiated", len(t.observers))
 	cpy := make([]Conn, 0, len(t.observers))
 	for _, obs := range t.observers {
 		cpy = append(cpy, obs)
 	}
 	t.m.RUnlock()
+	defer log.Println("observer dispatch completed", len(cpy))
 
 	for _, conn := range cpy {
 		if err := conn.Dispatch(ctx, messages...); err != nil {
@@ -123,7 +125,7 @@ func (t Directory) background() {
 			case fsnotify.Remove:
 				logx.MaybeLog(t.disconnect(e))
 			}
-			log.Println("open connections", len(t.observers))
+			log.Println("open connections", t.Observers())
 		case err := <-t.watcher.Errors:
 			log.Println("watch error", err)
 		}

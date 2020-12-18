@@ -173,6 +173,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d agent.Dialer, sm
 			agentutil.LogEvent(t.c.Local(), "restarting deploy"),
 			agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandRestart()),
 		)
+
 		if err != nil {
 			return errors.Wrap(err, "restart command failure")
 		}
