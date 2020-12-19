@@ -98,12 +98,17 @@ func (t Directory) Connect(b chan agent.Message) (l net.Listener, s *grpc.Server
 // Dispatch messages to the observers.
 func (t Directory) Dispatch(ctx context.Context, messages ...agent.Message) error {
 	t.m.RLock()
-	log.Println("observer dispatch initiated", len(t.observers))
 	cpy := make([]Conn, 0, len(t.observers))
 	for _, obs := range t.observers {
 		cpy = append(cpy, obs)
 	}
 	t.m.RUnlock()
+
+	if len(cpy) == 0 {
+		return nil
+	}
+
+	log.Println("observer dispatch initiated", len(cpy))
 	defer log.Println("observer dispatch completed", len(cpy))
 
 	for _, conn := range cpy {

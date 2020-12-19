@@ -39,7 +39,7 @@ func Bootstrap(ctx Context) (err error) {
 		bootstrap.OptionMaxAttempts(ctx.Config.Bootstrap.Attempts),
 	)
 
-	if err = bus.Run(ctx.Context, ctx.Config, ctx.Download); err != nil {
+	if err = bus.Run(ctx.Context, ctx.Config, ctx.Download, ctx.Results); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}

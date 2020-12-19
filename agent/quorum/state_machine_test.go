@@ -1,7 +1,6 @@
 package quorum_test
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"io/ioutil"
@@ -79,7 +78,6 @@ func newPeer(c Transcoder, name string, leader bool) (raft.Server, *raft.InmemTr
 	)
 	config := raft.DefaultConfig()
 	config.LogOutput = ioutil.Discard
-	config.StartAsLeader = leader
 	config.LocalID = raft.ServerID(name)
 	storage := raft.NewInmemStore()
 	snapshot := raft.NewInmemSnapshotStore()
@@ -229,16 +227,6 @@ var _ = Describe("StateMachine", func() {
 			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
 		),
 	)
-
-	It("should restore v0 state", func() {
-		obs := make(chan agent.Message, 5)
-		ob := NewEvery(obs)
-		encoded, err := ioutil.ReadFile(".fixtures/wal-v0.proto.bin")
-		Expect(err).To(Succeed())
-		wal := NewWAL(NewTranscoder(ob))
-		Expect(wal.Restore(ioutil.NopCloser(bytes.NewBuffer(encoded)))).To(Succeed())
-		Expect(len(obs)).To(Equal(3))
-	})
 
 	It("should return an error when dispatch fails", func() {
 		cmd := agent.DeployCommand{

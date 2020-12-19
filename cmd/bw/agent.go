@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 
@@ -71,12 +72,11 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 func (t *agentCmd) bind() (err error) {
 	var (
-		c             clustering.Cluster
-		tlscreds      *tls.Config
-		keyring       *memberlist.Keyring
-		p             raftutil.Protocol
-		deployResults []chan deployment.DeployResult
-		ns            notary.Composite
+		c        clustering.Cluster
+		tlscreds *tls.Config
+		keyring  *memberlist.Keyring
+		p        raftutil.Protocol
+		ns       notary.Composite
 	)
 
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
@@ -153,9 +153,7 @@ func (t *agentCmd) bind() (err error) {
 
 	cx := cluster.New(local, c)
 	var (
-		tc  storage.TorrentConfig
-		tcu storage.TorrentUtil
-		tdr = make(chan deployment.DeployResult)
+		tc storage.TorrentConfig
 	)
 
 	opts := []storage.TorrentOption{
@@ -167,14 +165,6 @@ func (t *agentCmd) bind() (err error) {
 	if tc, err = storage.NewTorrent(cx, opts...); err != nil {
 		return err
 	}
-
-	go func() {
-		for range tdr {
-			tcu.ClearTorrents(tc)
-		}
-	}()
-
-	deployResults = append(deployResults, tdr)
 
 	dctx := daemons.Context{
 		ConfigurationFile: t.configFile,
@@ -213,12 +203,16 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
+	go deployment.ResultBus(
+		dctx.Results,
+		syncAuthorizations(ns),
+		clearTorrents(tc),
+	)
+
 	if err = daemons.Bootstrap(dctx); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}
-
-	go deployment.ResultBus(dctx.Results, deployResults...)
 
 	return nil
 }
@@ -299,4 +293,33 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 
 	fmt.Printf("log metrics %#v\n", lstats)
 	return nil
+}
+
+func clearTorrents(c storage.TorrentConfig) chan deployment.DeployResult {
+	var (
+		tcu storage.TorrentUtil
+		tdr = make(chan deployment.DeployResult)
+	)
+
+	go func() {
+		for range tdr {
+			tcu.ClearTorrents(c)
+		}
+	}()
+
+	return tdr
+}
+
+func syncAuthorizations(ns notary.Composite) chan deployment.DeployResult {
+	var (
+		ndr = make(chan deployment.DeployResult)
+	)
+
+	go func() {
+		for dr := range ndr {
+			logx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(ns.Root, bw.AuthKeysFile)))
+		}
+	}()
+
+	return ndr
 }

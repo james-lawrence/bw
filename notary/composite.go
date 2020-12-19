@@ -1,8 +1,9 @@
 package notary
 
 // NewComposite storage.
-func NewComposite(p storage, buckets ...storage) Composite {
+func NewComposite(root string, p storage, buckets ...storage) Composite {
 	return Composite{
+		Root:    root,
 		primary: p,
 		buckets: buckets,
 	}
@@ -10,6 +11,7 @@ func NewComposite(p storage, buckets ...storage) Composite {
 
 // Composite combine multiple storages into a single api.
 type Composite struct {
+	Root    string    // root of the authorization directory.
 	primary storage   // the mutatable bucket, allows for insertions.
 	buckets []storage // read only buckets. cannot be mutated by the composite.
 }

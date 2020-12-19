@@ -78,7 +78,7 @@ type UntilSuccess struct {
 }
 
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol) (err error) {
+func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol, results chan deployment.DeployResult) (err error) {
 	var (
 		sctx shell.Context
 	)
@@ -101,7 +101,7 @@ func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.Downlo
 	)
 
 	for i := 0; i < t.maxAttempts; i++ {
-		if err := Bootstrap(ctx, c, coord); err != nil {
+		if err := Bootstrap(ctx, c, coord, results); err != nil {
 			log.Println(errors.Wrap(err, "bootstrap attempt failed"))
 			select {
 			case <-ctx.Done():
@@ -131,7 +131,7 @@ func ignore(err error) error {
 }
 
 // Bootstrap a server with the latest deploy.
-func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator) (err error) {
+func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator, dresults chan deployment.DeployResult) (err error) {
 	var (
 		current agent.Deploy
 		latest  agent.Deploy
@@ -190,6 +190,14 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	case deploy = <-results:
 	}
 
+	if dresults != nil {
+		select {
+		case <-deadline.Done():
+			return errors.Wrap(deadline.Err(), "failed to bootstrap timeout")
+		case dresults <- deploy:
+		}
+	}
+
 	if err = deploy.Error; err != nil {
 		return errors.Wrap(err, "deployment failed")
 	}
@@ -197,8 +205,8 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	// again retrieve the latest deployment information from the cluster.
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
-	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); err != nil {
-		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying 2")
+	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); err != nil && !agentutil.IsActiveDeployment(err) {
+		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 
 	if !agentutil.SameArchive(latest.Archive, &deploy.Archive) {

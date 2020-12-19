@@ -3,6 +3,7 @@ package notary
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -51,10 +52,11 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 	if err = bw.ExpandAndDecode(bin, &nc); err != nil {
 		return c, err
 	}
+	authority := append(nc.Config.Authority, filepath.Join(root, bw.AuthKeysFile))
+	buckets := make([]storage, 0, len(authority))
 
-	buckets := make([]storage, 0, len(nc.Config.Authority))
-	log.Println("loading authorizations", nc.Config.Authority)
-	for _, p := range nc.Config.Authority {
+	log.Println("loading authorizations", authority)
+	for _, p := range authority {
 		var (
 			b storage
 		)
@@ -66,7 +68,37 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 		buckets = append(buckets, b)
 	}
 
-	return NewComposite(directory, buckets...), nil
+	return NewComposite(root, directory, buckets...), nil
+}
+
+// CloneAuthorizationFile copies the authorization from one location to another.
+func CloneAuthorizationFile(from, to string) (err error) {
+	var (
+		ff *os.File
+		tf *os.File
+	)
+
+	log.Println("synchronizing authorization", from, "->", to)
+	if ff, err = os.Open(from); err != nil {
+		return err
+	}
+	defer ff.Close()
+
+	if tf, err = ioutil.TempFile(filepath.Dir(to), fmt.Sprintf("%s.sync", filepath.Base(to))); err != nil {
+		return err
+	}
+	defer tf.Close()
+
+	if err = os.Chmod(tf.Name(), 0600); err != nil {
+		return err
+	}
+
+	if _, err = io.Copy(tf, ff); err != nil {
+		return err
+	}
+
+	log.Println("renaming", tf.Name(), "->", to)
+	return os.Rename(tf.Name(), to)
 }
 
 type notary struct {

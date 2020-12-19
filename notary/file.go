@@ -3,6 +3,7 @@ package notary
 import (
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -15,6 +16,10 @@ func newFile(path string) (s *file, err error) {
 	)
 
 	// ensure the file we are watching exists
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return s, err
+	}
+
 	if tmp, err = os.OpenFile(path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600); err != nil {
 		return s, err
 	}
@@ -55,6 +60,11 @@ func (t *file) background() *file {
 				var (
 					err error
 				)
+
+				if evt.Op == fsnotify.Chmod {
+					continue
+				}
+
 				log.Println("change detected", t.source, evt.Op)
 				m := newMem()
 				if err = loadAuthorizedKeys(m, t.source); err != nil {

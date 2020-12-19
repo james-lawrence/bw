@@ -53,7 +53,7 @@ var _ = Describe("Bootstrap", func() {
 		)
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc)).ToNot(HaveOccurred())
+		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
 	})
 
 	It("should fail when it fails to download the archive", func() {
@@ -77,7 +77,7 @@ var _ = Describe("Bootstrap", func() {
 		)
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
-		Expect(errors.Cause(Bootstrap(context.Background(), c, dc))).To(MatchError("download failed"))
+		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("download failed"))
 	})
 
 	It("should fail when the deployment fails", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Bootstrap", func() {
 		)
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
-		Expect(errors.Cause(Bootstrap(context.Background(), c, dc))).To(MatchError("deployment failed"))
+		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("deployment failed"))
 	})
 
 	It("should succeed when it finishes bootstrapping from quorum", func() {
@@ -123,7 +123,7 @@ var _ = Describe("Bootstrap", func() {
 		)
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc)).ToNot(HaveOccurred())
+		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
 	})
 
 	It("should bootstrap from fallback bootstrap services when quorum has no deployments", func() {
@@ -147,7 +147,7 @@ var _ = Describe("Bootstrap", func() {
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketAuto(c), Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc)).To(MatchError("failed to determine latest deployment from quorum, retrying 2: no deployments found"))
+		Expect(Bootstrap(context.Background(), c, dc, nil)).To(MatchError("failed to determine latest deployment from quorum, retrying: no deployments found"))
 	})
 
 	It("should stop attempting to bootstrap if all services return no deployments found", func() {
@@ -167,7 +167,7 @@ var _ = Describe("Bootstrap", func() {
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketAuto(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc)).To(Succeed())
+		Expect(Bootstrap(context.Background(), c, dc, nil)).To(Succeed())
 	})
 
 	Context("active deploy", func() {
@@ -191,7 +191,7 @@ var _ = Describe("Bootstrap", func() {
 			)
 			Expect(Run(context.Background(), SocketLocal(c), Mock{Current: current})).To(Succeed())
 			Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current, Info: agent.ArchiveResponse_ActiveDeploy})).To(Succeed())
-			Expect(Bootstrap(context.Background(), c, dc).Error()).To(Equal("active deploy matches the local deployment, waiting for deployment to complete: deployment in progress"))
+			Expect(Bootstrap(context.Background(), c, dc, nil).Error()).To(Equal("active deploy matches the local deployment, waiting for deployment to complete: deployment in progress"))
 		})
 	})
 })

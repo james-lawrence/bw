@@ -415,11 +415,11 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if err = os.MkdirAll(filepath.Join(root, "archive"), 0700); err != nil {
+	if err = os.MkdirAll(filepath.Join(root, bw.DirArchive), 0700); err != nil {
 		return errors.Wrap(err, "failed to create archive directory")
 	}
 
-	if err = packer.Unpack(filepath.Join(root, "archive"), dst); err != nil {
+	if err = packer.Unpack(filepath.Join(root, bw.DirArchive), dst); err != nil {
 		return errors.Wrap(err, "failed to unpack archive")
 	}
 

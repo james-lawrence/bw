@@ -38,8 +38,12 @@ const (
 	DirTorrents = "torrents"
 	// DirAuthorizations the directory storing authorization credentials
 	DirAuthorizations = "authorizations"
-	// EnvFile environment file name.
+	// DirArchive the name of the directory where archives are extracted
+	DirArchive = "archive"
+	// EnvFile contains the filename for the deploy's environment variables.
 	EnvFile = "bw.env"
+	// AuthKeysFile contains the filename which holds the public keys for deployments.
+	AuthKeysFile = "bw.auth.keys"
 	// DefaultDeployTimeout default timeout for a deployment.
 	DefaultDeployTimeout = time.Hour
 	// DeployLog filename for the logs of a given deployment.

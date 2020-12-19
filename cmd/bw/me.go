@@ -14,7 +14,7 @@ type me struct {
 }
 
 func (t *me) configure(parent *kingpin.CmdClause) {
-	parent.Command("show", "show current credentials").Action(t.show)
+	parent.Command("show", "show current credentials").Default().Action(t.show)
 	parent.Command("init", "initialize the users credentials").Action(t.exec)
 }
 
