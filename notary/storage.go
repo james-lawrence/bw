@@ -15,6 +15,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/sshx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
@@ -78,7 +79,7 @@ func CloneAuthorizationFile(from, to string) (err error) {
 		tf *os.File
 	)
 
-	log.Println("synchronizing authorization", from, "->", to)
+	debugx.Println("synchronizing authorization", from, "->", to)
 	if ff, err = os.Open(from); err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func CloneAuthorizationFile(from, to string) (err error) {
 		return err
 	}
 
-	log.Println("renaming", tf.Name(), "->", to)
+	debugx.Println("renaming", tf.Name(), "->", to)
 	return os.Rename(tf.Name(), to)
 }
 
@@ -173,4 +174,58 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 	}
 
 	return nil
+}
+
+// ReplaceAuthorizedKey replace an authorized
+func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
+	var (
+		auths   *os.File
+		buf     *os.File
+		encoded []byte
+	)
+
+	if auths, err = os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600); err != nil {
+		return errors.WithStack(err)
+	}
+	defer auths.Close()
+
+	if buf, err = ioutil.TempFile(filepath.Dir(path), fmt.Sprintf("%s.*", filepath.Base(path))); err != nil {
+		return errors.Wrap(err, "unable to open buffer")
+	}
+	defer os.Remove(buf.Name())
+	defer buf.Close()
+
+	debugx.Println("replacing authorization key within", path)
+
+	if encoded, err = ioutil.ReadFile(path); err != nil {
+		return err
+	}
+
+	for len(encoded) != 0 {
+		var (
+			key ssh.PublicKey
+		)
+
+		if key, _, _, encoded, err = ssh.ParseAuthorizedKey(encoded); err != nil {
+			if sshx.IsNoKeyFound(err) {
+				continue
+			}
+			log.Println(err)
+			continue
+		}
+
+		if genFingerprint(ssh.MarshalAuthorizedKey(key)) == fingerprint {
+			continue
+		}
+
+		if _, err = buf.Write(ssh.MarshalAuthorizedKey(key)); err != nil {
+			return err
+		}
+	}
+
+	if _, err = buf.Write(rpub); err != nil {
+		return err
+	}
+
+	return CloneAuthorizationFile(buf.Name(), path)
 }

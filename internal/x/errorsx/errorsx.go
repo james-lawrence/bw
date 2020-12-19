@@ -77,6 +77,12 @@ type notification struct {
 }
 
 func (t notification) Notification() {}
+func (t notification) Unwrap() error {
+	return t.error
+}
+func (t notification) Cause() error {
+	return t.error
+}
 
 // UserFriendly represents an error that will be displayed to users.
 func UserFriendly(err error) error {
@@ -91,3 +97,9 @@ type userfriendly struct {
 
 // user friendly error
 func (t userfriendly) UserFriendly() {}
+func (t userfriendly) Unwrap() error {
+	return t.error
+}
+func (t userfriendly) Cause() error {
+	return t.error
+}

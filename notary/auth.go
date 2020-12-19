@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
@@ -30,7 +31,7 @@ const (
 type ErrUnauthorizedKey struct{}
 
 func (t ErrUnauthorizedKey) Error() string {
-	path := bw.DefaultUserDirLocation(bw.DefaultNotaryKey) + ".pub"
+	path := PublicKeyPath()
 	return fmt.Sprintf(`your key is unauthorized and will need to be added by an authorized user.
 please give the following file to an authorized user "%s".
 they can add the key using the command "bw notary insert %s"`, path, path)
@@ -42,6 +43,26 @@ func (t ErrUnauthorizedKey) Format(s fmt.State, verb rune) {
 }
 
 type keyGen func() ([]byte, error)
+
+// PublicKeyPath generates the path to the public key on disk for
+// a client.
+func PublicKeyPath() string {
+	return bw.DefaultUserDirLocation(bw.DefaultNotaryKey) + ".pub"
+}
+
+// PrivateKeyPath generates the path to the private key on disk for
+// a client.
+func PrivateKeyPath() string {
+	return bw.DefaultUserDirLocation(bw.DefaultNotaryKey)
+}
+
+// ClearAutoSignerKey clears the autosigner from disk.
+func ClearAutoSignerKey() error {
+	return errorsx.Compact(
+		os.Remove(PrivateKeyPath()),
+		os.Remove(PublicKeyPath()),
+	)
+}
 
 // NewAutoSigner - loads or generates a ssh key to sign RPC requests with.
 // this method is only for use by clients and the new key will need to be added to the cluster.
@@ -56,8 +77,7 @@ func AutoSignerInfo() (fp string, pub []byte, err error) {
 		encoded []byte
 	)
 
-	location := bw.DefaultUserDirLocation(bw.DefaultNotaryKey) + ".pub"
-	if encoded, err = ioutil.ReadFile(location); err != nil {
+	if encoded, err = ioutil.ReadFile(PublicKeyPath()); err != nil {
 		return fp, pub, err
 	}
 
@@ -138,6 +158,11 @@ func NewSigner(pkey []byte) (s Signer, err error) {
 type Signer struct {
 	fingerprint string
 	signer      ssh.Signer
+}
+
+// AutoSignerInfo returns the fingerprint and authorized ssh key.
+func (t Signer) AutoSignerInfo() (fp string, pub []byte, err error) {
+	return t.fingerprint, ssh.MarshalAuthorizedKey(t.signer.PublicKey()), nil
 }
 
 // GetRequestMetadata inserts authentication metadata into request.

@@ -42,7 +42,7 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
 	if _, err = os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return config, errorsx.UserFriendly(errors.Errorf("unknown environment: %s - %s", environment, path))
+			return config, errorsx.UserFriendly(errors.Wrapf(err, "unknown environment: %s - %s", environment, path))
 		}
 
 		return config, err
