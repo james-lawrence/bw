@@ -66,6 +66,44 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			return false
 		}
 		switch n.kind {
+		case binaryExpr, unaryExpr, parenExpr:
+			if isBoolAction(n) {
+				break
+			}
+			// Gather assigned type if set, to give context for type propagation at post-order.
+			switch n.anc.kind {
+			case assignStmt, defineStmt:
+				a := n.anc
+				i := childPos(n) - a.nright
+				if i < 0 {
+					break
+				}
+				if len(a.child) > a.nright+a.nleft {
+					i--
+				}
+				dest := a.child[i]
+				if dest.typ != nil && !isInterface(dest.typ) {
+					// Interface type are not propagated, and will be resolved at post-order.
+					n.typ = dest.typ
+				}
+			case binaryExpr, unaryExpr, parenExpr:
+				n.typ = n.anc.typ
+			}
+
+		case defineStmt:
+			// Determine type of variables initialized at declaration, so it can be propagated.
+			if n.nleft+n.nright == len(n.child) {
+				// No type was specified on the left hand side, it will resolved at post-order.
+				break
+			}
+			n.typ, err = nodeType(interp, sc, n.child[n.nleft])
+			if err != nil {
+				break
+			}
+			for i := 0; i < n.nleft; i++ {
+				n.child[i].typ = n.typ
+			}
+
 		case blockStmt:
 			if n.anc != nil && n.anc.kind == rangeStmt {
 				// For range block: ensure that array or map type is propagated to iterators
@@ -159,7 +197,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 		case breakStmt, continueStmt, gotoStmt:
 			if len(n.child) > 0 {
-				// Handle labeled statements
+				// Handle labeled statements.
 				label := n.child[0].ident
 				if sym, _, ok := sc.lookup(label); ok {
 					if sym.kind != labelSym {
@@ -176,25 +214,23 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 		case labeledStmt:
 			label := n.child[0].ident
-			if sym, _, ok := sc.lookup(label); ok {
-				if sym.kind != labelSym {
-					err = n.child[0].cfgErrorf("label %s not defined", label)
-					break
-				}
+			// TODO(marc): labels must be stored outside of symbols to avoid collisions
+			// Used labels are searched in current and sub scopes, not upper ones.
+			if sym, ok := sc.lookdown(label); ok {
 				sym.node = n
 				n.sym = sym
 			} else {
 				n.sym = &symbol{kind: labelSym, node: n, index: -1}
-				sc.sym[label] = n.sym
 			}
+			sc.sym[label] = n.sym
 
 		case caseClause:
 			sc = sc.pushBloc()
 			if sn := n.anc.anc; sn.kind == typeSwitch && sn.child[1].action == aAssign {
-				// Type switch clause with a var defined in switch guard
+				// Type switch clause with a var defined in switch guard.
 				var typ *itype
 				if len(n.child) == 2 {
-					// 1 type in clause: define the var with this type in the case clause scope
+					// 1 type in clause: define the var with this type in the case clause scope.
 					switch {
 					case n.child[0].ident == nilIdent:
 						typ = sc.getType("interface{}")
@@ -204,7 +240,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 						typ, err = nodeType(interp, sc, n.child[0])
 					}
 				} else {
-					// define the var with the type in the switch guard expression
+					// Define the var with the type in the switch guard expression.
 					typ = sn.child[1].child[1].child[0].typ
 				}
 				if err != nil {
@@ -285,11 +321,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				}
 			}
 
-		case forStmt0, forRangeStmt:
-			sc = sc.pushBloc()
-			sc.loop, sc.loopRestart = n, n.child[0]
-
-		case forStmt1, forStmt2, forStmt3, forStmt3a, forStmt4:
+		case forStmt0, forStmt1, forStmt2, forStmt3, forStmt4, forStmt5, forStmt6, forStmt7, forRangeStmt:
 			sc = sc.pushBloc()
 			sc.loop, sc.loopRestart = n, n.lastChild()
 
@@ -386,9 +418,10 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				return false
 			}
 
-			if n.child[1].kind == identExpr {
+			switch n.child[1].kind {
+			case identExpr, selectorExpr:
 				n.typ = &itype{cat: aliasT, val: typ, name: typeName}
-			} else {
+			default:
 				n.typ = typ
 				n.typ.name = typeName
 			}
@@ -443,14 +476,11 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 				n.gen = nop
 				break
 			}
-			if n.anc.kind == commClause {
-				n.gen = nop
-				break
-			}
+
 			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
 				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
-					return
+					break
 				}
 			}
 
@@ -554,6 +584,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					src.findex = dest.findex
 					src.level = level
+				case n.action == aAssign && len(n.child) < 4 && !src.rval.IsValid() && isArithmeticAction(src):
+					// Optimize single assignments from some arithmetic operations.
+					// Skip the assign operation entirely, the source frame index is set
+					// to destination index, avoiding extra memory alloc and duplication.
+					src.typ = dest.typ
+					src.findex = dest.findex
+					src.level = level
+					n.gen = nop
 				case src.kind == basicLit && !src.rval.IsValid():
 					// Assign to nil.
 					src.rval = reflect.New(dest.typ.TypeOf()).Elem()
@@ -639,7 +677,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 			switch n.action {
-			case aRem, aShl, aShr:
+			case aRem:
+				n.typ = c0.typ
+			case aShl, aShr:
+				if c0.typ.untyped {
+					break
+				}
 				n.typ = c0.typ
 			case aEqual, aNotEqual:
 				n.typ = sc.getType("bool")
@@ -855,7 +898,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 					n.gen = nop
 					n.findex = -1
 					n.typ = c0.typ
-					n.rval = c1.rval
+					if c, ok := c1.rval.Interface().(constant.Value); ok {
+						i, _ := constant.Int64Val(constant.ToInt(c))
+						n.rval = reflect.ValueOf(i).Convert(c0.typ.rtype)
+					} else {
+						n.rval = c1.rval.Convert(c0.typ.rtype)
+					}
 				default:
 					n.gen = convert
 					n.typ = c0.typ
@@ -982,7 +1030,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 
 			n.findex = sc.add(n.typ)
 			// TODO: Check that composite literal expr matches corresponding type
-			n.gen = compositeGenerator(n, n.typ)
+			n.gen = compositeGenerator(n, n.typ, nil)
 
 		case fallthroughtStmt:
 			if n.anc.kind != caseBody {
@@ -1000,7 +1048,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			body.tnext = n.start
 			sc = sc.pop()
 
-		case forStmt1: // for cond {}
+		case forStmt1: // for init; ; {}
+			init, body := n.child[0], n.child[1]
+			n.start = init.start
+			init.tnext = body.start
+			body.tnext = n.start
+			sc = sc.pop()
+
+		case forStmt2: // for cond {}
 			cond, body := n.child[0], n.child[1]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
@@ -1019,7 +1074,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			setFNext(cond, n)
 			sc = sc.pop()
 
-		case forStmt2: // for init; cond; {}
+		case forStmt3: // for init; cond; {}
 			init, cond, body := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
@@ -1041,7 +1096,14 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			setFNext(cond, n)
 			sc = sc.pop()
 
-		case forStmt3: // for ; cond; post {}
+		case forStmt4: // for ; ; post {}
+			post, body := n.child[0], n.child[1]
+			n.start = body.start
+			post.tnext = body.start
+			body.tnext = post.start
+			sc = sc.pop()
+
+		case forStmt5: // for ; cond; post {}
 			cond, post, body := n.child[0], n.child[1], n.child[2]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
@@ -1061,7 +1123,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			body.tnext = post.start
 			sc = sc.pop()
 
-		case forStmt3a: // for init; ; post {}
+		case forStmt6: // for init; ; post {}
 			init, post, body := n.child[0], n.child[1], n.child[2]
 			n.start = init.start
 			init.tnext = body.start
@@ -1069,7 +1131,7 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			post.tnext = body.start
 			sc = sc.pop()
 
-		case forStmt4: // for init; cond; post {}
+		case forStmt7: // for init; cond; post {}
 			init, cond, post, body := n.child[0], n.child[1], n.child[2], n.child[3]
 			if !isBool(cond.typ) {
 				err = cond.cfgErrorf("non-bool used as for condition")
@@ -1129,7 +1191,6 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			sym, level, found := sc.lookup(n.ident)
 			if !found {
 				// retry with the filename, in case ident is a package name.
-				// TODO(mpl): maybe we improve lookup itself so it can deal with that.
 				sym, level, found = sc.lookup(filepath.Join(n.ident, baseName))
 				if !found {
 					err = n.cfgErrorf("undefined: %s", n.ident)
@@ -1302,7 +1363,12 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			}
 
 		case returnStmt:
-			if mustReturnValue(sc.def.child[2]) {
+			if len(n.child) > sc.def.typ.numOut() {
+				err = n.cfgErrorf("too many arguments to return")
+				break
+			}
+			returnSig := sc.def.child[2]
+			if mustReturnValue(returnSig) {
 				nret := len(n.child)
 				if nret == 1 && isCall(n.child[0]) {
 					nret = n.child[0].child[0].typ.numOut()
@@ -1316,13 +1382,19 @@ func (interp *Interpreter) cfg(root *node, importPath string) ([]*node, error) {
 			n.tnext = nil
 			n.val = sc.def
 			for i, c := range n.child {
+				var typ *itype
+				typ, err = nodeType(interp, sc.upperLevel(), returnSig.child[1].fieldType(i))
+				if err != nil {
+					return
+				}
+				// TODO(mpl): move any of that code to typecheck?
+				c.typ.node = c
+				if !c.typ.assignableTo(typ) {
+					err = fmt.Errorf("cannot use %v (type %v) as type %v in return argument", c.ident, c.typ.cat, typ.cat)
+					return
+				}
 				if c.typ.cat == nilT {
 					// nil: Set node value to zero of return type
-					f := sc.def
-					var typ *itype
-					if typ, err = nodeType(interp, sc, f.child[2].child[1].fieldType(i)); err != nil {
-						return
-					}
 					if typ.cat == funcT {
 						// Wrap the typed nil value in a node, as per other interpreter functions
 						c.rval = reflect.ValueOf(&node{kind: basicLit, rval: reflect.New(typ.TypeOf()).Elem()})
@@ -2263,7 +2335,7 @@ func isCall(n *node) bool {
 }
 
 func isBinCall(n *node) bool {
-	return n.kind == callExpr && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
+	return isCall(n) && n.child[0].typ.cat == valueT && n.child[0].typ.rtype.Kind() == reflect.Func
 }
 
 func mustReturnValue(n *node) bool {
@@ -2279,7 +2351,7 @@ func mustReturnValue(n *node) bool {
 }
 
 func isRegularCall(n *node) bool {
-	return n.kind == callExpr && n.child[0].typ.cat == funcT
+	return isCall(n) && n.child[0].typ.cat == funcT
 }
 
 func variadicPos(n *node) int {
@@ -2360,10 +2432,10 @@ func gotoLabel(s *symbol) {
 	}
 }
 
-func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
+func compositeGenerator(n *node, typ *itype, rtyp reflect.Type) (gen bltnGenerator) {
 	switch typ.cat {
 	case aliasT, ptrT:
-		gen = compositeGenerator(n, n.typ.val)
+		gen = compositeGenerator(n, n.typ.val, rtyp)
 	case arrayT:
 		gen = arrayLit
 	case mapT:
@@ -2386,11 +2458,21 @@ func compositeGenerator(n *node, typ *itype) (gen bltnGenerator) {
 			}
 		}
 	case valueT:
-		switch k := n.typ.rtype.Kind(); k {
+		if rtyp == nil {
+			rtyp = n.typ.rtype
+		}
+		switch k := rtyp.Kind(); k {
 		case reflect.Struct:
-			gen = compositeBinStruct
+			if n.nleft == 1 {
+				gen = compositeBinStruct
+			} else {
+				gen = compositeBinStructNotype
+			}
 		case reflect.Map:
+			// TODO(mpl): maybe needs a NoType version too
 			gen = compositeBinMap
+		case reflect.Ptr:
+			gen = compositeGenerator(n, typ, n.typ.val.rtype)
 		default:
 			log.Panic(n.cfgErrorf("compositeGenerator not implemented for type kind: %s", k))
 		}
@@ -2431,4 +2513,23 @@ func isValueUntyped(v reflect.Value) bool {
 		return true
 	}
 	return t.String() == t.Kind().String()
+}
+
+// isArithmeticAction returns true if the node action is an arithmetic operator.
+func isArithmeticAction(n *node) bool {
+	switch n.action {
+	case aAdd, aAnd, aAndNot, aBitNot, aMul, aQuo, aRem, aShl, aShr, aSub, aXor:
+		return true
+	default:
+		return false
+	}
+}
+
+func isBoolAction(n *node) bool {
+	switch n.action {
+	case aEqual, aGreater, aGreaterEqual, aLand, aLor, aLower, aLowerEqual, aNot, aNotEqual:
+		return true
+	default:
+		return false
+	}
 }

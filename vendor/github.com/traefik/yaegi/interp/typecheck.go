@@ -91,7 +91,10 @@ func (check typecheck) addressExpr(n *node) error {
 		case selectorExpr:
 			c0 = c0.child[1]
 			continue
-		case indexExpr:
+		case starExpr:
+			c0 = c0.child[0]
+			continue
+		case indexExpr, sliceExpr:
 			c := c0.child[0]
 			if isArray(c.typ) || isMap(c.typ) {
 				c0 = c
@@ -101,7 +104,7 @@ func (check typecheck) addressExpr(n *node) error {
 			found = true
 			continue
 		}
-		return n.cfgErrorf("invalid operation: cannot take address of %s", c0.typ.id())
+		return n.cfgErrorf("invalid operation: cannot take address of %s [kind: %s]", c0.typ.id(), kinds[c0.kind])
 	}
 	return nil
 }
@@ -148,7 +151,7 @@ func (check typecheck) shift(n *node) error {
 	t0, t1 := c0.typ.TypeOf(), c1.typ.TypeOf()
 
 	var v0 constant.Value
-	if c0.typ.untyped {
+	if c0.typ.untyped && c0.rval.IsValid() {
 		v0 = constant.ToInt(c0.rval.Interface().(constant.Value))
 		c0.rval = reflect.ValueOf(v0)
 	}
@@ -214,6 +217,7 @@ var binaryOpPredicates = opPredicates{
 // binaryExpr type checks a binary expression.
 func (check typecheck) binaryExpr(n *node) error {
 	c0, c1 := n.child[0], n.child[1]
+
 	a := n.action
 	if isAssignAction(a) {
 		a--
@@ -221,6 +225,21 @@ func (check typecheck) binaryExpr(n *node) error {
 
 	if isShiftAction(a) {
 		return check.shift(n)
+	}
+
+	switch n.action {
+	case aRem:
+		if zeroConst(c1) {
+			return n.cfgErrorf("invalid operation: division by zero")
+		}
+	case aQuo:
+		if zeroConst(c1) {
+			return n.cfgErrorf("invalid operation: division by zero")
+		}
+		if c0.rval.IsValid() && c1.rval.IsValid() {
+			// Avoid constant conversions below to ensure correct constant integer quotient.
+			return nil
+		}
 	}
 
 	_ = check.convertUntyped(c0, c1.typ)
@@ -238,14 +257,11 @@ func (check typecheck) binaryExpr(n *node) error {
 	if err := check.op(binaryOpPredicates, a, n, c0, t0); err != nil {
 		return err
 	}
-
-	switch n.action {
-	case aQuo, aRem:
-		if (c0.typ.untyped || isInt(t0)) && c1.typ.untyped && constant.Sign(c1.rval.Interface().(constant.Value)) == 0 {
-			return n.cfgErrorf("invalid operation: division by zero")
-		}
-	}
 	return nil
+}
+
+func zeroConst(n *node) bool {
+	return n.typ.untyped && constant.Sign(n.rval.Interface().(constant.Value)) == 0
 }
 
 func (check typecheck) index(n *node, max int) error {
@@ -483,9 +499,7 @@ func (check typecheck) sliceExpr(n *node) error {
 	case reflect.Array:
 		valid = true
 		l = t.Len()
-		if c.kind != selectorExpr && (c.sym == nil || c.sym.kind != varSym) {
-			return c.cfgErrorf("cannot slice type %s", c.typ.id())
-		}
+		// TODO(marc): check addressable status of array object (i.e. composite arrays are not).
 	case reflect.Slice:
 		valid = true
 	case reflect.Ptr:
@@ -618,16 +632,13 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 	if !ok {
 		return n.cfgErrorf("cannot convert expression of type %s to type %s", n.typ.id(), typ.id())
 	}
-
-	if n.typ.untyped {
-		if isInterface(typ) || c != nil && !isConstType(typ) {
-			typ = n.typ.defaultType()
-		}
-		if err := check.convertUntyped(n, typ); err != nil {
-			return err
-		}
+	if !n.typ.untyped || c == nil {
+		return nil
 	}
-	return nil
+	if isInterface(typ) || !isConstType(typ) {
+		typ = n.typ.defaultType()
+	}
+	return check.convertUntyped(n, typ)
 }
 
 type param struct {
