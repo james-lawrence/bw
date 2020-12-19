@@ -1,3 +1,71 @@
+commit b5bafcd5359b7a8ecaa3dcd2dc819b3b5b9c5d65
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 09:29:42 2020 -0500
+
+    update release
+
+commit 940b05e12b0de5bd59d203e54226d9a3b4ee56b6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 09:21:19 2020 -0500
+
+    implement authorization file from deployments
+
+commit 00ff6917d7973f1647b632a57a43d7123783825d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Dec 18 16:22:56 2020 -0500
+
+    remove unused sync code
+
+commit 0709d8a45b72df5acd1307f55eca09cae7c7aaaf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Dec 18 15:49:43 2020 -0500
+
+    remove deprecated wal decoding
+
+commit 8d7c7a9ecaf3c75adbcebb321017e205be3c8593
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Dec 18 14:51:52 2020 -0500
+
+    update raft
+
+commit b757a4926a663b244ed314480a64e3cb545a3299
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 27 06:09:37 2020 -0400
+
+    cleanup logs
+
+commit 08b7054e73313e3aaa3590d04ae18ade1db82bfd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 27 05:58:18 2020 -0400
+
+    standardize pebble setup for test environment
+
+commit e246ec0a0eb80dd134e88127dd2ec660e3c7117e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 27 05:13:34 2020 -0400
+
+    log fix
+
+commit 521de13dacad403e3d11695ad12249e89bd9ef1b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 27 05:11:52 2020 -0400
+
+    Revert "Revert "update yaegi""
+    
+    This reverts commit e8e2b1be092194e3308430f6827c615a8838776a.
+
+commit cd0a7ffe08332429651b75ccdf5bab3144ac5b10
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 27 05:11:34 2020 -0400
+
+    log tests
+
+commit fee0c9480f4e951f5bdbb4a30a9084a006cb07eb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 26 15:49:39 2020 -0400
+
+    release 0.1.1601149727-7eb04af3
+
 commit 7eb04af3523dd3b783376d68e5a1e99e447c9dee
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 26 15:45:56 2020 -0400
