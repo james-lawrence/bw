@@ -37,7 +37,7 @@ release: release-check
 
 	git log $(shell git describe --tags --abbrev=0)..HEAD > .dist/RELEASE-NOTES.md
 
-	# GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
+	GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE) GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
 
 	git archive --format=tar -o $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar HEAD
 	tar -f $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar --delete '.dist' --delete '.test'
