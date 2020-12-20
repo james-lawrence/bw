@@ -46,7 +46,7 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 		cc      agent.ConfigClient
 	)
 
-	if err = errors.WithStack(os.MkdirAll(t.path, 0755)); err != nil {
+	if err = errors.WithStack(os.MkdirAll(filepath.Join(t.path, t.name), 0755)); err != nil {
 		return err
 	}
 
@@ -61,7 +61,11 @@ func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
 		return errors.Wrap(err, "failed to encode configuration, try updating to a newer bearded wookie version")
 	}
 
-	if err = ioutil.WriteFile(filepath.Join(t.path, t.name), encoded, 0600); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(t.path, t.name, bw.DefaultClientConfig), encoded, 0600); err != nil {
+		return errors.Wrap(err, "failed to write configuration")
+	}
+
+	if err = ioutil.WriteFile(filepath.Join(t.path, t.name, bw.AuthKeysFile), []byte(nil), 0600); err != nil {
 		return errors.Wrap(err, "failed to write configuration")
 	}
 

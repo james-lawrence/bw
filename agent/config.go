@@ -91,6 +91,7 @@ func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
+	root            string `yaml:"-"` // filepath of the configuration on disk.
 	Address         string // cluster address
 	Discovery       string // discovery service address
 	Concurrency     float64
@@ -111,7 +112,14 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 		return t, err
 	}
 
+	t.root = filepath.Dir(path)
+
 	return t, nil
+}
+
+// Dir path to the configuration on disk
+func (t ConfigClient) Dir() string {
+	return t.root
 }
 
 // Partitioner ...

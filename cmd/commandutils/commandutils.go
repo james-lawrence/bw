@@ -39,7 +39,24 @@ func NewClientPeer(options ...agent.PeerOption) (p agent.Peer) {
 
 // ReadConfiguration reads the configuration for the given environment.
 func ReadConfiguration(environment string) (config agent.ConfigClient, err error) {
+	// migrate environment to directory structure.
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	if i, err := os.Stat(path); err == nil && !i.IsDir() {
+		log.Println("detected old configuration migrating environment")
+		dst := filepath.Join(path, bw.DefaultClientConfig)
+		tmp := path + ".bak"
+		err = errorsx.Compact(
+			os.Rename(path, tmp),
+			os.MkdirAll(path, 0700),
+			os.Rename(tmp, dst),
+		)
+
+		if err != nil {
+			return config, errorsx.UserFriendly(errors.Wrapf(err, "failed environment migration: %s - %s -> %s", environment, path, dst))
+		}
+	}
+
+	path = filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment, bw.DefaultClientConfig)
 	if _, err = os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return config, errorsx.UserFriendly(errors.Wrapf(err, "unknown environment: %s - %s", environment, path))

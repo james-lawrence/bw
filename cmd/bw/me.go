@@ -65,7 +65,7 @@ func (t *me) exec(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	return notary.ReplaceAuthorizedKey(
-		filepath.Join(config.DeployDataDir, bw.AuthKeysFile),
+		filepath.Join(config.Dir(), bw.AuthKeysFile),
 		fingerprint,
 		encoded,
 	)

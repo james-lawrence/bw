@@ -2,6 +2,7 @@ package iox
 
 import (
 	"io"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -49,4 +50,31 @@ func (writeNopCloser) Close() error { return nil }
 // the provided Writer w.
 func WriteNopCloser(w io.Writer) io.WriteCloser {
 	return writeNopCloser{w}
+}
+
+// Copy a file to another path
+func Copy(from, to string) error {
+	in, err := os.Open(from)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	i, err := in.Stat()
+	if err != nil {
+		return err
+	}
+
+	out, err := os.OpenFile(to, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, i.Mode())
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+
+	return out.Close()
 }

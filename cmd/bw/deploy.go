@@ -32,6 +32,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
@@ -212,6 +213,11 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
+
+	if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.EnvFile)); err != nil {
+		return err
+	}
+
 	events <- agentutil.LogEvent(local.Peer, "archive upload initiated")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
@@ -373,6 +379,10 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	log.Println("configuration:", spew.Sdump(config))
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+		return err
+	}
+
+	if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.AuthKeysFile)); err != nil {
 		return err
 	}
 

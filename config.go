@@ -27,6 +27,8 @@ const (
 	DefaultDeployspaceConfigDir = ".bwconfig"
 	// DefaultEnvironmentName name of the environment to default to.
 	DefaultEnvironmentName = "default"
+	// DefaultClientConfig default filename for the client configuration
+	DefaultClientConfig = "config.yml"
 )
 
 var fallbackUser = user.User{
