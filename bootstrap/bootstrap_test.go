@@ -147,7 +147,10 @@ var _ = Describe("Bootstrap", func() {
 		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketQuorum(c), Mock{Fail: missing})).To(Succeed())
 		Expect(Run(context.Background(), SocketAuto(c), Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc, nil)).To(MatchError("failed to determine latest deployment from quorum, retrying: no deployments found"))
+		results := make(chan deployment.DeployResult, 1)
+		Expect(Bootstrap(context.Background(), c, dc, results)).To(MatchError("failed to determine latest deployment from quorum, retrying: no deployments found"))
+		result := <-results
+		Expect([]byte(result.ID)).To(Equal(current.Archive.DeploymentID))
 	})
 
 	It("should stop attempting to bootstrap if all services return no deployments found", func() {
