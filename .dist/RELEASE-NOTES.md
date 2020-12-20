@@ -1,3 +1,27 @@
+commit 9cfe2866c7a5eba318ef4bd7bf3ae33632a814c1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 18:31:33 2020 -0500
+
+    change golang build version
+
+commit 6ec879c3de26d043824d4b83bce74acfec3acead
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 18:21:59 2020 -0500
+
+    update build
+
+commit 5e2e713cb42f2562476e3eff1d910d6deee94d4e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 15:58:38 2020 -0500
+
+    add auth key to me init function
+
+commit d59fcbb61c37eee6027d6f1e69cfa7a2706cd512
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 14:29:24 2020 -0500
+
+    release 0.1.1608406076-21f1c9bd
+
 commit 21f1c9bde48c9256cec12700fe6adc27e279e484
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 19 14:27:56 2020 -0500
