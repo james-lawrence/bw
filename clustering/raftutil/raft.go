@@ -18,7 +18,6 @@ import (
 	"github.com/james-lawrence/bw/internal/x/contextx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 
 	"github.com/davecgh/go-spew/spew"
@@ -192,8 +191,62 @@ type stateMeta struct {
 	transport raft.Transport
 	protocol  *Protocol
 	sgroup    *sync.WaitGroup
+	ctx       context.Context
+	done      context.CancelFunc
 }
 
+func (t *stateMeta) waitShutdown(c cluster) {
+	log.Println(c.LocalNode().Name, "raft protocol shutdown initated")
+	defer log.Println(c.LocalNode().Name, "raft protocol shutdown completed")
+	defer contextx.WaitGroupDone(t.protocol.Context)
+
+	<-t.ctx.Done()
+
+	log.Println(c.LocalNode().Name, "initiating shutdown for raft protocol")
+	// notify the overlay function that something has occurred.
+	t.protocol.ClusterChange.Broadcast()
+	log.Println("waiting for overlay to complete")
+	// wait for the overlay to complete.
+	t.sgroup.Wait()
+	log.Println("attempting clean shutdown")
+	// attempt to cleanly shutdown the local peer.
+	t.cleanShutdown(c)
+	log.Println("signaling wait group of completion")
+}
+
+func (t *stateMeta) cleanShutdown(c cluster) {
+	if t.r != nil {
+		if err := t.r.Shutdown().Error(); err != nil {
+			log.Println(c.LocalNode().Name, "failed to shutdown raft", err)
+		}
+	}
+
+	if err := autocloseTransport(t.transport); err == nil {
+		log.Println(c.LocalNode().Name, "closed transport")
+	} else {
+		log.Println(c.LocalNode().Name, "failed to close transport", err)
+	}
+}
+
+func (t *stateMeta) background() {
+	defer t.sgroup.Done()
+	for {
+		select {
+		case <-t.ctx.Done():
+			return
+		case e := <-t.protocol.StabilityQueue.Queue:
+			e.Raft = t.r
+			if t.protocol.clusterObserver != nil {
+				handleClusterEvent(e, t.protocol.clusterObserver)
+			} else {
+				handleClusterEvent(e)
+			}
+			t.protocol.ClusterChange.Broadcast()
+		}
+	}
+}
+
+// Storage ...
 type Storage interface {
 	raft.LogStore
 	raft.StableStore
@@ -248,24 +301,6 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 // RaftAddr ...
 func (t *Protocol) RaftAddr(n *memberlist.Node) (raft.Server, error) {
 	return t.StabilityQueue.Provider.RaftAddr(n)
-}
-
-func (t Protocol) background(sm stateMeta) {
-	defer sm.sgroup.Done()
-	for {
-		select {
-		case <-t.Context.Done():
-			return
-		case e := <-t.StabilityQueue.Queue:
-			e.Raft = sm.r
-			if t.clusterObserver != nil {
-				handleClusterEvent(e, t.clusterObserver)
-			} else {
-				handleClusterEvent(e)
-			}
-			t.ClusterChange.Broadcast()
-		}
-	}
 }
 
 func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
@@ -337,43 +372,11 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	return network, r, nil
 }
 
-func (t *Protocol) waitShutdown(c cluster, sm stateMeta) {
-	defer log.Println(c.LocalNode().Name, "raft protocol clean shutdown")
-	defer contextx.WaitGroupDone(t.Context)
-	<-t.Context.Done()
-	debugx.Println(c.LocalNode().Name, "initiating shutdown for raft protocol")
-	// notify the overlay function that something has occurred.
-	t.ClusterChange.Broadcast()
-	debugx.Println("waiting for overlay to complete")
-	// wait for the overlay to complete.
-	sm.sgroup.Wait()
-	debugx.Println("attempting clean shutdown")
-	// attempt to cleanly shutdown the local peer.
-	t.maybeShutdown(c, sm.r, sm.transport)
-	debugx.Println("signaling wait group of completion")
-}
-
-func (t *Protocol) maybeShutdown(c cluster, r *raft.Raft, transport raft.Transport) {
-	if r == nil {
-		return
-	}
-
-	if err := r.Shutdown().Error(); err != nil {
-		log.Println(c.LocalNode().Name, "failed to shutdown raft", err)
-	}
-
-	if transport == nil {
-		return
-	}
-
-	if err := autocloseTransport(transport); err == nil {
-		log.Println(c.LocalNode().Name, "closed transport")
-	} else {
-		log.Println(c.LocalNode().Name, "failed to close transport", err)
-	}
-}
-
 func autocloseTransport(trans raft.Transport) error {
+	if trans == nil {
+		return errors.New("missing transport, unable to close")
+	}
+
 	if trans, ok := trans.(raft.WithClose); ok {
 		return trans.Close()
 	}
@@ -478,6 +481,15 @@ func (t BacklogQueue) NotifyUpdate(n *memberlist.Node) {
 	}
 }
 
+func leave(c cluster, sm stateMeta) state {
+	sm.done()
+
+	return passive{
+		protocol: sm.protocol,
+		sgroup:   sm.sgroup,
+	}
+}
+
 // maybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
 // returns true if it left the raft protocol.
@@ -488,31 +500,6 @@ func maybeLeave(c cluster) bool {
 
 	log.Println(c.LocalNode().Name, "no longer a possible member of quorum, leaving raft cluster")
 	return true
-}
-
-func leave(current state, sm stateMeta) state {
-	if err := sm.r.Shutdown().Error(); err != nil {
-		log.Println("failed to shutdown raft protocol", err)
-		return current
-	}
-
-	if sm.transport == nil {
-		log.Println("expected a transport to exist during leave but its nil?!")
-		return current
-	}
-
-	if trans, ok := sm.transport.(raft.WithClose); ok {
-		log.Println("closing raft transport")
-		if err := trans.Close(); err != nil {
-			logx.MaybeLog(errors.WithMessage(err, "failed to close transport"))
-			return current
-		}
-	}
-
-	return passive{
-		protocol: sm.protocol,
-		sgroup:   sm.sgroup,
-	}
 }
 
 // isMember utility function for checking if the local node of the cluster is a member

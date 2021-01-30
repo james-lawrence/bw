@@ -32,6 +32,12 @@ func (t *workspaceCreate) configure(parent *kingpin.CmdClause) {
 }
 
 func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
+	// TODO: tarball url instead of inlining like so.
+	// - command: "echo %H %m %d %f %u %U %h %bwroot %bwcwd %%"
+	// - command: git fetch --all
+	// - command: echo "deploying ${DEPLOY_BRANCH}"
+	// - command: git rev-parse --verify ${DEPLOY_BRANCH} > git.commit
+	// - command: cd %bwcwd; git archive --format=tar.gz -o %bwroot/archive.tar.gz ${DEPLOY_BRANCH}
 	const (
 		skeletonShellDirective = `- command: "echo hello world"
 - command: "echo hello ${USER}"

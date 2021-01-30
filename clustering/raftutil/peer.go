@@ -42,7 +42,7 @@ func (t peer) Update(c cluster) state {
 	default:
 		debugx.Println(c.LocalNode().Name, "peer current state", s)
 		if maybeLeave(c) || t.protocol.deadlockedLeadership(c.LocalNode(), t.r, t.lastContact()) {
-			return leave(t, t.stateMeta)
+			return leave(c, t.stateMeta)
 		}
 		debugx.Println(c.LocalNode().Name, "peer state updated", s)
 	}

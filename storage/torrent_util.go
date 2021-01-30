@@ -149,9 +149,6 @@ func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (m torrent.Meta
 }
 
 func (TorrentUtil) magnet(meta torrent.Metadata) metainfo.Magnet {
-	// for t := range mi.UpvertedAnnounceList().DistinctValues() {
-	// 	m.Trackers = append(m.Trackers, t)
-	// }
 	return metainfo.Magnet{
 		DisplayName: meta.DisplayName,
 		InfoHash:    meta.InfoHash,

@@ -1,6 +1,7 @@
 package raftutil
 
 import (
+	"context"
 	"log"
 	"sync"
 	"time"
@@ -44,18 +45,21 @@ func (t passive) Update(c cluster) state {
 		return maintainState
 	}
 
+	ctx, done := context.WithCancel(t.protocol.Context)
 	sm := stateMeta{
 		r:         r,
 		transport: network,
 		protocol:  t.protocol,
 		sgroup:    t.sgroup,
 		initTime:  time.Now(),
+		ctx:       ctx,
+		done:      done,
 	}
 
 	if r.LastIndex() == 0 {
 		if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
 			log.Println("raft bootstrap failed", r.LastIndex(), err)
-			t.protocol.maybeShutdown(c, sm.r, sm.transport)
+			sm.cleanShutdown(c)
 			return maintainState
 		}
 	}
@@ -63,8 +67,8 @@ func (t passive) Update(c cluster) state {
 	// add this to the parent context waitgroup
 	contextx.WaitGroupAdd(t.protocol.Context, 1)
 	sm.sgroup.Add(1)
-	go t.protocol.waitShutdown(c, sm)
-	go t.protocol.background(sm)
+	go sm.waitShutdown(c)
+	go sm.background()
 
 	return peer{
 		stateMeta: sm,
