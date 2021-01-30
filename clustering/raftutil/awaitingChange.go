@@ -14,12 +14,18 @@ type conditionTransition struct {
 }
 
 func (t conditionTransition) Update(c cluster) state {
-	xx := time.NewTimer(t.Duration)
-	defer xx.Stop()
-	go func() {
-		<-xx.C
-		t.cond.Broadcast()
-	}()
+	// xx := time.NewTimer(t.Duration)
+	// done := make(chan struct{})
+	// defer close(done)
+	// defer xx.Stop()
+	// go func() {
+	// 	select {
+	// 	case <-done:
+	// 		return
+	// 	case <-xx.C:
+	// 		t.cond.Broadcast()
+	// 	}
+	// }()
 
 	t.cond.L.Lock()
 	t.cond.Wait()
