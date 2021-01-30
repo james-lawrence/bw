@@ -1,3 +1,38 @@
+commit 6fff36259e51caffa9a73d29b20f0582c178a156
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 30 04:34:13 2021 -0500
+
+    attempt to resolve multiple passive state routines
+    
+    we seem to spawn multiple raft instances over time.
+    leading to multiple conditionTransitions and background routines.
+    
+    this seems to be related to the fact the state machine was blocking
+    on the protocol's context, which isnt cancelled until process shutdown.
+    
+    meaning everytime a node would be promoted into the cluster and then
+    demoted it wouldn't reset the raft cluster properly. specifically the
+    network connections wouldn't be reset. this buildup would lead to a
+    gradual resource exhaustion of file handles.
+
+commit a52b137fbc3edbaeecc64efc01140f0d41e1086f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 20 10:22:44 2020 -0500
+
+    cleanup deploy and bootstrap tests
+
+commit ae1eac85f1550fa27e059675ade68127d77364c6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Dec 20 09:11:47 2020 -0500
+
+    update client configuration to contain auth keys
+
+commit 7d5ec33c59de17b2737d9a9cb2605e1961bf28dd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 19 19:02:49 2020 -0500
+
+    release 0.1.1608422512-9cfe2866
+
 commit 9cfe2866c7a5eba318ef4bd7bf3ae33632a814c1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 19 18:31:33 2020 -0500
