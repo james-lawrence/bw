@@ -70,7 +70,7 @@ func OptionInitializers(inits ...Initializer) Option {
 }
 
 // New new quorum instance based on the options.
-func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, options ...Option) Quorum {
+func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
 	deployment := newDeployment(d, c)
 	obs := NewObserver(make(chan agent.Message, 100))
 	go obs.Observe(context.Background(), cd)
@@ -88,6 +88,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 		wal:                   &wal,
 		sm:                    &DisabledMachine{},
 		uploads:               upload,
+		rp:                    rp,
 		dialer:                agent.NewDialer(agent.DefaultDialerOptions(grpc.WithInsecure())...),
 		m:                     &sync.Mutex{},
 		c:                     c,
@@ -113,11 +114,12 @@ type Quorum struct {
 	dialer       agent.Dialer
 	lost         chan struct{}
 	initializers []Initializer
+	rp           raftutil.Protocol
 }
 
 // Observe observes a raft cluster and updates the quorum state.
-func (t *Quorum) Observe(rp raftutil.Protocol, events chan raft.Observation) {
-	go rp.Overlay(
+func (t *Quorum) Observe(events chan raft.Observation) {
+	go t.rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
 			return t.wal
@@ -304,6 +306,8 @@ func (t *Quorum) quorumOnly() (p stateMachine, err error) {
 	case raft.Leader, raft.Follower, raft.Candidate:
 		return p, nil
 	default:
+		log.Println("broading cluster change due invalid quorum to tickle raft overlay")
+		t.rp.ClusterChange.Broadcast()
 		return p, errors.Errorf("must be run on a member of quorum: %s", state)
 	}
 }

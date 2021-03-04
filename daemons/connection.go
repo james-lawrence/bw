@@ -55,7 +55,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Defaults, c clustering.Cluster, err error) {
+func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Defaults, c clustering.C, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -63,6 +63,11 @@ func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Def
 	if creds, err = GRPCGenClient(config); err != nil {
 		return d, c, err
 	}
+
+	// TODO: allow access to the various api's from the discovery endpoint.
+	// if d, c, err = connect(config, creds, options...); err == nil {
+	// 	return d, c, err
+	// }
 
 	return deprecatedConnect(config, creds, options...)
 }

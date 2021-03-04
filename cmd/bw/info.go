@@ -60,7 +60,7 @@ func (t *agentInfo) checkCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 
 func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	var (
-		c      clustering.Cluster
+		c      clustering.C
 		d      dialers.Defaults
 		config agent.ConfigClient
 		latest agent.Deploy
@@ -126,7 +126,7 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 
 func (t *agentInfo) _info() (err error) {
 	var (
-		c      clustering.Cluster
+		c      clustering.C
 		d      dialers.Defaults
 		config agent.ConfigClient
 		client agent.DeployClient

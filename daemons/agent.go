@@ -88,12 +88,13 @@ func Agent(ctx Context) (err error) {
 			configuration,
 		),
 		ctx.Upload,
+		ctx.Raft,
 		quorum.OptionDialer(dialer),
 		quorum.OptionInitializers(
 			authority,
 		),
 	)
-	go (&q).Observe(ctx.Raft, make(chan raft.Observation, 200))
+	go (&q).Observe(make(chan raft.Observation, 200))
 
 	a := agent.NewServer(
 		ctx.Cluster,

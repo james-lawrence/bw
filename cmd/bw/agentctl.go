@@ -61,7 +61,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	var (
 		config agent.ConfigClient
 		dialer dialers.Defaults
-		c      clustering.Cluster
+		c      clustering.C
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
