@@ -42,7 +42,7 @@ func (t *agentInfo) configure(parent *kingpin.CmdClause) {
 
 	t.infoCmd(common(parent.Command("all", "retrieve info from all nodes within the cluster").Default()))
 	t.logCmd(common(parent.Command("logs", "log retrieval for the latest deployment")))
-	t.checkCmd(parent.Command("check", "check connectively with the discovery service"))
+	t.checkCmd(parent.Command("check", "check connectivity with the discovery service"))
 }
 
 func (t *agentInfo) infoCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -110,11 +110,17 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 	if err != nil {
 		return err
 	}
+
 	resp, err := discovery.NewDiscoveryClient(cc).Quorum(context.Background(), &discovery.QuorumRequest{})
 	if err != nil {
 		return err
 	}
-	log.Println("discovered", spew.Sdump(resp))
+
+	log.Println("quorum")
+	for _, n := range resp.Nodes {
+		log.Print(spew.Sdump(*n))
+	}
+
 	return nil
 }
 

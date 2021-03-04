@@ -4,25 +4,44 @@ import (
 	"context"
 	"crypto/tls"
 	"log"
+	"net"
 	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
 // DebugIntercepter prints when each request is initiated and completed
 func DebugIntercepter(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	log.Printf("%T %s initiated", info.Server, info.FullMethod)
-	defer log.Printf("%T %s completed", info.Server, info.FullMethod)
+	var (
+		addr net.Addr
+	)
+
+	if x, ok := peer.FromContext(ctx); ok {
+		addr = x.Addr
+	}
+
+	log.Printf("%T %s client(%s) initiated", info.Server, info.FullMethod, addr.String())
+	defer log.Printf("%T %s client(%s) completed", info.Server, info.FullMethod, addr.String())
+
 	return handler(ctx, req)
 }
 
 // DebugStreamIntercepter prints when each stream is initiated and completed
 func DebugStreamIntercepter(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-	log.Printf("%T %s initiated", srv, info.FullMethod)
-	defer log.Printf("%T %s completed", srv, info.FullMethod)
+	var (
+		addr net.Addr
+	)
+
+	if x, ok := peer.FromContext(ss.Context()); ok {
+		addr = x.Addr
+	}
+
+	log.Printf("%T %s client(%s) initiated", srv, info.FullMethod, addr.String())
+	defer log.Printf("%T %s client(%s) completed", srv, info.FullMethod, addr.String())
 	return handler(srv, ss)
 }
 

@@ -9,6 +9,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/james-lawrence/bw/internal/bytesx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/iox"
@@ -65,13 +66,6 @@ func ComposeServerOptions(options ...ServerOption) ServerOption {
 func ServerOptionDeployer(d deployer) ServerOption {
 	return func(s *Server) {
 		s.Deployer = d
-	}
-}
-
-// ServerOptionCluster ...
-func ServerOptionCluster(c connector) ServerOption {
-	return func(s *Server) {
-		s.connector = c
 	}
 }
 
@@ -166,7 +160,7 @@ func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *Connect
 
 // Logs retrieve logs for the given deploy.
 func (t Server) Logs(req *LogRequest, out Agent_LogsServer) (err error) {
-	const KB16 = 16384
+	const KB16 = 16 * bytesx.KiB
 	logs := t.Deployer.Logs(req.DeploymentID)
 
 	buf := bytes.NewBuffer(make([]byte, 0, KB16))

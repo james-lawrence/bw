@@ -95,7 +95,7 @@ func (t Filesystem) monitor() {
 		events = make(chan agent.Message, 5)
 	)
 
-	go agentutil.WatchEvents(t.c.Local(), t.c.Local(), t.d, events)
+	go agentutil.WatchEvents(context.Background(), t.c.Local(), t.c.Local(), t.d, events)
 
 	for m := range events {
 		if m.Hidden {

@@ -31,7 +31,7 @@ func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) 
 		events = make(chan agent.Message, 5)
 	)
 
-	go agentutil.WatchEvents(local, proxy, d, events)
+	go agentutil.WatchEvents(ctx, local, proxy, d, events)
 
 	for {
 		select {
