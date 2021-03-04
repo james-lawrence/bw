@@ -66,7 +66,6 @@ func (t Directive) deploy(dctx DeployContext) {
 		dinterp directives.InterpLoader
 		dfs     directives.ArchiveLoader
 		dshell  directives.ShellLoader
-		dpkg    directives.PackageLoader
 		loaded  []directives.Loaded
 		environ []string
 	)
@@ -94,10 +93,6 @@ func (t Directive) deploy(dctx DeployContext) {
 		Context: dc,
 	}
 
-	dpkg = directives.PackageLoader{
-		Context: dc,
-	}
-
 	dinterp = directives.InterpLoader{
 		Context:      dc,
 		Environ:      dshell.Context.Environ,
@@ -107,7 +102,6 @@ func (t Directive) deploy(dctx DeployContext) {
 	loaders := []directives.Loader{
 		dshell,
 		dinterp,
-		dpkg,
 		dfs,
 		directives.NewAWSELBAttach(),
 		directives.NewAWSELBDetach(),
