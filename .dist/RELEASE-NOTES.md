@@ -1,3 +1,36 @@
+commit 164713c6dc1b45c83d2c9eec69f446cf6252fa23
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Mar 4 04:37:55 2021 -0500
+
+    improve debug log
+
+commit 5576e989d319c4b5758dbcd77e21a56ec0ff5324
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Mar 4 04:33:10 2021 -0500
+
+    tickle raft overlay when quoromOnly check fails.
+    
+    i suspect the raft cluster was shutdown, and then locked into a pending
+    state. this tickle should reboot it.
+
+commit cac63ab07e7d0ffe546f07395bf9e1a86d144161
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Mar 4 03:51:49 2021 -0500
+
+    implement additional debugging
+
+commit 4dc3196cb04667666cdc753c17ef7c59e0c63d73
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Mar 4 03:51:20 2021 -0500
+
+    remove packagekit
+
+commit 3401564a2a12eba385775ff40785e801bc883b80
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 30 11:49:30 2021 -0500
+
+    release 0.1.1612023911-bf556b99
+
 commit bf556b995b1a7987d771464a881af4a774bd1b1b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 30 11:25:11 2021 -0500
