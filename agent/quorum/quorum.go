@@ -306,7 +306,7 @@ func (t *Quorum) quorumOnly() (p stateMachine, err error) {
 	case raft.Leader, raft.Follower, raft.Candidate:
 		return p, nil
 	default:
-		log.Println("broading cluster change due invalid quorum to tickle raft overlay")
+		log.Printf("broading cluster change due invalid quorum to tickle raft overlay: %T - %s\n", p, state)
 		t.rp.ClusterChange.Broadcast()
 		return p, errors.Errorf("must be run on a member of quorum: %s", state)
 	}
