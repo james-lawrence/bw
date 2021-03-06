@@ -33,9 +33,8 @@ require (
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-test/deep v1.0.2 // indirect
 	github.com/gocql/gocql v0.0.0-20190910075112-d63913db787c // indirect
-	github.com/godbus/dbus v4.1.0+incompatible
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.1
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
@@ -58,7 +57,6 @@ require (
 	github.com/hashicorp/vault v0.10.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190318174639-195e0e9d07f1 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
-	github.com/huin/goupnp v0.0.0-20171109214107-dceda08e705b
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 	github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
 	github.com/jefferai/jsonx v1.0.1 // indirect
@@ -70,8 +68,6 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20181002194514-a7b3b318ed4e
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
 	github.com/manifoldco/promptui v0.7.0
-	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
-	github.com/manveru/gobdd v0.0.0-20131210092515-f1a17fdd710b // indirect
 	github.com/maruel/panicparse v1.0.2 // indirect
 	github.com/maruel/ut v1.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.4 // indirect
@@ -103,8 +99,8 @@ require (
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
 	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
 	google.golang.org/api v0.8.0
-	google.golang.org/genproto v0.0.0-20190911173649-1774047e7e51 // indirect
-	google.golang.org/grpc v1.23.1
+	google.golang.org/grpc v1.27.0
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/ory-am/dockertest.v3 v3.3.5 // indirect
