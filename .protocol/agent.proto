@@ -7,7 +7,7 @@ message Archive {
   Peer peer = 2;
   string location = 3;
   bytes checksum = 4;
-  int64 ts = 5; // unix timestamp marking the time the archive was created.
+  int64 ts = 5;  // unix timestamp marking the time the archive was created.
   int64 dts = 7; // marks the time the archive was deployed.
   string initiator = 6;
 }
@@ -19,12 +19,17 @@ message PeerMetadata {
   uint32 SWIMPort = 4;
   uint32 TorrentPort = 5;
   uint32 DiscoveryPort = 7;
-  uint32 AutocertPort = 8; // deprecated - temporary field until RPC credentials is prevelant.
+  // deprecated - temporary field until RPC credentials is prevelant.
+  uint32 AutocertPort = 8;
   int32 Status = 6;
 }
 
 message Peer {
-  enum State { Node = 0; Client = 2; Gone = 3; }
+  enum State {
+    Node = 0;
+    Client = 2;
+    Gone = 3;
+  }
   State Status = 1;
   string ip = 2;
   string name = 3;
@@ -33,7 +38,8 @@ message Peer {
   uint32 SWIMPort = 6;
   uint32 TorrentPort = 7;
   uint32 DiscoveryPort = 8;
-  uint32 AutocertPort = 9; // deprecated - temporary field until RPC credentials is prevelant.
+  // deprecated - temporary field until RPC credentials is prevelant.
+  uint32 AutocertPort = 9;
 }
 
 message TLSEvent {
@@ -51,10 +57,13 @@ message WALPreamble {
   int32 Patch = 3;
 }
 
-// Represents every message sent between nodes. effectively describes all possible events we may want
-// to act upon.
+// Represents every message sent between nodes. effectively describes all
+// possible events we may want to act upon.
 message Message {
-  enum NodeEvent { Joined = 0; Departed = 1; }
+  enum NodeEvent {
+    Joined = 0;
+    Departed = 1;
+  }
   enum Type {
     PeerEvent = 0;
     LogEvent = 1;
@@ -66,8 +75,10 @@ message Message {
   }
 
   string id = 9;
-  bool disallowWAL = 998; // used to prevent message's from recording in the WAL.
-  bool hidden = 999; // used to prevent message's from appearing in observers.
+  // used to prevent message's from recording in the WAL.
+  bool disallowWAL = 998;
+  // used to prevent message's from appearing in observers.
+  bool hidden = 999;
 
   // Identifies which field is filled in.
   Type type = 1;
@@ -87,19 +98,27 @@ message Message {
 }
 
 // Write ahead log, deprecated.
-message WAL {
-  repeated Message messages = 1;
-}
+message WAL { repeated Message messages = 1; }
 
 message DeployOptions {
-  int64 concurrency = 2;    // sets the number of simultaneously instance deploys to run.
-  int64 timeout = 3;        // how long to wait before a single deploy is considered a failure.
-  bool ignoreFailures = 4;  // ignore failures during the deploy.
-  bool silenceDeployLogs = 5; // silence the deploy logging.
+  // sets the number of simultaneously instance deploys to run.
+  int64 concurrency = 2;
+  // how long to wait before a single deploy is considered a failure.
+  int64 timeout = 3;
+  // ignore failures during the deploy.
+  bool ignoreFailures = 4;
+  // silence the deploy logging.
+  bool silenceDeployLogs = 5;
 }
 
 message DeployCommand {
-  enum Command { Begin = 0; Cancel = 1; Done = 2; Failed = 3; Restart = 4; }
+  enum Command {
+    Begin = 0;
+    Cancel = 1;
+    Done = 2;
+    Failed = 3;
+    Restart = 4;
+  }
   Command command = 1;
   Archive archive = 2;
   string initiator = 3;
@@ -107,7 +126,11 @@ message DeployCommand {
 }
 
 message Deploy {
-  enum Stage { Failed = 0; Deploying = 1; Completed = 2; }
+  enum Stage {
+    Failed = 0;
+    Deploying = 1;
+    Completed = 2;
+  }
   Stage stage = 1;
   Archive archive = 2;
   DeployOptions options = 4;
@@ -121,9 +144,7 @@ message DeployCommandRequest {
 }
 message DeployCommandResult {}
 
-message Log {
-  string log = 1;
-}
+message Log { string log = 1; }
 
 message UploadMetadata {
   uint64 bytes = 1;
@@ -139,20 +160,22 @@ message UploadChunk {
   }
 }
 
-message UploadResponse {
-  Archive archive = 1;
-}
+message UploadResponse { Archive archive = 1; }
 
 message WatchRequest {}
 message DispatchResponse {}
 
 message InfoRequest {}
 message InfoResponse {
-  enum Mode { None = 0; Deploying = 1; }
+  enum Mode {
+    None = 0;
+    Deploying = 1;
+  }
   Mode mode = 1;
   DeployCommand deploying = 2;
   DeployCommand deployed = 3;
   Peer leader = 4;
+  repeated Peer quorum = 5;
 }
 
 // Deployments service public facing endpoints for deployments.
@@ -192,24 +215,20 @@ message DeployRequest {
   DeployOptions options = 2;
 }
 
-message DeployResponse {
-  Deploy deploy = 1;
-}
+message DeployResponse { Deploy deploy = 1; }
 
-message ShutdownRequest{}
-message ShutdownResponse{}
+message ShutdownRequest {}
+message ShutdownResponse {}
 
-message CancelRequest{}
-message CancelResponse{}
+message CancelRequest {}
+message CancelResponse {}
 
 message LogRequest {
   bytes deploymentID = 1;
   Peer peer = 2;
 }
 
-message LogResponse {
-  bytes content = 1;
-}
+message LogResponse { bytes content = 1; }
 
 service Agent {
   rpc Connect(ConnectRequest) returns (ConnectResponse) {}
@@ -220,9 +239,7 @@ service Agent {
   rpc Logs(LogRequest) returns (stream LogResponse) {}
 }
 
-message TLSUpdateRequest {
-  TLSEvent creds = 1;
-}
+message TLSUpdateRequest { TLSEvent creds = 1; }
 
 message TLSUpdateResponse {}
 
@@ -230,9 +247,7 @@ service Configuration {
   rpc TLSUpdate(TLSUpdateRequest) returns (TLSUpdateResponse) {}
 }
 
-message DispatchRequest {
-  repeated Message messages = 1;
-}
+message DispatchRequest { repeated Message messages = 1; }
 
 service Observer {
   rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
@@ -240,7 +255,10 @@ service Observer {
 
 message ArchiveRequest {}
 message ArchiveResponse {
-  enum Info { None = 0; ActiveDeploy = 1; }
+  enum Info {
+    None = 0;
+    ActiveDeploy = 1;
+  }
   Info info = 1;
   Deploy deploy = 2;
 }
