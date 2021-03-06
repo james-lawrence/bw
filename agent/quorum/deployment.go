@@ -93,6 +93,7 @@ func (t *deployment) getInfo(leader *agent.Peer) agent.InfoResponse {
 		Deploying: t.runningDeploy,
 		Deployed:  t.lastSuccessfulDeploy,
 		Leader:    leader,
+		Quorum:    agent.PeersToPtr(agent.QuorumPeers(t.c)...),
 	}
 }
 

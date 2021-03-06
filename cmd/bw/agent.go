@@ -9,6 +9,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
@@ -27,6 +28,8 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -292,6 +295,70 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	fmt.Printf("log metrics %#v\n", lstats)
+	return nil
+}
+
+func (t *agentCmd) quorumCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.quorum)
+}
+
+func (t *agentCmd) quorum(ctx *kingpin.ParseContext) (err error) {
+	var (
+		conn   *grpc.ClientConn
+		d      dialers.Dialer
+		creds  credentials.TransportCredentials
+		quorum *agent.InfoResponse
+	)
+	defer t.global.shutdown()
+
+	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
+		return err
+	}
+
+	log.Println(spew.Sdump(t.config))
+
+	if creds, err = daemons.GRPCGenServer(t.config); err != nil {
+		return err
+	}
+
+	d = dialers.NewDirect(
+		agent.RPCAddress(t.config.Peer()),
+		grpc.WithTransportCredentials(creds),
+	)
+
+	if conn, err = d.Dial(); err != nil {
+		return err
+	}
+
+	if quorum, err = agent.NewQuorumClient(conn).Info(t.global.ctx, &agent.InfoRequest{}); err != nil {
+		return err
+	}
+
+	fmt.Println("quorum:")
+	for idx, p := range quorum.Quorum {
+		log.Println(idx, p.Name, spew.Sdump(p))
+	}
+
+	peer := func(p *agent.Peer) string {
+		if p == nil {
+			return "None"
+		}
+
+		return fmt.Sprintf("peer %s - %s", p.Name, spew.Sdump(p))
+	}
+
+	deployment := func(c *agent.DeployCommand) string {
+		if c == nil || c.Archive == nil {
+			return "None"
+		}
+
+		return fmt.Sprintf("deployment %s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Archive.Initiator, c.Command.String())
+	}
+
+	fmt.Printf("leader: %s\n", peer(quorum.Leader))
+	fmt.Printf("latest: %s\n", deployment(quorum.Deployed))
+	fmt.Printf("ongoing: %s\n", deployment(quorum.Deploying))
+
 	return nil
 }
 
