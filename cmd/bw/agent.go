@@ -71,6 +71,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
 
 	t.displayCmd(parent.Command("quorum-state", "display the quorum state, only can be run on the server"))
+	t.quorumCmd((parent.Command("quorum", "display quorum information, only can be run on the server")))
 }
 
 func (t *agentCmd) bind() (err error) {
