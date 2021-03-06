@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"regexp"
@@ -18,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"google.golang.org/grpc"
 )
 
 type actlCmd struct {
@@ -34,7 +36,9 @@ func (t *actlCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.restartCmd(common(parent.Command("restart", "restart all the nodes within the cluster").Default()))
+	common(parent.Command("quorum", "print information about the quorum members of the cluster").Default()).Action(t.quorum)
+	t.restartCmd(common(parent.Command("restart", "restart all the nodes within the cluster")))
+
 }
 
 func (t *actlCmd) restartCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -59,16 +63,9 @@ func (t *actlCmd) restart(ctx *kingpin.ParseContext) error {
 
 func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	var (
-		config agent.ConfigClient
-		dialer dialers.Defaults
-		c      clustering.C
+		d dialers.Defaults
+		c clustering.C
 	)
-
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
-		return err
-	}
-
-	log.Println("configuration:", spew.Sdump(config))
 
 	local := cluster.NewLocal(
 		agent.Peer{
@@ -78,23 +75,9 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		),
-	}
-
-	if dialer, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = t.connect(local); err != nil {
 		return err
 	}
-
-	log.Println("connected to cluster")
-	debugx.Printf("configuration:\n%#v\n", config)
-
 	cx := cluster.New(local, c)
 
 	peers := agentutil.PeerSet(deployment.ApplyFilter(filter, cx.Peers()...))
@@ -106,5 +89,91 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		return nil
 	}
 
-	return agentutil.Shutdown(peers, agent.NewDialer(dialer.Defaults()...))
+	return agentutil.Shutdown(peers, agent.NewDialer(d.Defaults()...))
+}
+
+func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
+	var (
+		conn   *grpc.ClientConn
+		d      dialers.Defaults
+		c      clustering.C
+		quorum *agent.InfoResponse
+	)
+
+	local := cluster.NewLocal(
+		agent.Peer{
+			Name: bw.MustGenerateID().String(),
+			Ip:   systemx.HostnameOrLocalhost(),
+		},
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	)
+
+	if d, c, err = t.connect(local); err != nil {
+		return err
+	}
+
+	fmt.Println("quorum:")
+	for idx, p := range agent.QuorumPeers(c) {
+		log.Println(idx, p.Name, spew.Sdump(p))
+	}
+
+	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
+		return err
+	}
+
+	if quorum, err = agent.NewQuorumClient(conn).Info(t.global.ctx, &agent.InfoRequest{}); err != nil {
+		return err
+	}
+
+	peer := func(p *agent.Peer) string {
+		if p == nil {
+			return "None"
+		}
+
+		return fmt.Sprintf("peer %s:", p.Name, spew.Sdump(p))
+	}
+
+	deployment := func(c *agent.DeployCommand) string {
+		if c == nil || c.Archive == nil {
+			return "None"
+		}
+
+		return fmt.Sprintf("deployment %s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Archive.Initiator, c.Command.String())
+	}
+
+	fmt.Printf("leader: %s\n", peer(quorum.Leader))
+	fmt.Printf("latest: %s\n", deployment(quorum.Deployed))
+	fmt.Printf("ongoing: %s\n", deployment(quorum.Deploying))
+
+	return nil
+}
+
+func (t actlCmd) connect(local cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
+	var (
+		config agent.ConfigClient
+	)
+
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return d, c, err
+	}
+
+	log.Println("configuration:", spew.Sdump(config))
+
+	coptions := []daemons.ConnectOption{
+		daemons.ConnectOptionClustering(
+			clustering.OptionDelegate(local),
+			clustering.OptionNodeID(local.Peer.Name),
+			clustering.OptionBindAddress(local.Peer.Ip),
+			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
+			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+		),
+	}
+
+	if d, c, err = daemons.Connect(config, coptions...); err != nil {
+		return d, c, err
+	}
+
+	log.Println("connected to cluster")
+	debugx.Printf("configuration:\n%#v\n", config)
+	return d, c, nil
 }
