@@ -65,8 +65,9 @@ func (t passive) Update(c cluster) state {
 
 	// add this to the parent context waitgroup
 	contextx.WaitGroupAdd(t.protocol.Context, 1)
-	sm.sgroup.Add(1)
 	go sm.waitShutdown(c)
+
+	sm.sgroup.Add(1)
 	go sm.background()
 
 	return peer{

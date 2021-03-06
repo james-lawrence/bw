@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/contextx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 
 	"github.com/davecgh/go-spew/spew"
@@ -203,15 +204,13 @@ func (t *stateMeta) waitShutdown(c cluster) {
 	<-t.ctx.Done()
 
 	log.Println(c.LocalNode().Name, "initiating shutdown for raft protocol")
-	// notify the overlay function that something has occurred.
-	t.protocol.ClusterChange.Broadcast()
-	log.Println("waiting for overlay to complete")
-	// wait for the overlay to complete.
-	t.sgroup.Wait()
-	log.Println("attempting clean shutdown")
 	// attempt to cleanly shutdown the local peer.
 	t.cleanShutdown(c)
-	log.Println("signaling wait group of completion")
+
+	log.Println("waiting for background stability queue to complete")
+
+	// wait for the background stability queue to complete.
+	t.sgroup.Wait()
 }
 
 func (t *stateMeta) cleanShutdown(c cluster) {
@@ -229,7 +228,9 @@ func (t *stateMeta) cleanShutdown(c cluster) {
 }
 
 func (t *stateMeta) background() {
+	defer log.Println("stability queue background shutdown")
 	defer t.sgroup.Done()
+
 	for {
 		select {
 		case <-t.ctx.Done():
@@ -241,6 +242,8 @@ func (t *stateMeta) background() {
 			} else {
 				handleClusterEvent(e)
 			}
+
+			log.Println("broadcasting cluster change due to unstable cluster")
 			t.protocol.ClusterChange.Broadcast()
 		}
 	}
@@ -290,7 +293,7 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 	for {
 		select {
 		case <-t.Context.Done():
-			debugx.Println("overlay shutting down")
+			log.Println("overlay shutting down")
 			return
 		default:
 			s = s.Update(c)
@@ -355,12 +358,14 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	}
 
 	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, snapshots, network); err != nil {
-		autocloseTransport(network)
+		if failure := logx.MaybeLog(errors.Wrap(autocloseTransport(network), "failed to cleanup")); failure != nil {
+			panic(err)
+		}
 		return nil, nil, errors.WithStack(err)
 	}
 
 	r.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		// log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
+		log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
 		t.ClusterChange.Broadcast()
 		return false
 	}))
@@ -380,6 +385,9 @@ func autocloseTransport(trans raft.Transport) error {
 	if trans, ok := trans.(raft.WithClose); ok {
 		return trans.Close()
 	}
+
+	log.Printf("unable to close transport, not closable: %T\n", trans)
+
 	return nil
 }
 
@@ -486,7 +494,7 @@ func leave(c cluster, sm stateMeta) state {
 
 	return passive{
 		protocol: sm.protocol,
-		sgroup:   sm.sgroup,
+		sgroup:   &sync.WaitGroup{},
 	}
 }
 
@@ -512,11 +520,6 @@ func isMember(c cluster) bool {
 func possiblePeers(n int, c cluster) []*memberlist.Node {
 	return c.GetN(n, []byte(agent.QuorumKey))
 }
-
-// // quorumPeers utility function for locating N possible peers for the raft protocol.
-// func quorumPeers(c rendezvous) []*memberlist.Node {
-// 	return c.GetN(3, []byte(agent.QuorumKey))
-// }
 
 func configuration(provider addressProdvider, c cluster) (conf raft.Configuration) {
 	var (

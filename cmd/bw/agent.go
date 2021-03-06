@@ -313,7 +313,7 @@ func (t *agentCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 	defer t.global.shutdown()
 
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
-		return err
+		return errors.Wrap(err, "unable to load configuration")
 	}
 
 	log.Println(spew.Sdump(t.config))
