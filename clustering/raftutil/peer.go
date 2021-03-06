@@ -28,9 +28,8 @@ func (t peer) lastContact() time.Time {
 func (t peer) Update(c cluster) state {
 	var (
 		maintain state = conditionTransition{
-			next:     t,
-			cond:     t.protocol.ClusterChange,
-			Duration: 15 * time.Minute,
+			next: t,
+			cond: t.protocol.ClusterChange,
 		}
 	)
 

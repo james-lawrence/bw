@@ -26,7 +26,7 @@ func (t leader) Update(c cluster) state {
 		}
 	)
 
-	debugx.Printf("leader update invoked: %p\n", t.r)
+	log.Printf("leader update invoked: %p\n", t.r)
 	switch t.r.State() {
 	case raft.Leader:
 		if t.cleanupPeers(c.LocalNode(), agent.QuorumNodes(c)...) {

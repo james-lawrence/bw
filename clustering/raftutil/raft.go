@@ -306,7 +306,7 @@ func (t *Protocol) RaftAddr(n *memberlist.Node) (raft.Server, error) {
 func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
 	leader := string(p.Leader())
 
-	log.Println(local.Name, "current leader", stringsx.DefaultIfBlank(leader, "[None]"), lastSeen)
+	log.Println(local.Name, "current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.leadershipGrace, lastSeen)
 	if leader == "" && lastSeen.Add(t.leadershipGrace).Before(time.Now()) {
 		log.Println(local.Name, "leader is missing and grace period has passed, resetting this peer", t.leadershipGrace)
 		return true

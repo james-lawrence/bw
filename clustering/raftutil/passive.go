@@ -26,9 +26,8 @@ func (t passive) Update(c cluster) state {
 
 	// log.Println(c.LocalNode().Name, "passive update invoked")
 	maintainState := conditionTransition{
-		next:     t,
-		cond:     t.protocol.ClusterChange,
-		Duration: t.protocol.PassiveCheckin,
+		next: t,
+		cond: t.protocol.ClusterChange,
 	}
 
 	if !isMember(c) {
