@@ -10,8 +10,10 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
@@ -27,13 +29,13 @@ import (
 )
 
 // Agent daemon - rpc endpoint for the system.
-func Agent(ctx Context) (err error) {
+func Agent(ctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
 	var (
+		// deprecatedbind net.Listener
+		bind         net.Listener
 		sctx         shell.Context
 		observersdir observers.Directory
-		bind         net.Listener
-		dlreg        = storage.New(storage.OptionProtocols(ctx.Download))
-		acmesvc      acme.Service
+		dlreg        = storage.New(storage.OptionProtocols(download))
 	)
 
 	if sctx, err = shell.DefaultContext(); err != nil {
@@ -44,15 +46,12 @@ func Agent(ctx Context) (err error) {
 		return err
 	}
 
-	if acmesvc, err = acme.ReadConfig(ctx.Config, ctx.ConfigurationFile); err != nil {
-		return err
-	}
-
-	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
-
-	dialer := agent.NewDialer(agent.DefaultDialerOptions(grpc.WithTransportCredentials(ctx.GRPCCreds()))...)
-	qdialer := agent.NewQuorumDialer(dialer)
-	dispatcher := agentutil.NewDispatcher(ctx.Cluster, qdialer)
+	qdialer := dialers.NewQuorum(
+		ctx.Cluster,
+		ctx.Dialer.Defaults()...,
+	)
+	dialer := agent.NewDialer(ctx.Dialer.Defaults()...)
+	dispatcher := agentutil.NewDispatcher(qdialer)
 
 	deploy := deployment.NewDirective(
 		deployment.DirectiveOptionShellContext(sctx),
@@ -71,8 +70,7 @@ func Agent(ctx Context) (err error) {
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
-		grpc.Creds(ctx.GRPCCreds()),
-		keepalive,
+		grpc.KeepaliveParams(ctx.RPCKeepalive),
 	)
 	authority := quorum.NewAuthority(ctx.Config)
 
@@ -87,9 +85,9 @@ func Agent(ctx Context) (err error) {
 			authority,
 			configuration,
 		),
-		ctx.Upload,
+		upload,
 		ctx.Raft,
-		quorum.OptionDialer(dialer),
+		quorum.OptionDialer(qdialer),
 		quorum.OptionInitializers(
 			authority,
 		),
@@ -108,14 +106,11 @@ func Agent(ctx Context) (err error) {
 		certificatecache.NewAuthorityCache(ctx.Config.CredentialsDir),
 		ctx.NotaryStorage,
 	).Bind(server)
+	proxy.NewDeployment(ctx.NotaryAuth, qdialer).Bind(server)
 	agent.RegisterAgentServer(server, a)
 	agent.RegisterQuorumServer(server, aq)
 	agent.RegisterConfigurationServer(server, configurationsvc)
-	acme.RegisterACMEServer(server, acmesvc)
-
-	if bind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
-		return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)
-	}
+	acme.RegisterACMEServer(server, acme.NewService(ctx.ACMECache, ctx.NotaryAuth))
 
 	// hack to propagate TLS to agents who are not in the quorum.
 	// this can be removed once per request credentials is fully implemented.
@@ -147,6 +142,14 @@ func Agent(ctx Context) (err error) {
 			}
 		}
 	})
+
+	// if deprecatedbind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
+	// 	return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)
+	// }
+
+	if bind, err = ctx.Muxer.Bind(bw.ProtocolAgent, ctx.Listener.Addr()); err != nil {
+		return errors.Wrap(err, "failed to bind agent protocol")
+	}
 
 	ctx.grpc("agent", server, bind)
 

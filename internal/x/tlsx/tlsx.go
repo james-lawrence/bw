@@ -206,10 +206,30 @@ func WriteCertificateFile(path string, cert []byte) (err error) {
 // Option tls config options
 type Option func(*tls.Config) error
 
-// OptionVerifyClientIfGiven ...
+// OptionVerifyClientIfGiven see tls.VerifyClientCertIfGiven
 func OptionVerifyClientIfGiven(c *tls.Config) error {
 	c.ClientAuth = tls.VerifyClientCertIfGiven
 	return nil
+}
+
+// OptionNoClientCert see tls.NoClientCert
+func OptionNoClientCert(c *tls.Config) error {
+	c.ClientAuth = tls.NoClientCert
+	return nil
+}
+
+// OptionInsecureSkipVerify see tls.Config.InsecureSkipVerify
+func OptionInsecureSkipVerify(c *tls.Config) error {
+	c.InsecureSkipVerify = true
+	return nil
+}
+
+// OptionNextProtocols ALPN see tls.NextProtos
+func OptionNextProtocols(protocols ...string) Option {
+	return func(c *tls.Config) error {
+		c.NextProtos = append(c.NextProtos, protocols...)
+		return nil
+	}
 }
 
 // Clone ...
@@ -223,6 +243,15 @@ func Clone(c *tls.Config, options ...Option) (updated *tls.Config, err error) {
 	}
 
 	return updated, nil
+}
+
+// MustClone ...
+func MustClone(c *tls.Config, options ...Option) *tls.Config {
+	updated, err := Clone(c, options...)
+	if err != nil {
+		panic(err)
+	}
+	return updated
 }
 
 // PrintEncoded certificate
@@ -283,4 +312,9 @@ func DecodePEMCertificate(encoded []byte) (cert *x509.Certificate, err error) {
 	}
 
 	return cert, nil
+}
+
+// NewDialer for tls configurations.
+func NewDialer(c *tls.Config, options ...Option) *tls.Dialer {
+	return &tls.Dialer{Config: MustClone(c, options...)}
 }

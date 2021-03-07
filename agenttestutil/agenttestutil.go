@@ -13,16 +13,16 @@ import (
 func NewPeers(n int) (peers []agent.Peer) {
 	for i := 0; i < n; i++ {
 		ip := net.ParseIP(fmt.Sprintf("127.0.0.%d", i+1))
-		peers = append(peers, agent.NewPeer(ip.String(), agent.PeerOptionIP(ip)))
+		peers = append(peers, *agent.NewPeer(ip.String(), agent.PeerOptionIP(ip)))
 	}
 
 	return peers
 }
 
 // NewCluster ...
-func NewCluster(p agent.Peer, opts ...clustering.Option) (c cluster.Cluster, err error) {
+func NewCluster(p *agent.Peer, opts ...clustering.Option) (c cluster.Cluster, err error) {
 	var (
-		cp clustering.Cluster
+		cp clustering.Memberlist
 	)
 	local := cluster.NewLocal(p)
 	ip := net.ParseIP(p.Ip)
@@ -30,9 +30,7 @@ func NewCluster(p agent.Peer, opts ...clustering.Option) (c cluster.Cluster, err
 		opts,
 		clustering.OptionNodeID(ip.String()),
 		clustering.OptionBindAddress(ip.String()),
-		clustering.OptionDelegate(local),
 		clustering.OptionBindPort(int(local.Peer.SWIMPort)),
-		clustering.OptionDelegate(local),
 	)
 
 	if cp, err = clustering.NewCluster(opts...); err != nil {

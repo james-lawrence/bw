@@ -11,6 +11,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
@@ -40,10 +41,13 @@ type dialer2 interface {
 	Defaults(...grpc.DialOption) []grpc.DialOption
 }
 
+type dialer3 interface {
+	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
+}
+
 type cluster interface {
-	Local() agent.Peer
-	Peers() []agent.Peer
-	Quorum() []agent.Peer
+	GetN(n int, key []byte) []*memberlist.Node
+	Peers() []*agent.Peer
 }
 
 // Cleaner interface for cleaning workspace directories.
@@ -136,16 +140,16 @@ func KeepNewestN(n int) Cleaner {
 
 // WatchEvents connects to the event stream of the cluster using the provided
 // peer as a proxy.
-func WatchEvents(ctx context.Context, local, proxy agent.Peer, d dialer, events chan agent.Message) {
+func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Minute), 1)
 	var (
-		err error
-		qc  agent.Client
+		err  error
+		conn *grpc.ClientConn
 	)
 
 	for {
-		if qc != nil {
-			logx.MaybeLog(qc.Close())
+		if conn != nil {
+			logx.MaybeLog(conn.Close())
 		}
 
 		if err = rl.Wait(ctx); err != nil {
@@ -153,12 +157,12 @@ func WatchEvents(ctx context.Context, local, proxy agent.Peer, d dialer, events 
 			continue
 		}
 
-		if qc, err = agent.NewProxyDialer(d).Dial(proxy); err != nil {
+		if conn, err = d.DialContext(ctx); err != nil {
 			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
 			continue
 		}
 
-		if err = qc.Watch(ctx, events); err != nil {
+		if err = agent.NewConn(conn).Watch(ctx, events); err != nil {
 			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}
@@ -166,16 +170,16 @@ func WatchEvents(ctx context.Context, local, proxy agent.Peer, d dialer, events 
 }
 
 // WatchClusterEvents pushes events into the provided channel for the given dialer.
-func WatchClusterEvents(ctx context.Context, proxy string, d dialers.DefaultsDialer, local agent.Peer, events chan agent.Message) {
+func WatchClusterEvents(ctx context.Context, d dialers.DefaultsDialer, local *agent.Peer, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
-		err error
-		qc  agent.DeployClient
+		err  error
+		conn *grpc.ClientConn
 	)
 
 	for {
-		if qc != nil {
-			logx.MaybeLog(qc.Close())
+		if conn != nil {
+			logx.MaybeLog(conn.Close())
 		}
 
 		select {
@@ -189,12 +193,12 @@ func WatchClusterEvents(ctx context.Context, proxy string, d dialers.DefaultsDia
 			continue
 		}
 
-		if qc, err = DeprecatedNewDeploy(proxy, d); err != nil {
-			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+		if conn, err = d.DialContext(ctx); err != nil {
+			events <- LogError(local, errors.Wrap(err, "unable to connect"))
 			continue
 		}
 
-		if err = qc.Watch(ctx, events); err != nil {
+		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
 			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}
@@ -231,7 +235,7 @@ func IsNoDeployments(err error) bool {
 func DeprecatedNewDeploy(proxy string, d dialers.DefaultsDialer) (_ agent.DeployClient, err error) {
 	// deprecated code path.
 	if len(proxy) == 0 {
-		return agent.MaybeClient(d.Dial())
+		return agent.MaybeClient(d.DialContext(context.Background()))
 	}
 
 	return agent.MaybeDeployConn(dialers.NewDirect(proxy).Dial(d.Defaults()...))

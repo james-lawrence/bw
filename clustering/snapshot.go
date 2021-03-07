@@ -40,7 +40,7 @@ func newSnapshot(options ...SnapshotOption) (snapper snapshot) {
 }
 
 // Snapshot - performs a periodic snapshot of the cluster. blocking.
-func Snapshot(c cluster, s snapshotter, options ...SnapshotOption) {
+func Snapshot(c Rendezvous, s snapshotter, options ...SnapshotOption) {
 	var (
 		err     error
 		snapper = newSnapshot(options...)

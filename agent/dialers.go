@@ -3,11 +3,8 @@ package agent
 import (
 	"log"
 	"math/rand"
-	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
-	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -22,7 +19,7 @@ type dialer interface {
 
 // Random returns a single random peer from the set.
 // if the set is empty then a zero value peer is returned.
-func Random(peers ...Peer) (p Peer) {
+func Random(peers ...*Peer) (p *Peer) {
 	for _, p = range shuffleQuorum(peers) {
 		return p
 	}
@@ -31,12 +28,12 @@ func Random(peers ...Peer) (p Peer) {
 }
 
 // Shuffle the peers
-func Shuffle(q []Peer) []Peer {
+func Shuffle(q []*Peer) []*Peer {
 	return shuffleQuorum(q)
 }
 
 // QuorumPeers helper method.
-func QuorumPeers(c rendezvous) []Peer {
+func QuorumPeers(c rendezvous) []*Peer {
 	return Shuffle(NodesToPeers(QuorumNodes(c)...))
 }
 
@@ -45,7 +42,7 @@ func QuorumNodes(c rendezvous) []*memberlist.Node {
 	return c.GetN(3, []byte(QuorumKey))
 }
 
-func shuffleQuorum(q []Peer) []Peer {
+func shuffleQuorum(q []*Peer) []*Peer {
 	rand.Shuffle(len(q), func(i int, j int) {
 		q[i], q[j] = q[j], q[i]
 	})
@@ -72,8 +69,8 @@ func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 		return conn, err
 	}
 
-	for _, q := range shuffleQuorum(PtrToPeers(cinfo.Quorum...)) {
-		if conn, err = d.Dial(q); err != nil {
+	for _, q := range shuffleQuorum(cinfo.Quorum) {
+		if conn, err = d.Dial(*q); err != nil {
 			log.Println("failed to dial", RPCAddress(q), err)
 			continue
 		}
@@ -96,18 +93,6 @@ func Dial(address string, options ...grpc.DialOption) (_ignored Conn, err error)
 	return Conn{conn: conn}, nil
 }
 
-// DefaultDialerOptions sets reasonable defaults for dialing the agent.
-func DefaultDialerOptions(options ...grpc.DialOption) (results []grpc.DialOption) {
-	results = make([]grpc.DialOption, 0, len(options)+1)
-	results = append(
-		results,
-		grpc.WithBackoffMaxDelay(5*time.Second),
-		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
-	)
-
-	return append(results, options...)
-}
-
 // NewDialer creates a new dialer from the provided options
 func NewDialer(options ...grpc.DialOption) Dialer {
 	return Dialer{
@@ -122,13 +107,6 @@ func NewProxyDialer(d dialer) ProxyQuorumDialer {
 	}
 }
 
-// NewQuorumDialer creates a new dialer that connects to a member of the quorum.
-func NewQuorumDialer(d dialer) QuorumDialer {
-	return QuorumDialer{
-		dialer: d,
-	}
-}
-
 // Dialer interface for connecting to a given peer.
 type Dialer struct {
 	options []grpc.DialOption
@@ -140,7 +118,7 @@ func (t Dialer) Dial(p Peer) (zeroc Client, err error) {
 		addr string
 	)
 
-	if addr = RPCAddress(p); addr == "" {
+	if addr = RPCAddress(&p); addr == "" {
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
 
@@ -162,22 +140,28 @@ func (t ProxyQuorumDialer) Dial(p Peer) (conn Client, err error) {
 	return ProxyDialQuorum(conn, t.d)
 }
 
-// QuorumDialer connects to a member of the quorum.
-type QuorumDialer struct {
-	dialer dialer
-}
+// // NewQuorumDialer creates a new dialer that connects to a member of the quorum.
+// func NewQuorumDialer(d dialer) QuorumDialer {
+// 	return QuorumDialer{
+// 		dialer: d,
+// 	}
+// }
 
-// Dial connects to a member of the quorum based on the cluster.
-func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
-	err = errors.New("unable to connect")
+// // QuorumDialer connects to a member of the quorum.
+// type QuorumDialer struct {
+// 	dialer dialer
+// }
 
-	for _, p := range shuffleQuorum(c.Quorum()) {
-		debugx.Println("dialing", spew.Sdump(p))
-		if client, err = t.dialer.Dial(p); err == nil {
-			break
-		}
-		log.Println("failed to connect to peer", p.Name, p.Ip)
-	}
+// // Dial connects to a member of the quorum based on the cluster.
+// func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
+// 	err = errors.New("unable to connect")
 
-	return client, errors.WithMessage(err, "failed to connect to a member of the quorum")
-}
+// 	for _, p := range shuffleQuorum(c.Quorum()) {
+// 		if client, err = t.dialer.Dial(*p); err == nil {
+// 			break
+// 		}
+// 		log.Println("failed to connect to peer", p.Name, p.Ip)
+// 	}
+
+// 	return client, errors.WithMessage(err, "failed to connect to a member of the quorum")
+// }

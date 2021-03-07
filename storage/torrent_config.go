@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"crypto/sha256"
 	"io/ioutil"
 	"log"
@@ -15,10 +16,17 @@ import (
 // TorrentOption ...
 type TorrentOption func(*TorrentConfig)
 
-// TorrentOptionBind set address to bind to.
-func TorrentOptionBind(a net.Addr) TorrentOption {
+// TorrentOptionBindAddr set address to bind to.
+func TorrentOptionBindAddr(a net.Addr) TorrentOption {
 	return func(c *TorrentConfig) {
-		c.addr = a
+		c.b = torrent.NewAutobindSpecified(a.String())
+	}
+}
+
+// TorrentOptionBind set listener binder for the torrent.
+func TorrentOptionBind(b torrent.Binder) TorrentOption {
+	return func(c *TorrentConfig) {
+		c.b = b
 	}
 }
 
@@ -42,6 +50,11 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	}
 }
 
+type socket interface {
+	net.Listener
+	Dial(ctx context.Context, addr string) (net.Conn, error)
+}
+
 // NewTorrent ...
 func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err error) {
 	var (
@@ -52,16 +65,17 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		c:            cls,
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
+
 	c.ClientConfig.DisableIPv6 = true
 	c.ClientConfig.Logger = log.New(ioutil.Discard, "", 0)
 	c.ClientConfig.Seed = true
+	c.ClientConfig.NoDefaultPortForwarding = true
 
 	for _, opt := range options {
 		opt(&c)
 	}
 
-	autobind := torrent.NewAutobindSpecified(c.addr.String())
-	if c.client, err = autobind.Bind(torrent.NewClient(c.ClientConfig)); err != nil {
+	if c.client, err = c.b.Bind(torrent.NewClient(c.ClientConfig)); err != nil {
 		return c, errors.WithStack(err)
 	}
 
@@ -76,8 +90,8 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 
 // TorrentConfig ...
 type TorrentConfig struct {
-	addr net.Addr
-	c    cluster
+	b torrent.Binder
+	c cluster
 	*torrent.ClientConfig
 	client *torrent.Client
 }

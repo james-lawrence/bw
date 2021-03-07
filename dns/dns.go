@@ -52,7 +52,7 @@ func (t config) merge(options ...Option) config {
 	return t
 }
 
-func (t config) peersToBind(peers ...agent.Peer) []dns.A {
+func (t config) peersToBind(peers ...*agent.Peer) []dns.A {
 	rrset := make([]dns.A, 0, len(peers))
 	for _, peer := range peers {
 		rrset = append(rrset, dns.A{

@@ -41,7 +41,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: id,
-			Peer:         &p,
+			Peer:         p,
 		}
 		dopts := agent.DeployOptions{
 			Concurrency:    1,
@@ -86,7 +86,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
 		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())

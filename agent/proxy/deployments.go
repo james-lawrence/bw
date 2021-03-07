@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"io"
+	"log"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -16,11 +17,11 @@ import (
 )
 
 type auth interface {
-	Authorize(ctx context.Context) notary.Permission
+	Authorize(ctx context.Context) *notary.Permission
 }
 
 // NewDeployment proxy for deploys, dialer must be a quorum dialer.
-func NewDeployment(a auth, d dialers.DefaultsDialer) Deployment {
+func NewDeployment(a auth, d dialers.Quorum) Deployment {
 	return Deployment{Auth: a, Dialer: d}
 }
 
@@ -28,7 +29,7 @@ func NewDeployment(a auth, d dialers.DefaultsDialer) Deployment {
 type Deployment struct {
 	agent.UnimplementedDeploymentsServer
 	Auth   auth
-	Dialer dialers.DefaultsDialer // must be a quorum dialer.
+	Dialer dialers.Quorum
 }
 
 // Bind to the given grpc server.
@@ -36,34 +37,18 @@ func (t Deployment) Bind(s *grpc.Server) {
 	agent.RegisterDeploymentsServer(s, t)
 }
 
-func (t Deployment) client() (c agent.Client, err error) {
-	var (
-		cc *grpc.ClientConn
-	)
-
-	if cc, err = t.Dialer.Dial(); err != nil {
-		return c, err
-	}
-
-	return agent.NewConn(cc), err
+func (t Deployment) conn(ctx context.Context) (conn *grpc.ClientConn, err error) {
+	return t.Dialer.DialContext(ctx)
 }
 
-func (t Deployment) direct(p agent.Peer) (c agent.Client, err error) {
-	var (
-		cc *grpc.ClientConn
-	)
-
-	if cc, err = t.Dialer.Dial(); err != nil {
-		return c, err
-	}
-
-	return agent.NewConn(cc), err
+func (t Deployment) direct(ctx context.Context, p *agent.Peer) (conn *grpc.ClientConn, err error) {
+	return dialers.NewDirect(agent.RPCAddress(p), t.Dialer.Defaults()...).DialContext(ctx)
 }
 
 // Upload a deployment archive into the cluster
 func (t Deployment) Upload(stream agent.Deployments_UploadServer) (err error) {
 	var (
-		c      agent.Client
+		cc     *grpc.ClientConn
 		upload agent.Quorum_UploadClient
 		chunk  *agent.UploadChunk
 		resp   *agent.UploadResponse
@@ -73,12 +58,13 @@ func (t Deployment) Upload(stream agent.Deployments_UploadServer) (err error) {
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if c, err = t.client(); err != nil {
-		return err
+	if cc, err = t.conn(stream.Context()); err != nil {
+		log.Println("proxy connection failed", err)
+		return status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	if upload, err = agent.NewQuorumClient(c.Conn()).Upload(stream.Context()); err != nil {
+	if upload, err = agent.NewQuorumClient(cc).Upload(stream.Context()); err != nil {
 		return err
 	}
 
@@ -106,56 +92,60 @@ func (t Deployment) Upload(stream agent.Deployments_UploadServer) (err error) {
 // Deploy execute an actual deployment archive.
 func (t Deployment) Deploy(ctx context.Context, req *agent.DeployCommandRequest) (resp *agent.DeployCommandResult, err error) {
 	var (
-		c agent.Client
+		cc *grpc.ClientConn
 	)
 
 	if !t.Auth.Authorize(ctx).Deploy {
 		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if c, err = t.client(); err != nil {
-		return resp, err
+	if cc, err = t.conn(ctx); err != nil {
+		log.Println("proxy connection failed", err)
+		return resp, status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	return agent.NewQuorumClient(c.Conn()).Deploy(ctx, req)
+	return agent.NewQuorumClient(cc).Deploy(ctx, req)
 }
 
 // Cancel an active deploy.
 func (t Deployment) Cancel(ctx context.Context, req *agent.CancelRequest) (resp *agent.CancelResponse, err error) {
 	var (
-		c agent.Client
+		cc *grpc.ClientConn
 	)
 
 	if !t.Auth.Authorize(ctx).Deploy {
 		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if c, err = t.client(); err != nil {
-		return resp, err
+	if cc, err = t.conn(ctx); err != nil {
+		log.Println("proxy connection failed", err)
+		return resp, status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	return agent.NewQuorumClient(c.Conn()).Cancel(ctx, req)
+	return agent.NewQuorumClient(cc).Cancel(ctx, req)
 }
 
 // Watch watch for events.
 func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchServer) (err error) {
 	var (
-		c agent.Client
-		w agent.Quorum_WatchClient
+		cc *grpc.ClientConn
+		w  agent.Quorum_WatchClient
 	)
 
 	if !t.Auth.Authorize(out.Context()).Deploy {
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if c, err = t.client(); err != nil {
-		return err
+	if cc, err = t.conn(out.Context()); err != nil {
+		log.Println("proxy connection failed", err)
+		return status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	if w, err = agent.NewQuorumClient(c.Conn()).Watch(out.Context(), req); err != nil {
+	if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
+		log.Println("Watch quorum client failed", err)
 		return err
 	}
 
@@ -171,26 +161,27 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 // Dispatch messages to the state machine.
 func (t Deployment) Dispatch(ctx context.Context, req *agent.DispatchRequest) (resp *agent.DispatchResponse, err error) {
 	var (
-		c agent.Client
+		cc *grpc.ClientConn
 	)
 
 	if !t.Auth.Authorize(ctx).Deploy {
 		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if c, err = t.client(); err != nil {
-		return resp, err
+	if cc, err = t.conn(ctx); err != nil {
+		log.Println("proxy connection failed", err)
+		return resp, status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	return agent.NewQuorumClient(c.Conn()).Dispatch(ctx, req)
+	return agent.NewQuorumClient(cc).Dispatch(ctx, req)
 }
 
 // Logs retrieve logs for the given deploy.
 func (t Deployment) Logs(req *agent.LogRequest, out agent.Deployments_LogsServer) (err error) {
 	var (
-		c agent.Client
-		w agent.Deployments_LogsClient
+		cc *grpc.ClientConn
+		w  agent.Deployments_LogsClient
 	)
 
 	if !t.Auth.Authorize(out.Context()).Deploy {
@@ -201,12 +192,13 @@ func (t Deployment) Logs(req *agent.LogRequest, out agent.Deployments_LogsServer
 		return status.Error(codes.FailedPrecondition, "peer to retrieve logs from required")
 	}
 
-	if c, err = t.direct(*req.Peer); err != nil {
-		return err
+	if cc, err = t.direct(out.Context(), req.Peer); err != nil {
+		log.Println("proxy connection failed", err)
+		return status.Error(codes.Unavailable, "proxy connection error")
 	}
-	defer c.Close()
+	defer cc.Close()
 
-	if w, err = agent.NewAgentClient(c.Conn()).Logs(out.Context(), req); err != nil {
+	if w, err = agent.NewAgentClient(cc).Logs(out.Context(), req); err != nil {
 		return err
 	}
 

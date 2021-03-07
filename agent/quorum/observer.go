@@ -11,7 +11,7 @@ import (
 )
 
 // NewObserver creates an observer of the state machine.
-func NewObserver(c chan agent.Message) Observer {
+func NewObserver(c chan *agent.Message) Observer {
 	return Observer{
 		c: c,
 	}
@@ -19,7 +19,7 @@ func NewObserver(c chan agent.Message) Observer {
 
 // Observer used to observe messages processed by the state machine.
 type Observer struct {
-	c chan agent.Message
+	c chan *agent.Message
 }
 
 // Observe consume the results of the observer by forwarding them to the ConnectableDispatcher
@@ -32,7 +32,7 @@ func (t Observer) Observe(ctx context.Context, d agent.ConnectableDispatcher) {
 }
 
 // Decode consume the messages passing them to the buffer.
-func (t Observer) Decode(ctx TranscoderContext, m agent.Message) error {
+func (t Observer) Decode(ctx TranscoderContext, m *agent.Message) error {
 	if m.Hidden || ctx.State == StateRecovering {
 		return nil
 	}

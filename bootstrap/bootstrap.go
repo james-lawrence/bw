@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
@@ -31,13 +32,14 @@ type downloader interface {
 }
 
 type dialer interface {
-	Dial(agent.Peer) (zeroc agent.Client, err error)
+	Defaults(...grpc.DialOption) []grpc.DialOption
+	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
 }
 
 type cluster interface {
-	Local() agent.Peer
-	Peers() []agent.Peer
-	Quorum() []agent.Peer
+	GetN(n int, key []byte) []*memberlist.Node
+	Local() *agent.Peer
+	Peers() []*agent.Peer
 	Connect() agent.ConnectResponse
 }
 

@@ -1250,3 +1250,116 @@ var Bootstrap_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "agent.proto",
 }
+
+// ClusterClient is the client API for Cluster service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ClusterClient interface {
+	Watch(ctx context.Context, in *ClusterWatchRequest, opts ...grpc.CallOption) (Cluster_WatchClient, error)
+}
+
+type clusterClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewClusterClient(cc grpc.ClientConnInterface) ClusterClient {
+	return &clusterClient{cc}
+}
+
+func (c *clusterClient) Watch(ctx context.Context, in *ClusterWatchRequest, opts ...grpc.CallOption) (Cluster_WatchClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Cluster_ServiceDesc.Streams[0], "/agent.Cluster/Watch", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &clusterWatchClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Cluster_WatchClient interface {
+	Recv() (*ClusterWatchEvents, error)
+	grpc.ClientStream
+}
+
+type clusterWatchClient struct {
+	grpc.ClientStream
+}
+
+func (x *clusterWatchClient) Recv() (*ClusterWatchEvents, error) {
+	m := new(ClusterWatchEvents)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// ClusterServer is the server API for Cluster service.
+// All implementations must embed UnimplementedClusterServer
+// for forward compatibility
+type ClusterServer interface {
+	Watch(*ClusterWatchRequest, Cluster_WatchServer) error
+	mustEmbedUnimplementedClusterServer()
+}
+
+// UnimplementedClusterServer must be embedded to have forward compatible implementations.
+type UnimplementedClusterServer struct {
+}
+
+func (UnimplementedClusterServer) Watch(*ClusterWatchRequest, Cluster_WatchServer) error {
+	return status.Errorf(codes.Unimplemented, "method Watch not implemented")
+}
+func (UnimplementedClusterServer) mustEmbedUnimplementedClusterServer() {}
+
+// UnsafeClusterServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ClusterServer will
+// result in compilation errors.
+type UnsafeClusterServer interface {
+	mustEmbedUnimplementedClusterServer()
+}
+
+func RegisterClusterServer(s grpc.ServiceRegistrar, srv ClusterServer) {
+	s.RegisterService(&Cluster_ServiceDesc, srv)
+}
+
+func _Cluster_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ClusterWatchRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ClusterServer).Watch(m, &clusterWatchServer{stream})
+}
+
+type Cluster_WatchServer interface {
+	Send(*ClusterWatchEvents) error
+	grpc.ServerStream
+}
+
+type clusterWatchServer struct {
+	grpc.ServerStream
+}
+
+func (x *clusterWatchServer) Send(m *ClusterWatchEvents) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+// Cluster_ServiceDesc is the grpc.ServiceDesc for Cluster service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Cluster_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "agent.Cluster",
+	HandlerType: (*ClusterServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Watch",
+			Handler:       _Cluster_Watch_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "agent.proto",
+}

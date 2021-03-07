@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/backoff"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -17,45 +17,29 @@ import (
 const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
 
 type dialer interface {
-	Dial(agent.Peer) (agent.Client, error)
+	Defaults(combined ...grpc.DialOption) []grpc.DialOption
 }
 
-// Dialer for connecting to a given peer.
-type _Dialer struct {
-	options []grpc.DialOption
-}
-
-// Dial connects to the provided peer.
-func (t _Dialer) Dial(p agent.Peer) (zeroc agent.Client, err error) {
-	var (
-		addr string
-	)
-
-	if addr = agent.AutocertAddress(p); addr == "" {
-		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
-	}
-
-	return agent.Dial(addr, t.options...)
-}
-
-// NewClient create a new Client
-func NewClient(r rendezvous) Client {
-	return Client{
+// NewChallenger create a new Client
+func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Challenger {
+	return Challenger{
+		local:      p,
 		rendezvous: r,
-		d: _Dialer{
-			options: agent.DefaultDialerOptions(grpc.WithTransportCredentials(grpcx.InsecureTLS())),
-		},
+		dialer:     d,
+		cache:      cache,
 	}
 }
 
-// Client client to deal with acme resolutions.
-type Client struct {
+// Challenger client to deal with acme challenges.
+type Challenger struct {
+	local *agent.Peer
 	rendezvous
-	d dialer
+	dialer
+	cache DiskCache
 }
 
 // Challenge initiate a challenge.
-func (t Client) Challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
+func (t Challenger) Challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
 	bo := backoff.Jitter(time.Second, backoff.Maximum(time.Minute, backoff.Exponential(time.Second)))
 	for i := 0; ; i++ {
 		if key, cert, authority, err = t.challenge(ctx, csr); err == nil {
@@ -73,14 +57,14 @@ func (t Client) Challenge(ctx context.Context, csr []byte) (key, cert, authority
 	}
 }
 
-func (t Client) challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
+func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
 	var (
 		conn *grpc.ClientConn
-		p    agent.Peer
+		p    *agent.Peer
 		resp *ChallengeResponse
 	)
 
-	req := ChallengeRequest{
+	req := &ChallengeRequest{
 		CSR: csr,
 	}
 
@@ -90,24 +74,50 @@ func (t Client) challenge(ctx context.Context, csr []byte) (key, cert, authority
 		return key, cert, authority, err
 	}
 
-	if conn, err = agent.MaybeConn(t.d.Dial(p)); err != nil {
+	if p.Name == t.local.Name {
+		if resp, err = t.cache.Challenge(ctx, req); err != nil {
+			return nil, nil, nil, errors.Wrap(err, "disk cache")
+		}
+		return resp.Private, resp.Certificate, resp.Authority, nil
+	}
+
+	if conn, err = dialers.NewDirect(agent.AutocertAddress(p)).DialContext(ctx, t.dialer.Defaults()...); err != nil {
 		return key, cert, authority, err
 	}
 	defer conn.Close()
 
-	if resp, err = NewACMEClient(conn).Challenge(ctx, &req); err != nil {
+	if resp, err = NewACMEClient(conn).Challenge(ctx, req); err != nil {
 		return key, cert, authority, err
 	}
 
 	return resp.Private, resp.Certificate, resp.Authority, nil
 }
 
+// NewResolver create a new Client
+func NewResolver(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Resolver {
+	return Resolver{
+		local:      p,
+		rendezvous: r,
+		dialer:     d,
+		cache:      cache,
+	}
+}
+
+// Client client to deal with acme resolutions.
+type Resolver struct {
+	local *agent.Peer
+	rendezvous
+	dialer
+	cache DiskCache
+}
+
 // Resolution retrieve a resolution.
-func (t Client) Resolution(ctx context.Context) (c Challenge, err error) {
+func (t Resolver) Resolution(ctx context.Context) (c *Challenge, err error) {
 	var (
 		conn *grpc.ClientConn
-		p    agent.Peer
+		p    *agent.Peer
 		resp *ResolutionResponse
+		req  = &ResolutionRequest{}
 	)
 
 	// here we select a node based on the a disciminator. that node is responsible
@@ -116,16 +126,21 @@ func (t Client) Resolution(ctx context.Context) (c Challenge, err error) {
 		return c, err
 	}
 
-	if conn, err = agent.MaybeConn(t.d.Dial(p)); err != nil {
+	if p.Name == t.local.Name {
+		if resp, err = t.cache.Resolution(ctx, req); err != nil {
+			return nil, errors.Wrap(err, "disk cache")
+		}
+		return resp.Challenge, nil
+	}
+
+	if conn, err = dialers.NewDirect(agent.AutocertAddress(p)).DialContext(ctx, t.dialer.Defaults()...); err != nil {
 		return c, err
 	}
 	defer conn.Close()
 
-	req := ResolutionRequest{}
-
-	if resp, err = NewACMEClient(conn).Resolution(ctx, &req); err != nil {
+	if resp, err = NewACMEClient(conn).Resolution(ctx, req); err != nil {
 		return c, err
 	}
 
-	return *resp.Challenge, err
+	return resp.Challenge, err
 }

@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -42,7 +43,7 @@ func (t *deployment) Encode(dst io.Writer) error {
 	return nil
 }
 
-func (t *deployment) Decode(_ TranscoderContext, m agent.Message) error {
+func (t *deployment) Decode(_ TranscoderContext, m *agent.Message) error {
 	var (
 		dc *agent.DeployCommand
 	)
@@ -93,7 +94,7 @@ func (t *deployment) getInfo(leader *agent.Peer) agent.InfoResponse {
 		Deploying: t.runningDeploy,
 		Deployed:  t.lastSuccessfulDeploy,
 		Leader:    leader,
-		Quorum:    agent.PeersToPtr(agent.QuorumPeers(t.c)...),
+		Quorum:    agent.QuorumPeers(t.c),
 	}
 }
 
@@ -110,12 +111,12 @@ func (t *deployment) getRunningDeploy() *agent.DeployCommand {
 }
 
 // Deploy trigger a deploy.
-func (t *deployment) deploy(d agent.Dialer, dopts agent.DeployOptions, a agent.Archive, peers ...agent.Peer) (err error) {
+func (t *deployment) deploy(d dialers.Defaults, dopts agent.DeployOptions, a agent.Archive, peers ...*agent.Peer) (err error) {
 	return t.d.Deploy(d, dopts, a, peers...)
 }
 
 // Cancel a ongoing deploy.
-func (t *deployment) cancel(ctx context.Context, d agent.Dialer, sm stateMachine) (err error) {
+func (t *deployment) cancel(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
 	if err = agentutil.Cancel(t.c, d); err != nil {
 		return err
 	}
@@ -123,7 +124,7 @@ func (t *deployment) cancel(ctx context.Context, d agent.Dialer, sm stateMachine
 	return sm.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandCancel("")))
 }
 
-func (t *deployment) determineLatestDeploy(ctx context.Context, d agent.Dialer, sm stateMachine) (err error) {
+func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
 	var (
 		deploy agent.Deploy
 	)
@@ -139,7 +140,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d agent.Dialer, 
 	}
 
 	return sm.Dispatch(ctx,
-		agentutil.DeployCommand(t.c.Local(), agent.DeployCommand{
+		agentutil.DeployCommand(t.c.Local(), &agent.DeployCommand{
 			Command: agent.DeployCommand_Done,
 			Archive: deploy.Archive,
 			Options: deploy.Options,
@@ -147,7 +148,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d agent.Dialer, 
 	)
 }
 
-func (t *deployment) restartActiveDeploy(ctx context.Context, d agent.Dialer, sm stateMachine) (err error) {
+func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
 	var (
 		dc *agent.DeployCommand
 	)

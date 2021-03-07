@@ -13,21 +13,21 @@ import (
 )
 
 // PeersFoundEvent ...
-func PeersFoundEvent(p agent.Peer, n int64) agent.Message {
+func PeersFoundEvent(p *agent.Peer, n int64) *agent.Message {
 	return integerEvent(p, agent.Message_PeersFoundEvent, n)
 }
 
 // PeersCompletedEvent ...
-func PeersCompletedEvent(p agent.Peer, n int64) agent.Message {
+func PeersCompletedEvent(p *agent.Peer, n int64) *agent.Message {
 	return integerEvent(p, agent.Message_PeersCompletedEvent, n)
 }
 
 // LogEvent create a log event message.
-func LogEvent(p agent.Peer, s string) agent.Message {
-	return agent.Message{
+func LogEvent(p *agent.Peer, s string) *agent.Message {
+	return &agent.Message{
 		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_LogEvent,
-		Peer: &p,
+		Peer: p,
 		Ts:   time.Now().Unix(),
 		Event: &agent.Message_Log{
 			Log: &agent.Log{
@@ -38,12 +38,12 @@ func LogEvent(p agent.Peer, s string) agent.Message {
 }
 
 // TLSEventMessage contains the generated TLS certificate for the cluster.
-func TLSEventMessage(p agent.Peer, key, cert []byte) agent.Message {
+func TLSEventMessage(p *agent.Peer, key, cert []byte) *agent.Message {
 	tls := TLSEvent(key, cert)
-	return agent.Message{
+	return &agent.Message{
 		Id:          uuid.Must(uuid.NewV4()).String(),
 		Type:        agent.Message_TLSCAEvent,
-		Peer:        &p,
+		Peer:        p,
 		Ts:          time.Now().Unix(),
 		DisallowWAL: true,
 		Hidden:      true,
@@ -64,11 +64,11 @@ func TLSEvent(key, cert []byte) agent.TLSEvent {
 }
 
 // TLSRequest request the clusters tls certificate.
-func TLSRequest(p agent.Peer) agent.Message {
-	return agent.Message{
+func TLSRequest(p *agent.Peer) *agent.Message {
+	return &agent.Message{
 		Id:          uuid.Must(uuid.NewV4()).String(),
 		Type:        agent.Message_TLSCAEvent,
-		Peer:        &p,
+		Peer:        p,
 		Ts:          time.Now().Unix(),
 		DisallowWAL: true,
 		Hidden:      true,
@@ -88,11 +88,11 @@ func WALPreamble() *agent.WALPreamble {
 }
 
 // LogError create a log event message from an error.
-func LogError(p agent.Peer, s error) agent.Message {
-	return agent.Message{
+func LogError(p *agent.Peer, s error) *agent.Message {
+	return &agent.Message{
 		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_LogEvent,
-		Peer: &p,
+		Peer: p,
 		Ts:   time.Now().Unix(),
 		Event: &agent.Message_Log{
 			Log: &agent.Log{
@@ -103,91 +103,91 @@ func LogError(p agent.Peer, s error) agent.Message {
 }
 
 // PeerEvent ...
-func PeerEvent(p agent.Peer) agent.Message {
-	return agent.Message{
+func PeerEvent(p *agent.Peer) *agent.Message {
+	return &agent.Message{
 		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_PeerEvent,
-		Peer:  &p,
+		Peer:  p,
 		Ts:    time.Now().Unix(),
 		Event: &agent.Message_None{},
 	}
 }
 
 // NodeEvent ...
-func NodeEvent(p agent.Peer, event agent.Message_NodeEvent) agent.Message {
-	return agent.Message{
+func NodeEvent(p *agent.Peer, event agent.Message_NodeEvent) *agent.Message {
+	return &agent.Message{
 		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_PeerEvent,
-		Peer:  &p,
+		Peer:  p,
 		Ts:    time.Now().Unix(),
 		Event: &agent.Message_Membership{Membership: event},
 	}
 }
 
-func deployToOptions(d agent.Deploy) (dopts agent.DeployOptions) {
+func deployToOptions(d *agent.Deploy) (dopts *agent.DeployOptions) {
 	if d.Options != nil {
-		return *d.Options
+		return d.Options
 	}
 
-	return dopts
+	return &agent.DeployOptions{}
 }
 
-func deployToArchive(d agent.Deploy) (a agent.Archive) {
+func deployToArchive(d *agent.Deploy) (a *agent.Archive) {
 	if d.Archive != nil {
-		return *d.Archive
+		return d.Archive
 	}
 
-	return a
+	return &agent.Archive{}
 }
 
 // DeployCommandCancel create a cancellation command.
-func DeployCommandCancel(by string) agent.DeployCommand {
-	return agent.DeployCommand{
+func DeployCommandCancel(by string) *agent.DeployCommand {
+	return &agent.DeployCommand{
 		Command:   agent.DeployCommand_Cancel,
 		Initiator: by,
 	}
 }
 
 // DeployCommandRestart delivered when a deploy is automatically restarting.
-func DeployCommandRestart() agent.DeployCommand {
-	return agent.DeployCommand{
+func DeployCommandRestart() *agent.DeployCommand {
+	return &agent.DeployCommand{
 		Command: agent.DeployCommand_Restart,
 	}
 }
 
 // DeployCommand send a deploy command message
-func DeployCommand(p agent.Peer, dc agent.DeployCommand) agent.Message {
-	return agent.Message{
+func DeployCommand(p *agent.Peer, dc *agent.DeployCommand) *agent.Message {
+	return &agent.Message{
 		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: agent.Message_DeployCommandEvent,
-		Peer: &p,
+		Peer: p,
 		Ts:   time.Now().Unix(),
 		Event: &agent.Message_DeployCommand{
-			DeployCommand: &dc,
+			DeployCommand: dc,
 		},
 	}
 }
 
 // DeployEvent represents a deploy being triggered.
-func DeployEvent(p agent.Peer, d agent.Deploy) agent.Message {
+func DeployEvent(p *agent.Peer, d *agent.Deploy) *agent.Message {
 	return deployEvent(d.Stage, p, deployToOptions(d), deployToArchive(d))
 }
 
-func deployEvent(t agent.Deploy_Stage, p agent.Peer, di agent.DeployOptions, a agent.Archive) agent.Message {
-	return agent.Message{
+func deployEvent(t agent.Deploy_Stage, p *agent.Peer, di *agent.DeployOptions, a *agent.Archive) *agent.Message {
+	return &agent.Message{
 		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_DeployEvent,
-		Peer:  &p,
+		Peer:  p,
 		Ts:    time.Now().Unix(),
-		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Options: &di, Archive: &a}},
+		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Options: di, Archive: a}},
 	}
 }
 
-func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
-	return agent.Message{
+func integerEvent(p *agent.Peer, t agent.Message_Type, n int64) *agent.Message {
+	return &agent.Message{
 		Id:   uuid.Must(uuid.NewV4()).String(),
 		Type: t,
-		Peer: &p,
+		Peer: p,
 		Ts:   time.Now().Unix(),
 		Event: &agent.Message_Int{
 			Int: n,
@@ -197,14 +197,14 @@ func integerEvent(p agent.Peer, t agent.Message_Type, n int64) agent.Message {
 
 // ApplyToStateMachine utility function that applies an event to the provided
 // state machine handling the encoding and error handling logic.
-func ApplyToStateMachine(r *raft.Raft, m agent.Message, d time.Duration) (err error) {
+func ApplyToStateMachine(r *raft.Raft, m *agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
 		future  raft.ApplyFuture
 		ok      bool
 	)
 
-	if encoded, err = proto.Marshal(&m); err != nil {
+	if encoded, err = proto.Marshal(m); err != nil {
 		return errors.WithStack(err)
 	}
 

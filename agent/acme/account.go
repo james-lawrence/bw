@@ -8,7 +8,7 @@ import (
 	"github.com/go-acme/lego/v4/registration"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/internal/x/sshx"
+	"github.com/james-lawrence/bw/internal/rsax"
 )
 
 const (
@@ -33,7 +33,7 @@ func (t account) GetPrivateKey() (priv crypto.PrivateKey) {
 		err error
 	)
 
-	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedGenerate(filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey), 4096)); err != nil {
+	if priv, err = rsax.MaybeDecode(rsax.CachedGenerate(filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey), 4096)); err != nil {
 		log.Println("failed to load private key", err)
 		return nil
 	}

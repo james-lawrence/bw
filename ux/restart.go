@@ -8,7 +8,7 @@ type restart struct {
 	cState
 }
 
-func (t restart) Consume(m agent.Message) consumer {
+func (t restart) Consume(m *agent.Message) consumer {
 	t.cState.print(m)
 
 	switch m.Type {

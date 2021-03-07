@@ -19,8 +19,9 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/rsax"
+	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
 const (
@@ -67,7 +68,7 @@ func ClearAutoSignerKey() error {
 // NewAutoSigner - loads or generates a ssh key to sign RPC requests with.
 // this method is only for use by clients and the new key will need to be added to the cluster.
 func NewAutoSigner(comment string) (s Signer, err error) {
-	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, sshx.Auto)
+	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.Auto)
 }
 
 // AutoSignerInfo returns the fingerprint and authorized ssh key.
@@ -169,20 +170,21 @@ func (t Signer) AutoSignerInfo() (fp string, pub []byte, err error) {
 func (t Signer) GetRequestMetadata(ctx context.Context, uri ...string) (m map[string]string, err error) {
 	var (
 		encoded string
-		sig     Signature
+		sig     *Signature
 	)
+
 	tok := GenerateToken(t.fingerprint)
 
-	if sig, err = genSignature(t.signer, tok); err != nil {
+	if sig, err = genTokenSignature(t.signer, &tok); err != nil {
 		return m, err
 	}
 
 	a := Authorization{
 		Token:     &tok,
-		Signature: &sig,
+		Signature: sig,
 	}
 
-	if encoded, err = EncodeAuthorization(a); err != nil {
+	if encoded, err = EncodeAuthorization(&a); err != nil {
 		return m, err
 	}
 
@@ -205,17 +207,17 @@ func NewAuth(s storage) Auth {
 func newAuth(s storage) Auth {
 	return Auth{
 		storage: s,
-		roots:   map[string]Grant{},
+		roots:   map[string]*Grant{},
 	}
 }
 
 // Auth returns authorization.
 type Auth struct {
 	storage storage
-	roots   map[string]Grant
+	roots   map[string]*Grant
 }
 
-func (t Auth) lookup(fingerprint string) (g Grant, ok bool) {
+func (t Auth) lookup(fingerprint string) (g *Grant, ok bool) {
 	var (
 		err error
 	)
@@ -232,13 +234,13 @@ func (t Auth) lookup(fingerprint string) (g Grant, ok bool) {
 }
 
 // Authorize the given request context.
-func (t Auth) Authorize(ctx context.Context) Permission {
+func (t Auth) Authorize(ctx context.Context) *Permission {
 	var (
 		err     error
 		ok      bool
 		md      metadata.MD
-		a       Authorization
-		g       Grant
+		a       *Authorization
+		g       *Grant
 		encoded []byte
 		vals    []string
 		pkey    ssh.PublicKey
@@ -288,7 +290,7 @@ func (t Auth) Authorize(ctx context.Context) Permission {
 		return none()
 	}
 
-	return unwrap(g.Permission)
+	return g.Permission
 }
 
 // GenerateToken generates a request token for the given fingerprint.
@@ -304,12 +306,12 @@ func GenerateToken(fingerprint string) (t Token) {
 }
 
 // EncodeAuthorization encodes an authorization into a b64 string.
-func EncodeAuthorization(a Authorization) (encoded string, err error) {
+func EncodeAuthorization(a *Authorization) (encoded string, err error) {
 	var (
 		b []byte
 	)
 
-	if b, err = proto.Marshal(&a); err != nil {
+	if b, err = proto.Marshal(a); err != nil {
 		return "", errors.Wrap(err, "failed to generate authorization")
 	}
 
@@ -317,18 +319,19 @@ func EncodeAuthorization(a Authorization) (encoded string, err error) {
 }
 
 // DecodeAuthorization decodes authorization into its token and signature.
-func DecodeAuthorization(encoded string) (a Authorization, err error) {
+func DecodeAuthorization(encoded string) (_ *Authorization, err error) {
 	var (
+		a   Authorization
 		b64 []byte
 	)
 
 	if b64, err = base64.URLEncoding.DecodeString(encoded); err != nil {
-		return a, err
+		return nil, err
 	}
 
 	if err = proto.Unmarshal(b64, &a); err != nil {
-		return a, err
+		return nil, err
 	}
 
-	return a, nil
+	return &a, nil
 }

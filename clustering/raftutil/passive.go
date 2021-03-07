@@ -56,7 +56,7 @@ func (t passive) Update(c cluster) state {
 	}
 
 	if r.LastIndex() == 0 {
-		if err = r.BootstrapCluster(configuration(t.protocol, c)).Error(); err != nil {
+		if err = r.BootstrapCluster(configuration(c)).Error(); err != nil {
 			log.Println("raft bootstrap failed", r.LastIndex(), err)
 			sm.cleanShutdown(c)
 			return maintainState

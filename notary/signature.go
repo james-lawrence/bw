@@ -30,25 +30,32 @@ func genSignatureData(t *Token) (b []byte, err error) {
 	return b, errors.Wrap(err, "failed to generate signature")
 }
 
-// GeneratureSignature generate a signature for the provided token.
-func genSignature(k ssh.Signer, t Token) (s Signature, err error) {
+func genSignature(k ssh.Signer, b []byte) (s *Signature, err error) {
 	var (
-		b  []byte
 		ss *ssh.Signature
 	)
-
-	if b, err = genSignatureData(&t); err != nil {
-		return s, errors.Wrap(err, "failed to generate signature")
-	}
 
 	if ss, err = k.Sign(rand.Reader, b); err != nil {
 		return s, errors.Wrap(err, "failed to generate signature")
 	}
 
-	return Signature{
+	return &Signature{
 		Format: ss.Format,
 		Data:   ss.Blob,
 	}, nil
+}
+
+// generate a signature for the provided token.
+func genTokenSignature(k ssh.Signer, t *Token) (s *Signature, err error) {
+	var (
+		b []byte
+	)
+
+	if b, err = genSignatureData(t); err != nil {
+		return s, errors.Wrap(err, "failed to generate signature")
+	}
+
+	return genSignature(k, b)
 }
 
 func (t Signature) sig() *ssh.Signature {

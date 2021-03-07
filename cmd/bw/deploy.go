@@ -20,7 +20,6 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/deployclient"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	packer "github.com/james-lawrence/bw/archive"
@@ -67,7 +66,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
-func (t *deployCmd) initializeUX(c agent.DeployClient, events chan agent.Message) {
+func (t *deployCmd) initializeUX(c agent.DeployClient, events chan *agent.Message) {
 	t.global.cleanup.Add(1)
 	go func() {
 		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(c)))
@@ -122,13 +121,14 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		err     error
 		dst     *os.File
 		dstinfo os.FileInfo
+		conn    *grpc.ClientConn
 		d       dialers.Defaults
 		client  agent.DeployClient
 		config  agent.ConfigClient
-		c       clustering.C
+		c       clustering.LocalRendezvous
 		ss      notary.Signer
 		archive agent.Archive
-		peers   []agent.Peer
+		peers   []*agent.Peer
 	)
 
 	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
@@ -162,53 +162,39 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}
 
-	events := make(chan agent.Message, 100)
+	events := make(chan *agent.Message, 100)
 
-	// BEGIN deprecated: remove, cluster should no longer be accessed by the deploy client.
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(
-			agent.PeerOptionName("local"),
-		),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	local := commandutils.NewClientPeer(
+		agent.PeerOptionName("local"),
 	)
-
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-			clustering.OptionLogOutput(ioutil.Discard),
-		),
-	}
-	// END deprecated
+	coptions := []daemons.ConnectOption{}
 
 	logRetryError := func(err error) {
 		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
 	}
 
-	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	events <- agentutil.LogEvent(local, "connecting to cluster")
 	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
 
-	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
+	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
 	}
+
 	go func() {
 		<-t.global.ctx.Done()
-		if err = client.Close(); err != nil {
-			log.Println("failed to close client", err)
-		}
+		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
-	t.initializeUX(client, events)
-	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+	client = agent.NewDeployConn(conn)
 
-	go agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, qd, local.Peer, events)
+	t.initializeUX(client, events)
+	events <- agentutil.LogEvent(local, "connected to cluster")
+
+	go agentutil.WatchClusterEvents(t.global.ctx, qd, local, events)
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -220,11 +206,11 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}
 
-	events <- agentutil.LogEvent(local.Peer, "archive upload initiated")
+	events <- agentutil.LogEvent(local, "archive upload initiated")
 
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local, "deployment failed")
 		return nil
 	}
 	defer os.Remove(dst.Name())
@@ -235,24 +221,24 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	if dstinfo, err = dst.Stat(); err != nil {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local, "deployment failed")
 		return nil
 	}
 
 	if _, err = dst.Seek(0, io.SeekStart); err != nil {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
+		events <- agentutil.LogEvent(local, "deployment failed")
 		return nil
 	}
 
 	if archive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive upload failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
+		events <- agentutil.LogEvent(local, "deployment failed")
 		return nil
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
+	events <- agentutil.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(c.Members())))
 
@@ -273,13 +259,13 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	if len(peers) == 0 && !allowEmpty {
 		cause := errorsx.String("deployment failed, filter did not match any servers")
-		events <- agentutil.LogError(local.Peer, cause)
+		events <- agentutil.LogError(local, cause)
 		return cause
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
+	events <- agentutil.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
-		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
+		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 
 	return err
@@ -290,7 +276,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		client agent.DeployClient
 		config agent.ConfigClient
 		d      dialers.Defaults
-		c      clustering.C
+		c      clustering.Rendezvous
 		ss     notary.Signer
 	)
 
@@ -306,29 +292,31 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println("configuration:", spew.Sdump(config))
 
-	events := make(chan agent.Message, 100)
+	events := make(chan *agent.Message, 100)
 
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
+	local := commandutils.NewClientPeer()
+	coptions := []daemons.ConnectOption{}
+	// local := cluster.NewLocal(
+	// 	commandutils.NewClientPeer(),
+	// 	cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	// )
 
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-			clustering.OptionLogOutput(ioutil.Discard),
-		),
-	}
+	// coptions := []daemons.ConnectOption{
+	// 	daemons.ConnectOptionClustering(
+	// 		clustering.OptionDelegate(local),
+	// 		clustering.OptionNodeID(local.Name),
+	// 		clustering.OptionBindAddress(local.Ip),
+	// 		clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
+	// 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
+	// 		clustering.OptionLogOutput(ioutil.Discard),
+	// 	),
+	// }
 
 	logRetryError := func(err error) {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "connection to cluster failed"))
+		events <- agentutil.LogError(local, errors.Wrap(err, "connection to cluster failed"))
 	}
 
-	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	events <- agentutil.LogEvent(local, "connecting to cluster")
 	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
 		return err
 	}
@@ -340,9 +328,8 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	t.initializeUX(client, events)
-	logx.MaybeLog(c.Shutdown())
 
-	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+	events <- agentutil.LogEvent(local, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
 		if err = client.Close(); err != nil {
@@ -355,11 +342,11 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
-	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local.Peer, cmd)); err != nil {
+	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local, cmd)); err != nil {
 		return err
 	}
 
-	events <- agentutil.LogEvent(local.Peer, "deploy cancelled")
+	events <- agentutil.LogEvent(local, "deploy cancelled")
 
 	return nil
 }
@@ -483,10 +470,10 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		d       dialers.Defaults
 		client  agent.DeployClient
 		config  agent.ConfigClient
-		c       clustering.C
+		c       clustering.LocalRendezvous
 		located agent.Deploy
 		archive agent.Archive
-		peers   []agent.Peer
+		peers   []*agent.Peer
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
@@ -507,25 +494,14 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}
 
-	events := make(chan agent.Message, 100)
-
+	events := make(chan *agent.Message, 100)
+	coptions := []daemons.ConnectOption{}
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
 			agent.PeerOptionName("local"),
 		),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
-
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-			clustering.OptionLogOutput(ioutil.Discard),
-		),
-	}
 
 	logRetryError := func(err error) {
 		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
@@ -551,7 +527,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}()
 
-	go agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, qd, local.Peer, events)
+	go agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
 
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, d, agentutil.FilterDeployID(t.deploymentID)); err != nil {

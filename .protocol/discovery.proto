@@ -6,6 +6,7 @@ option go_package = "github.com/james-lawrence/agent/discovery";
 message Node {
   string ip = 1;
   string name = 2;
+  uint32 P2PPort = 8;
   uint32 RPCPort = 3;
   uint32 RaftPort = 4;
   uint32 SWIMPort = 5;
@@ -14,34 +15,28 @@ message Node {
 }
 
 message QuorumRequest {}
-message QuorumResponse {
-  repeated Node nodes = 1;
-}
+message QuorumResponse { repeated Node nodes = 1; }
 
 message AgentsRequest {
   // maximum number of nodes per page, defaults to 100.
   int64 maximum = 1;
   // bloom filter to allow the agent to filter the results sent back.
-  // because its lossy clients will still need to filter the results client side.
-  // an empty array indicates send everything.
+  // because its lossy clients will still need to filter the results client
+  // side. an empty array indicates send everything.
   bytes bloom = 2;
 }
 
-message AgentsResponse {
-  repeated Node nodes = 1;
-}
+message AgentsResponse { repeated Node nodes = 1; }
 
-// Discovery service provides information about the cluster. typically this is used
-// for establishing connections with the quorum nodes, which are responsible for
-// persisting data needed by the cluster.
+// Discovery service provides information about the cluster. typically this is
+// used for establishing connections with the quorum nodes, which are
+// responsible for persisting data needed by the cluster.
 service Discovery {
   rpc Quorum(QuorumRequest) returns (QuorumResponse) {}
   rpc Agents(AgentsRequest) returns (stream AgentsResponse) {}
 }
 
-message CheckRequest {
-  string fingerprint = 1;
-}
+message CheckRequest { string fingerprint = 1; }
 
 message CheckResponse {}
 

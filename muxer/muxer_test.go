@@ -42,7 +42,7 @@ var _ = Describe("Dial and accept", func() {
 		Expect(err).To(Succeed())
 		go counter(l2, &c2)
 
-		d1 := NewDialer("proto1", net.Dialer{})
+		d1 := NewDialer("proto1", &net.Dialer{})
 
 		conn, err := d1.DialContext(context.Background(), "tcp", l.Addr().String())
 		Expect(err).To(Succeed())
@@ -50,7 +50,7 @@ var _ = Describe("Dial and accept", func() {
 		Expect(atomic.LoadInt64(&c1)).To(Equal(int64(1)))
 		Expect(atomic.LoadInt64(&c2)).To(Equal(int64(0)))
 
-		d2 := NewDialer("proto2", net.Dialer{})
+		d2 := NewDialer("proto2", &net.Dialer{})
 
 		conn, err = d2.DialContext(context.Background(), "tcp", l.Addr().String())
 		Expect(err).To(Succeed())

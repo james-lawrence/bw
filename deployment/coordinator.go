@@ -30,7 +30,7 @@ const (
 )
 
 // New Builds a deployment Coordinator.
-func New(local agent.Peer, d deployer, options ...CoordinatorOption) Coordinator {
+func New(local *agent.Peer, d deployer, options ...CoordinatorOption) Coordinator {
 	const (
 		defaultKeepN = 3
 	)
@@ -106,7 +106,7 @@ type Coordinator struct {
 	keepN             int // never set manually. always set by CoordinatorOptionKeepN
 	root              string
 	deploysRoot       string // never set manually. always set by CoordinatorOptionRoot
-	local             agent.Peer
+	local             *agent.Peer
 	deployer          deployer
 	dispatcher        dispatcher
 	dlreg             storage.DownloadFactory
@@ -241,7 +241,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
-	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d))
+	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, &d))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
 		return d, dctx.Done(err)

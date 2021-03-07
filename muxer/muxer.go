@@ -3,9 +3,12 @@ package muxer
 import (
 	"context"
 	"crypto/md5"
+	"crypto/tls"
+	"encoding/hex"
 	"io"
 	"log"
 	"net"
+	"runtime"
 	sync "sync"
 	"time"
 
@@ -19,29 +22,46 @@ type option func(*M) error
 
 func New(options ...option) *M {
 	return &M{
-		m:         &sync.RWMutex{},
-		protocols: make(map[Protocol]listener, 10),
+		m:             &sync.RWMutex{},
+		protocols:     make(map[Protocol]*listener, 10),
+		acceptTimeout: time.Second,
 	}
 }
 
 type M struct {
-	m         *sync.RWMutex
-	protocols map[Protocol]listener
+	m             *sync.RWMutex
+	protocols     map[Protocol]*listener
+	defaulted     *listener
+	acceptTimeout time.Duration
+}
+
+func (t *M) bind(protocol string, addr net.Addr) (net.Listener, error) {
+	digested := md5.Sum([]byte(protocol))
+	if l, ok := t.protocols[digested]; ok {
+		return l, errors.Errorf("protocol already registered: %s", protocol)
+	}
+
+	l := newListener(t, addr, protocol, digested)
+	t.protocols[digested] = l
+
+	// log.Println("BOUND", protocol, "->", hex.EncodeToString(digested[:]))
+
+	return l, nil
 }
 
 func (t *M) Bind(protocol string, addr net.Addr) (net.Listener, error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	digested := md5.Sum([]byte(protocol))
-	if l, ok := t.protocols[digested]; ok {
-		return l, errors.Errorf("protocol already registered: %s", protocol)
-	}
+	return t.bind(protocol, addr)
+}
 
-	l := newListener(t, addr, digested)
-	t.protocols[digested] = l
+func (t *M) Default(protocol string, addr net.Addr) (net.Listener, error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+	t.defaulted = newListener(t, addr, protocol, md5.Sum([]byte(protocol)))
 
-	return l, nil
+	return t.defaulted, nil
 }
 
 func (t *M) release(p Protocol) {
@@ -52,51 +72,116 @@ func (t *M) release(p Protocol) {
 }
 
 func Listen(ctx context.Context, m *M, l net.Listener) error {
+	inbound := make(chan net.Conn, 200)
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go accept1(ctx, m, inbound)
+	}
+
+	// log.Println("spawned", runtime.NumCPU(), "accepts")
+
 	for {
 		var (
-			err     error
-			conn    net.Conn
-			session *yamux.Session
-			stream  net.Conn
-			req     Protocol
+			err  error
+			conn net.Conn
 		)
 
 		if conn, err = l.Accept(); err != nil {
+			log.Println("accept failed", err)
 			return err
 		}
 
-		if session, err = yamux.Server(conn, nil); err != nil {
-			return err
-		}
-
-		if stream, err = session.Accept(); err != nil {
-			return err
-		}
-
-		if req, err = handshakeInbound(m, stream); err != nil {
-			log.Println("inbound handshake failure", err)
-			continue
-		}
-
-		m.m.RLock()
-		protocol := m.protocols[req]
-		m.m.RUnlock()
-
+		// log.Printf("accept: initiated %T %p backlog(%d) cap(%d)\n", conn, inbound, len(inbound), cap(inbound))
 		select {
-		case protocol.inbound <- stream:
+		case inbound <- conn:
 		case <-ctx.Done():
+			conn.Close()
 			return ctx.Err()
-		case <-time.After(time.Second):
-			stream.Close()
-			log.Println("accept failed - protocol took too long accept connection")
-			continue
 		}
+	}
+}
+
+func accept1(ctx context.Context, m *M, inbound chan net.Conn) (err error) {
+	for {
+		select {
+		case conn := <-inbound:
+			// log.Printf("accept: completed %T %p backlog(%d) cap(%d)\n", conn, inbound, len(inbound), cap(inbound))
+			if err = accept(ctx, m, conn); err != nil {
+				conn.Close()
+				log.Println("accept failed", err)
+			}
+		case <-ctx.Done():
+			log.Println("accept failed", ctx.Err())
+			return ctx.Err()
+		}
+	}
+}
+
+func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
+	var (
+		session *yamux.Session
+		stream  net.Conn
+		req     Protocol
+	)
+
+	cctx, done := context.WithTimeout(ctx, m.acceptTimeout)
+	defer done()
+	// log.Println("accept initiated")
+	// defer log.Println("accept completed")
+
+	if tlsconn, ok := conn.(*tls.Conn); ok {
+		if err = tlsconn.Handshake(); err != nil {
+			conn.Close()
+			return errors.Wrap(err, "tls handshake failed")
+		}
+
+		if s := tlsconn.ConnectionState(); s.NegotiatedProtocol != "bw.mux" {
+			if m.defaulted == nil {
+				conn.Close()
+				return errors.Wrap(err, "tls unknown protocol")
+			}
+
+			m.defaulted.inbound <- conn
+			return nil
+		}
+	}
+
+	if session, err = yamux.Server(conn, nil); err != nil {
+		conn.Close()
+		return errors.Wrap(err, "failed to create session")
+	}
+
+	if stream, err = session.Accept(); err != nil {
+		session.Close()
+		return errors.Wrap(err, "failed to create stream")
+	}
+
+	if req, err = handshakeInbound(m, stream); err != nil {
+		session.Close()
+		return errors.Wrap(err, "muxer.handshakeInbound failed")
+	}
+
+	m.m.RLock()
+	protocol, ok := m.protocols[req]
+	m.m.RUnlock()
+
+	if !ok {
+		session.Close()
+		return errors.Errorf("unknown protocol: %s", hex.EncodeToString(req[:]))
+	}
+
+	// log.Println("muxer.Accept", protocol.protocol, conn.RemoteAddr().String(), "->", conn.LocalAddr().String())
+	select {
+	case protocol.inbound <- stream:
+		return nil
+	case <-cctx.Done():
+		session.Close()
+		return cctx.Err()
 	}
 }
 
 func handshakeOutbound(protocol []byte, conn net.Conn) (err error) {
 	var (
-		inbound [22]byte // 4 (version) + 4 (error) + protocol (36)
+		inbound [22]byte // 4 (version) + 2 (error) + protocol (16)
 		resp    Accepted
 	)
 

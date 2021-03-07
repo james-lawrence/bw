@@ -1,68 +1,55 @@
 package daemons
 
 import (
-	"crypto/tls"
+	"log"
 	"net"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
-	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/acme"
-	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/discovery"
-	"github.com/james-lawrence/bw/agent/proxy"
-	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
-	"github.com/james-lawrence/bw/notary"
 )
 
 // Discovery initiates the discovery backend.
 func Discovery(ctx Context) (err error) {
 	var (
-		bind      net.Listener
-		tlsconfig *tls.Config
-		server    *grpc.Server
+		// deprecatedbind net.Listener
+		bind   net.Listener
+		server *grpc.Server
 	)
-
-	keepalive := grpc.KeepaliveParams(ctx.RPCKeepalive)
-
-	if tlsconfig, err = TLSGenServer(ctx.Config, tlsx.OptionVerifyClientIfGiven); err != nil {
-		return err
-	}
-	tlsconfig = certificatecache.NewALPN(tlsconfig, acme.NewALPNCertCache(acme.NewClient(ctx.Cluster)))
-
-	if bind, err = net.Listen(ctx.Config.DiscoveryBind.Network(), ctx.Config.DiscoveryBind.String()); err != nil {
-		return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Config.DiscoveryBind)
-	}
 
 	server = grpc.NewServer(
 		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
-		grpc.Creds(credentials.NewTLS(tlsconfig)),
-		keepalive,
+		grpc.KeepaliveParams(ctx.RPCKeepalive),
 	)
 
-	dialer := dialers.NewQuorum(
-		ctx.Cluster,
-		agent.DefaultDialerOptions(
-			grpc.WithTransportCredentials(ctx.GRPCCreds()),
-		)...,
-	)
+	// dialer := dialers.NewQuorum(
+	// 	ctx.Cluster,
+	// 	ctx.Dialer.Defaults()...,
+	// )
 
-	proxy.NewDeployment(notary.NewAuth(ctx.NotaryStorage), dialer).Bind(server)
-	notary.NewProxy(dialer).Bind(server)
+	// notary.NewProxy(dialer).Bind(server)
 
 	// exposes details about the cluster.
 	discovery.New(ctx.Cluster).Bind(server)
 
 	// used to validate client certificates.
-	discovery.NewAuthority(
-		certificatecache.CAKeyPath(ctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
-	).Bind(server)
+	// discovery.NewAuthority(
+	// 	certificatecache.CAKeyPath(ctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
+	// ).Bind(server)
 
+	// log.Println("discovery", ctx.Config.DiscoveryBind.String())
+	// if bind, err = net.Listen(ctx.Config.DiscoveryBind.Network(), ctx.Config.DiscoveryBind.String()); err != nil {
+	// 	return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Config.DiscoveryBind)
+	// }
+
+	log.Printf("discovery: %T %s", ctx.Listener, ctx.Listener.Addr().String())
+	if bind, err = ctx.Muxer.Bind(bw.ProtocolDiscovery, ctx.Listener.Addr()); err != nil {
+		return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Listener.Addr().String())
+	}
 	ctx.grpc("discovery", server, bind)
 
 	return nil

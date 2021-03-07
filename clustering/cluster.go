@@ -4,30 +4,40 @@ import (
 	"net"
 	"time"
 
-	"github.com/james-lawrence/bw/clustering/rendezvous"
-
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw/clustering/rendezvous"
 )
 
 // Interfaces used by this package to perform various work.
 
 // cluster is used to extract the peers within a cluster from the underlying implementations.
-type cluster interface {
-	Leave(time.Duration) error
+type Joiner interface {
 	Join(...string) (int, error)
 	Members() []*memberlist.Node
 }
 
-// C interface to a cluster.
-type C interface {
+// Rendezvous interface
+type Rendezvous interface {
+	Members() []*memberlist.Node
 	Get(key []byte) *memberlist.Node
 	GetN(n int, key []byte) []*memberlist.Node
-	Members() []*memberlist.Node
+}
+
+type LocalRendezvous interface {
+	Rendezvous
+	LocalNode() *memberlist.Node
+}
+
+type Replication interface {
+	UpdateNode(timeout time.Duration) error
+}
+
+// C interface to a cluster.
+type C interface {
+	Joiner
+	Rendezvous
+	Replication
 	Shutdown() error
-	// deprecated methods
-	Config() *memberlist.Config
-	Join(...string) (int, error)
-	Leave(time.Duration) (err error)
 	LocalNode() *memberlist.Node
 }
 
@@ -42,14 +52,14 @@ type Source interface {
 	Peers() ([]string, error)
 }
 
-// Cluster represents the cluster.
-type Cluster struct {
+// Memberlist represents the cluster.
+type Memberlist struct {
 	config *memberlist.Config
 	list   *memberlist.Memberlist
 }
 
 // Leave ...
-func (t Cluster) Leave(d time.Duration) (err error) {
+func (t Memberlist) Leave(d time.Duration) (err error) {
 	if t.list == nil {
 		return nil
 	}
@@ -66,54 +76,63 @@ func (t Cluster) Leave(d time.Duration) (err error) {
 }
 
 // Join ...
-func (t Cluster) Join(existing ...string) (int, error) {
+func (t Memberlist) Join(existing ...string) (int, error) {
 	return t.list.Join(existing)
 }
 
 // Config returns the configuration for the cluster.
-func (t Cluster) Config() *memberlist.Config {
+func (t Memberlist) Config() *memberlist.Config {
 	return t.config
 }
 
 // Members returns the members of the cluster.
-func (t Cluster) Members() []*memberlist.Node {
+func (t Memberlist) Members() []*memberlist.Node {
 	return t.list.Members()
 }
 
 // Get - computes the peer that is responsible for the given key.
-func (t Cluster) Get(key []byte) *memberlist.Node {
+func (t Memberlist) Get(key []byte) *memberlist.Node {
 	return rendezvous.Max(key, t.Members())
 }
 
 // GetN - computes the top N peer for the given key.
-func (t Cluster) GetN(n int, key []byte) []*memberlist.Node {
+func (t Memberlist) GetN(n int, key []byte) []*memberlist.Node {
 	return rendezvous.MaxN(n, key, t.Members())
 }
 
 // IsLocal - checks if the local peer is responsible for the given key,
 // returns true, and the local peer if the local peer is responsible.
 // returns false, and the peer that is responsible for the key otherwise.
-func (t Cluster) IsLocal(key []byte) (bool, *memberlist.Node) {
+func (t Memberlist) IsLocal(key []byte) (bool, *memberlist.Node) {
 	n := t.Get(key)
 	return n == t.list.LocalNode(), n
 }
 
 // LocalNode returns the local node of the cluster.
-func (t Cluster) LocalNode() *memberlist.Node {
+func (t Memberlist) LocalNode() *memberlist.Node {
 	return t.list.LocalNode()
 }
 
 // LocalAddr returns the local node's IP address.
-func (t Cluster) LocalAddr() net.IP {
+func (t Memberlist) LocalAddr() net.IP {
 	return t.LocalNode().Addr
 }
 
 // Shutdown - leaves the cluster.
-func (t Cluster) Shutdown() error {
+func (t Memberlist) Shutdown() error {
 	return t.Leave(3 * time.Second)
 }
 
 // ForceShutdown -- do not use.
-func (t Cluster) ForceShutdown() error {
+func (t Memberlist) ForceShutdown() error {
 	return t.list.Shutdown()
+}
+
+// GetPrimaryKey ...
+func (t Memberlist) GetPrimaryKey() []byte {
+	return t.config.Keyring.GetPrimaryKey()
+}
+
+func (t Memberlist) UpdateNode(timeout time.Duration) error {
+	return t.list.UpdateNode(timeout)
 }

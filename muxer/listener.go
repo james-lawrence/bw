@@ -6,8 +6,9 @@ import (
 	sync "sync"
 )
 
-func newListener(m *M, addr net.Addr, p Protocol) listener {
-	return listener{
+func newListener(m *M, addr net.Addr, name string, p Protocol) *listener {
+	return &listener{
+		protocol: name,
 		p:        p,
 		m:        m,
 		inbound:  make(chan net.Conn),
@@ -17,6 +18,7 @@ func newListener(m *M, addr net.Addr, p Protocol) listener {
 }
 
 type listener struct {
+	protocol string
 	p        Protocol
 	m        *M
 	inbound  chan net.Conn

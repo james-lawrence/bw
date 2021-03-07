@@ -1,6 +1,8 @@
 package muxer_test
 
 import (
+	"io"
+	"log"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -10,7 +12,7 @@ import (
 )
 
 func Test(t *testing.T) {
-	// log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Muxer Suite")
 }

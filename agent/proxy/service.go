@@ -4,17 +4,20 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
 type clusterx interface {
-	Local() agent.Peer
-	Peers() []agent.Peer
-	Quorum() []agent.Peer
+	GetN(n int, key []byte) []*memberlist.Node
+	Local() *agent.Peer
+	Peers() []*agent.Peer
+	Quorum() []*agent.Peer
 	Connect() agent.ConnectResponse
 }
 
@@ -34,14 +37,14 @@ type Proxy struct {
 // The deploy itself is run asychronously as they take awhile, letting callers
 // continue on. But it will error out if there are issues initiating the deploy.
 // such as another deploy is currently running.
-func (t Proxy) Deploy(dialer agent.Dialer, dopts agent.DeployOptions, archive agent.Archive, peers ...agent.Peer) (err error) {
+func (t Proxy) Deploy(dialer dialers.Defaults, dopts agent.DeployOptions, archive agent.Archive, peers ...*agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
 
-	d := agentutil.NewDispatcher(t.c, agent.NewQuorumDialer(dialer))
+	d := agentutil.NewDispatcher(dialers.NewQuorum(t.c, dialer.Defaults()...))
 
-	cmd := agent.DeployCommand{
+	cmd := &agent.DeployCommand{
 		Command: agent.DeployCommand_Begin,
 		Options: &dopts,
 		Archive: &archive,
@@ -58,7 +61,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, dopts agent.DeployOptions, archive ag
 
 	options := []deployment.Option{
 		deployment.DeployOptionChecker(deployment.OperationFunc(check(dialer))),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(dopts, archive, dialer))),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(&dopts, &archive, dialer))),
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
@@ -72,7 +75,7 @@ func (t Proxy) Deploy(dialer agent.Dialer, dopts agent.DeployOptions, archive ag
 			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive, Options: &dopts}
 		}
 
-		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), dcmd)))
+		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), &dcmd)))
 	}()
 
 	return nil

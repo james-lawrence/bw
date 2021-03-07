@@ -4,7 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-Restart=always
+# Restart=always
+Restart=no
 StateDirectory=%p/%i
 RuntimeDirectory=%p/%i
 CacheDirectory=%p/%i
@@ -12,10 +13,14 @@ CacheDirectory=%p/%i
 EnvironmentFile=-%C/%p/%i/agent.env
 Environment=HOME=%h
 Environment=LEGO_CA_CERTIFICATES="%h/.config/bearded-wookie-pebble/certs/pebble.minica.pem"
+Environment=BEARDED_WOOKIE_AGENT_CERTIFICATE_AUTHORITY="%h/.config/bearded-wookie-pebble/certs/pebble.pem"
+Environment=BEARDED_WOOKIE_LOGS_VERBOSE=1
 Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
+Environment=BEARDED_WOOKIE_LOGS_GRPC=1
+#Environment=BEARDED_WOOKIE_LOGS_RAFT=1
 SyslogIdentifier=%p-%i
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
-ExecStart=%h/go/bin/bw agent --agent-name="%i" --agent-config="%C/%p/%i/agent.config" ${CLI_OPTIONS}
+ExecStart=%h/go/bin/bw agent --agent-name="%i" --agent-config="%C/%p/%i/agent.config" ${BEARDED_WOOKIE_CLI_OPTIONS}
 
 [Install]
 WantedBy=default.target

@@ -4,7 +4,7 @@
     "managementListenAddress": "0.0.0.0:15000",
     "certificate": "certs/localhost/cert.pem",
     "privateKey": "certs/localhost/key.pem",
-    "tlsPort": 2001,
+    "tlsPort": 2000,
     "ocspResponderURL": "",
     "externalAccountBindingRequired": false
   }

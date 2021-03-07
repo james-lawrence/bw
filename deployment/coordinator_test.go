@@ -34,7 +34,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		dopts := agent.DeployOptions{
 			Concurrency:       1,
@@ -69,7 +69,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		dopts := agent.DeployOptions{
 			Concurrency:       1,
@@ -88,7 +88,7 @@ var _ = Describe("Coordinator", func() {
 		a2 := agent.Archive{
 			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		_, err = c.Deploy(dopts, a2)
 		Expect(err).To(MatchError(fmt.Sprintf("%s is already deploying: %s - Deploying", a.Initiator, bw.RandomID(a.DeploymentID).String())))
@@ -114,7 +114,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		dopts := agent.DeployOptions{
 			Concurrency:       1,
@@ -131,7 +131,7 @@ var _ = Describe("Coordinator", func() {
 		a2 := agent.Archive{
 			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		_, err = c.Deploy(dopts, a2)
 		Expect(err).ToNot(HaveOccurred())
@@ -155,7 +155,7 @@ var _ = Describe("Coordinator", func() {
 		a := agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
-			Peer:         &p,
+			Peer:         p,
 		}
 		dopts := agent.DeployOptions{
 			Concurrency:       1,

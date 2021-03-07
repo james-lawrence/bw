@@ -113,7 +113,7 @@ func notShutdownFilter(i raft.RaftState) bool {
 	return i != raft.Shutdown
 }
 
-func random(peers ...clustering.Cluster) clustering.Cluster {
+func random(peers ...clustering.Memberlist) clustering.Memberlist {
 	rand.Shuffle(len(peers), func(i int, j int) {
 		peers[i], peers[j] = peers[j], peers[i]
 	})
@@ -125,7 +125,7 @@ func random(peers ...clustering.Cluster) clustering.Cluster {
 	panic("tried to get a random member of an empty set")
 }
 
-func overlayRaft(ctx context.Context, q BacklogQueueWorker, tmpdir string, p clustering.Cluster) (r Protocol) {
+func overlayRaft(ctx context.Context, q BacklogQueueWorker, tmpdir string, p clustering.Memberlist) (r Protocol) {
 	var (
 		err error
 	)
@@ -161,12 +161,12 @@ func overlayRaft(ctx context.Context, q BacklogQueueWorker, tmpdir string, p clu
 }
 
 type peer struct {
-	c  clustering.Cluster
+	c  clustering.Memberlist
 	r  *Protocol
 	rc context.CancelFunc
 }
 
-func clusters(peers ...peer) (o []clustering.Cluster) {
+func clusters(peers ...peer) (o []clustering.Memberlist) {
 	for _, p := range peers {
 		o = append(o, p.c)
 	}
@@ -175,7 +175,7 @@ func clusters(peers ...peer) (o []clustering.Cluster) {
 }
 
 func newPeer(ctx context.Context, provider UnixAddressProvider, tmpdir string, obs *raft.Observer, network *memberlist.MockNetwork, peers ...peer) peer {
-	sq := BacklogQueueWorker{Provider: provider, Queue: make(chan Event)}
+	sq := BacklogQueueWorker{Queue: make(chan Event)}
 	bq := BacklogQueue{Backlog: make(chan QueuedEvent, 100)}
 	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(bq), clustering.OptionLogOutput(ioutil.Discard))
 	Expect(err).ToNot(HaveOccurred())

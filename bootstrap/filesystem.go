@@ -15,6 +15,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -70,7 +71,7 @@ func (t Filesystem) Bind(ctx context.Context, socket string, options ...grpc.Ser
 // Archive - implements the bootstrap service.
 func (t Filesystem) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *agent.ArchiveResponse, err error) {
 	var (
-		dc agent.DeployCommand
+		dc *agent.DeployCommand
 	)
 
 	if _, err = os.Stat(t.uploaded); err != nil {
@@ -93,10 +94,14 @@ func (t Filesystem) Archive(ctx context.Context, req *agent.ArchiveRequest) (res
 
 func (t Filesystem) monitor() {
 	var (
-		events = make(chan agent.Message, 5)
+		events = make(chan *agent.Message, 5)
 	)
 
-	go agentutil.WatchEvents(context.Background(), t.c.Local(), t.c.Local(), t.d, events)
+	d := dialers.NewProxy(
+		dialers.NewDirect(agent.RPCAddress(t.c.Local()), t.d.Defaults()...),
+	)
+
+	go agentutil.WatchEvents(context.Background(), t.c.Local(), d, events)
 
 	for m := range events {
 		if m.Hidden {
@@ -105,7 +110,7 @@ func (t Filesystem) monitor() {
 
 		switch event := m.GetEvent().(type) {
 		case *agent.Message_DeployCommand:
-			dc := *event.DeployCommand
+			dc := event.DeployCommand
 			if dc.Command == agent.DeployCommand_Done && dc.Archive != nil {
 				go func() {
 					if logx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed")) == nil {
@@ -124,7 +129,7 @@ func (t Filesystem) init() error {
 	return errors.WithStack(os.MkdirAll(t.a.Bootstrap.ArchiveDirectory, 0744))
 }
 
-func (t Filesystem) clone(a agent.DeployCommand) (err error) {
+func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 	var (
 		d        *os.File
 		archive  *os.File
@@ -171,11 +176,11 @@ func (t Filesystem) clone(a agent.DeployCommand) (err error) {
 
 func (t Filesystem) upload() (err error) {
 	var (
-		c   agent.Client
-		i   os.FileInfo
-		src *os.File
-		a   agent.Archive
-		dc  agent.DeployCommand
+		conn *grpc.ClientConn
+		i    os.FileInfo
+		src  *os.File
+		a    agent.Archive
+		dc   *agent.DeployCommand
 	)
 
 	if i, err = os.Stat(t.current); err != nil {
@@ -194,15 +199,16 @@ func (t Filesystem) upload() (err error) {
 		return errors.WithStack(err)
 	}
 
-	if c, err = t.d.Dial(t.c.Local()); err != nil {
-		return err
-	}
-
 	if dc, err = agent.ReadMetadata(t.metadata); err != nil {
 		return err
 	}
 
-	if a, err = c.Upload(dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
+	if conn, err = t.d.DialContext(context.Background()); err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if a, err = agent.NewConn(conn).Upload(dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
 		return err
 	}
 

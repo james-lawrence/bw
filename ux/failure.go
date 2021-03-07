@@ -24,11 +24,11 @@ type dialer interface {
 
 // gathers up failures
 type failure struct {
-	failures map[string]agent.Message
+	failures map[string]*agent.Message
 	cState
 }
 
-func (t failure) Consume(m agent.Message) consumer {
+func (t failure) Consume(m *agent.Message) consumer {
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
 		t.logs()
@@ -54,14 +54,14 @@ func (t failure) logs() {
 }
 
 type failureDisplay interface {
-	Display(cState, agent.Message)
+	Display(cState, *agent.Message)
 }
 
 // FailureDisplayNoop - ignores failures
 type FailureDisplayNoop struct{}
 
 // Display does nothing
-func (t FailureDisplayNoop) Display(cState, agent.Message) {}
+func (t FailureDisplayNoop) Display(cState, *agent.Message) {}
 
 // NewFailureDisplayPrint ...
 func NewFailureDisplayPrint(c agent.DeployClient) FailureDisplayPrint {
@@ -78,7 +78,7 @@ type FailureDisplayPrint struct {
 }
 
 // Display prints the logs for each message
-func (t FailureDisplayPrint) Display(s cState, m agent.Message) {
+func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 	if m.Peer == nil {
 		log.Println("unexpected nil peer skipping", spew.Sdump(m))
 		return

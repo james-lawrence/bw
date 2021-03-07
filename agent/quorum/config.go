@@ -47,7 +47,7 @@ func (t Configuration) Encode(dst io.Writer) (err error) {
 }
 
 // Decode ...
-func (t Configuration) Decode(tctx TranscoderContext, m agent.Message) (err error) {
+func (t Configuration) Decode(tctx TranscoderContext, m *agent.Message) (err error) {
 	var (
 		evt agent.TLSEvent
 		c   agent.Client

@@ -18,16 +18,16 @@ type torrentD struct {
 	util   TorrentUtil
 }
 
-func peerToNode(p agent.Peer) torrent.Peer {
+func peerToNode(p *agent.Peer) torrent.Peer {
 	return torrent.Peer{
 		IP:      net.ParseIP(p.Ip),
-		Port:    int(p.TorrentPort),
+		Port:    agent.TorrentPort(p),
 		Source:  "X",
 		Trusted: true,
 	}
 }
 
-func peersToNode(peers ...agent.Peer) (r []torrent.Peer) {
+func peersToNode(peers ...*agent.Peer) (r []torrent.Peer) {
 	for _, p := range peers {
 		r = append(r, peerToNode(p))
 	}

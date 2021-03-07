@@ -1,6 +1,7 @@
 package clustering
 
 import (
+	"errors"
 	"time"
 
 	"github.com/james-lawrence/bw/clustering/rendezvous"
@@ -45,11 +46,6 @@ func (t Static) Join(...string) (int, error) {
 	return len(t.peers), nil
 }
 
-// Leave - see cluster (deprecated)
-func (t Static) Leave(time.Duration) (err error) {
-	return nil
-}
-
 // LocalNode - see cluster (deprecated)
 func (t Static) LocalNode() *memberlist.Node {
 	return &memberlist.Node{}
@@ -58,4 +54,8 @@ func (t Static) LocalNode() *memberlist.Node {
 // Config - see Cluster.
 func (t Static) Config() *memberlist.Config {
 	return memberlist.DefaultLocalConfig()
+}
+
+func (t Static) UpdateNode(timeout time.Duration) error {
+	return errors.New("unable to update a static cluster")
 }

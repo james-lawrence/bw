@@ -18,7 +18,7 @@ import (
 )
 
 type connector interface {
-	Local() Peer
+	Local() *Peer
 	Connect() ConnectResponse
 }
 
@@ -148,7 +148,7 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 	}
 
 	return &StatusResponse{
-		Peer:        &tmp,
+		Peer:        tmp,
 		Deployments: deployPointers(d...),
 	}, nil
 }

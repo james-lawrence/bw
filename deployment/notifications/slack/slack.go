@@ -39,7 +39,7 @@ type Notifier struct {
 }
 
 // Notify send notification about a deploy
-func (t Notifier) Notify(dc agent.DeployCommand) {
+func (t Notifier) Notify(dc *agent.DeployCommand) {
 	var (
 		err  error
 		raw  []byte

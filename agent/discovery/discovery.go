@@ -16,15 +16,15 @@ import (
 
 // cluster interface for the package.
 type cluster interface {
-	Quorum() []agent.Peer
-	Peers() []agent.Peer
+	Quorum() []*agent.Peer
+	Peers() []*agent.Peer
 }
 
 type authorization interface {
 	Authorized(context.Context) error
 }
 
-func peerToNode(p agent.Peer) Node {
+func peerToNode(p *agent.Peer) Node {
 	return Node{
 		Ip:            p.Ip,
 		Name:          p.Name,
@@ -33,12 +33,13 @@ func peerToNode(p agent.Peer) Node {
 		SWIMPort:      p.SWIMPort,
 		TorrentPort:   p.TorrentPort,
 		DiscoveryPort: p.DiscoveryPort,
+		P2PPort:       p.P2PPort,
 	}
 }
 
 // nodeToPeer ...
-func nodeToPeer(n Node) agent.Peer {
-	return agent.Peer{
+func nodeToPeer(n *Node) *agent.Peer {
+	return &agent.Peer{
 		Ip:            n.Ip,
 		Name:          n.Name,
 		RPCPort:       n.RPCPort,
@@ -46,17 +47,18 @@ func nodeToPeer(n Node) agent.Peer {
 		SWIMPort:      n.SWIMPort,
 		TorrentPort:   n.TorrentPort,
 		DiscoveryPort: n.DiscoveryPort,
+		P2PPort:       n.P2PPort,
 	}
 }
 
-func nodeToMember(n Node) *memberlist.Node {
+func nodeToMember(n *Node) *memberlist.Node {
 	tmp := agent.PeerToNode(nodeToPeer(n))
 	return &tmp
 }
 
 func nodesToMembers(ns ...*Node) (r []*memberlist.Node) {
 	for _, n := range ns {
-		r = append(r, nodeToMember(*n))
+		r = append(r, nodeToMember(n))
 	}
 	return r
 }

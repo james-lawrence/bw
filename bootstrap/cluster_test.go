@@ -23,7 +23,7 @@ var _ = Describe("Cluster", func() {
 	var (
 		peer1    = agent.NewPeer("node1")
 		archive1 = agent.Archive{
-			Peer:         &peer1,
+			Peer:         peer1,
 			Ts:           time.Now().Unix(),
 			DeploymentID: bw.MustGenerateID(),
 		}

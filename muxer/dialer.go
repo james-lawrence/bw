@@ -2,23 +2,37 @@ package muxer
 
 import (
 	"context"
+	"crypto/tls"
+	"log"
 	"net"
+	"sync/atomic"
 
 	"github.com/hashicorp/yamux"
+	"github.com/pkg/errors"
 )
 
+type dialer interface {
+	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
+}
+
+var i = new(int64)
+
 // Newdialer net.Dialer for the given protocol.
-func NewDialer(protocol string, d net.Dialer) Dialer {
+func NewDialer(protocol string, d dialer) Dialer {
 	return Dialer{
-		p: Proto(protocol),
-		d: d,
+		id:       atomic.AddInt64(i, 1),
+		protocol: protocol,
+		digest:   Proto(protocol),
+		d:        d,
 	}
 }
 
 // Dialer implements the net.Dialer interface
 type Dialer struct {
-	p Protocol
-	d net.Dialer
+	id       int64
+	protocol string
+	digest   Protocol
+	d        dialer
 }
 
 func (t Dialer) Dial(network string, address string) (conn net.Conn, err error) {
@@ -30,22 +44,40 @@ func (t Dialer) DialContext(ctx context.Context, network string, address string)
 		session *yamux.Session
 	)
 
+	// log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
+	// defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
+
 	if conn, err = t.d.DialContext(ctx, network, address); err != nil {
-		return conn, err
+		return conn, errors.Wrapf(err, "muxer.DialContext failed: %s %s://%s", t.protocol, network, address)
+	}
+
+	if tlsconn, ok := conn.(*tls.Conn); ok {
+		if err := tlsconn.Handshake(); err != nil {
+			conn.Close()
+			return nil, errors.Wrap(err, "tls handshake failed")
+		}
+
+		s := tlsconn.ConnectionState()
+		if s.NegotiatedProtocol != "bw.mux" {
+			return conn, nil
+		}
 	}
 
 	if session, err = yamux.Client(conn, nil); err != nil {
+		log.Println("muxer.DialContext session creation failed", t.protocol, network, address, err)
 		conn.Close()
 		return nil, err
 	}
 
 	if conn, err = session.Open(); err != nil {
-		conn.Close()
+		log.Println("muxer.DialContext session open failed", t.protocol, network, address, err)
+		session.Close()
 		return nil, err
 	}
 
-	if err = handshakeOutbound(t.p[:], conn); err != nil {
-		conn.Close()
+	if err = handshakeOutbound(t.digest[:], conn); err != nil {
+		log.Println("muxer.DialContext handshakeOutbound", t.protocol, network, address, err)
+		session.Close()
 		return nil, err
 	}
 

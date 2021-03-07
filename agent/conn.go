@@ -154,12 +154,12 @@ func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archiv
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) (err error) {
+func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
 		Archive: &a,
 		Options: &dopts,
-		Peers:   PeersToPtr(peers...),
+		Peers:   peers,
 	}
 
 	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
@@ -170,14 +170,14 @@ func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) (err e
 }
 
 // Deploy ...
-func (t Conn) Deploy(options DeployOptions, archive Archive) (d Deploy, err error) {
+func (t Conn) Deploy(options *DeployOptions, archive *Archive) (d *Deploy, err error) {
 	var (
 		ar *DeployResponse
 	)
 
 	rpc := NewAgentClient(t.conn)
 
-	if ar, err = rpc.Deploy(context.Background(), &DeployRequest{Options: &options, Archive: &archive}); err != nil {
+	if ar, err = rpc.Deploy(context.Background(), &DeployRequest{Options: options, Archive: archive}); err != nil {
 		return d, errors.Wrap(err, "failed to initiated deploy")
 	}
 
@@ -185,7 +185,7 @@ func (t Conn) Deploy(options DeployOptions, archive Archive) (d Deploy, err erro
 		return d, errors.New("deploy result is nil")
 	}
 
-	return *ar.Deploy, nil
+	return ar.Deploy, nil
 }
 
 // Connect ...
@@ -217,7 +217,7 @@ func (t Conn) Info() (_zeroInfo StatusResponse, err error) {
 }
 
 // Watch for messages sent to the leader. blocks.
-func (t Conn) Watch(ctx context.Context, out chan<- Message) (err error) {
+func (t Conn) Watch(ctx context.Context, out chan<- *Message) (err error) {
 	var (
 		src Quorum_WatchClient
 		msg *Message
@@ -231,17 +231,17 @@ func (t Conn) Watch(ctx context.Context, out chan<- Message) (err error) {
 	}
 
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
-		out <- *msg
+		out <- msg
 	}
 
 	return errorsx.Compact(errors.WithStack(err), src.CloseSend())
 }
 
 // Dispatch messages to the leader.
-func (t Conn) Dispatch(ctx context.Context, messages ...Message) (err error) {
+func (t Conn) Dispatch(ctx context.Context, messages ...*Message) (err error) {
 	var (
 		out = DispatchRequest{
-			Messages: MessagesToPtr(messages...),
+			Messages: messages,
 		}
 	)
 

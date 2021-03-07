@@ -16,7 +16,7 @@ type Initializer interface {
 }
 
 // NewMachine ...
-func NewMachine(l agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine {
+func NewMachine(l *agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine {
 	return &StateMachine{
 		l:     l,
 		state: rp,
@@ -26,7 +26,7 @@ func NewMachine(l agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine
 
 // StateMachine wraps the raft protocol giving more convient access to the protocol.
 type StateMachine struct {
-	l     agent.Peer
+	l     *agent.Peer
 	state *raft.Raft
 	inits []Initializer
 }
@@ -43,7 +43,7 @@ func (t *StateMachine) initialize() (err error) {
 
 // Leader returns the current leader.
 func (t *StateMachine) Leader() *agent.Peer {
-	return &t.l
+	return t.l
 }
 
 // State returns the state of the raft cluster.
@@ -52,7 +52,7 @@ func (t *StateMachine) State() raft.RaftState {
 }
 
 // Dispatch a message to the WAL.
-func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) (err error) {
+func (t *StateMachine) Dispatch(ctx context.Context, messages ...*agent.Message) (err error) {
 	for _, m := range messages {
 		if err = t.writeWAL(m, 10*time.Second); err != nil {
 			return err
@@ -62,14 +62,14 @@ func (t *StateMachine) Dispatch(ctx context.Context, messages ...agent.Message) 
 	return nil
 }
 
-func (t *StateMachine) writeWAL(m agent.Message, d time.Duration) (err error) {
+func (t *StateMachine) writeWAL(m *agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
 		future  raft.ApplyFuture
 		ok      bool
 	)
 
-	if encoded, err = proto.Marshal(&m); err != nil {
+	if encoded, err = proto.Marshal(m); err != nil {
 		return errors.WithStack(err)
 	}
 

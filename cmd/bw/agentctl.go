@@ -68,7 +68,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 	)
 
 	local := cluster.NewLocal(
-		agent.Peer{
+		&agent.Peer{
 			Name: bw.MustGenerateID().String(),
 			Ip:   systemx.HostnameOrLocalhost(),
 		},
@@ -89,7 +89,7 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 		return nil
 	}
 
-	return agentutil.Shutdown(peers, agent.NewDialer(d.Defaults()...))
+	return agentutil.Shutdown(peers, d)
 }
 
 func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
@@ -101,7 +101,7 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 	)
 
 	local := cluster.NewLocal(
-		agent.Peer{
+		&agent.Peer{
 			Name: bw.MustGenerateID().String(),
 			Ip:   systemx.HostnameOrLocalhost(),
 		},
@@ -130,7 +130,7 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 			return "None"
 		}
 
-		return fmt.Sprintf("peer %s:", p.Name, spew.Sdump(p))
+		return fmt.Sprintf("peer %s: %s", p.Name, spew.Sdump(p))
 	}
 
 	deployment := func(c *agent.DeployCommand) string {
@@ -148,7 +148,7 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 	return nil
 }
 
-func (t actlCmd) connect(local cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
+func (t actlCmd) connect(local *cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
 	var (
 		config agent.ConfigClient
 	)
@@ -161,7 +161,6 @@ func (t actlCmd) connect(local cluster.Local) (d dialers.Defaults, c clustering.
 
 	coptions := []daemons.ConnectOption{
 		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),

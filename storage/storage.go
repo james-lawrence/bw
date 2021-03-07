@@ -18,8 +18,8 @@ const (
 )
 
 type cluster interface {
-	Quorum() []agent.Peer
-	Local() agent.Peer
+	Quorum() []*agent.Peer
+	Local() *agent.Peer
 }
 
 func newErrReader(err error) io.ReadCloser {

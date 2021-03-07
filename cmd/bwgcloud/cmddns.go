@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/dns"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
@@ -52,7 +53,7 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 	var (
 		err     error
-		c       clustering.Cluster
+		c       clustering.Memberlist
 		keyring *memberlist.Keyring
 	)
 
@@ -81,17 +82,20 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
 		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
 	}
 
-	cdialer := commandutils.NewClusterDialer(
+	cdialer := daemons.NewClusterDialer(
 		t.config,
 		clustering.OptionNodeID(local.Peer.Name),
-		clustering.OptionDelegate(local),
 		clustering.OptionBindAddress(local.Peer.Ip),
 		clustering.OptionBindPort(0),
 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
 		clustering.OptionKeyring(keyring),
 	)
 
-	if c, err = commandutils.ClusterJoin(t.global.ctx, t.config, cdialer, fssnapshot, peering.NewStaticTCP(t.bootstrap...)); err != nil {
+	if c, err = cdialer.Dial(); err != nil {
+		return err
+	}
+
+	if err = commandutils.ClusterJoin(t.global.ctx, t.config, c, fssnapshot, peering.NewStaticTCP(t.bootstrap...)); err != nil {
 		return err
 	}
 

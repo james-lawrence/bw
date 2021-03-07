@@ -29,6 +29,9 @@ systemctl --user restart bearded-wookie@agent3.service
 systemctl --user restart bearded-wookie@agent4.service
 
 pushd .test && bw deploy && popd
+
+# TODO
+systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent4/tls ~/.cache/bearded-wookie/agent4/cached.certs && systemctl --user restart bearded-wookie@agent4.service && journalctl -f --user-unit bearded-wookie@agent4.service
 ```
 
 ### quick start - gcloud (assumes a gcloud project, and terraform).

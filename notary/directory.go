@@ -24,10 +24,12 @@ type Directory struct {
 	m    *sync.RWMutex
 }
 
-func (t Directory) lookup(fingerprint string) (key string, g Grant, err error) {
+func (t Directory) lookup(fingerprint string) (key string, g *Grant, err error) {
 	var (
 		encoded []byte
 	)
+
+	g = &Grant{}
 
 	if strings.TrimSpace(fingerprint) == "" {
 		return key, g, errors.New("can not use an empty fingerprint")
@@ -39,7 +41,7 @@ func (t Directory) lookup(fingerprint string) (key string, g Grant, err error) {
 		return key, g, errors.Wrapf(err, "unable to read %s", key)
 	}
 
-	if err = proto.Unmarshal(encoded, &g); err != nil {
+	if err = proto.Unmarshal(encoded, g); err != nil {
 		return key, g, errors.Wrapf(err, "unable to read %s", key)
 	}
 
@@ -47,7 +49,7 @@ func (t Directory) lookup(fingerprint string) (key string, g Grant, err error) {
 }
 
 // Lookup a grant.
-func (t Directory) Lookup(fingerprint string) (g Grant, err error) {
+func (t Directory) Lookup(fingerprint string) (g *Grant, err error) {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
@@ -57,16 +59,16 @@ func (t Directory) Lookup(fingerprint string) (g Grant, err error) {
 }
 
 // Insert a grant
-func (t Directory) Insert(g Grant) (_ Grant, err error) {
+func (t Directory) Insert(g *Grant) (_ *Grant, err error) {
 	var (
 		encoded []byte
 		dst     *os.File
 	)
 
-	g = g.EnsureDefaults()
+	gd := g.EnsureDefaults()
 	key := genKey(t.root, g.Fingerprint)
 
-	if encoded, err = proto.Marshal(&g); err != nil {
+	if encoded, err = proto.Marshal(gd); err != nil {
 		return g, errors.Wrapf(err, "unable to write %s", key)
 	}
 
@@ -94,7 +96,7 @@ func (t Directory) Insert(g Grant) (_ Grant, err error) {
 }
 
 // Delete a grant
-func (t Directory) Delete(g Grant) (_ Grant, err error) {
+func (t Directory) Delete(g *Grant) (_ *Grant, err error) {
 	var (
 		key string
 	)

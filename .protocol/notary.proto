@@ -25,6 +25,7 @@ message Permission {
   bool grant = 3;
   bool revoke = 4;
   bool deploy = 5;
+  bool autocert = 6;
 }
 
 message Grant {
@@ -83,4 +84,5 @@ service Notary {
   rpc Revoke(RevokeRequest) returns (RevokeResponse) {}
   rpc Refresh(RefreshRequest) returns (RefreshResponse) {}
   rpc Search(SearchRequest) returns (stream SearchResponse) {}
+  // rpc Sync(SyncRequest) returns (stream SyncResponse) {}
 }

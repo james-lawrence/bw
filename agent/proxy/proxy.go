@@ -4,46 +4,48 @@ package proxy
 
 import (
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
+	"google.golang.org/grpc"
 )
 
-func check(d agent.Dialer) func(n agent.Peer) (agent.Deploy, error) {
-	return func(n agent.Peer) (_d agent.Deploy, err error) {
+func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
+	return func(n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
-			c    agent.Client
+			c    *grpc.ClientConn
 			info agent.StatusResponse
 		)
 
-		if c, err = d.Dial(n); err != nil {
+		if c, err = dialers.NewDirect(agent.RPCAddress(n)).Dial(d.Defaults()...); err != nil {
 			return _d, err
 		}
 
 		defer c.Close()
 
-		if info, err = c.Info(); err != nil {
+		if info, err = agent.NewConn(c).Info(); err != nil {
 			return _d, err
 		}
 
 		if len(info.Deployments) > 0 {
-			return *info.Deployments[0], nil
+			return info.Deployments[0], nil
 		}
 
-		return agent.Deploy{
+		return &agent.Deploy{
 			Stage: agent.Deploy_Completed,
 		}, nil
 	}
 }
 
-func deploy(dopts agent.DeployOptions, archive agent.Archive, dialer agent.Dialer) func(n agent.Peer) (agent.Deploy, error) {
-	return func(n agent.Peer) (_d agent.Deploy, err error) {
+func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
+	return func(n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
-			c agent.Client
+			c *grpc.ClientConn
 		)
 
-		if c, err = dialer.Dial(n); err != nil {
+		if c, err = dialers.NewDirect(agent.RPCAddress(n)).Dial(d.Defaults()...); err != nil {
 			return _d, err
 		}
 		defer c.Close()
 
-		return c.Deploy(dopts, archive)
+		return agent.NewConn(c).Deploy(dopts, archive)
 	}
 }

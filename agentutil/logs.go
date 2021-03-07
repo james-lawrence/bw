@@ -15,15 +15,15 @@ func PrintLogs(ctx context.Context, c agent.DeployClient, p *agent.Peer, did []b
 }
 
 // DeploymentLogs retrieves the logs for the given deployment ID from each server in the cluster.
-func DeploymentLogs(c cluster, d dialer, deploymentID []byte) io.ReadCloser {
+func DeploymentLogs(c cluster, d dialer2, deploymentID []byte) io.ReadCloser {
 	r, w := io.Pipe()
 	go func() {
-		b, done := context.WithTimeout(context.Background(), 20*time.Second)
+		ctx, done := context.WithTimeout(context.Background(), 20*time.Second)
 		defer done()
 
 		w.CloseWithError(NewClusterOperation(Operation(func(c agent.Client) error {
 			// TODO: change cluster operation to provide peer.
-			return PrintLogs(b, c, nil, deploymentID, w)
+			return PrintLogs(ctx, c, nil, deploymentID, w)
 		}))(c, d))
 	}()
 	return r

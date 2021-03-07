@@ -27,7 +27,7 @@ type encoder interface {
 
 // decodes are used to process the message.
 type decoder interface {
-	Decode(TranscoderContext, agent.Message) error
+	Decode(TranscoderContext, *agent.Message) error
 }
 
 type transcoder interface {
@@ -56,7 +56,7 @@ func (t Transcoder) Encode(dst io.Writer) (err error) {
 
 // Decode pass the message through each decoder. the first error encountered is
 // returned.
-func (t Transcoder) Decode(ctx TranscoderContext, m agent.Message) error {
+func (t Transcoder) Decode(ctx TranscoderContext, m *agent.Message) error {
 	for _, c := range t {
 		if err := c.Decode(ctx, m); err != nil {
 			return err
@@ -70,7 +70,7 @@ func (t Transcoder) Decode(ctx TranscoderContext, m agent.Message) error {
 type Discard struct{ Cause error }
 
 // Decode discards the message
-func (t Discard) Decode(_ TranscoderContext, m agent.Message) error {
+func (t Discard) Decode(_ TranscoderContext, m *agent.Message) error {
 	return t.Cause
 }
 

@@ -7,7 +7,7 @@ import (
 
 // Every executes the provided function every duration.
 func Every(d time.Duration, do func()) {
-	for _ = range time.Tick(d) {
+	for range time.Tick(d) {
 		do()
 	}
 }
@@ -15,7 +15,7 @@ func Every(d time.Duration, do func()) {
 // NowAndEvery executes the provided function immeditately and every duration.
 func NowAndEvery(d time.Duration, do func()) {
 	do()
-	for _ = range time.Tick(d) {
+	for range time.Tick(d) {
 		do()
 	}
 }
@@ -50,4 +50,15 @@ func DurationMin(ds ...time.Duration) (d time.Duration) {
 	}
 
 	return d
+}
+
+// SafeReset stops and drains the timer (if necessary) and then resets.
+func SafeReset(t *time.Timer, d time.Duration) {
+	if !t.Stop() {
+		select {
+		case <-t.C:
+		default:
+		}
+	}
+	t.Reset(d)
 }

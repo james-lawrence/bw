@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -17,7 +15,6 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
@@ -52,46 +49,46 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 		bw.EnvAgentRAFTBind,
 	).TCPVar(&t.config.RaftBind)
 
-	parent.Flag("cluster-dns-enable", "enable dns bootstrap").BoolVar(&t.dnsEnabled)
-	parent.Flag("cluster-aws-enable", "enable/disable aws autoscale group bootstrap").Default("true").BoolVar(&t.awsEnabled)
-	parent.Flag("cluster-gcloud-enable", "enable/disable gcloud target pools bootstrap").Default("true").BoolVar(&t.gcloudEnabled)
+	parent.Flag("cluster-dns-enable", "enable dns bootstrap").Default("false").BoolVar(&t.dnsEnabled)
+	parent.Flag("cluster-aws-enable", "enable/disable aws autoscale group bootstrap").Default("false").BoolVar(&t.awsEnabled)
+	parent.Flag("cluster-gcloud-enable", "enable/disable gcloud target pools bootstrap").Default("false").BoolVar(&t.gcloudEnabled)
 }
 
-func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, d clustering.Dialer, snap peering.File) (clustering.Cluster, error) {
+func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, c clustering.Joiner, snap peering.File) error {
 	var (
-		awspeers           clustering.Source = peering.NewStaticTCP()
-		gcloudpeers        clustering.Source = peering.NewStaticTCP()
-		dnspeers           clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
-		dnspeersDeprecated clustering.Source = peering.NewStaticTCP()
-		clipeers           clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		clipeers clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		// awspeers    clustering.Source = peering.NewStaticTCP()
+		// gcloudpeers clustering.Source = peering.NewStaticTCP()
+		// dnspeers    clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
+		// p2ppeers    clustering.Source = peering.NewDNS(t.config.P2PBind.Port)
 	)
 
-	if t.dnsEnabled {
-		log.Println("dns peering enabled")
-		dnspeers = peering.NewDNS(t.config.SWIMBind.Port, append(t.config.DNSBootstrap, t.config.ServerName)...)
-		dnspeersDeprecated = peering.NewDNS(2001, append(t.config.DNSBootstrap, t.config.ServerName)...)
-	}
+	// if t.dnsEnabled {
+	// 	log.Println("dns peering enabled")
+	// 	dnspeers = peering.NewDNS(t.config.SWIMBind.Port, append(t.config.DNSBootstrap, t.config.ServerName)...)
+	// }
 
-	if t.awsEnabled {
-		log.Println("aws autoscale groups peering enabled")
-		awspeers = peering.AWSAutoscaling{
-			Port:               conf.SWIMBind.Port,
-			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
-		}
-	}
+	// if t.awsEnabled {
+	// 	log.Println("aws autoscale groups peering enabled")
+	// 	awspeers = peering.AWSAutoscaling{
+	// 		Port:               conf.SWIMBind.Port,
+	// 		SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
+	// 	}
+	// }
 
-	if t.gcloudEnabled {
-		log.Println("gcloud target pool peering enabled")
-		gcloudpeers = peering.GCloudTargetPool{
-			Port:    conf.SWIMBind.Port,
-			Maximum: conf.MinimumNodes,
-		}
-	}
+	// if t.gcloudEnabled {
+	// 	log.Println("gcloud target pool peering enabled")
+	// 	gcloudpeers = peering.GCloudTargetPool{
+	// 		Port:    conf.SWIMBind.Port,
+	// 		Maximum: conf.MinimumNodes,
+	// 	}
+	// }
 
-	return commandutils.ClusterJoin(ctx, conf, d, clipeers, dnspeers, dnspeersDeprecated, awspeers, gcloudpeers, snap)
+	return commandutils.ClusterJoin(ctx, conf, c, clipeers)
+	// return commandutils.ClusterJoin(ctx, conf, c, clipeers, p2ppeers, dnspeers, awspeers, gcloudpeers, snap)
 }
 
-func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, options ...clustering.SnapshotOption) {
+func (t *clusterCmd) Snapshot(c clustering.Rendezvous, fssnapshot peering.File, options ...clustering.SnapshotOption) {
 	go clustering.Snapshot(
 		c,
 		fssnapshot,
@@ -101,7 +98,6 @@ func (t *clusterCmd) Snapshot(c clustering.Cluster, fssnapshot peering.File, opt
 
 func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
-		cs *tls.Config
 		dir = filepath.Join(conf.Root, "raft.d")
 	)
 
@@ -109,13 +105,8 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 		return p, err
 	}
 
-	if cs, err = daemons.TLSGenServer(conf); err != nil {
-		return p, errors.WithStack(err)
-	}
-
 	defaultOptions := []raftutil.ProtocolOption{
 		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
-		raftutil.ProtocolOptionTCPTransport(conf.RaftBind, cs),
 		raftutil.ProtocolOptionPassiveReset(func() (s raftutil.Storage, ss raft.SnapshotStore, err error) {
 			if err = errorsx.Compact(os.RemoveAll(dir), os.MkdirAll(dir, 0700)); err != nil {
 				return s, ss, errors.WithStack(err)

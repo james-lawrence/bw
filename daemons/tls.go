@@ -17,7 +17,7 @@ import (
 // AgentCertificateCache initializes the certificate cache manager.
 func AgentCertificateCache(ctx Context) (err error) {
 	config := ctx.Config
-	client := acme.NewClient(ctx.Cluster)
+	client := acme.NewChallenger(ctx.Cluster.Local(), ctx.Cluster, ctx.ACMECache, ctx.Dialer)
 	fallback := certificatecache.NewRefreshAgent(config.CredentialsDir, client)
 
 	return certificatecache.FromConfig(
@@ -91,13 +91,15 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 		return creds, errors.WithStack(err)
 	}
 
-	m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, c.CA, pool)
+	// m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, c.CA, pool)
 
 	creds = &tls.Config{
-		ServerName:           c.ServerName,
-		RootCAs:              pool,
-		GetCertificate:       m.GetCertificate,
-		GetClientCertificate: m.GetClientCertificate,
+		ServerName:         c.ServerName,
+		RootCAs:            pool,
+		InsecureSkipVerify: true,
+		NextProtos:         []string{"bw.mux"},
+		// GetCertificate:       m.GetCertificate,
+		// GetClientCertificate: m.GetClientCertificate,
 	}
 
 	return creds, nil

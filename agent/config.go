@@ -131,7 +131,7 @@ func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 func BootstrapPeers(peers ...*Peer) peering.Static {
 	speers := make([]string, 0, len(peers))
 	for _, p := range peers {
-		speers = append(speers, SWIMAddress(*p))
+		speers = append(speers, SWIMAddress(p))
 	}
 
 	return peering.NewStatic(speers...)
@@ -178,6 +178,10 @@ func ConfigOptionCompose(options ...ConfigOption) ConfigOption {
 // ConfigOptionDefaultBind default connection bindings.
 func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 	return ConfigOptionCompose(
+		ConfigOptionP2P(&net.TCPAddr{
+			IP:   ip,
+			Port: bw.DefaultP2PPort,
+		}),
 		ConfigOptionAutocert(&net.TCPAddr{
 			IP:   ip,
 			Port: bw.DefaultAutocertPort,
@@ -203,6 +207,13 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 			Port: bw.DefaultDiscoveryPort,
 		}),
 	)
+}
+
+// ConfigOptionP2P sets the libp2p address to bind.
+func ConfigOptionP2P(p *net.TCPAddr) ConfigOption {
+	return func(c *Config) {
+		c.P2PBind = p
+	}
 }
 
 // ConfigOptionAutocert sets the autocert address to bind.
@@ -272,12 +283,13 @@ type Config struct {
 	RaftBind          *net.TCPAddr
 	SWIMBind          *net.TCPAddr
 	AutocertBind      *net.TCPAddr
+	TorrentBind       *net.TCPAddr
+	P2PBind           *net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
-	CA                string `yaml:"ca"`
-	CredentialsMode   string `yaml:"credentialsSource"`
-	CredentialsDir    string `yaml:"credentialsDir"`
-	TorrentBind       *net.TCPAddr
+	CA                string   `yaml:"ca"`
+	CredentialsMode   string   `yaml:"credentialsSource"`
+	CredentialsDir    string   `yaml:"credentialsDir"`
 	DNSBind           dnsBind  `yaml:"dnsBind"`
 	DNSBootstrap      []string `yaml:"dnsBootstrap"`
 	AWSBootstrap      struct {
@@ -313,8 +325,8 @@ func (t Config) Clone(options ...ConfigOption) Config {
 }
 
 // Peer - builds the Peer information from the configuration.
-func (t Config) Peer() Peer {
-	return Peer{
+func (t Config) Peer() *Peer {
+	return &Peer{
 		Status:        Peer_Node,
 		Name:          t.Name,
 		Ip:            t.RPCBind.IP.String(),
@@ -324,6 +336,7 @@ func (t Config) Peer() Peer {
 		SWIMPort:      uint32(t.SWIMBind.Port),
 		TorrentPort:   uint32(t.TorrentBind.Port),
 		DiscoveryPort: uint32(t.DiscoveryBind.Port),
+		P2PPort:       uint32(t.P2PBind.Port),
 	}
 }
 

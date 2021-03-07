@@ -7,10 +7,12 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
+	"google.golang.org/grpc"
 )
 
 // NewProxyMachine stores the state of the cluster.
-func NewProxyMachine(l cluster, r *raft.Raft, d agent.Dialer) ProxyMachine {
+func NewProxyMachine(l cluster, r *raft.Raft, d dialers.Defaults) ProxyMachine {
 	sm := ProxyMachine{
 		local:  l,
 		state:  r,
@@ -25,7 +27,7 @@ func NewProxyMachine(l cluster, r *raft.Raft, d agent.Dialer) ProxyMachine {
 type ProxyMachine struct {
 	local  cluster
 	state  *raft.Raft
-	dialer agent.Dialer
+	dialer dialers.Defaults
 }
 
 // State returns the state of the raft cluster.
@@ -38,45 +40,44 @@ func (t *ProxyMachine) Leader() *agent.Peer {
 	return agent.DetectQuorum(t.local, agent.IsLeader(string(t.state.Leader())))
 }
 
-func (t *ProxyMachine) leader() (peader agent.Peer, err error) {
+func (t *ProxyMachine) leader() (peader *agent.Peer, err error) {
 	if p := t.Leader(); p != nil {
-		return *p, nil
+		return p, nil
 	}
 
-	return peader, errors.New("failed to locate leader")
+	return nil, errors.New("failed to locate leader")
 }
 
 // DialLeader dials the leader using the given dialer.
-func (t *ProxyMachine) DialLeader(d agent.Dialer) (c agent.Client, err error) {
+func (t *ProxyMachine) DialLeader(d dialers.Defaults) (c *grpc.ClientConn, err error) {
 	var (
-		leader agent.Peer
+		leader *agent.Peer
 	)
 
 	if leader, err = t.leader(); err != nil {
 		return c, err
 	}
 
-	return d.Dial(leader)
+	return dialers.NewDirect(agent.RPCAddress(leader)).DialContext(context.Background(), d.Defaults()...)
 }
 
 // Dispatch a message to the WAL.
-func (t *ProxyMachine) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
+func (t *ProxyMachine) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
 	return t.writeWAL(ctx, m...)
 }
 
-func (t *ProxyMachine) writeWAL(ctx context.Context, m ...agent.Message) (err error) {
+func (t *ProxyMachine) writeWAL(ctx context.Context, m ...*agent.Message) (err error) {
 	var (
-		c agent.Client
+		conn *grpc.ClientConn
 	)
 
-	if c, err = t.DialLeader(t.dialer); err != nil {
+	if conn, err = t.DialLeader(t.dialer); err != nil {
 		return err
 	}
-
-	defer c.Close()
+	defer conn.Close()
 
 	ctx, done := context.WithTimeout(ctx, 10*time.Second)
 	defer done()
 
-	return c.Dispatch(ctx, m...)
+	return agent.NewConn(conn).Dispatch(ctx, m...)
 }

@@ -2,14 +2,16 @@ package daemons
 
 import (
 	"context"
+	"crypto/tls"
 	"io/ioutil"
+	"net"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -76,7 +78,7 @@ func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Def
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config agent.ConfigClient, onRetry func(error), options ...ConnectOption,
-) (d dialers.Defaults, c clustering.C, err error) {
+) (d dialers.Defaults, c clustering.LocalRendezvous, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -89,13 +91,6 @@ func ConnectClientUntilSuccess(
 		if d, c, err = connect(config, creds, options...); err == nil {
 			return d, c, err
 		}
-
-		if d, c, err = deprecatedConnect(config, creds, options...); err == nil {
-			return d, c, err
-		}
-
-		// when an error occurs, cleanup any resources.
-		logx.MaybeLog(errors.WithMessage(c.Shutdown(), "failed to cleanup cluster"))
 
 		select {
 		case <-ctx.Done():
@@ -111,28 +106,45 @@ func ConnectClientUntilSuccess(
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
 func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Static, err error) {
 	var (
-		nodes []*memberlist.Node
+		addr      *net.TCPAddr
+		nodes     []*memberlist.Node
+		tlsconfig *tls.Config
 	)
 
-	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
-
-	if nodes, err = discovery.Snapshot(config.Discovery, dopts...); err != nil {
+	if addr, err = net.ResolveTCPAddr("tcp", config.Address); err != nil {
 		return d, c, err
+	}
+
+	if tlsconfig, err = TLSGenClient(config); err != nil {
+		return d, c, err
+	}
+
+	dopts := dialers.DefaultDialerOptions(
+		dialers.WithMuxer(tlsx.NewDialer(tlsconfig), addr),
+		grpc.WithInsecure(),
+	)
+
+	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Discovery), dopts...); err != nil {
+		return d, c, err
+	}
+
+	if len(nodes) == 0 {
+		return d, c, errors.New("no agents found")
 	}
 
 	c = clustering.NewStatic(nodes...)
 
-	return dialers.NewDirect(config.Discovery, dopts...), c, err
+	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Discovery), dopts...), c, err
 }
 
-func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Cluster, err error) {
+func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Memberlist, err error) {
 	var (
 		details agent.ConnectResponse
 		cl      agent.Client
 	)
 
 	conn := newConnect(options...)
-	dopts := agent.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
+	dopts := dialers.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
 
 	if cl, err = agent.AddressProxyDialQuorum(config.Address, dopts...); err != nil {
 		return d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
@@ -150,7 +162,7 @@ func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCre
 	return dialers.NewQuorum(c, dopts...), c, nil
 }
 
-func clusterConnect(details agent.ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Cluster, err error) {
+func clusterConnect(details agent.ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Memberlist, err error) {
 	keyring, err := memberlist.NewKeyring([][]byte{}, details.Secret)
 	if err != nil {
 		return c, errors.Wrap(err, "failed to create keyring")

@@ -14,8 +14,8 @@ import (
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/pkg/errors"
 
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/sshx"
 )
 
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
@@ -27,7 +27,6 @@ func DefaultACMEConfig() ACMEConfig {
 		CAURL: lego.LEDirectoryProduction,
 		Challenges: challenges{
 			ALPN: true,
-			// DNS:  true,
 		},
 	}
 }
@@ -81,7 +80,7 @@ func (t ACME) Refresh() (err error) {
 		priv      *rsa.PrivateKey
 	)
 
-	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
+	if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
 

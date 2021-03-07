@@ -15,7 +15,7 @@ import (
 )
 
 // NewTermui - terminal based ux.
-func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup, events chan agent.Message) {
+func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup, events chan *agent.Message) {
 	defer wg.Done()
 	defer log.Println("termui shutting down")
 
@@ -59,7 +59,7 @@ func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup,
 	}
 }
 
-func mergeEvent(s state, m agent.Message) state {
+func mergeEvent(s state, m *agent.Message) state {
 	switch m.Type {
 	case agent.Message_LogEvent:
 		s.Logs = s.Logs.Add(m)
@@ -67,13 +67,13 @@ func mergeEvent(s state, m agent.Message) state {
 		s.Peers[m.Peer.Name] = *m.Peer
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()
-		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - %s %s", m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
+		s.Logs = s.Logs.Add(agentutil.LogEvent(m.Peer, fmt.Sprintf("%s - %s %s", m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
 	case agent.Message_PeersCompletedEvent:
 		s.NodesCompleted = m.GetInt()
 	case agent.Message_PeersFoundEvent:
 		s.NodesFound = m.GetInt()
 	default:
-		s.Logs = s.Logs.Add(agentutil.LogEvent(*m.Peer, fmt.Sprintf("%s - Unknown Event - %s", messagePrefix(m), m.Type)))
+		s.Logs = s.Logs.Add(agentutil.LogEvent(m.Peer, fmt.Sprintf("%s - Unknown Event - %s", messagePrefix(m), m.Type)))
 	}
 
 	return s
@@ -126,7 +126,7 @@ func render(s state) {
 
 func logsToList(s state) []string {
 	out := make([]string, 0, s.Logs.ring.Len())
-	s.Logs.Do(func(m agent.Message) {
+	s.Logs.Do(func(m *agent.Message) {
 		l := m.GetLog()
 		out = append(out, fmt.Sprintf("%s - %s", messagePrefix(m), l.Log))
 	})

@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/sshx"
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/x/testingx"
 )
 
@@ -17,7 +17,7 @@ var _ = Describe("newAutoSignerPath", func() {
 		_, err := newAutoSignerPath(
 			filepath.Join(testingx.TempDir(), bw.DefaultNotaryKey),
 			"",
-			sshx.UnsafeAuto,
+			rsax.UnsafeAuto,
 		)
 		Expect(err).To(Succeed())
 	})
@@ -28,7 +28,7 @@ var _ = Describe("newAutoSignerPath", func() {
 		_, err := newAutoSignerPath(
 			filepath.Join(tmp, bw.DefaultNotaryKey),
 			"",
-			sshx.UnsafeAuto,
+			rsax.UnsafeAuto,
 		)
 		Expect(err).ToNot(Succeed())
 	})

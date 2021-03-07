@@ -32,7 +32,7 @@ var _ = Describe("Notary", func() {
 
 			// generate a new key to add.
 			_, npubkey := QuickKey()
-			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: PermAll()})
+			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: UserFull()})
 			Expect(err).To(Succeed())
 			Expect(ngrant.Authorization).To(Equal(npubkey))
 		})
@@ -57,7 +57,7 @@ var _ = Describe("Notary", func() {
 
 			// generate a new key to add.
 			_, npubkey := QuickKey()
-			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: PermAll()})
+			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: UserFull()})
 			Expect(err).To(Succeed())
 			Expect(ngrant.Authorization).To(Equal(npubkey))
 			nrevoked, err := c.Revoke(ngrant.Fingerprint)

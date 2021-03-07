@@ -20,7 +20,7 @@ type Dialer struct {
 }
 
 // Dial ...
-func (t Dialer) Dial(options ...Option) (Cluster, error) {
+func (t Dialer) Dial(options ...Option) (Memberlist, error) {
 	options = append(t.dOptions, options...)
 	c, err := NewOptions(options...).NewCluster()
 	return c, errors.Wrap(err, "failed to join cluster")

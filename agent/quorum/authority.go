@@ -57,7 +57,7 @@ func (t Authority) Encode(dst io.Writer) (err error) {
 }
 
 // Decode ...
-func (t Authority) Decode(_ TranscoderContext, m agent.Message) (err error) {
+func (t Authority) Decode(_ TranscoderContext, m *agent.Message) (err error) {
 	var (
 		buf []byte
 		evt *agent.TLSEvent
@@ -77,7 +77,7 @@ func (t Authority) Decode(_ TranscoderContext, m agent.Message) (err error) {
 		return nil
 	}
 
-	if buf, err = proto.Marshal(&m); err != nil {
+	if buf, err = proto.Marshal(m); err != nil {
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (t Authority) load(d agent.Dispatcher) (err error) {
 		return err
 	}
 
-	return d.Dispatch(context.Background(), m)
+	return d.Dispatch(context.Background(), &m)
 }
 
 func (t Authority) generate(d agent.Dispatcher) (err error) {

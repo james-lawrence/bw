@@ -18,7 +18,7 @@ type Composite struct {
 
 // Lookup scan each bucket for the fingerprint starting with the primary.
 // returns the last error encountered.
-func (t Composite) Lookup(fingerprint string) (g Grant, err error) {
+func (t Composite) Lookup(fingerprint string) (g *Grant, err error) {
 	if g, err = t.primary.Lookup(fingerprint); err == nil {
 		return g, err
 	}
@@ -33,11 +33,11 @@ func (t Composite) Lookup(fingerprint string) (g Grant, err error) {
 }
 
 // Insert the grant into the primary.
-func (t Composite) Insert(g Grant) (Grant, error) {
+func (t Composite) Insert(g *Grant) (*Grant, error) {
 	return t.primary.Insert(g)
 }
 
 // Delete the grant from the primary.
-func (t Composite) Delete(g Grant) (Grant, error) {
+func (t Composite) Delete(g *Grant) (*Grant, error) {
 	return t.primary.Delete(g)
 }

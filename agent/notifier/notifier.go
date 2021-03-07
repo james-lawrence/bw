@@ -7,10 +7,11 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment/notifications"
+	"google.golang.org/grpc"
 )
 
 type dialer interface {
-	Dial(p agent.Peer) (agent.Client, error)
+	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
 }
 
 // New creates a notification agent from the given configuration.
@@ -26,12 +27,12 @@ type Notifier struct {
 }
 
 // Start processes notifications from the client.
-func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) {
+func (t Notifier) Start(ctx context.Context, local, proxy *agent.Peer, d dialer) {
 	var (
-		events = make(chan agent.Message, 5)
+		events = make(chan *agent.Message, 5)
 	)
 
-	go agentutil.WatchEvents(ctx, local, proxy, d, events)
+	go agentutil.WatchEvents(ctx, local, d, events)
 
 	for {
 		select {
@@ -40,7 +41,7 @@ func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) 
 		case m := <-events:
 			switch event := m.GetEvent().(type) {
 			case *agent.Message_DeployCommand:
-				dc := *event.DeployCommand
+				dc := event.DeployCommand
 				for _, n := range t.n {
 					notifyDeployCommand(n, dc)
 				}
@@ -55,7 +56,7 @@ func (t Notifier) Start(ctx context.Context, local, proxy agent.Peer, d dialer) 
 	}
 }
 
-func notifyDeployCommand(n notifications.Notifier, dc agent.DeployCommand) {
+func notifyDeployCommand(n notifications.Notifier, dc *agent.DeployCommand) {
 	switch dc.Command {
 	case agent.DeployCommand_Begin, agent.DeployCommand_Cancel, agent.DeployCommand_Done, agent.DeployCommand_Failed:
 		if dc.Archive != nil {

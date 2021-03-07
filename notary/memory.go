@@ -7,18 +7,18 @@ import (
 
 func newMem() memory {
 	return memory{
-		mem: map[string]Grant{},
+		mem: map[string]*Grant{},
 		m:   &sync.RWMutex{},
 	}
 }
 
 // memory storage
 type memory struct {
-	mem map[string]Grant
+	mem map[string]*Grant
 	m   *sync.RWMutex
 }
 
-func (t memory) Lookup(fingerprint string) (g Grant, err error) {
+func (t memory) Lookup(fingerprint string) (g *Grant, err error) {
 	var (
 		ok bool
 	)
@@ -33,17 +33,17 @@ func (t memory) Lookup(fingerprint string) (g Grant, err error) {
 	return g, nil
 }
 
-func (t memory) Insert(g Grant) (_ Grant, err error) {
+func (t memory) Insert(g *Grant) (_ *Grant, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	g = g.EnsureDefaults()
-	t.mem[g.Fingerprint] = g
+	gd := g.EnsureDefaults()
+	t.mem[g.Fingerprint] = gd
 
-	return g, nil
+	return gd, nil
 }
 
-func (t memory) Delete(g Grant) (r Grant, err error) {
+func (t memory) Delete(g *Grant) (r *Grant, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 

@@ -2,8 +2,10 @@ package bootstrap
 
 import (
 	"context"
+	"log"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -13,14 +15,14 @@ import (
 
 // NewLocal consumes a configuration and generates a bootstrap socket
 // for the agent.
-func NewLocal(p agent.Peer, d dialer) Local {
+func NewLocal(p *agent.Peer, d dialer) Local {
 	return Local{p: p, d: d}
 }
 
 // Local bootstrap service returns the latest deployment of the local agent.
 type Local struct {
 	agent.UnimplementedBootstrapServer
-	p agent.Peer
+	p *agent.Peer
 	d dialer
 }
 
@@ -35,7 +37,10 @@ func (t Local) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *ag
 		latest agent.Deploy
 	)
 
-	if latest, err = agentutil.LocalLatestDeployment(t.p, t.d); err != nil {
+	log.Println("Local.Archive initiated")
+	defer log.Println("Local.Archive completed")
+	d := dialers.NewDirect(agent.RPCAddress(t.p), t.d.Defaults()...)
+	if latest, err = agentutil.LocalLatestDeployment(d); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case agentutil.ErrNoDeployments:
 			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "local: latest deployment discovery found no deployments").Error())

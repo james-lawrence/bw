@@ -2,19 +2,19 @@ package daemons
 
 import (
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/bootstrap"
+	"github.com/james-lawrence/bw/storage"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
 )
 
 // Bootstrap daemon - pulls latest deploy from the cluster and ensures its running locally.
-func Bootstrap(ctx Context) (err error) {
+func Bootstrap(ctx Context, download storage.DownloadProtocol) (err error) {
 	cx := ctx.Cluster
-	dialer := agent.NewDialer(
-		agent.DefaultDialerOptions(
-			grpc.WithTransportCredentials(ctx.GRPCCreds()),
-		)...,
+	dialer := dialers.NewDirect(
+		agent.RPCAddress(cx.Local()),
+		ctx.Dialer.Defaults()...,
 	)
 
 	bootstrap.CleanSockets(ctx.Config)
@@ -39,7 +39,7 @@ func Bootstrap(ctx Context) (err error) {
 		bootstrap.OptionMaxAttempts(ctx.Config.Bootstrap.Attempts),
 	)
 
-	if err = bus.Run(ctx.Context, ctx.Config, ctx.Download, ctx.Results); err != nil {
+	if err = bus.Run(ctx.Context, ctx.Config, download, ctx.Results); err != nil {
 		// if bootstrapping fails shutdown the process.
 		return errors.Wrap(err, "failed to bootstrap node shutting down")
 	}

@@ -5,10 +5,10 @@ import (
 )
 
 type quorum interface {
-	Deploy(opts DeployOptions, a Archive, peers ...Peer) error
+	Deploy(opts DeployOptions, a Archive, peers ...*Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
-	Dispatch(context.Context, ...Message) error
+	Dispatch(context.Context, ...*Message) error
 	Info(context.Context) (InfoResponse, error)
 	Cancel(context.Context) error
 }
@@ -43,7 +43,7 @@ func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *Deplo
 		_zero DeployCommandResult
 	)
 
-	return &_zero, t.q.Deploy(*req.Options, *req.Archive, PtrToPeers(req.Peers...)...)
+	return &_zero, t.q.Deploy(*req.Options, *req.Archive, req.Peers...)
 }
 
 // Upload ...
@@ -58,7 +58,7 @@ func (t Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
 
 // Dispatch record deployment events.
 func (t Quorum) Dispatch(ctx context.Context, req *DispatchRequest) (*DispatchResponse, error) {
-	return &DispatchResponse{}, t.q.Dispatch(ctx, MessagesFromPtr(req.Messages...)...)
+	return &DispatchResponse{}, t.q.Dispatch(ctx, req.Messages...)
 }
 
 // Cancel the active deploy.

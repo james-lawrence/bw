@@ -27,27 +27,27 @@ type partitioner interface {
 
 // applies an operation to the node.
 type operation interface {
-	Visit(agent.Peer) (agent.Deploy, error)
+	Visit(*agent.Peer) (*agent.Deploy, error)
 }
 
 // OperationFunc pure function operation.
-type OperationFunc func(agent.Peer) (agent.Deploy, error)
+type OperationFunc func(*agent.Peer) (*agent.Deploy, error)
 
 // Visit implements operation.
-func (t OperationFunc) Visit(c agent.Peer) (agent.Deploy, error) {
+func (t OperationFunc) Visit(c *agent.Peer) (*agent.Deploy, error) {
 	return t(c)
 }
 
 type constantChecker struct {
-	Deploy agent.Deploy
+	Deploy *agent.Deploy
 }
 
-func (t constantChecker) Visit(agent.Peer) (agent.Deploy, error) {
+func (t constantChecker) Visit(*agent.Peer) (*agent.Deploy, error) {
 	return t.Deploy, nil
 }
 
 type cluster interface {
-	Peers() []agent.Peer
+	Peers() []*agent.Peer
 }
 
 // Option ...
@@ -97,13 +97,13 @@ func DeployOptionTimeout(t time.Duration) Option {
 }
 
 // NewDeploy by default deploys operate in one-at-a-time mode.
-func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
+func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
 			c:          make(chan func()),
 			wait:       new(sync.WaitGroup),
-			check:      constantChecker{Deploy: agent.Deploy{Stage: agent.Deploy_Completed}},
+			check:      constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
 			deploy:     OperationFunc(loggingDeploy),
 			dispatcher: di,
 			local:      p,
@@ -122,19 +122,19 @@ func NewDeploy(p agent.Peer, di dispatcher, options ...Option) Deploy {
 }
 
 // RunDeploy convience function for executing a deploy.
-func RunDeploy(p agent.Peer, c cluster, di dispatcher, options ...Option) (int64, bool) {
+func RunDeploy(p *agent.Peer, c cluster, di dispatcher, options ...Option) (int64, bool) {
 	return NewDeploy(p, di, options...).Deploy(c)
 }
 
-func loggingDeploy(peer agent.Peer) (agent.Deploy, error) {
+func loggingDeploy(peer *agent.Peer) (*agent.Deploy, error) {
 	log.Println("deploy triggered for peer", peer.String())
-	return agent.Deploy{Stage: agent.Deploy_Deploying}, nil
+	return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
 }
 
 type worker struct {
 	c              chan func()
 	wait           *sync.WaitGroup
-	local          agent.Peer
+	local          *agent.Peer
 	dispatcher     dispatcher
 	check          operation
 	deploy         operation
@@ -166,7 +166,7 @@ func (t worker) Complete() (int64, bool) {
 	return failures, t.ignoreFailures || failures == 0
 }
 
-func (t worker) DeployTo(peer agent.Peer) {
+func (t worker) DeployTo(peer *agent.Peer) {
 	t.c <- func() {
 		deadline, done := context.WithTimeout(context.Background(), t.timeout)
 		defer done()
@@ -229,8 +229,8 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 }
 
 // ApplyFilter applies the filter to the set of peers.
-func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
-	subset := make([]agent.Peer, 0, len(set))
+func ApplyFilter(s Filter, set ...*agent.Peer) []*agent.Peer {
+	subset := make([]*agent.Peer, 0, len(set))
 	for _, peer := range set {
 		if s.Match(peer) {
 			subset = append(subset, peer)
@@ -240,8 +240,8 @@ func ApplyFilter(s Filter, set ...agent.Peer) []agent.Peer {
 	return subset
 }
 
-func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c cluster, peers ...agent.Peer) error {
-	remaining := make([]agent.Peer, 0, len(peers))
+func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c cluster, peers ...*agent.Peer) error {
+	remaining := make([]*agent.Peer, 0, len(peers))
 	failed := error(nil)
 
 	b := backoff.Maximum(timex.DurationMin(time.Minute, timeout/4), backoff.Exponential(time.Second))

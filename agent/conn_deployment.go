@@ -49,14 +49,14 @@ func (t DeployConn) Cancel() error {
 	return errors.WithStack(err)
 }
 
-// Upload ...
+// Upload an archive to be deployed.
 func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info Archive, err error) {
 	var (
 		stream Deployments_UploadClient
 		_info  *UploadResponse
+		rpc    = NewDeploymentsClient(t.conn)
 	)
 
-	rpc := NewDeploymentsClient(t.conn)
 	if stream, err = rpc.Upload(context.Background()); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
@@ -95,12 +95,12 @@ func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info 
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t DeployConn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) (err error) {
+func (t DeployConn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
 	rpc := NewDeploymentsClient(t.conn)
 	req := DeployCommandRequest{
 		Archive: &a,
 		Options: &dopts,
-		Peers:   PeersToPtr(peers...),
+		Peers:   peers,
 	}
 
 	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
@@ -111,7 +111,7 @@ func (t DeployConn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...Peer) 
 }
 
 // Watch for messages sent to the leader. blocks.
-func (t DeployConn) Watch(ctx context.Context, out chan<- Message) (err error) {
+func (t DeployConn) Watch(ctx context.Context, out chan<- *Message) (err error) {
 	var (
 		src Deployments_WatchClient
 		msg *Message
@@ -123,17 +123,17 @@ func (t DeployConn) Watch(ctx context.Context, out chan<- Message) (err error) {
 	}
 
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
-		out <- *msg
+		out <- msg
 	}
 
 	return errorsx.Compact(errors.WithStack(err), src.CloseSend())
 }
 
 // Dispatch messages to the leader.
-func (t DeployConn) Dispatch(ctx context.Context, messages ...Message) (err error) {
+func (t DeployConn) Dispatch(ctx context.Context, messages ...*Message) (err error) {
 	var (
 		out = DispatchRequest{
-			Messages: MessagesToPtr(messages...),
+			Messages: messages,
 		}
 	)
 

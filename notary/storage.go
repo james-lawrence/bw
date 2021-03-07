@@ -15,8 +15,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/sshx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -163,7 +163,7 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 		}
 
 		g := Grant{
-			Permission:    ptr(all()),
+			Permission:    UserFull(),
 			Authorization: ssh.MarshalAuthorizedKey(key),
 		}.EnsureDefaults()
 

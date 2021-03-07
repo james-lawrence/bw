@@ -1,5 +1,5 @@
-address: "localhost:2002"
-discovery: "localhost:2001"
+address: "localhost:2000"
+discovery: "localhost:2000"
 concurrency: 2
 servername: "bearded-wookie.lan"
 ca: "${HOME}/.cache/bearded-wookie/agent1/tls/tlsca.cert"

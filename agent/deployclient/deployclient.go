@@ -10,7 +10,7 @@ import (
 )
 
 // NewClusterEventHandler ...
-func NewClusterEventHandler(bus chan agent.Message) ClusterEventHandler {
+func NewClusterEventHandler(bus chan *agent.Message) ClusterEventHandler {
 	return ClusterEventHandler{
 		bus: bus,
 	}
@@ -18,7 +18,7 @@ func NewClusterEventHandler(bus chan agent.Message) ClusterEventHandler {
 
 // ClusterEventHandler ...
 type ClusterEventHandler struct {
-	bus chan agent.Message
+	bus chan *agent.Message
 }
 
 // NotifyJoin logs when a peer joins.
@@ -39,7 +39,7 @@ func (t ClusterEventHandler) NotifyUpdate(peer *memberlist.Node) {
 func (t ClusterEventHandler) update(peer *memberlist.Node, options ...agent.PeerOption) {
 	var (
 		err error
-		p   agent.Peer
+		p   *agent.Peer
 	)
 
 	if p, err = agent.NodeToPeer(peer); err != nil {

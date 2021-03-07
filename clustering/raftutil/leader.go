@@ -77,7 +77,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
 	for _, peer := range candidates {
-		if rs, err = t.protocol.RaftAddr(peer); err != nil {
+		if rs, err = nodeToserver(peer); err != nil {
 			log.Println("failed to lookup peer", err)
 			return true
 		}

@@ -22,7 +22,7 @@ type Creator func() Notifier
 
 // Notifier ...
 type Notifier interface {
-	Notify(agent.DeployCommand)
+	Notify(*agent.DeployCommand)
 }
 
 // DecodeConfig ...
@@ -62,7 +62,7 @@ func DecodeConfig(path string, creators map[string]Creator) (n []Notifier, err e
 }
 
 // ExpandEnv replaces environment variables based on the deploy command
-func ExpandEnv(s string, dc agent.DeployCommand) string {
+func ExpandEnv(s string, dc *agent.DeployCommand) string {
 	return os.Expand(s, func(key string) string {
 		switch key {
 		case EnvDeployID:

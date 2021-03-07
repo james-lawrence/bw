@@ -22,16 +22,18 @@ func deployPointers(deploys ...Deploy) []*Deploy {
 }
 
 // ReadMetadata from the specified file.
-func ReadMetadata(path string) (a DeployCommand, err error) {
+func ReadMetadata(path string) (a *DeployCommand, err error) {
 	var (
 		raw []byte
 	)
+
+	a = &DeployCommand{}
 
 	if raw, err = ioutil.ReadFile(path); err != nil {
 		return a, errors.WithStack(err)
 	}
 
-	if err = proto.Unmarshal(raw, &a); err != nil {
+	if err = proto.Unmarshal(raw, a); err != nil {
 		return a, errors.WithStack(err)
 	}
 
@@ -39,7 +41,7 @@ func ReadMetadata(path string) (a DeployCommand, err error) {
 }
 
 // WriteMetadata to the specified file
-func WriteMetadata(path string, d DeployCommand) error {
+func WriteMetadata(path string, d *DeployCommand) error {
 	var (
 		err error
 		dst *os.File
@@ -52,7 +54,7 @@ func WriteMetadata(path string, d DeployCommand) error {
 	defer func() { logx.MaybeLog(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
 	defer func() { logx.MaybeLog(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
 
-	if raw, err = proto.Marshal(&d); err != nil {
+	if raw, err = proto.Marshal(d); err != nil {
 		return errors.WithStack(err)
 	}
 

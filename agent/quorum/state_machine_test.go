@@ -21,7 +21,7 @@ import (
 
 type mockLocal struct{}
 
-func (mockLocal) Local() agent.Peer {
+func (mockLocal) Local() *agent.Peer {
 	return agent.NewPeer("")
 }
 
@@ -116,8 +116,8 @@ func awaitFollower(protocols ...*raft.Raft) *raft.Raft {
 	}
 }
 
-func qCommand(d agent.DeployCommand_Command) agent.DeployCommand {
-	return agent.DeployCommand{
+func qCommand(d agent.DeployCommand_Command) *agent.DeployCommand {
+	return &agent.DeployCommand{
 		Command: d,
 		Archive: &agent.Archive{},
 		Options: &agent.DeployOptions{},
@@ -144,7 +144,7 @@ var _ = Describe("StateMachine", func() {
 	})
 
 	DescribeTable("persisting state",
-		func(n int, messages ...agent.Message) {
+		func(n int, messages ...*agent.Message) {
 			var (
 				decoded []agent.Message
 			)
@@ -175,7 +175,7 @@ var _ = Describe("StateMachine", func() {
 			Expect(
 				proto.Equal(
 					convert(agent.MessagesToPtr(decoded...)),
-					convert(agent.MessagesToPtr(messages[n:]...)),
+					convert(messages[n:]),
 				),
 			).To(BeTrue())
 		},
@@ -229,11 +229,7 @@ var _ = Describe("StateMachine", func() {
 	)
 
 	It("should return an error when dispatch fails", func() {
-		cmd := agent.DeployCommand{
-			Command: agent.DeployCommand_Begin,
-			Options: &agent.DeployOptions{},
-			Archive: &agent.Archive{},
-		}
+		cmd := qCommand(agent.DeployCommand_Begin)
 
 		protocols, _, err := newCluster(NewTranscoder(Discard{Cause: errors.New("boom")}), "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
@@ -247,14 +243,14 @@ var _ = Describe("StateMachine", func() {
 	})
 
 	It("should write message to the observer", func() {
-		messages := []agent.Message{
+		messages := []*agent.Message{
 			agentutil.LogEvent(local.Local(), "message 1"),
 			agentutil.LogEvent(local.Local(), "message 2"),
 			agentutil.LogEvent(local.Local(), "message 3"),
 			agentutil.LogEvent(local.Local(), "message 4"),
 		}
 
-		obs := make(chan agent.Message, len(messages))
+		obs := make(chan *agent.Message, len(messages))
 		ob := NewObserver(obs)
 		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
 		Expect(err).ToNot(HaveOccurred())
@@ -270,7 +266,7 @@ var _ = Describe("StateMachine", func() {
 		for _, m := range messages {
 			var expected agent.Message
 			Eventually(obs).Should(Receive(&expected))
-			Expect(proto.Equal(&expected, &m)).To(BeTrue())
+			Expect(proto.Equal(&expected, m)).To(BeTrue())
 		}
 	})
 })

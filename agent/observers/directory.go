@@ -13,6 +13,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
@@ -96,7 +97,7 @@ func (t Directory) Connect(b chan agent.Message) (l net.Listener, s *grpc.Server
 }
 
 // Dispatch messages to the observers.
-func (t Directory) Dispatch(ctx context.Context, messages ...agent.Message) error {
+func (t Directory) Dispatch(ctx context.Context, messages ...*agent.Message) error {
 	t.m.RLock()
 	cpy := make([]Conn, 0, len(t.observers))
 	for _, obs := range t.observers {
@@ -108,8 +109,10 @@ func (t Directory) Dispatch(ctx context.Context, messages ...agent.Message) erro
 		return nil
 	}
 
-	log.Println("observer dispatch initiated", len(cpy))
-	defer log.Println("observer dispatch completed", len(cpy))
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("observer dispatch initiated", len(cpy))
+		defer log.Println("observer dispatch completed", len(cpy))
+	}
 
 	for _, conn := range cpy {
 		if err := conn.Dispatch(ctx, messages...); err != nil {

@@ -25,6 +25,6 @@ func (t DisabledMachine) State() raft.RaftState {
 }
 
 // Dispatch a message to the WAL.
-func (t DisabledMachine) Dispatch(_ context.Context, m ...agent.Message) (err error) {
+func (t DisabledMachine) Dispatch(_ context.Context, m ...*agent.Message) (err error) {
 	return ErrDisabledMachine
 }

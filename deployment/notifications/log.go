@@ -20,6 +20,6 @@ type Stderr struct {
 }
 
 // Notify send notification about a deploy
-func (t Stderr) Notify(dc agent.DeployCommand) {
+func (t Stderr) Notify(dc *agent.DeployCommand) {
 	log.Println(ExpandEnv(t.Message, dc))
 }

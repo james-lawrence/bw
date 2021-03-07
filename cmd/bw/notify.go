@@ -8,6 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/notifier"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
@@ -59,7 +60,8 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(n))
 
-	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), agent.NewDialer(grpc.WithTransportCredentials(creds)))
+	d := dialers.NewDirect(agent.RPCAddress(t.config.Peer()), grpc.WithTransportCredentials(creds))
+	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), d)
 
 	return nil
 }

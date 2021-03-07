@@ -5,7 +5,7 @@ import (
 )
 
 // Cancel - cancels all deploys across the cluster.
-func Cancel(c peers, d agent.Dialer) error {
+func Cancel(c peers, d dialer2) error {
 	return NewClusterOperation(Operation(func(c agent.Client) error {
 		if cause := c.NodeCancel(); cause != nil {
 			return cause

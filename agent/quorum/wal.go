@@ -76,7 +76,7 @@ func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 		return err
 	}
 
-	if err = t.c.Decode(ctx, m); err != nil {
+	if err = t.c.Decode(ctx, &m); err != nil {
 		return err
 	}
 

@@ -79,7 +79,6 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 
 	coptions := []daemons.ConnectOption{
 		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
@@ -92,11 +91,11 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	cx := cluster.New(local, c)
-	if latest, err = agentutil.DetermineLatestDeployment(cx, agent.NewDialer(d.Defaults()...)); err != nil {
+	if latest, err = agentutil.DetermineLatestDeployment(cx, d); err != nil {
 		return err
 	}
 
-	logs := agentutil.DeploymentLogs(cx, agent.NewDialer(d.Defaults()...), latest.Archive.DeploymentID)
+	logs := agentutil.DeploymentLogs(cx, d, latest.Archive.DeploymentID)
 	return iox.Error(io.Copy(os.Stderr, logs))
 }
 
@@ -118,7 +117,7 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println("quorum")
 	for _, n := range resp.Nodes {
-		log.Print(spew.Sdump(*n))
+		log.Print(spew.Sdump(n))
 	}
 
 	return nil
@@ -150,7 +149,6 @@ func (t *agentInfo) _info() (err error) {
 
 	coptions := []daemons.ConnectOption{
 		daemons.ConnectOptionClustering(
-			clustering.OptionDelegate(local),
 			clustering.OptionNodeID(local.Peer.Name),
 			clustering.OptionBindAddress(local.Peer.Ip),
 			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
@@ -183,16 +181,16 @@ func (t *agentInfo) _info() (err error) {
 		}
 
 		return nil
-	}))(cx, agent.NewDialer(d.Defaults()...))
+	}))(cx, d)
 
 	logx.MaybeLog(err)
 
-	events := make(chan agent.Message, 100)
+	events := make(chan *agent.Message, 100)
 
 	t.global.cleanup.Add(1)
 	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(client)))
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(t.global.ctx, config.Discovery, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
+	agentutil.WatchClusterEvents(t.global.ctx, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
 
 	return nil
 }

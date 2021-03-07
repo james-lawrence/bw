@@ -14,43 +14,58 @@ import (
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
-// PermAll all the permissions.
-func PermAll() *Permission {
-	return ptr(all())
+func AgentGrant(pub []byte) *Grant {
+	return Grant{
+		Permission:    agent(),
+		Authorization: pub,
+	}.EnsureDefaults()
+}
+
+// UserFull all the permissions.
+func UserFull() *Permission {
+	return all()
+}
+
+func agent() *Permission {
+	return &Permission{
+		Grant:    false,
+		Revoke:   false,
+		Search:   false,
+		Refresh:  false,
+		Deploy:   true,
+		Autocert: true,
+	}
 }
 
 // grant all permissions
-func all() Permission {
-	return Permission{
-		Grant:   true,
-		Revoke:  true,
-		Search:  true,
-		Refresh: true,
-		Deploy:  true,
+func all() *Permission {
+	return &Permission{
+		Grant:    true,
+		Revoke:   true,
+		Search:   true,
+		Refresh:  true,
+		Deploy:   true,
+		Autocert: false,
 	}
 }
 
 // grant no permissions
-func none() Permission {
-	return Permission{}
-}
-
-func ptr(p Permission) *Permission {
-	return &p
+func none() *Permission {
+	return &Permission{}
 }
 
 func unwrap(p *Permission) Permission {
 	if p == nil {
-		return none()
+		p = none()
 	}
 
 	return *p
 }
 
 type storage interface {
-	Lookup(fingerprint string) (g Grant, err error)
-	Insert(Grant) (Grant, error)
-	Delete(Grant) (Grant, error)
+	Lookup(fingerprint string) (*Grant, error)
+	Insert(*Grant) (*Grant, error)
+	Delete(*Grant) (*Grant, error)
 }
 
 type option func(*Service)
@@ -94,7 +109,7 @@ func (t Service) Bind(s *grpc.Server, options ...option) {
 // Grant add a grant to the notary service.
 func (t Service) Grant(ctx context.Context, req *GrantRequest) (_ *GrantResponse, err error) {
 	var (
-		g    Grant
+		g    *Grant
 		resp GrantResponse
 	)
 
@@ -106,19 +121,19 @@ func (t Service) Grant(ctx context.Context, req *GrantRequest) (_ *GrantResponse
 		return &resp, errorsx.String("a grant must be provided")
 	}
 
-	if g, err = t.storage.Insert(*req.Grant); err != nil {
+	if g, err = t.storage.Insert(req.Grant); err != nil {
 		return &resp, err
 	}
 
 	return &GrantResponse{
-		Grant: &g,
+		Grant: g,
 	}, nil
 }
 
 // Revoke a grant from the notary service.
 func (t Service) Revoke(ctx context.Context, req *RevokeRequest) (_ *RevokeResponse, err error) {
 	var (
-		g    Grant
+		g    *Grant
 		resp RevokeResponse
 	)
 
@@ -126,12 +141,12 @@ func (t Service) Revoke(ctx context.Context, req *RevokeRequest) (_ *RevokeRespo
 		return &resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if g, err = t.storage.Delete(Grant{Fingerprint: req.Fingerprint}); err != nil {
+	if g, err = t.storage.Delete(&Grant{Fingerprint: req.Fingerprint}); err != nil {
 		return &resp, err
 	}
 
 	return &RevokeResponse{
-		Grant: &g,
+		Grant: g,
 	}, nil
 }
 

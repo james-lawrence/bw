@@ -8,9 +8,11 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -18,18 +20,18 @@ const (
 )
 
 type dispatcher interface {
-	Dispatch(context.Context, ...agent.Message) error
+	Dispatch(context.Context, ...*agent.Message) error
 }
 
 // Dispatch messages using the provided dispatcher will log and return the error,
 // if any, that occurs.
-func Dispatch(d dispatcher, m ...agent.Message) error {
+func Dispatch(d dispatcher, m ...*agent.Message) error {
 	return logx.MaybeLog(_dispatch(context.Background(), d, dispatchTimeout, m...))
 }
 
 // ReliableDispatch repeatedly attempts to deliver messages using the provided
 // context and dispatcher until the context is cancelled.
-func ReliableDispatch(ctx context.Context, d dispatcher, m ...agent.Message) (err error) {
+func ReliableDispatch(ctx context.Context, d dispatcher, m ...*agent.Message) (err error) {
 	bs := backoff.Maximum(10*time.Second, backoff.Exponential(200*time.Millisecond))
 	for i := 0; ; i++ {
 		if err = _dispatch(ctx, d, dispatchTimeout, m...); err == nil {
@@ -47,7 +49,7 @@ func ReliableDispatch(ctx context.Context, d dispatcher, m ...agent.Message) (er
 	}
 }
 
-func _dispatch(ctx context.Context, d dispatcher, timeout time.Duration, m ...agent.Message) error {
+func _dispatch(ctx context.Context, d dispatcher, timeout time.Duration, m ...*agent.Message) error {
 	ctx, done := context.WithTimeout(ctx, timeout)
 	defer done()
 
@@ -58,7 +60,7 @@ func _dispatch(ctx context.Context, d dispatcher, timeout time.Duration, m ...ag
 type DiscardDispatcher struct{}
 
 // Dispatch ...
-func (t DiscardDispatcher) Dispatch(_ context.Context, ms ...agent.Message) error {
+func (t DiscardDispatcher) Dispatch(_ context.Context, ms ...*agent.Message) error {
 	return nil
 }
 
@@ -66,7 +68,7 @@ func (t DiscardDispatcher) Dispatch(_ context.Context, ms ...agent.Message) erro
 type LogDispatcher struct{}
 
 // Dispatch ....
-func (t LogDispatcher) Dispatch(_ context.Context, ms ...agent.Message) error {
+func (t LogDispatcher) Dispatch(_ context.Context, ms ...*agent.Message) error {
 	for _, m := range ms {
 		log.Printf("dispatched %#v\n", m)
 	}
@@ -74,29 +76,27 @@ func (t LogDispatcher) Dispatch(_ context.Context, ms ...agent.Message) error {
 }
 
 // NewDispatcher create a message dispatcher from the cluster and credentials.
-func NewDispatcher(c cluster, d agent.QuorumDialer) *Dispatcher {
+func NewDispatcher(d dialers.ContextDialer) *Dispatcher {
 	return &Dispatcher{
-		cluster: c,
-		dialer:  d,
-		m:       &sync.Mutex{},
+		dialer: d,
+		m:      &sync.Mutex{},
 	}
 }
 
 // Dispatcher - dispatches messages.
 type Dispatcher struct {
-	cluster
-	dialer agent.QuorumDialer
-	c      agent.Client
+	dialer dialers.ContextDialer
+	c      *grpc.ClientConn
 	m      *sync.Mutex
 }
 
 // Dispatch dispatches messages
-func (t *Dispatcher) Dispatch(ctx context.Context, m ...agent.Message) (err error) {
+func (t *Dispatcher) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
 	var (
 		c agent.Client
 	)
 
-	if c, err = t.getClient(); err != nil {
+	if c, err = t.getClient(ctx); err != nil {
 		log.Println("-------------- dispatching failed---------------")
 		return err
 	}
@@ -104,18 +104,18 @@ func (t *Dispatcher) Dispatch(ctx context.Context, m ...agent.Message) (err erro
 	return logx.MaybeLog(t.dropClient(c, c.Dispatch(ctx, m...)))
 }
 
-func (t *Dispatcher) getClient() (c agent.Client, err error) {
+func (t *Dispatcher) getClient(ctx context.Context) (c agent.Client, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if t.c != nil {
-		return t.c, nil
+		return agent.NewConn(t.c), nil
 	}
 
-	if t.c, err = t.dialer.Dial(t.cluster); err != nil {
-		return t.c, err
+	if t.c, err = t.dialer.DialContext(ctx); err != nil {
+		return nil, err
 	}
 
-	return t.c, nil
+	return agent.NewConn(t.c), nil
 }
 
 func (t *Dispatcher) dropClient(bad agent.Client, err error) error {

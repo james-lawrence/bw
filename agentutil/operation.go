@@ -1,8 +1,12 @@
 package agentutil
 
 import (
+	"context"
+
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type operation interface {
@@ -18,20 +22,20 @@ func (t Operation) Visit(c agent.Client) error {
 }
 
 type peers interface {
-	Peers() []agent.Peer
+	Peers() []*agent.Peer
 }
 
 // PeerSet a set of static peers.
-type PeerSet []agent.Peer
+type PeerSet []*agent.Peer
 
 // Peers the set of peers.
-func (t PeerSet) Peers() []agent.Peer {
+func (t PeerSet) Peers() []*agent.Peer {
 	return t
 }
 
 // NewClusterOperation applies an operation to every node in the cluster.
-func NewClusterOperation(o operation) func(peers, dialer) error {
-	return func(c peers, d dialer) (err error) {
+func NewClusterOperation(o operation) func(peers, dialer2) error {
+	return func(c peers, d dialer2) (err error) {
 		for _, peer := range c.Peers() {
 			if err = dialAndVisit(d, peer, o); err != nil {
 				return err
@@ -42,15 +46,16 @@ func NewClusterOperation(o operation) func(peers, dialer) error {
 	}
 }
 
-func dialAndVisit(d dialer, p agent.Peer, o operation) (err error) {
+func dialAndVisit(d dialer2, p *agent.Peer, o operation) (err error) {
 	var (
-		cx agent.Client
+		conn *grpc.ClientConn
 	)
 
-	if cx, err = d.Dial(p); err != nil {
+	dd := dialers.NewDirect(agent.RPCAddress(p), d.Defaults()...)
+	if conn, err = dd.DialContext(context.Background()); err != nil {
 		return errors.WithStack(err)
 	}
-	defer cx.Close()
+	defer conn.Close()
 
-	return errors.WithStack(o.Visit(cx))
+	return errors.WithStack(o.Visit(agent.NewConn(conn)))
 }

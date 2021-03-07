@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/james-lawrence/bw/internal/x/sshx"
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
@@ -36,11 +36,11 @@ func (t selfsigned) Refresh() (err error) {
 		CommonName: t.domain,
 	})
 
-	if priv, err = sshx.MaybeDecodeRSA(sshx.CachedAuto(filepath.Join(t.credentialsDir, DefaultTLSKeyServer))); err != nil {
+	if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.credentialsDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
 
-	if template, err = tlsx.X509Template(minimumExpiration(), subject, tlsx.X509OptionCA()); err != nil {
+	if template, err = tlsx.X509Template(minimumExpiration(), subject, tlsx.X509OptionCA(), tlsx.X509OptionHosts(t.domain)); err != nil {
 		return err
 	}
 

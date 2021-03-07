@@ -20,8 +20,8 @@ import (
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/muxer"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
@@ -46,28 +46,13 @@ type state interface {
 	Update(cluster) state
 }
 
-type clusterEventType int
-
-const (
-	// EventJoined ...
-	EventJoined = iota
-	// EventLeft ...
-	EventLeft
-	// EventUpdate ...
-	EventUpdate
-	// EventUnstable ...
-	EventUnstable
-)
-
 type clusterObserver interface {
 	Observer(Event)
 }
 
 // Event ...
 type Event struct {
-	Type clusterEventType
-	Node agent.Peer
-	Peer raft.Server
+	*agent.ClusterWatchEvents
 	Raft *raft.Raft
 }
 
@@ -89,6 +74,22 @@ func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 }
 
 // ProtocolOptionTCPTransport set the state machine for the protocol
+func ProtocolOptionMuxerTransport(tcp *net.TCPAddr, m *muxer.M, ts *tls.Config) ProtocolOption {
+	return ProtocolOptionTransport(func() (_ raft.Transport, err error) {
+		var (
+			l net.Listener
+			d = muxer.NewDialer(bw.ProtocolRAFT, NewTLSStreamDialer(ts))
+		)
+
+		if l, err = m.Bind(bw.ProtocolRAFT, tcp); err != nil {
+			return nil, errors.WithStack(err)
+		}
+
+		return raft.NewNetworkTransport(NewTLSStreamLayer(l, d), 5, 10*time.Second, os.Stderr), nil
+	})
+}
+
+// ProtocolOptionTCPTransport set the state machine for the protocol
 func ProtocolOptionTCPTransport(tcp *net.TCPAddr, ts *tls.Config) ProtocolOption {
 	return ProtocolOptionTransport(func() (raft.Transport, error) {
 		var (
@@ -104,7 +105,7 @@ func ProtocolOptionTCPTransport(tcp *net.TCPAddr, ts *tls.Config) ProtocolOption
 			return nil, errors.WithStack(err)
 		}
 
-		return raft.NewNetworkTransport(NewTLSStreamLayer(l, ts), 5, 10*time.Second, os.Stderr), nil
+		return raft.NewNetworkTransport(NewTLSStreamLayer(tls.NewListener(l, ts), NewTLSStreamDialer(ts)), 5, 10*time.Second, os.Stderr), nil
 	})
 }
 
@@ -236,11 +237,14 @@ func (t *stateMeta) background() {
 		case <-t.ctx.Done():
 			return
 		case e := <-t.protocol.StabilityQueue.Queue:
-			e.Raft = t.r
+			evt := Event{
+				ClusterWatchEvents: e,
+				Raft:               t.r,
+			}
 			if t.protocol.clusterObserver != nil {
-				handleClusterEvent(e, t.protocol.clusterObserver)
+				handleClusterEvent(evt, t.protocol.clusterObserver)
 			} else {
-				handleClusterEvent(e)
+				handleClusterEvent(evt)
 			}
 
 			log.Println("broadcasting cluster change due to unstable cluster")
@@ -299,11 +303,6 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 			s = s.Update(c)
 		}
 	}
-}
-
-// RaftAddr ...
-func (t *Protocol) RaftAddr(n *memberlist.Node) (raft.Server, error) {
-	return t.StabilityQueue.Provider.RaftAddr(n)
 }
 
 func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
@@ -396,12 +395,12 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 		return
 	}
 
-	switch e.Type {
-	case EventJoined:
+	switch e.Event {
+	case agent.ClusterWatchEvents_Joined:
 		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Joined), 10*time.Second); err != nil {
 			log.Println("failed apply peer", err)
 		}
-	case EventLeft:
+	case agent.ClusterWatchEvents_Depart:
 		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Departed), 10*time.Second); err != nil {
 			log.Println("failed apply peer", err)
 		}
@@ -412,80 +411,22 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 	}
 }
 
-// QueuedEvent ...
-type QueuedEvent struct {
-	Event clusterEventType
-	Node  *memberlist.Node
-}
-
 // BacklogQueueWorker ...
 type BacklogQueueWorker struct {
-	Provider addressProdvider
-	Queue    chan Event
+	Queue chan *agent.ClusterWatchEvents
 }
 
-// Background ...
-func (t BacklogQueueWorker) Background(backlog BacklogQueue) {
-	var (
-		err error
-		rs  raft.Server
-	)
-
-	for n := range backlog.Backlog {
-		if rs, err = t.Provider.RaftAddr(n.Node); err != nil {
-			log.Println("ignoring join due to error decoding meta data", err)
-			continue
-		}
-		p := agent.MustPeer(agent.NodeToPeer(n.Node))
-
-		if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
-			log.Println(n.Event, spew.Sdump(p))
-		}
-
-		t.Queue <- Event{
-			Type: n.Event,
-			Node: agent.MustPeer(agent.NodeToPeer(n.Node)),
-			Peer: rs,
-		}
+func (t BacklogQueueWorker) Enqueue(ctx context.Context, evt *agent.ClusterWatchEvents) error {
+	if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
+		log.Println("BacklogQueueWorker.Enqueue", evt.Event.String(), evt.Node.Ip, evt.Node.Name, "initiated")
+		log.Println("BacklogQueueWorker.Enqueue", evt.Event.String(), evt.Node.Ip, evt.Node.Name, "completed")
 	}
-}
 
-// BacklogQueue ...
-type BacklogQueue struct {
-	Backlog chan QueuedEvent
-}
-
-// NotifyJoin is invoked when a node is detected to have joined.
-// The Node argument must not be modified.
-func (t BacklogQueue) NotifyJoin(n *memberlist.Node) {
-	log.Println("Join:", n.Name)
 	select {
-	case t.Backlog <- QueuedEvent{Event: EventJoined, Node: n}:
-	default:
-		log.Println("dropping node join onto the floor due to full queue", n.Name)
-	}
-}
-
-// NotifyLeave is invoked when a node is detected to have left.
-// The Node argument must not be modified.
-func (t BacklogQueue) NotifyLeave(n *memberlist.Node) {
-	log.Println("Leave:", n.Name)
-	select {
-	case t.Backlog <- QueuedEvent{Event: EventLeft, Node: n}:
-	default:
-		log.Println("dropping node leave onto the floor due to full queue", n.Name)
-	}
-}
-
-// NotifyUpdate is invoked when a node is detected to have
-// updated, usually involving the meta data. The Node argument
-// must not be modified.
-func (t BacklogQueue) NotifyUpdate(n *memberlist.Node) {
-	log.Println("Update:", n.Name)
-	select {
-	case t.Backlog <- QueuedEvent{Event: EventUpdate, Node: n}:
-	default:
-		log.Println("dropping node leave onto the floor due to full queue", n.Name)
+	case t.Queue <- evt:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
@@ -521,14 +462,14 @@ func possiblePeers(n int, c cluster) []*memberlist.Node {
 	return c.GetN(n, []byte(agent.QuorumKey))
 }
 
-func configuration(provider addressProdvider, c cluster) (conf raft.Configuration) {
+func configuration(c cluster) (conf raft.Configuration) {
 	var (
 		err error
 		rs  raft.Server
 	)
 
 	for _, peer := range agent.QuorumNodes(c) {
-		if rs, err = provider.RaftAddr(peer); err != nil {
+		if rs, err = nodeToserver(peer); err != nil {
 			log.Println("ignoring peer, unable to compute address", peer.String(), err)
 			continue
 		}
@@ -558,4 +499,20 @@ func peersToString(peers ...*memberlist.Node) []string {
 		results = append(results, peer.Name)
 	}
 	return results
+}
+
+func nodeToserver(n *memberlist.Node) (_zero raft.Server, err error) {
+	var (
+		p *agent.Peer
+	)
+
+	if p, err = agent.NodeToPeer(n); err != nil {
+		return _zero, err
+	}
+
+	return raft.Server{
+		ID:       raft.ServerID(n.Name),
+		Address:  raft.ServerAddress(agent.RaftAddress(p)),
+		Suffrage: raft.Voter,
+	}, err
 }

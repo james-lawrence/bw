@@ -16,14 +16,15 @@ message Archive {
 
 message PeerMetadata {
   bytes capability = 1;
+  int32 Status = 6;
+  uint32 P2PPort = 9;
+  // deprecated - temporary ports until libp2p is deployed
   uint32 RPCPort = 2;
   uint32 RaftPort = 3;
   uint32 SWIMPort = 4;
   uint32 TorrentPort = 5;
   uint32 DiscoveryPort = 7;
-  // deprecated - temporary field until RPC credentials is prevelant.
   uint32 AutocertPort = 8;
-  int32 Status = 6;
 }
 
 message Peer {
@@ -35,13 +36,15 @@ message Peer {
   State Status = 1;
   string ip = 2;
   string name = 3;
+  uint32 P2PPort = 10;
+  // deprecated - temporary ports until libp2p is deployed
+  uint32 AutocertPort = 9;
   uint32 RPCPort = 4;
   uint32 RaftPort = 5;
   uint32 SWIMPort = 6;
   uint32 TorrentPort = 7;
   uint32 DiscoveryPort = 8;
-  // deprecated - temporary field until RPC credentials is prevelant.
-  uint32 AutocertPort = 9;
+  bytes PublicKey = 11;
 }
 
 message TLSEvent {
@@ -267,4 +270,22 @@ message ArchiveResponse {
 
 service Bootstrap {
   rpc Archive(ArchiveRequest) returns (ArchiveResponse) {}
+}
+
+
+// ClusterEvents an in memory service for dealing with events that occur within the cluster.
+message ClusterWatchRequest{}
+message ClusterWatchEvents{
+  enum Event {
+    Joined = 0;
+    Depart = 1;
+    Update = 2;
+  }
+
+  Event event = 1;
+  Peer node = 2;
+}
+
+service Cluster {
+  rpc Watch(ClusterWatchRequest) returns ( stream ClusterWatchEvents){}
 }

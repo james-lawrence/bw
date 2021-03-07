@@ -171,27 +171,27 @@ type Options struct {
 
 // NewCluster initializes a cluster based on the options and optionally bootstraps
 // the node from the provided addresses.
-func (t Options) NewCluster() (Cluster, error) {
+func (t Options) NewCluster() (Memberlist, error) {
 	return newCluster(t.Config)
 }
 
 // NewCluster ...
-func NewCluster(options ...Option) (Cluster, error) {
+func NewCluster(options ...Option) (Memberlist, error) {
 	return newCluster(NewOptions(options...).Config)
 }
 
-func newCluster(config *memberlist.Config) (Cluster, error) {
+func newCluster(config *memberlist.Config) (Memberlist, error) {
 	var (
 		err     error
 		members *memberlist.Memberlist
-		c       Cluster
+		c       Memberlist
 	)
 
 	if members, err = memberlist.Create(config); err != nil {
 		return c, errors.WithStack(err)
 	}
 
-	c = Cluster{
+	c = Memberlist{
 		config: config,
 		list:   members,
 	}

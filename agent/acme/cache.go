@@ -11,7 +11,7 @@ import (
 )
 
 type resolution interface {
-	Resolution(ctx context.Context) (c Challenge, err error)
+	Resolution(ctx context.Context) (c *Challenge, err error)
 }
 
 // NewALPNCertCache certificate lookup for ALPN requests.
@@ -28,7 +28,7 @@ type ALPNCertCache struct {
 // GetCertificate returns a certificate based on the challenge.
 func (t ALPNCertCache) GetCertificate(hello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
 	var (
-		cc Challenge
+		cc *Challenge
 	)
 
 	if cc, err = t.r.Resolution(context.Background()); err != nil {

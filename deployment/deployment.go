@@ -62,7 +62,7 @@ func AwaitDeployResult(dctx DeployContext) DeployResult {
 }
 
 // NewDeployContext create a deployment context from the provided settings.
-func NewDeployContext(root string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewDeployContext(root string, p *agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	id := bw.RandomID(a.DeploymentID)
 
 	dctx := DeployContext{
@@ -108,7 +108,7 @@ func deployDirs(root string, a agent.Archive) (bw.RandomID, string, string) {
 
 // NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
-func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
 	var (
 		logger dlog
 	)
@@ -134,7 +134,7 @@ func NewRemoteDeployContext(workdir string, p agent.Peer, dopts agent.DeployOpti
 
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
-	Local         agent.Peer
+	Local         *agent.Peer
 	completed     chan DeployResult
 	ID            bw.RandomID
 	disableReset  bool
@@ -157,7 +157,7 @@ func (t DeployContext) timeout() time.Duration {
 }
 
 // Dispatch an event to the cluster
-func (t DeployContext) Dispatch(m ...agent.Message) error {
+func (t DeployContext) Dispatch(m ...*agent.Message) error {
 	return logx.MaybeLog(agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...))
 }
 
@@ -251,7 +251,7 @@ func (t DeployResult) deployComplete() agent.Deploy {
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
 	d := agent.Deploy{Stage: agent.Deploy_Completed, Archive: &tmpa, Options: &tmpo}
-	t.Dispatch(agentutil.DeployEvent(t.Local, d))
+	t.Dispatch(agentutil.DeployEvent(t.Local, &d))
 	return d
 }
 
@@ -264,7 +264,7 @@ func (t DeployResult) deployFailed(err error) agent.Deploy {
 	d := agent.Deploy{Stage: agent.Deploy_Failed, Archive: &tmpa, Options: &tmpo}
 	t.Dispatch(
 		agentutil.LogError(t.Local, err),
-		agentutil.DeployEvent(t.Local, d),
+		agentutil.DeployEvent(t.Local, &d),
 	)
 	return d
 }
@@ -278,5 +278,5 @@ func (t DeployResult) complete() agent.Deploy {
 }
 
 type dispatcher interface {
-	Dispatch(context.Context, ...agent.Message) error
+	Dispatch(context.Context, ...*agent.Message) error
 }

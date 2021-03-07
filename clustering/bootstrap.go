@@ -108,7 +108,7 @@ func newBootstrap(options ...BootstrapOption) bootstrap {
 }
 
 // Bootstrap - bootstraps the provided cluster using the options provided.
-func Bootstrap(ctx context.Context, c cluster, options ...BootstrapOption) error {
+func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) error {
 	var (
 		err      error
 		joined   int
@@ -178,8 +178,9 @@ retry:
 }
 
 // Peers converts the peers into an array of host:port.
-func Peers(c cluster) []string {
-	peers := c.Members()
+func Peers(c Rendezvous) []string {
+	const key = "d989d44e-c327-41ef-9810-14a3768f2dc7"
+	peers := c.GetN(10, []byte(key))
 	list := make([]string, 0, len(peers))
 	for _, peer := range peers {
 		list = append(list, net.JoinHostPort(peer.Addr.String(), strconv.Itoa(int(peer.Port))))

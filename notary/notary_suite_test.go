@@ -8,7 +8,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/james-lawrence/bw/internal/x/sshx"
+	"github.com/james-lawrence/bw/internal/rsax"
+	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/testingx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
@@ -39,13 +40,13 @@ func QuickService() (notary.Client, func()) {
 
 // QuickStorage ...
 func QuickStorage() (encoded []byte, s notary.Directory) {
-	pkey, err := sshx.Generate(1024)
+	pkey, err := rsax.Generate(1024)
 	Expect(err).To(Succeed())
 	pubkey, err := sshx.PublicKey(pkey)
 	Expect(err).To(Succeed())
 
 	storage := notary.NewDirectory(testingx.TempDir())
-	_, err = storage.Insert(notary.Grant{Authorization: pubkey, Permission: notary.PermAll()})
+	_, err = storage.Insert(&notary.Grant{Authorization: pubkey, Permission: notary.UserFull()})
 	Expect(err).To(Succeed())
 
 	return pkey, storage
@@ -54,7 +55,7 @@ func QuickStorage() (encoded []byte, s notary.Directory) {
 // QuickKey generate a quick keypair.
 func QuickKey() ([]byte, []byte) {
 	// generate a new key to add.
-	pkey, err := sshx.UnsafeAuto()
+	pkey, err := rsax.UnsafeAuto()
 	Expect(err).To(Succeed())
 	pubkey, err := sshx.PublicKey(pkey)
 	Expect(err).To(Succeed())

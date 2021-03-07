@@ -51,6 +51,8 @@ const (
 	DeployLog = "deploy.log"
 	// ArchiveFile name of the archive file stored on disk
 	ArchiveFile = "archive.tar.gz"
+	// DefaultP2PPort port which will replace all other ports
+	DefaultP2PPort = 2000
 	// DefaultDiscoveryPort default port for the public service.
 	// discovery is special because it expects to be accessed globally.
 	DefaultDiscoveryPort = 2001
@@ -74,6 +76,16 @@ const (
 	DefaultTLSKeyCA = "tlsca.key"
 	// DefaultTLSCertCA default name for the certificate authority certificate.
 	DefaultTLSCertCA = "tlsca.cert"
+)
+
+// The various protocols defined for bearded wookie
+const (
+	ProtocolDiscovery = "bw.discovery"
+	ProtocolSWIM      = "bw.swim"
+	ProtocolRAFT      = "bw.raft"
+	ProtocolAgent     = "bw.agent"
+	ProtocolAutocert  = "bw.autocert"
+	ProtocolTorrent   = "bw.torrent"
 )
 
 // DeployDir return the deploy directory under the given root.

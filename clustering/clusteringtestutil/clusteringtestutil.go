@@ -28,7 +28,7 @@ func defaultLocalConfig() *memberlist.Config {
 }
 
 // NewPeerFromConfig ...
-func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) (c clustering.Cluster, err error) {
+func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) (c clustering.Memberlist, err error) {
 	// The mock network cannot be shutdown cleanly, so ignore it, even though it would be ideal
 	// for this use case.
 	transport, err := memberlist.NewNetTransport(&memberlist.NetTransportConfig{
@@ -53,15 +53,15 @@ func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) 
 }
 
 // NewPeer ...
-func NewPeer(network *memberlist.MockNetwork, options ...clustering.Option) (c clustering.Cluster, err error) {
+func NewPeer(network *memberlist.MockNetwork, options ...clustering.Option) (c clustering.Memberlist, err error) {
 	return NewPeerFromConfig(defaultLocalConfig(), options...)
 }
 
 // NewCluster ...
-func NewCluster(n int, options ...clustering.Option) (network memberlist.MockNetwork, out []clustering.Cluster, err error) {
+func NewCluster(n int, options ...clustering.Option) (network memberlist.MockNetwork, out []clustering.Memberlist, err error) {
 	for i := 0; i < n; i++ {
 		var (
-			c clustering.Cluster
+			c clustering.Memberlist
 		)
 
 		if c, err = NewPeer(&network, options...); err != nil {
@@ -81,7 +81,7 @@ func NewCluster(n int, options ...clustering.Option) (network memberlist.MockNet
 }
 
 // Connect the local node to the provided peers.
-func Connect(local clustering.Cluster, peers ...clustering.Cluster) (int, error) {
+func Connect(local clustering.Memberlist, peers ...clustering.Memberlist) (int, error) {
 	log.Println("connecting to", len(peers))
 	addrs := make([]string, 0, len(peers))
 	for _, p := range peers {
@@ -92,7 +92,7 @@ func Connect(local clustering.Cluster, peers ...clustering.Cluster) (int, error)
 }
 
 // ShutdownCluster ...
-func ShutdownCluster(nodes ...clustering.Cluster) (err error) {
+func ShutdownCluster(nodes ...clustering.Memberlist) (err error) {
 	for _, n := range nodes {
 		if cause := n.Shutdown(); cause != nil && err == nil {
 			err = cause

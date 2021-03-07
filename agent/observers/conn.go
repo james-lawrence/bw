@@ -34,10 +34,10 @@ type Conn struct {
 }
 
 // Dispatch the messages.
-func (t Conn) Dispatch(ctx context.Context, messages ...agent.Message) (err error) {
+func (t Conn) Dispatch(ctx context.Context, messages ...*agent.Message) (err error) {
 	var (
 		dispatch = agent.DispatchRequest{
-			Messages: agent.MessagesToPtr(messages...),
+			Messages: messages,
 		}
 	)
 

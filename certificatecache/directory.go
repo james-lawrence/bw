@@ -15,7 +15,7 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
@@ -124,6 +124,10 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 func (t Directory) load(path string) (err error) {
 	var ca []byte
 
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("loading authority", path)
+	}
+
 	if ca, err = ioutil.ReadFile(path); err != nil {
 		return errors.Wrapf(err, "failed to read certificate: %s", path)
 	}
@@ -144,7 +148,9 @@ func (t *Directory) refresh() (err error) {
 	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSBootstrapCert)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
-	debugx.Println("loading", certpath, keypath)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("loading", certpath, keypath)
+	}
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {
 		return errors.WithStack(err)
@@ -154,6 +160,13 @@ func (t *Directory) refresh() (err error) {
 	defer t.m.Unlock()
 
 	t.cachedCert = &cert
+
+	bootstrapcert := bw.LocateFirstInDir(t.dir, DefaultTLSBootstrapCert)
+	if systemx.FileExists(bootstrapcert) {
+		if err = t.load(bootstrapcert); err != nil {
+			return err
+		}
+	}
 
 	if systemx.FileExists(t.caFile) {
 		if err = t.load(t.caFile); err != nil {

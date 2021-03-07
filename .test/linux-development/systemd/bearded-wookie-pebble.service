@@ -10,9 +10,13 @@ RuntimeDirectory=%p/%i
 CacheDirectory=%p/%i
 WorkingDirectory=%h/.config/%p
 SyslogIdentifier=%p
+Environment=PEBBLE_VA_NOSLEEP=1
+Environment=PEBBLE_WFE_NONCEREJECT=0
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY} runtime=${RUNTIME_DIRECTORY} - ${PWD}"
-ExecStartPre=go get -u github.com/letsencrypt/pebble/...
 ExecStart=%h/go/bin/pebble -config ${STATE_DIRECTORY}/config.json
+ExecStartPost=sleep 5
+ExecStartPost=echo curl --insecure https://localhost:15000/intermediates/0 --output ${STATE_DIRECTORY}/certs/pebble.pem
+ExecStartPost=curl --insecure https://localhost:15000/intermediates/0 --output ${STATE_DIRECTORY}/certs/pebble.pem
 
 [Install]
 WantedBy=default.target

@@ -27,7 +27,7 @@ func OptionFailureDisplay(fd failureDisplay) Option {
 }
 
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message, options ...Option) {
+func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message, options ...Option) {
 	defer wg.Done()
 
 	var (
@@ -44,7 +44,7 @@ func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message, 
 }
 
 // Logging based ux
-func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message, options ...Option) {
+func Logging(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message, options ...Option) {
 	defer wg.Done()
 
 	var (
@@ -60,7 +60,7 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan agent.Message,
 	run(ctx, events, s)
 }
 
-func run(ctx context.Context, events chan agent.Message, s consumer) {
+func run(ctx context.Context, events chan *agent.Message, s consumer) {
 	for {
 		select {
 		case m := <-events:
@@ -90,7 +90,7 @@ func (t cState) merge(options ...Option) cState {
 	return dup
 }
 
-func (t cState) print(m agent.Message) {
+func (t cState) print(m *agent.Message) {
 	switch m.Type {
 	case agent.Message_PeerEvent:
 	case agent.Message_DeployCommandEvent:
@@ -123,7 +123,7 @@ func (t cState) print(m agent.Message) {
 	}
 }
 
-func (t cState) printDeployCommand(m agent.Message) {
+func (t cState) printDeployCommand(m *agent.Message) {
 	d := m.GetDeployCommand()
 	switch d.Command {
 	case agent.DeployCommand_Begin:
@@ -152,14 +152,14 @@ func (t cState) printDeployCommand(m agent.Message) {
 }
 
 type consumer interface {
-	Consume(agent.Message) consumer
+	Consume(*agent.Message) consumer
 }
 
 type tail struct {
 	cState
 }
 
-func (t tail) Consume(m agent.Message) consumer {
+func (t tail) Consume(m *agent.Message) consumer {
 	t.cState.print(m)
 	return t
 }
@@ -168,7 +168,7 @@ type deploying struct {
 	cState
 }
 
-func (t deploying) Consume(m agent.Message) consumer {
+func (t deploying) Consume(m *agent.Message) consumer {
 	t.cState.print(m)
 
 	switch m.Type {
@@ -188,7 +188,7 @@ func (t deploying) Consume(m agent.Message) consumer {
 			digest := md5.Sum([]byte(d.Error))
 			return failure{
 				cState: t.cState,
-				failures: map[string]agent.Message{
+				failures: map[string]*agent.Message{
 					hex.EncodeToString(digest[:]): m,
 				},
 			}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/james-lawrence/bw/agent"
@@ -16,6 +15,7 @@ import (
 
 // Mock bootstrap service
 type Mock struct {
+	agent.UnimplementedBootstrapServer
 	Fail    error
 	Current agent.Deploy
 	Info    agent.ArchiveResponse_Info
@@ -70,8 +70,8 @@ func (t fakeClient) RemoteDeploy(dopts agent.DeployOptions, a agent.Archive, pee
 	return t.errResult
 }
 
-func (t fakeClient) Deploy(agent.DeployOptions, agent.Archive) (agent.Deploy, error) {
-	return t.deploy, t.errResult
+func (t fakeClient) Deploy(*agent.DeployOptions, *agent.Archive) (*agent.Deploy, error) {
+	return &t.deploy, t.errResult
 }
 
 func (t fakeClient) Connect() (agent.ConnectResponse, error) {
@@ -79,7 +79,6 @@ func (t fakeClient) Connect() (agent.ConnectResponse, error) {
 }
 
 func (t fakeClient) Info() (agent.StatusResponse, error) {
-	log.Println("INFO", t.status, t.errResult)
 	return t.status, t.errResult
 }
 
@@ -87,11 +86,11 @@ func (t fakeClient) QuorumInfo() (agent.InfoResponse, error) {
 	return t.qinfo, t.errResult
 }
 
-func (t fakeClient) Watch(_ context.Context, out chan<- agent.Message) error {
+func (t fakeClient) Watch(_ context.Context, out chan<- *agent.Message) error {
 	return t.errResult
 }
 
-func (t fakeClient) Dispatch(_ context.Context, messages ...agent.Message) error {
+func (t fakeClient) Dispatch(_ context.Context, messages ...*agent.Message) error {
 	return t.errResult
 }
 
@@ -100,11 +99,15 @@ type fakeDialer struct {
 	local fakeClient
 }
 
-func (t fakeDialer) Dial(p agent.Peer) (agent.Client, error) {
+func (t fakeDialer) Dial(...grpc.DialOption) (*grpc.ClientConnInterface, error) {
 	if p.Name == "local" {
 		return t.local, nil
 	}
 	return t.c, nil
+}
+
+func (t fakeDialer) Defaults(...grpc.DialOption) []grpc.DialOption {
+	return []grpc.DialOption{}
 }
 
 type noopDeployer struct {

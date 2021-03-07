@@ -55,7 +55,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 
-			q := PeersToPtr(h.cluster.Quorum()...)
+			q := h.cluster.Quorum()
 			info, err := h.client.Connect()
 			Expect(err).ToNot(HaveOccurred())
 			Expect(info.Quorum).To(ConsistOf(q[0], q[1], q[2]))
@@ -81,7 +81,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 
-			_, err := h.client.Deploy(DeployOptions{}, Archive{})
+			_, err := h.client.Deploy(&DeployOptions{}, &Archive{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
@@ -91,7 +91,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 			p := h.cluster.Local()
-			pipe := h.client.Logs(context.Background(), &p, []byte("fake"))
+			pipe := h.client.Logs(context.Background(), p, []byte("fake"))
 			raw, err := ioutil.ReadAll(pipe)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(raw)).To(Equal("INFO: fake"))

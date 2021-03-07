@@ -1,18 +1,21 @@
 package agentutil
 
 import (
+	"context"
 	"log"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
 // If no error occurs, latest.Archive is guaranteed to be populated.
-func DetermineLatestDeployment(c cluster, d dialer) (latest agent.Deploy, err error) {
+func DetermineLatestDeployment(c cluster, d dialer2) (latest agent.Deploy, err error) {
 	type result struct {
 		deploy agent.Deploy
 		count  int
@@ -87,15 +90,19 @@ func quorum(c cluster, votes int) bool {
 
 // QuorumLatestDeployment determines the latest deployment by asking the agents
 // who are in the raft cluster what the latest deployment is.
-func QuorumLatestDeployment(c cluster, d dialer) (z agent.Deploy, err error) {
+func QuorumLatestDeployment(c cluster, d dialer2) (z agent.Deploy, err error) {
 	var (
+		conn   *grpc.ClientConn
 		i      agent.InfoResponse
 		client agent.Client
 	)
 
-	if client, err = agent.NewQuorumDialer(d).Dial(c); err != nil {
+	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
 		return z, err
 	}
+	defer conn.Close()
+
+	client = agent.NewConn(conn)
 
 	if i, err = client.QuorumInfo(); err != nil {
 		return z, errorsx.Compact(err, client.Close())
@@ -125,16 +132,16 @@ func QuorumLatestDeployment(c cluster, d dialer) (z agent.Deploy, err error) {
 }
 
 // LocalLatestDeployment determines the latest successful local deployment.
-func LocalLatestDeployment(local agent.Peer, d dialer) (a agent.Deploy, err error) {
+func LocalLatestDeployment(d dialers.ContextDialer) (a agent.Deploy, err error) {
 	var (
-		c agent.Client
+		c *grpc.ClientConn
 	)
 
-	if c, err = d.Dial(local); err != nil {
+	if c, err = d.DialContext(context.Background()); err != nil {
 		return a, errors.Wrap(err, "failed to connect to local server")
 	}
 
-	a, err = AgentLatestDeployment(c)
+	a, err = AgentLatestDeployment(agent.NewConn(c))
 
 	return a, errorsx.Compact(err, c.Close())
 }
@@ -199,7 +206,7 @@ func LocateDeployment(c cluster, d dialer2, filter func(agent.Deploy) bool) (lat
 		return nil
 	}
 
-	if err = NewClusterOperation(Operation(locate))(c, agent.NewDialer(d.Defaults()...)); errors.Cause(err) == done {
+	if err = NewClusterOperation(Operation(locate))(c, d); errors.Cause(err) == done {
 		return latest, nil
 	}
 
