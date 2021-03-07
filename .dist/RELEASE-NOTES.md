@@ -1,3 +1,51 @@
+commit 1a4acad73737b5242926dca883f9e356ed81866b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 16:38:04 2021 -0500
+
+    debugging logs
+
+commit d4dcfac96cb93212ada65e70bb1ee148d68c9dbc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 15:04:17 2021 -0500
+
+    enable quorum command
+
+commit 4b20c7cf5b0aa5d40717d2ecfe21a4fd57d339ef
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 14:59:45 2021 -0500
+
+    add quorum members to info
+
+commit 57f316bd2a5ca6501cf1a4220667c37ac501ea89
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 14:59:20 2021 -0500
+
+    add quorum members to quorum info
+
+commit 91b4991b431bff2488d2925de5f33ec154a14d23
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 14:58:58 2021 -0500
+
+    update dependencies
+
+commit 97cb0c913413f7b00eac7cbb9354acb10f5a9fac
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 13:46:49 2021 -0500
+
+    add info to agentctl
+
+commit de2b261498dd3d55fe41118c13a14a866927084e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 6 13:01:10 2021 -0500
+
+    clustering debug
+
+commit c4cab818d0f42c71765cf488cc0ace944a0d8133
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Mar 4 04:41:56 2021 -0500
+
+    release 0.1.1614850675-164713c6
+
 commit 164713c6dc1b45c83d2c9eec69f446cf6252fa23
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Mar 4 04:37:55 2021 -0500
