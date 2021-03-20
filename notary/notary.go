@@ -71,6 +71,7 @@ func New(servername string, a authority, s storage, options ...option) Service {
 
 // Service of a notary service
 type Service struct {
+	UnimplementedNotaryServer
 	servername string
 	authority  authority
 	storage    storage

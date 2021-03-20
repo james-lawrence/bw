@@ -20,6 +20,7 @@ func NewQuorum(c cluster, d dialer) Quorum {
 
 // Quorum implements the cluster bootstrap service.
 type Quorum struct {
+	agent.UnimplementedBootstrapServer
 	c cluster
 	d dialer
 }

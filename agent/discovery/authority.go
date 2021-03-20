@@ -19,6 +19,7 @@ func NewAuthority(protoPath string) Authority {
 
 // Authority provides methods around the TLS authority.
 type Authority struct {
+	UnimplementedAuthorityServer
 	protoPath string
 }
 

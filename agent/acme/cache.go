@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 
-	"github.com/go-acme/lego/challenge/tlsalpn01"
+	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/internal/x/logx"

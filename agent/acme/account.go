@@ -5,7 +5,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/go-acme/lego/registration"
+	"github.com/go-acme/lego/v4/registration"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/sshx"

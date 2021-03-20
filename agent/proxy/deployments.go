@@ -26,6 +26,7 @@ func NewDeployment(a auth, d dialers.DefaultsDialer) Deployment {
 
 // Deployment - proxy deployment commands from any agent to quorum.
 type Deployment struct {
+	agent.UnimplementedDeploymentsServer
 	Auth   auth
 	Dialer dialers.DefaultsDialer // must be a quorum dialer.
 }

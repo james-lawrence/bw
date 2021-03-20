@@ -22,6 +22,7 @@ func New(b chan agent.Message) (s *grpc.Server) {
 
 // Observer observes events of the cluster.
 type Observer struct {
+	agent.UnimplementedObserverServer
 	bus chan agent.Message
 }
 

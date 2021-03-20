@@ -22,6 +22,7 @@ func NewQuorum(q quorum) Quorum {
 
 // Quorum implements quorum functionality.
 type Quorum struct {
+	UnimplementedQuorumServer
 	q quorum
 }
 

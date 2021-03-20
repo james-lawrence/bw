@@ -11,7 +11,7 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/go-acme/lego/lego"
+	"github.com/go-acme/lego/v4/lego"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw/internal/x/logx"

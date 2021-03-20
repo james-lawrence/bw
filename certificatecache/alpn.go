@@ -3,7 +3,7 @@ package certificatecache
 import (
 	"crypto/tls"
 
-	"github.com/go-acme/lego/challenge/tlsalpn01"
+	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 )
 
 // represents a certificate cache

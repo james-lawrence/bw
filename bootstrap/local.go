@@ -19,6 +19,7 @@ func NewLocal(p agent.Peer, d dialer) Local {
 
 // Local bootstrap service returns the latest deployment of the local agent.
 type Local struct {
+	agent.UnimplementedBootstrapServer
 	p agent.Peer
 	d dialer
 }

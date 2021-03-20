@@ -20,6 +20,7 @@ func NewProxy(d dialer) Proxy {
 
 // Proxy service proxies the request to another service based on the dialer.
 type Proxy struct {
+	UnimplementedNotaryServer
 	c cached
 }
 

@@ -37,6 +37,7 @@ func NewFilesystem(a agent.Config, c cluster, d dialer) Filesystem {
 // successful deployment to the filesystem and return that deployment when queried.
 // this is useful for storing a backup copy that can be treated as bootstrappable archive.
 type Filesystem struct {
+	agent.UnimplementedBootstrapServer
 	a        agent.Config
 	c        cluster
 	d        dialer

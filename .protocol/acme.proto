@@ -1,5 +1,6 @@
 syntax = "proto3";
 package acme;
+option go_package = "github.com/james-lawrence/agent/acme";
 
 message Challenge {
   string domain = 1;

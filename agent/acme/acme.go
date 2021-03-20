@@ -23,12 +23,13 @@ import (
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
-	"github.com/go-acme/lego/certcrypto"
-	"github.com/go-acme/lego/challenge"
-	"github.com/go-acme/lego/lego"
-	"github.com/go-acme/lego/providers/dns/gcloud"
-	"github.com/go-acme/lego/providers/dns/route53"
-	"github.com/go-acme/lego/registration"
+	"github.com/go-acme/lego/v4/certcrypto"
+	"github.com/go-acme/lego/v4/certificate"
+	"github.com/go-acme/lego/v4/challenge"
+	"github.com/go-acme/lego/v4/lego"
+	"github.com/go-acme/lego/v4/providers/dns/gcloud"
+	"github.com/go-acme/lego/v4/providers/dns/route53"
+	"github.com/go-acme/lego/v4/registration"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -82,6 +83,7 @@ func newService(c agent.Config, ac certificatecache.ACMEConfig, u account) Servi
 
 // Service is responsible for generating and resolving ACME protocol certificates.
 type Service struct {
+	UnimplementedACMEServer
 	c        agent.Config
 	ac       certificatecache.ACMEConfig
 	u        account
@@ -185,8 +187,11 @@ func (t Service) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Ch
 			return resp, status.Error(codes.Internal, "acme setup dns failure")
 		}
 	}
-
-	certificates, err := client.Certificate.ObtainForCSR(*template, true)
+	request := certificate.ObtainForCSRRequest{
+		CSR:    template,
+		Bundle: true,
+	}
+	certificates, err := client.Certificate.ObtainForCSR(request)
 	if err != nil {
 		log.Println("unable to retrieve certificate", err)
 		return resp, status.Error(codes.Aborted, "acme certificate signature request failed")

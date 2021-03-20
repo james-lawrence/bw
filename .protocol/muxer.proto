@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package muxer;
+
+option go_package = "github.com/james-lawrence/muxer";
+
+message Handshake {
+  int32 version  = 1;
+  bytes protocol = 2;
+}

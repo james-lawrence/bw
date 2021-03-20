@@ -1,7 +1,7 @@
 module github.com/james-lawrence/bw
 
 require (
-	cloud.google.com/go v0.38.0
+	cloud.google.com/go v0.54.0
 	github.com/0xAX/notificator v0.0.0-20191016112426-3962a5ea8da1
 	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
 	github.com/Microsoft/go-winio v0.4.3 // indirect
@@ -13,7 +13,7 @@ require (
 	github.com/armon/go-metrics v0.3.5 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
-	github.com/aws/aws-sdk-go v1.23.0
+	github.com/aws/aws-sdk-go v1.37.27
 	github.com/cenkalti/backoff v2.1.1+incompatible // indirect
 	github.com/containerd/continuity v0.0.0-20181203112020-004b46473808 // indirect
 	github.com/coreos/go-systemd/v22 v22.0.0
@@ -26,15 +26,15 @@ require (
 	github.com/elazarl/go-bindata-assetfs v0.0.0-20160803192304-e1a2a7ec64b0 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/fatih/structs v1.1.0 // indirect
-	github.com/fsnotify/fsnotify v1.4.7
+	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gizak/termui v2.1.1+incompatible
-	github.com/go-acme/lego v2.7.2+incompatible
+	github.com/go-acme/lego/v4 v4.3.1
 	github.com/go-ldap/ldap v3.0.2+incompatible // indirect
 	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-test/deep v1.0.2 // indirect
 	github.com/gocql/gocql v0.0.0-20190910075112-d63913db787c // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/protobuf v1.4.1
+	github.com/golang/protobuf v1.5.1
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
@@ -47,16 +47,14 @@ require (
 	github.com/hashicorp/go-msgpack v1.1.5 // indirect
 	github.com/hashicorp/go-plugin v1.0.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
-	github.com/hashicorp/go-uuid v1.0.1 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/hcl v0.0.0-20180906183839-65a6292f0157 // indirect
 	github.com/hashicorp/memberlist v0.1.5
 	github.com/hashicorp/raft v1.2.0
 	github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617
 	github.com/hashicorp/vault v0.10.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190318174639-195e0e9d07f1 // indirect
-	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
+	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 	github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
 	github.com/jefferai/jsonx v1.0.1 // indirect
@@ -70,13 +68,11 @@ require (
 	github.com/manifoldco/promptui v0.7.0
 	github.com/maruel/panicparse v1.0.2 // indirect
 	github.com/maruel/ut v1.0.1 // indirect
-	github.com/mattn/go-runewidth v0.0.4 // indirect
-	github.com/miekg/dns v1.1.15
+	github.com/miekg/dns v1.1.40
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
-	github.com/mitchellh/mapstructure v1.1.2 // indirect
 	github.com/mitchellh/reflectwalk v1.0.1 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
@@ -90,22 +86,23 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/subosito/gotenv v1.1.0
+	github.com/subosito/gotenv v1.2.0
 	github.com/traefik/yaegi v0.9.8
-	golang.org/x/crypto v0.0.0-20190701094942-4def268fd1a4
-	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
-	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20201218084310-7d0127a74742 // indirect
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	golang.org/x/tools v0.0.0-20190524140312-2c0ae7006135
-	google.golang.org/api v0.8.0
-	google.golang.org/grpc v1.27.0
-	google.golang.org/protobuf v1.25.0
+	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
+	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20210319071255-635bc2c9138d // indirect
+	golang.org/x/text v0.3.5 // indirect
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
+	golang.org/x/tools v0.0.0-20200304193943-95d2e580d8eb
+	google.golang.org/api v0.20.0
+	google.golang.org/genproto v0.0.0-20210319143718-93e7006c17a6 // indirect
+	google.golang.org/grpc v1.36.0
+	google.golang.org/protobuf v1.26.0
 	gopkg.in/asn1-ber.v1 v1.0.0-20181015200546-f715ec2f112d // indirect
 	gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22 // indirect
 	gopkg.in/ory-am/dockertest.v3 v3.3.5 // indirect
-	gopkg.in/square/go-jose.v2 v2.3.1 // indirect
-	gopkg.in/yaml.v2 v2.2.7
+	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible // indirect
 )
 

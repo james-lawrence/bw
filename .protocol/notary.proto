@@ -1,5 +1,6 @@
 syntax = "proto3";
 package notary;
+option go_package = "github.com/james-lawrence/notary";
 
 message Token {
   bytes ID = 1;

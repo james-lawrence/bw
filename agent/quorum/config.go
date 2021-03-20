@@ -28,6 +28,7 @@ func NewConfigurationService(c Configuration) ConfigurationService {
 
 // ConfigurationService ...
 type ConfigurationService struct {
+	agent.UnimplementedConfigurationServer
 	c Configuration
 	m *sync.Mutex
 }

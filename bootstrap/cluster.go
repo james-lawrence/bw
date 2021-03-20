@@ -21,6 +21,7 @@ func NewCluster(c cluster, d dialer) Cluster {
 // within the cluster for that latest successful deploy and returning the deploy
 // that exceeds 50% of the cluster's agents.
 type Cluster struct {
+	agent.UnimplementedBootstrapServer
 	c cluster
 	d dialer
 }

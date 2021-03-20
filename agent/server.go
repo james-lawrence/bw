@@ -95,6 +95,7 @@ func NewServer(c connector, options ...ServerOption) Server {
 
 // Server ...
 type Server struct {
+	UnimplementedAgentServer
 	shutdown  context.CancelFunc
 	Deployer  deployer
 	connector connector

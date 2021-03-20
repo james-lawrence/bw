@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package agent;
 
+option go_package = "github.com/james-lawrence/agent";
+
 message Archive {
   bytes deploymentID = 1;
   Peer peer = 2;

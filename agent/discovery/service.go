@@ -16,6 +16,7 @@ func New(c cluster) Discovery {
 
 // Discovery provides information requestors
 type Discovery struct {
+	UnimplementedDiscoveryServer
 	c cluster
 }
 

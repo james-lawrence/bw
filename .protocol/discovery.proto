@@ -1,5 +1,7 @@
 syntax = "proto3";
+
 package discovery;
+option go_package = "github.com/james-lawrence/agent/discovery";
 
 message Node {
   string ip = 1;
