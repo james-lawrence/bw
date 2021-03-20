@@ -4,7 +4,21 @@ package muxer;
 
 option go_package = "github.com/james-lawrence/muxer";
 
-message Handshake {
+message Requested {
   int32 version  = 1;
   bytes protocol = 2;
+}
+
+message Accepted {
+  enum error {
+    Unused = 0;
+    None = 1;
+    ServerError = 2;
+    ClientError = 3;
+    UnknownProtocol = 4;
+  }
+
+  int32 version = 1;
+  error code = 2;
+  bytes protocol = 3;
 }

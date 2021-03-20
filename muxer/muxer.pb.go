@@ -25,7 +25,62 @@ const (
 // of the legacy proto package is being used.
 const _ = proto.ProtoPackageIsVersion4
 
-type Handshake struct {
+type AcceptedError int32
+
+const (
+	Accepted_Unused          AcceptedError = 0
+	Accepted_None            AcceptedError = 1
+	Accepted_ServerError     AcceptedError = 2
+	Accepted_ClientError     AcceptedError = 3
+	Accepted_UnknownProtocol AcceptedError = 4
+)
+
+// Enum value maps for AcceptedError.
+var (
+	AcceptedError_name = map[int32]string{
+		0: "Unused",
+		1: "None",
+		2: "ServerError",
+		3: "ClientError",
+		4: "UnknownProtocol",
+	}
+	AcceptedError_value = map[string]int32{
+		"Unused":          0,
+		"None":            1,
+		"ServerError":     2,
+		"ClientError":     3,
+		"UnknownProtocol": 4,
+	}
+)
+
+func (x AcceptedError) Enum() *AcceptedError {
+	p := new(AcceptedError)
+	*p = x
+	return p
+}
+
+func (x AcceptedError) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AcceptedError) Descriptor() protoreflect.EnumDescriptor {
+	return file_muxer_proto_enumTypes[0].Descriptor()
+}
+
+func (AcceptedError) Type() protoreflect.EnumType {
+	return &file_muxer_proto_enumTypes[0]
+}
+
+func (x AcceptedError) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AcceptedError.Descriptor instead.
+func (AcceptedError) EnumDescriptor() ([]byte, []int) {
+	return file_muxer_proto_rawDescGZIP(), []int{1, 0}
+}
+
+type Requested struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -34,8 +89,8 @@ type Handshake struct {
 	Protocol []byte `protobuf:"bytes,2,opt,name=protocol,proto3" json:"protocol,omitempty"`
 }
 
-func (x *Handshake) Reset() {
-	*x = Handshake{}
+func (x *Requested) Reset() {
+	*x = Requested{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_muxer_proto_msgTypes[0]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -43,13 +98,13 @@ func (x *Handshake) Reset() {
 	}
 }
 
-func (x *Handshake) String() string {
+func (x *Requested) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Handshake) ProtoMessage() {}
+func (*Requested) ProtoMessage() {}
 
-func (x *Handshake) ProtoReflect() protoreflect.Message {
+func (x *Requested) ProtoReflect() protoreflect.Message {
 	mi := &file_muxer_proto_msgTypes[0]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -61,19 +116,82 @@ func (x *Handshake) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Handshake.ProtoReflect.Descriptor instead.
-func (*Handshake) Descriptor() ([]byte, []int) {
+// Deprecated: Use Requested.ProtoReflect.Descriptor instead.
+func (*Requested) Descriptor() ([]byte, []int) {
 	return file_muxer_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Handshake) GetVersion() int32 {
+func (x *Requested) GetVersion() int32 {
 	if x != nil {
 		return x.Version
 	}
 	return 0
 }
 
-func (x *Handshake) GetProtocol() []byte {
+func (x *Requested) GetProtocol() []byte {
+	if x != nil {
+		return x.Protocol
+	}
+	return nil
+}
+
+type Accepted struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Version  int32         `protobuf:"varint,1,opt,name=version,proto3" json:"version,omitempty"`
+	Code     AcceptedError `protobuf:"varint,2,opt,name=code,proto3,enum=muxer.AcceptedError" json:"code,omitempty"`
+	Protocol []byte        `protobuf:"bytes,3,opt,name=protocol,proto3" json:"protocol,omitempty"`
+}
+
+func (x *Accepted) Reset() {
+	*x = Accepted{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_muxer_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Accepted) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Accepted) ProtoMessage() {}
+
+func (x *Accepted) ProtoReflect() protoreflect.Message {
+	mi := &file_muxer_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Accepted.ProtoReflect.Descriptor instead.
+func (*Accepted) Descriptor() ([]byte, []int) {
+	return file_muxer_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Accepted) GetVersion() int32 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *Accepted) GetCode() AcceptedError {
+	if x != nil {
+		return x.Code
+	}
+	return Accepted_Unused
+}
+
+func (x *Accepted) GetProtocol() []byte {
 	if x != nil {
 		return x.Protocol
 	}
@@ -84,14 +202,26 @@ var File_muxer_proto protoreflect.FileDescriptor
 
 var file_muxer_proto_rawDesc = []byte{
 	0x0a, 0x0b, 0x6d, 0x75, 0x78, 0x65, 0x72, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x05, 0x6d,
-	0x75, 0x78, 0x65, 0x72, 0x22, 0x41, 0x0a, 0x09, 0x48, 0x61, 0x6e, 0x64, 0x73, 0x68, 0x61, 0x6b,
-	0x65, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01,
+	0x75, 0x78, 0x65, 0x72, 0x22, 0x41, 0x0a, 0x09, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x65,
+	0x64, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01,
 	0x28, 0x05, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x1a, 0x0a, 0x08, 0x70,
 	0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x42, 0x21, 0x5a, 0x1f, 0x67, 0x69, 0x74, 0x68, 0x75,
-	0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6a, 0x61, 0x6d, 0x65, 0x73, 0x2d, 0x6c, 0x61, 0x77, 0x72,
-	0x65, 0x6e, 0x63, 0x65, 0x2f, 0x6d, 0x75, 0x78, 0x65, 0x72, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
-	0x6f, 0x33,
+	0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x22, 0xc1, 0x01, 0x0a, 0x08, 0x41, 0x63, 0x63, 0x65,
+	0x70, 0x74, 0x65, 0x64, 0x12, 0x18, 0x0a, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x76, 0x65, 0x72, 0x73, 0x69, 0x6f, 0x6e, 0x12, 0x29,
+	0x0a, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x15, 0x2e, 0x6d,
+	0x75, 0x78, 0x65, 0x72, 0x2e, 0x41, 0x63, 0x63, 0x65, 0x70, 0x74, 0x65, 0x64, 0x2e, 0x65, 0x72,
+	0x72, 0x6f, 0x72, 0x52, 0x04, 0x63, 0x6f, 0x64, 0x65, 0x12, 0x1a, 0x0a, 0x08, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x08, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x22, 0x54, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x0a,
+	0x0a, 0x06, 0x55, 0x6e, 0x75, 0x73, 0x65, 0x64, 0x10, 0x00, 0x12, 0x08, 0x0a, 0x04, 0x4e, 0x6f,
+	0x6e, 0x65, 0x10, 0x01, 0x12, 0x0f, 0x0a, 0x0b, 0x53, 0x65, 0x72, 0x76, 0x65, 0x72, 0x45, 0x72,
+	0x72, 0x6f, 0x72, 0x10, 0x02, 0x12, 0x0f, 0x0a, 0x0b, 0x43, 0x6c, 0x69, 0x65, 0x6e, 0x74, 0x45,
+	0x72, 0x72, 0x6f, 0x72, 0x10, 0x03, 0x12, 0x13, 0x0a, 0x0f, 0x55, 0x6e, 0x6b, 0x6e, 0x6f, 0x77,
+	0x6e, 0x50, 0x72, 0x6f, 0x74, 0x6f, 0x63, 0x6f, 0x6c, 0x10, 0x04, 0x42, 0x21, 0x5a, 0x1f, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6a, 0x61, 0x6d, 0x65, 0x73, 0x2d,
+	0x6c, 0x61, 0x77, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2f, 0x6d, 0x75, 0x78, 0x65, 0x72, 0x62, 0x06,
+	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -106,16 +236,20 @@ func file_muxer_proto_rawDescGZIP() []byte {
 	return file_muxer_proto_rawDescData
 }
 
-var file_muxer_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_muxer_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_muxer_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_muxer_proto_goTypes = []interface{}{
-	(*Handshake)(nil), // 0: muxer.Handshake
+	(AcceptedError)(0), // 0: muxer.Accepted.error
+	(*Requested)(nil),  // 1: muxer.Requested
+	(*Accepted)(nil),   // 2: muxer.Accepted
 }
 var file_muxer_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: muxer.Accepted.code:type_name -> muxer.Accepted.error
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_muxer_proto_init() }
@@ -125,7 +259,19 @@ func file_muxer_proto_init() {
 	}
 	if !protoimpl.UnsafeEnabled {
 		file_muxer_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*Handshake); i {
+			switch v := v.(*Requested); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_muxer_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Accepted); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -142,13 +288,14 @@ func file_muxer_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_muxer_proto_rawDesc,
-			NumEnums:      0,
-			NumMessages:   1,
+			NumEnums:      1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_muxer_proto_goTypes,
 		DependencyIndexes: file_muxer_proto_depIdxs,
+		EnumInfos:         file_muxer_proto_enumTypes,
 		MessageInfos:      file_muxer_proto_msgTypes,
 	}.Build()
 	File_muxer_proto = out.File
