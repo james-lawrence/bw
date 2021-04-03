@@ -19,7 +19,6 @@ import (
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/muxer"
 
 	"github.com/hashicorp/memberlist"
@@ -147,7 +146,7 @@ func ProtocolOptionPassiveCheckin(d time.Duration) ProtocolOption {
 // ProtocolOptionLeadershipGrace how long to wait before considering the leader dead.
 func ProtocolOptionLeadershipGrace(d time.Duration) ProtocolOption {
 	return func(p *Protocol) {
-		p.leadershipGrace = d
+		p.lastContactGrace = d
 	}
 }
 
@@ -173,7 +172,7 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 		ClusterChange:    sync.NewCond(&sync.Mutex{}),
 		enableSingleNode: false,
 		config:           defaultRaftConfig(),
-		leadershipGrace:  time.Minute,
+		lastContactGrace: time.Minute,
 		PassiveCheckin:   time.Minute,
 		PassiveReset: func() (Storage, raft.SnapshotStore, error) {
 			return raft.NewInmemStore(), raft.NewInmemSnapshotStore(), nil
@@ -188,13 +187,13 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 }
 
 type stateMeta struct {
-	initTime  time.Time
-	r         *raft.Raft
-	transport raft.Transport
-	protocol  *Protocol
-	sgroup    *sync.WaitGroup
-	ctx       context.Context
-	done      context.CancelFunc
+	lastContact time.Time
+	r           *raft.Raft
+	transport   raft.Transport
+	protocol    *Protocol
+	sgroup      *sync.WaitGroup
+	ctx         context.Context
+	done        context.CancelFunc
 }
 
 func (t *stateMeta) waitShutdown(c cluster) {
@@ -241,14 +240,19 @@ func (t *stateMeta) background() {
 				ClusterWatchEvents: e,
 				Raft:               t.r,
 			}
+
 			if t.protocol.clusterObserver != nil {
 				handleClusterEvent(evt, t.protocol.clusterObserver)
 			} else {
 				handleClusterEvent(evt)
 			}
 
-			log.Println("broadcasting cluster change due to unstable cluster")
-			t.protocol.ClusterChange.Broadcast()
+			switch e.Event {
+			case agent.ClusterWatchEvents_Update:
+			default:
+				log.Println("broadcasting cluster change due to unstable cluster", e.Event.String())
+				t.protocol.ClusterChange.Broadcast()
+			}
 		}
 	}
 }
@@ -276,7 +280,7 @@ type Protocol struct {
 	clusterObserver  clusterObserver
 	enableSingleNode bool
 	config           *raft.Config
-	leadershipGrace  time.Duration // how long to wait before a missing leader triggers a reset
+	lastContactGrace time.Duration // how long to wait before a missing leader triggers a reset
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
@@ -303,18 +307,6 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 			s = s.Update(c)
 		}
 	}
-}
-
-func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
-	leader := string(p.Leader())
-
-	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.leadershipGrace, lastSeen)
-	if leader == "" && lastSeen.Add(t.leadershipGrace).Before(time.Now()) {
-		log.Println("leader is missing and grace period has passed, resetting this peer", t.leadershipGrace)
-		return true
-	}
-
-	return false
 }
 
 func defaultRaftConfig() *raft.Config {

@@ -224,7 +224,7 @@ func (t *agentCmd) bind() (err error) {
 
 	// this unsafe dialer is used for the retrieving the response to an ACME challenge.
 	// this is safe to do because:
-	// 1. we'll only dial peers in our rendezous cluster. which have a pre shared key
+	// 1. we'll only dial peers in our cluster. which have a pre shared key
 	//    that validated them. (otherwise they couldn't be a member)
 	// 2. the server we contact also ensures the client is a member of the cluster by validating the request signature.
 	// 3. any individual agent only initiates challenges with servers that do have a valid TLS certificate.

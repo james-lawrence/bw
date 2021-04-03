@@ -1,50 +1,60 @@
 package raftutil
 
 import (
+	"log"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 )
 
 type peer struct {
 	stateMeta
 }
 
-func (t peer) lastContact() time.Time {
-	var (
-		lastContact = t.r.LastContact()
-	)
+func (t peer) deadleadership(p *raft.Raft) bool {
+	leader := string(p.Leader())
 
-	// if lastContact is a zero time. then we've never had a leader.
-	// when this is the case fallback to the initTime of the this peer.
-	if lastContact.IsZero() {
-		return t.initTime
+	// one would expect to be able to use raft's LastContact() function here instead of maintaining our own.
+	// however that function doesn't actually return accurate values. it updates every time a protocol message
+	// is sent, including candidate promotions. thereby not accurately representing the last contact time with
+	// the leadership.
+	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.lastContact, t.protocol.lastContactGrace)
+	if leader == "" && t.lastContact.Add(t.protocol.lastContactGrace).Before(time.Now()) {
+		log.Println("leader is missing and grace period has passed, resetting this peer", t.protocol.lastContactGrace)
+		return true
 	}
 
-	return lastContact
+	return false
+}
+
+func (t peer) updateLastContact(p *raft.Raft, n time.Time) peer {
+	leader := string(p.Leader())
+	if leader != "" {
+		t.lastContact = n
+	}
+
+	return peer{
+		stateMeta: t.stateMeta,
+	}
 }
 
 func (t peer) Update(c cluster) state {
-	var (
-		maintain state = conditionTransition{
-			next: t,
-			cond: t.protocol.ClusterChange,
-		}
-	)
-
 	switch s := t.r.State(); s {
 	case raft.Leader:
 		return leader{
 			stateMeta: t.stateMeta,
 		}.Update(c)
 	default:
-		debugx.Println(c.LocalNode().Name, "peer current state", s)
-		if maybeLeave(c) || t.protocol.deadlockedLeadership(c.LocalNode(), t.r, t.lastContact()) {
+		debugx.Println("peer current state", s)
+		if maybeLeave(c) || t.deadleadership(t.r) {
 			return leave(c, t.stateMeta)
 		}
-		debugx.Println(c.LocalNode().Name, "peer state updated", s)
-	}
 
-	return maintain
+		return conditionTransition{
+			next: t.updateLastContact(t.r, time.Now()),
+			cond: t.protocol.ClusterChange,
+		}
+	}
 }

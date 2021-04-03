@@ -46,13 +46,13 @@ func (t passive) Update(c cluster) state {
 
 	ctx, done := context.WithCancel(t.protocol.Context)
 	sm := stateMeta{
-		r:         r,
-		transport: network,
-		protocol:  t.protocol,
-		sgroup:    t.sgroup,
-		initTime:  time.Now(),
-		ctx:       ctx,
-		done:      done,
+		r:           r,
+		transport:   network,
+		protocol:    t.protocol,
+		sgroup:      t.sgroup,
+		lastContact: time.Now(),
+		ctx:         ctx,
+		done:        done,
 	}
 
 	if r.LastIndex() == 0 {
