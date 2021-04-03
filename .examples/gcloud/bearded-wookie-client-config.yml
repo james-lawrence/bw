@@ -1,3 +1,2 @@
-discovery: "${bearded_wookie_server}:2001"
-address: "${bearded_wookie_server}:2002"
+address: "${bearded_wookie_server}:2000"
 servername: "${bearded_wookie_server}"

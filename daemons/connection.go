@@ -121,7 +121,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		grpc.WithInsecure(),
 	)
 
-	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Discovery), dopts...); err != nil {
+	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), dopts...); err != nil {
 		return d, c, err
 	}
 
@@ -131,7 +131,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 
 	c = clustering.NewStatic(nodes...)
 
-	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Discovery), dopts...), c, err
+	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), dopts...), c, err
 }
 
 func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Memberlist, err error) {

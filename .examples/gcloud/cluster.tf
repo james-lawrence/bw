@@ -51,7 +51,7 @@ resource "google_compute_instance_template" "default" {
   description = "this template is used to create dht server instances."
 
   labels = {
-    environment = "${terraform.workspace}"
+    environment = terraform.workspace
   }
 
   instance_description = ""
@@ -92,7 +92,7 @@ resource "google_compute_instance_group_manager" "default" {
   base_instance_name = var.cluster
   zone               = var.zone
   target_size        = var.cluster_size
-  target_pools       = ["${google_compute_target_pool.default.self_link}"]
+  target_pools       = [google_compute_target_pool.default.self_link]
 
   named_port {
     name = "bearded-wookie-discovery"

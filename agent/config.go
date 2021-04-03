@@ -26,7 +26,7 @@ func CCOptionTLSConfig(name string) ConfigClientOption {
 // CCOptionAddress set address for the configuration.
 func CCOptionAddress(s string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.Address = net.JoinHostPort(s, strconv.Itoa(bw.DefaultRPCPort))
+		c.Address = net.JoinHostPort(s, strconv.Itoa(bw.DefaultP2PPort))
 		c.ServerName = s
 	}
 }
@@ -78,7 +78,6 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
 		Address:       systemx.HostnameOrLocalhost(),
-		Discovery:     systemx.HostnameOrLocalhost(),
 		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
 		DeployPrompt:  "are you sure you want to deploy? (remove this field to disable the prompt)",
 		DeployTimeout: bw.DefaultDeployTimeout,
@@ -93,7 +92,6 @@ func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
 type ConfigClient struct {
 	root            string `yaml:"-"` // filepath of the configuration on disk.
 	Address         string // cluster address
-	Discovery       string // discovery service address
 	Concurrency     float64
 	DeployDataDir   string        `yaml:"deployDataDir"`
 	DeployTimeout   time.Duration `yaml:"deployTimeout"`

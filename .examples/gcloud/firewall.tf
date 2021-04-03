@@ -4,26 +4,27 @@ resource "google_compute_firewall" "default" {
 
   allow {
     protocol = "tcp"
-    ports    = ["2001", "2002", "2003", "2004", "2006"] // DISCOVERY, RPC, SWIM, RAFT, AUTOCERT.
+    ports    = ["2000"] // agent
   }
 
   allow {
     protocol = "udp"
-    ports    = ["2003", "2005"] // SWIM, TORRENT.
+    ports    = ["2000"] // agent SWIM protocol
   }
 
   source_ranges = ["10.0.0.0/8"]
 }
 
-resource "google_compute_firewall" "discovery" {
+// bearded-wookie best practice is to run it inside of a VPN.
+// and to not expose it to the world. however, since this is example
+// code we'll expose it.
+resource "google_compute_firewall" "insecure" {
   name    = "${var.cluster}-bearded-wookie-discovery"
   network = "default"
 
-  # IMPORTANT: in real world deployments only the discovery service (port 2001) should be exposed.
-  # bearded-wookie assumes its running inside of a VPN. simply remove port 2002 from this list.
   allow {
     protocol = "tcp"
-    ports    = ["2001", "2002"] // DISCOVERY, RPC
+    ports    = ["2000"]
   }
 
   source_ranges = ["0.0.0.0/0"]
