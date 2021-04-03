@@ -9,13 +9,13 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 )
 
 // Discovery initiates the discovery backend.
 func Discovery(ctx Context) (err error) {
 	var (
-		// deprecatedbind net.Listener
 		bind   net.Listener
 		server *grpc.Server
 	)
@@ -26,25 +26,13 @@ func Discovery(ctx Context) (err error) {
 		grpc.KeepaliveParams(ctx.RPCKeepalive),
 	)
 
-	// dialer := dialers.NewQuorum(
-	// 	ctx.Cluster,
-	// 	ctx.Dialer.Defaults()...,
-	// )
-
-	// notary.NewProxy(dialer).Bind(server)
-
 	// exposes details about the cluster.
 	discovery.New(ctx.Cluster).Bind(server)
 
 	// used to validate client certificates.
-	// discovery.NewAuthority(
-	// 	certificatecache.CAKeyPath(ctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
-	// ).Bind(server)
-
-	// log.Println("discovery", ctx.Config.DiscoveryBind.String())
-	// if bind, err = net.Listen(ctx.Config.DiscoveryBind.Network(), ctx.Config.DiscoveryBind.String()); err != nil {
-	// 	return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Config.DiscoveryBind)
-	// }
+	discovery.NewAuthority(
+		certificatecache.CAKeyPath(ctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
+	).Bind(server)
 
 	log.Printf("discovery: %T %s", ctx.Listener, ctx.Listener.Addr().String())
 	if bind, err = ctx.Muxer.Bind(bw.ProtocolDiscovery, ctx.Listener.Addr()); err != nil {

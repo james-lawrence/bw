@@ -308,9 +308,9 @@ func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
 func (t Protocol) deadlockedLeadership(local *memberlist.Node, p *raft.Raft, lastSeen time.Time) bool {
 	leader := string(p.Leader())
 
-	log.Println(local.Name, "current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.leadershipGrace, lastSeen)
+	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.leadershipGrace, lastSeen)
 	if leader == "" && lastSeen.Add(t.leadershipGrace).Before(time.Now()) {
-		log.Println(local.Name, "leader is missing and grace period has passed, resetting this peer", t.leadershipGrace)
+		log.Println("leader is missing and grace period has passed, resetting this peer", t.leadershipGrace)
 		return true
 	}
 

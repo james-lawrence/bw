@@ -1,6 +1,7 @@
 package notary
 
 import (
+	"context"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -39,7 +40,7 @@ func (t cached) cached() (cc *grpc.ClientConn, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	if t.conn, err = t.dialer.Dial(); err != nil {
+	if t.conn, err = t.dialer.DialContext(context.Background()); err != nil {
 		return nil, err
 	}
 

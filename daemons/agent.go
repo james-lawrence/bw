@@ -31,7 +31,6 @@ import (
 // Agent daemon - rpc endpoint for the system.
 func Agent(ctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
 	var (
-		// deprecatedbind net.Listener
 		bind         net.Listener
 		sctx         shell.Context
 		observersdir observers.Directory
@@ -142,10 +141,6 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 			}
 		}
 	})
-
-	// if deprecatedbind, err = net.Listen(ctx.Config.RPCBind.Network(), ctx.Config.RPCBind.String()); err != nil {
-	// 	return errors.Wrapf(err, "failed to bind agent to %s", ctx.Config.RPCBind)
-	// }
 
 	if bind, err = ctx.Muxer.Bind(bw.ProtocolAgent, ctx.Listener.Addr()); err != nil {
 		return errors.Wrap(err, "failed to bind agent protocol")

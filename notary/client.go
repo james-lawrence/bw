@@ -51,13 +51,13 @@ type Dialer struct {
 	tls   grpc.DialOption
 }
 
-// Dial ...
-func (t Dialer) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
-	return t.proxy.Dial(append([]grpc.DialOption{t.tls, t.creds}, options...)...)
+// DialContext ...
+func (t Dialer) DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
+	return t.proxy.DialContext(ctx, append([]grpc.DialOption{t.tls, t.creds}, options...)...)
 }
 
 type dialer interface {
-	Dial(...grpc.DialOption) (*grpc.ClientConn, error)
+	DialContext(context.Context, ...grpc.DialOption) (*grpc.ClientConn, error)
 }
 
 // NewClient consumes a dialer

@@ -34,7 +34,6 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 		ok      bool
 		m1      agent.Message
 		m2      *agent.Message_Authority
-		evt     agent.TLSEvent
 		encoded []byte
 	)
 
@@ -54,9 +53,7 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
 	}
 
-	evt = *m2.Authority
-
-	if evt.Fingerprint != req.Fingerprint {
+	if m2.Authority.Fingerprint != req.Fingerprint {
 		return &CheckResponse{}, status.Error(codes.NotFound, "fingerprint mismatch")
 	}
 
