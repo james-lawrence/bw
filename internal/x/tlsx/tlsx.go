@@ -315,6 +315,6 @@ func DecodePEMCertificate(encoded []byte) (cert *x509.Certificate, err error) {
 }
 
 // NewDialer for tls configurations.
-func NewDialer(c *tls.Config, options ...Option) *tls.Dialer {
-	return &tls.Dialer{Config: MustClone(c, options...)}
+func NewDialer(c *tls.Config, options ...Option) *Dialer {
+	return &Dialer{Config: MustClone(c, options...)}
 }

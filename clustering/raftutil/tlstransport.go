@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/pkg/errors"
 )
 
@@ -21,7 +22,7 @@ func NewTLSStreamDialer(cs *tls.Config) dialer {
 		}
 	}
 
-	return &tls.Dialer{
+	return &tlsx.Dialer{
 		NetDialer: &net.Dialer{
 			KeepAlive: 5 * time.Second,
 		},
