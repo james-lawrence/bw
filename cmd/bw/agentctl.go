@@ -49,13 +49,17 @@ func (t *actlCmd) restartCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *actlCmd) restart(ctx *kingpin.ParseContext) error {
-	filters := make([]deployment.Filter, 0, len(t.filteredRegex))
+	filters := make([]deployment.Filter, 0, 1+len(t.filteredRegex)+len(t.filteredIP))
 	for _, n := range t.filteredRegex {
 		filters = append(filters, deployment.Named(n))
 	}
 
 	for _, n := range t.filteredIP {
 		filters = append(filters, deployment.IP(n))
+	}
+
+	if len(filters) == 0 {
+		filters = append(filters, deployment.AlwaysMatch)
 	}
 
 	return t.shutdown(deployment.Or(filters...))
@@ -159,16 +163,7 @@ func (t actlCmd) connect(local *cluster.Local) (d dialers.Defaults, c clustering
 
 	log.Println("configuration:", spew.Sdump(config))
 
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		),
-	}
-
-	if d, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = daemons.Connect(config); err != nil {
 		return d, c, err
 	}
 

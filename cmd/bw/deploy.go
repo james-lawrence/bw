@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -167,14 +166,9 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	local := commandutils.NewClientPeer(
 		agent.PeerOptionName("local"),
 	)
-	coptions := []daemons.ConnectOption{}
-
-	logRetryError := func(err error) {
-		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
-	}
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
 		return err
 	}
 
@@ -273,6 +267,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	var (
+		conn   *grpc.ClientConn
 		client agent.DeployClient
 		config agent.ConfigClient
 		d      dialers.Defaults
@@ -295,37 +290,24 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	events := make(chan *agent.Message, 100)
 
 	local := commandutils.NewClientPeer()
-	coptions := []daemons.ConnectOption{}
-	// local := cluster.NewLocal(
-	// 	commandutils.NewClientPeer(),
-	// 	cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	// )
-
-	// coptions := []daemons.ConnectOption{
-	// 	daemons.ConnectOptionClustering(
-	// 		clustering.OptionDelegate(local),
-	// 		clustering.OptionNodeID(local.Name),
-	// 		clustering.OptionBindAddress(local.Ip),
-	// 		clustering.OptionEventDelegate(deployclient.NewClusterEventHandler(events)),
-	// 		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-	// 		clustering.OptionLogOutput(ioutil.Discard),
-	// 	),
-	// }
-
-	logRetryError := func(err error) {
-		events <- agentutil.LogError(local, errors.Wrap(err, "connection to cluster failed"))
-	}
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
 		return err
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
 
-	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
+	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
 	}
+
+	go func() {
+		<-t.global.ctx.Done()
+		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+	}()
+
+	client = agent.NewDeployConn(conn)
 
 	t.initializeUX(client, events)
 
@@ -337,12 +319,13 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		}
 	}()
 
-	if err = client.Cancel(); err != nil {
+	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
+
+	if err = client.Cancel(&agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
 		return err
 	}
 
-	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
-	if err = client.Dispatch(context.Background(), agentutil.DeployCommand(local, cmd)); err != nil {
+	if err = client.Dispatch(t.global.ctx, agentutil.DeployCommand(local, cmd)); err != nil {
 		return err
 	}
 
@@ -396,7 +379,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		defer func() {
 			err = errorsx.Compact(err, errorsx.Notification(errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Brown("WARN"), root)))
 		}()
-		// defer log.Printf("%s build directory '%s' being left on disk\n", aurora.NewAurora(true).Brown("WARN"), root)
 	} else {
 		defer os.RemoveAll(root)
 	}
@@ -467,6 +449,7 @@ func (t *deployCmd) redeploy(ctx *kingpin.ParseContext) error {
 func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	var (
 		err     error
+		conn    *grpc.ClientConn
 		d       dialers.Defaults
 		client  agent.DeployClient
 		config  agent.ConfigClient
@@ -474,6 +457,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		located agent.Deploy
 		archive agent.Archive
 		peers   []*agent.Peer
+		ss      notary.Signer
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
@@ -488,14 +472,18 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 			Label:     config.DeployPrompt,
 			IsConfirm: true,
 		}).Run()
+
 		// we're done.
 		if err != nil {
 			return nil
 		}
 	}
 
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
+
 	events := make(chan *agent.Message, 100)
-	coptions := []daemons.ConnectOption{}
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(
 			agent.PeerOptionName("local"),
@@ -503,20 +491,23 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	logRetryError := func(err error) {
-		logx.MaybeLog(errors.Wrap(err, "connection to cluster failed"))
-	}
-
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, logRetryError, coptions...); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults()...)
+	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
 
-	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, qd); err != nil {
+	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
 	}
+
+	go func() {
+		<-t.global.ctx.Done()
+		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+	}()
+
+	client = agent.NewDeployConn(conn)
 
 	t.initializeUX(client, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")

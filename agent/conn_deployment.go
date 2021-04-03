@@ -44,8 +44,8 @@ func (t DeployConn) Close() error {
 
 // Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
-func (t DeployConn) Cancel() error {
-	_, err := NewDeploymentsClient(t.conn).Cancel(context.Background(), &CancelRequest{})
+func (t DeployConn) Cancel(req *CancelRequest) error {
+	_, err := NewDeploymentsClient(t.conn).Cancel(context.Background(), req)
 	return errors.WithStack(err)
 }
 

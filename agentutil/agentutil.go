@@ -230,13 +230,3 @@ func IsActiveDeployment(err error) bool {
 func IsNoDeployments(err error) bool {
 	return errors.Cause(err) == ErrNoDeployments
 }
-
-// DeprecatedNewDeploy deploy client.
-func DeprecatedNewDeploy(proxy string, d dialers.DefaultsDialer) (_ agent.DeployClient, err error) {
-	// deprecated code path.
-	if len(proxy) == 0 {
-		return agent.MaybeClient(d.DialContext(context.Background()))
-	}
-
-	return agent.MaybeDeployConn(dialers.NewDirect(proxy).Dial(d.Defaults()...))
-}

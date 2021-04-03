@@ -116,12 +116,12 @@ func (t *deployment) deploy(d dialers.Defaults, dopts agent.DeployOptions, a age
 }
 
 // Cancel a ongoing deploy.
-func (t *deployment) cancel(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
+func (t *deployment) cancel(ctx context.Context, req *agent.CancelRequest, d dialers.Defaults, sm stateMachine) (err error) {
 	if err = agentutil.Cancel(t.c, d); err != nil {
 		return err
 	}
 
-	return sm.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandCancel("")))
+	return sm.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandCancel(req.Initiator)))
 }
 
 func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
@@ -164,7 +164,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 			return errors.Wrap(err, "log restart detection failure")
 		}
 
-		if err = t.cancel(ctx, d, sm); err != nil {
+		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
 			msg := agentutil.LogEvent(t.c.Local(), "failed to cancel running deployments")
 			logx.MaybeLog(sm.Dispatch(ctx, msg))
 			return errors.Wrap(err, "cancellation failure")

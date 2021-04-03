@@ -128,7 +128,6 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 
 // Cancel ...
 func (t Server) Cancel(ctx context.Context, req *CancelRequest) (_ *CancelResponse, err error) {
-	debugx.Println("cancel initiated")
 	t.Deployer.Cancel()
 	return &CancelResponse{}, nil
 }

@@ -64,6 +64,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		d      dialers.Defaults
 		config agent.ConfigClient
 		latest agent.Deploy
+		ss     notary.Signer
 	)
 	defer t.global.shutdown()
 
@@ -72,21 +73,17 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	log.Println("configuration", spew.Sdump(config))
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
+
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		),
-	}
-
-	if d, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -125,6 +122,7 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 
 func (t *agentInfo) _info() (err error) {
 	var (
+		conn   *grpc.ClientConn
 		c      clustering.C
 		d      dialers.Defaults
 		config agent.ConfigClient
@@ -147,22 +145,22 @@ func (t *agentInfo) _info() (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	coptions := []daemons.ConnectOption{
-		daemons.ConnectOptionClustering(
-			clustering.OptionNodeID(local.Peer.Name),
-			clustering.OptionBindAddress(local.Peer.Ip),
-			clustering.OptionEventDelegate(cluster.LoggingEventHandler{}),
-			clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		),
-	}
-
-	if d, c, err = daemons.Connect(config, coptions...); err != nil {
+	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
-	if client, err = agentutil.DeprecatedNewDeploy(config.Discovery, dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)); err != nil {
+	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+
+	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
 	}
+
+	go func() {
+		<-t.global.ctx.Done()
+		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+	}()
+
+	client = agent.NewDeployConn(conn)
 
 	cx := cluster.New(local, c)
 	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {

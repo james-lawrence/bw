@@ -225,7 +225,10 @@ message DeployResponse { Deploy deploy = 1; }
 message ShutdownRequest {}
 message ShutdownResponse {}
 
-message CancelRequest {}
+message CancelRequest {
+  string initiator = 1;
+}
+
 message CancelResponse {}
 
 message LogRequest {

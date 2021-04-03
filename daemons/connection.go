@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 
 	"github.com/hashicorp/memberlist"
@@ -57,7 +58,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Defaults, c clustering.C, err error) {
+func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.Defaults, c clustering.C, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -66,18 +67,13 @@ func Connect(config agent.ConfigClient, options ...ConnectOption) (d dialers.Def
 		return d, c, err
 	}
 
-	// TODO: allow access to the various api's from the discovery endpoint.
-	// if d, c, err = connect(config, creds, options...); err == nil {
-	// 	return d, c, err
-	// }
-
-	return deprecatedConnect(config, creds, options...)
+	return connect(config, creds, options...)
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
 func ConnectClientUntilSuccess(
 	ctx context.Context,
-	config agent.ConfigClient, onRetry func(error), options ...ConnectOption,
+	config agent.ConfigClient,
 ) (d dialers.Defaults, c clustering.LocalRendezvous, err error) {
 	var (
 		creds credentials.TransportCredentials
@@ -88,7 +84,7 @@ func ConnectClientUntilSuccess(
 	}
 
 	for i := 0; ; i++ {
-		if d, c, err = connect(config, creds, options...); err == nil {
+		if d, c, err = connect(config, creds); err == nil {
 			return d, c, err
 		}
 
@@ -98,13 +94,14 @@ func ConnectClientUntilSuccess(
 		default:
 		}
 
-		onRetry(err)
+		logx.MaybeLog(errors.Wrap(err, "connection failed"))
+
 		time.Sleep(250 * time.Millisecond)
 	}
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Static, err error) {
+func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Defaults, c clustering.Static, err error) {
 	var (
 		addr      *net.TCPAddr
 		nodes     []*memberlist.Node
@@ -119,7 +116,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		return d, c, err
 	}
 
-	dopts := dialers.DefaultDialerOptions(
+	dopts := dialers.NewDefaults(options...).Defaults(
 		dialers.WithMuxer(tlsx.NewDialer(tlsconfig), addr),
 		grpc.WithInsecure(),
 	)

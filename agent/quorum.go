@@ -10,7 +10,7 @@ type quorum interface {
 	Watch(stream Quorum_WatchServer) error
 	Dispatch(context.Context, ...*Message) error
 	Info(context.Context) (InfoResponse, error)
-	Cancel(context.Context) error
+	Cancel(context.Context, *CancelRequest) error
 }
 
 // NewQuorum ...
@@ -63,5 +63,5 @@ func (t Quorum) Dispatch(ctx context.Context, req *DispatchRequest) (*DispatchRe
 
 // Cancel the active deploy.
 func (t Quorum) Cancel(ctx context.Context, req *CancelRequest) (*CancelResponse, error) {
-	return &CancelResponse{}, t.q.Cancel(ctx)
+	return &CancelResponse{}, t.q.Cancel(ctx, req)
 }

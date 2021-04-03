@@ -185,8 +185,8 @@ func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
 }
 
 // Cancel any active deploys
-func (t *Quorum) Cancel(ctx context.Context) (err error) {
-	return t.deployment.cancel(ctx, t.dialer, t.proxy())
+func (t *Quorum) Cancel(ctx context.Context, req *agent.CancelRequest) (err error) {
+	return t.deployment.cancel(ctx, req, t.dialer, t.proxy())
 }
 
 // Deploy ...
@@ -287,8 +287,6 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 
 // Dispatch record deployment events.
 func (t *Quorum) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
-	debugx.Println("dispatch initiated")
-	defer debugx.Println("dispatch completed")
 	return logx.MaybeLog(errors.Wrap(t.proxy().Dispatch(ctx, m...), "failed to dispatch"))
 }
 

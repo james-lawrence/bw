@@ -89,8 +89,8 @@ func (t Conn) Shutdown() (err error) {
 
 // Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
-func (t Conn) Cancel() error {
-	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), &CancelRequest{})
+func (t Conn) Cancel(req *CancelRequest) error {
+	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), req)
 	return errors.WithStack(err)
 }
 

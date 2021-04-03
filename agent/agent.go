@@ -33,7 +33,7 @@ type Client interface {
 	RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) error
 	Deploy(*DeployOptions, *Archive) (*Deploy, error)
 	Connect() (ConnectResponse, error)
-	Cancel() error
+	Cancel(*CancelRequest) error
 	NodeCancel() error
 	QuorumInfo() (InfoResponse, error)
 	Info() (StatusResponse, error)
@@ -50,7 +50,7 @@ type DeployClient interface {
 	Dispatch(ctx context.Context, messages ...*Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
 	Close() error
-	Cancel() error
+	Cancel(*CancelRequest) error
 }
 
 type cluster interface {
