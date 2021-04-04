@@ -182,27 +182,27 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 		}),
 		ConfigOptionAutocert(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultAutocertPort,
+			Port: bw.DefaultP2PPort,
 		}),
 		ConfigOptionRPC(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultRPCPort,
+			Port: bw.DefaultP2PPort,
 		}),
 		ConfigOptionSWIM(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultSWIMPort,
+			Port: bw.DefaultP2PPort,
 		}),
 		ConfigOptionRaft(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultRaftPort,
+			Port: bw.DefaultP2PPort,
 		}),
 		ConfigOptionTorrent(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultTorrentPort,
+			Port: bw.DefaultP2PPort,
 		}),
 		ConfigOptionDiscovery(&net.TCPAddr{
 			IP:   ip,
-			Port: bw.DefaultDiscoveryPort,
+			Port: bw.DefaultP2PPort,
 		}),
 	)
 }
