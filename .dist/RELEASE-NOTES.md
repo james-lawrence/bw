@@ -1,3 +1,66 @@
+commit 4905df4758fd7772d10328f4dc6810e33fedfe3f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 19:29:44 2021 -0400
+
+    update build
+
+commit 2cca8f28a4573be8b9cd0e4d90438f2b79739b58
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 18:59:49 2021 -0400
+
+    cleanup discovery field from configuration
+
+commit e69e7c3eb2017b81cbd368db6ab7f306aedc28a4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 18:41:43 2021 -0400
+
+    cleanup raftutil last contact logic
+
+commit 6aa6c95a2f8940be91f83c8e7dc1dd4592ef8981
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 13:17:02 2021 -0400
+
+    improve cancel logic to include who cancelled the deploy
+
+commit efbed9ee66546480a7a67c96aa7bad726124ca32
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 11:43:59 2021 -0400
+
+    cleanup
+
+commit 7b8eae5d8a7a6bcb6eea3d36ce2d332ac66ff46c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 11:21:16 2021 -0400
+
+    update dependencies
+
+commit cd2b634483346ea0bec048682a7345c07fffdf7d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 7 12:53:46 2021 -0500
+
+    agent reboot
+    
+    - collapses operational complexity of the agent down to a single port.
+    - makes autocertificate code more secure.
+
+commit 8986e355d36f0f5b2cd50a44835b5532a0d14ce9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 20 11:33:41 2021 -0400
+
+    muxer implementation
+
+commit c734123fbd497887916519712139fa2b6855ecaa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 20 09:42:45 2021 -0400
+
+    update lego, work towards muxer
+
+commit b8551e2ba84512b9920b5fc956f4720b6dfe0c9c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 7 06:15:31 2021 -0500
+
+    release 0.1.1615066684-1a4acad7
+
 commit 1a4acad73737b5242926dca883f9e356ed81866b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Mar 6 16:38:04 2021 -0500
