@@ -88,7 +88,7 @@ func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
 }
 
 // CoordinatorOptionDeployResults set the channel to send deploy results to.
-func CoordinatorOptionDeployResults(dst chan DeployResult) CoordinatorOption {
+func CoordinatorOptionDeployResults(dst chan *DeployResult) CoordinatorOption {
 	return func(d *Coordinator) {
 		d.completedObserver = dst
 	}
@@ -111,7 +111,7 @@ type Coordinator struct {
 	dispatcher        dispatcher
 	dlreg             storage.DownloadFactory
 	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
-	completedObserver chan DeployResult
+	completedObserver chan *DeployResult
 	ds                DeployState
 	m                 *sync.Mutex
 }
@@ -343,7 +343,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err err
 }
 
 // ResultBus bus for deploy results.
-func ResultBus(in chan DeployResult, out ...chan DeployResult) {
+func ResultBus(in chan *DeployResult, out ...chan *DeployResult) {
 	for result := range in {
 		for _, dst := range out {
 			dst <- result

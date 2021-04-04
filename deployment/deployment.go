@@ -56,7 +56,7 @@ func DeployContextOptionDisableReset(dctx *DeployContext) {
 }
 
 // AwaitDeployResult waits for the deployment result of the context
-func AwaitDeployResult(dctx DeployContext) DeployResult {
+func AwaitDeployResult(dctx DeployContext) *DeployResult {
 	defer close(dctx.completed)
 	return <-dctx.completed
 }
@@ -77,7 +77,7 @@ func NewDeployContext(root string, p *agent.Peer, dopts agent.DeployOptions, a a
 		Archive:       a,
 		DeployOptions: dopts,
 		dispatcher:    agentutil.LogDispatcher{},
-		completed:     make(chan DeployResult),
+		completed:     make(chan *DeployResult),
 		done:          &sync.Once{},
 	}
 
@@ -135,7 +135,7 @@ func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts agent.DeployOpt
 // DeployContext - information about the deploy, such as the root directory, the logfile, the archive etc.
 type DeployContext struct {
 	Local         *agent.Peer
-	completed     chan DeployResult
+	completed     chan *DeployResult
 	ID            bw.RandomID
 	disableReset  bool
 	Root          string
@@ -178,7 +178,7 @@ func (t DeployContext) Done(result error) error {
 		logx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
 
 		if t.completed != nil {
-			t.completed <- DeployResult{
+			t.completed <- &DeployResult{
 				Error:         result,
 				DeployContext: t,
 			}
@@ -221,7 +221,7 @@ func newCancelDeployContext() DeployContext {
 	return DeployContext{
 		dispatcher:    agentutil.DiscardDispatcher{},
 		DeployOptions: agent.DeployOptions{Timeout: int64(bw.DefaultDeployTimeout)},
-		completed:     make(chan DeployResult),
+		completed:     make(chan *DeployResult),
 		cancel:        func() {},
 	}
 }

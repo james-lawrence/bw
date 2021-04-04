@@ -11,6 +11,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agenttestutil"
 	"github.com/james-lawrence/bw/agentutil"
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/cluster"
@@ -27,11 +28,6 @@ var _ = Describe("Quorum", func() {
 			Ts:           time.Now().Unix(),
 			DeploymentID: bw.MustGenerateID(),
 		}
-		// archive2 = agent.Archive{
-		// 	Peer:         &peer1,
-		// 	Ts:           time.Now().Unix(),
-		// 	DeploymentID: bw.MustGenerateID(),
-		// }
 		dopts1 = agent.DeployOptions{
 			Timeout:           int64(time.Hour),
 			SilenceDeployLogs: true,
@@ -43,20 +39,23 @@ var _ = Describe("Quorum", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			qinfo: agent.InfoResponse{
-				Mode: agent.InfoResponse_None,
-				Deployed: &agent.DeployCommand{
-					Command: agent.DeployCommand_Done,
-					Archive: &archive1,
-					Options: &dopts1,
-				},
-			},
-		}
 
-		fd := fakeDialer{c: fc}
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeQuorum{
+				InfoResponse: agent.InfoResponse{
+					Mode: agent.InfoResponse_None,
+					Deployed: &agent.DeployCommand{
+						Command: agent.DeployCommand_Done,
+						Archive: &archive1,
+						Options: &dopts1,
+					},
+				},
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Succeed())
 	})
@@ -66,15 +65,18 @@ var _ = Describe("Quorum", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			qinfo: agent.InfoResponse{
-				Mode: agent.InfoResponse_None,
-			},
-		}
 
-		fd := fakeDialer{c: fc}
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeQuorum{
+				InfoResponse: agent.InfoResponse{
+					Mode: agent.InfoResponse_None,
+				},
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
 	})
@@ -84,14 +86,17 @@ var _ = Describe("Quorum", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			errResult: errors.New("boom"),
-		}
 
-		fd := fakeDialer{c: fc}
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeQuorum{
+				ErrResult: errors.New("boom"),
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
-		Expect(err.Error()).To(Equal("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = quorum: failed to determine latest archive to bootstrap: boom"))
+		Expect(err.Error()).To(Equal("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = quorum: failed to determine latest archive to bootstrap: rpc error: code = Unknown desc = boom"))
 	})
 })

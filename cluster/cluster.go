@@ -48,20 +48,7 @@ func (t Cluster) Quorum() []*agent.Peer {
 
 // Connect connection information for the cluster.
 func (t Cluster) Connect() agent.ConnectResponse {
-	type private interface {
-		GetPrimaryKey() []byte
-	}
-
-	var (
-		secret []byte
-	)
-
-	if priv, ok := t.cluster.(private); ok {
-		secret = priv.GetPrimaryKey()
-	}
-
 	return agent.ConnectResponse{
-		Secret: secret,
 		Quorum: t.Quorum(),
 	}
 }

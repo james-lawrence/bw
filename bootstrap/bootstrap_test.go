@@ -10,6 +10,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agenttestutil"
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/x/testingx"
@@ -37,7 +38,7 @@ var _ = Describe("Bootstrap", func() {
 		c := agent.Config{
 			Root: testingx.TempDir(),
 		}
-		current := agent.Deploy{
+		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
 			Archive: &archive1,
 			Options: &dopts1,
@@ -51,8 +52,8 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
 		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
 	})
 
@@ -63,7 +64,7 @@ var _ = Describe("Bootstrap", func() {
 		c := agent.Config{
 			Root: testingx.TempDir(),
 		}
-		current := agent.Deploy{
+		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
 			Archive: &archive1,
 			Options: &dopts1,
@@ -75,8 +76,8 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
 		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("download failed"))
 	})
 
@@ -84,7 +85,7 @@ var _ = Describe("Bootstrap", func() {
 		c := agent.Config{
 			Root: testingx.TempDir(),
 		}
-		current := agent.Deploy{
+		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
 			Archive: &archive1,
 			Options: &dopts1,
@@ -98,8 +99,8 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
 		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("deployment failed"))
 	})
 
@@ -107,7 +108,7 @@ var _ = Describe("Bootstrap", func() {
 		c := agent.Config{
 			Root: testingx.TempDir(),
 		}
-		current := agent.Deploy{
+		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
 			Archive: &archive1,
 			Options: &dopts1,
@@ -121,8 +122,8 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current})).To(Succeed())
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
 		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
 	})
 
@@ -130,7 +131,7 @@ var _ = Describe("Bootstrap", func() {
 		c := agent.Config{
 			Root: testingx.TempDir(),
 		}
-		current := agent.Deploy{
+		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
 			Archive: &archive1,
 			Options: &dopts1,
@@ -144,10 +145,10 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketAuto(c), Mock{Current: current})).To(Succeed())
-		results := make(chan deployment.DeployResult, 1)
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Current: current})).To(Succeed())
+		results := make(chan *deployment.DeployResult, 1)
 		Expect(Bootstrap(context.Background(), c, dc, results)).To(MatchError("failed to determine latest deployment from quorum, retrying: no deployments found"))
 		result := <-results
 		Expect([]byte(result.ID)).To(Equal(current.Archive.DeploymentID))
@@ -167,9 +168,9 @@ var _ = Describe("Bootstrap", func() {
 			deployment.CoordinatorOptionStorage(reg),
 			deployment.CoordinatorOptionRoot(testingx.TempDir()),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketAuto(c), Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
+		Expect(Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
 		Expect(Bootstrap(context.Background(), c, dc, nil)).To(Succeed())
 	})
 
@@ -178,7 +179,7 @@ var _ = Describe("Bootstrap", func() {
 			c := agent.Config{
 				Root: testingx.TempDir(),
 			}
-			current := agent.Deploy{
+			current := &agent.Deploy{
 				Stage:   agent.Deploy_Completed,
 				Archive: &archive1,
 				Options: &dopts1,
@@ -192,8 +193,8 @@ var _ = Describe("Bootstrap", func() {
 				deployment.CoordinatorOptionStorage(reg),
 				deployment.CoordinatorOptionRoot(testingx.TempDir()),
 			)
-			Expect(Run(context.Background(), SocketLocal(c), Mock{Current: current})).To(Succeed())
-			Expect(Run(context.Background(), SocketQuorum(c), Mock{Current: current, Info: agent.ArchiveResponse_ActiveDeploy})).To(Succeed())
+			Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Current: current})).To(Succeed())
+			Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current, Info: agent.ArchiveResponse_ActiveDeploy})).To(Succeed())
 			Expect(Bootstrap(context.Background(), c, dc, nil).Error()).To(Equal("active deploy matches the local deployment, waiting for deployment to complete: deployment in progress"))
 		})
 	})

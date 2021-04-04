@@ -3,7 +3,6 @@ package daemons
 import (
 	"context"
 	"crypto/tls"
-	"io/ioutil"
 	"net"
 	"time"
 
@@ -141,60 +140,4 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 	c = clustering.NewStatic(nodes...)
 
 	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), d.Defaults()...), c, err
-}
-
-func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Memberlist, err error) {
-	var (
-		details agent.ConnectResponse
-		cl      agent.Client
-	)
-
-	conn := newConnect(options...)
-	dopts := dialers.DefaultDialerOptions(grpc.WithTransportCredentials(creds))
-
-	if cl, err = agent.AddressProxyDialQuorum(config.Address, dopts...); err != nil {
-		return d, c, errors.Wrapf(err, "proxy dial quorum failed: %s", config.Address)
-	}
-	defer cl.Close()
-
-	if details, err = cl.Connect(); err != nil {
-		return d, c, err
-	}
-
-	if c, err = clusterConnect(details, conn.clustering.Options, conn.clustering.Bootstrap); err != nil {
-		return d, c, err
-	}
-
-	return dialers.NewQuorum(c, dopts...), c, nil
-}
-
-func clusterConnect(details agent.ConnectResponse, copts []clustering.Option, bopts []clustering.BootstrapOption) (c clustering.Memberlist, err error) {
-	keyring, err := memberlist.NewKeyring([][]byte{}, details.Secret)
-	if err != nil {
-		return c, errors.Wrap(err, "failed to create keyring")
-	}
-
-	copts = append([]clustering.Option{
-		clustering.OptionBindPort(0),
-		clustering.OptionLogOutput(ioutil.Discard),
-		clustering.OptionKeyring(keyring),
-	}, copts...)
-
-	if c, err = clustering.NewOptions(copts...).NewCluster(); err != nil {
-		return c, errors.Wrap(err, "failed to join cluster")
-	}
-
-	bopts = append([]clustering.BootstrapOption{
-		clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(1)),
-		clustering.BootstrapOptionAllowRetry(clustering.UnlimitedAttempts),
-		clustering.BootstrapOptionPeeringStrategies(
-			agent.BootstrapPeers(details.Quorum...),
-		),
-	}, bopts...)
-
-	if err = clustering.Bootstrap(context.Background(), c, bopts...); err != nil {
-		return c, errors.Wrap(err, "failed to connect to cluster")
-	}
-
-	return c, nil
 }

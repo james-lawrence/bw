@@ -85,7 +85,7 @@ func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, c clustering.J
 		}
 	}
 
-	return commandutils.ClusterJoin(ctx, conf, c, clipeers, p2ppeers, dnspeers, awspeers, gcloudpeers, snap)
+	return commandutils.ClusterJoin(ctx, conf, c, clipeers, p2ppeers, awspeers, gcloudpeers, snap, dnspeers)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Rendezvous, fssnapshot peering.File, options ...clustering.SnapshotOption) {

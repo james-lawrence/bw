@@ -196,7 +196,7 @@ func (t *agentCmd) bind() (err error) {
 			Time:              1 * time.Minute,
 			Timeout:           2 * time.Minute,
 		},
-		Results:       make(chan deployment.DeployResult, 100),
+		Results:       make(chan *deployment.DeployResult, 100),
 		PeeringEvents: clusterevents,
 		ACMECache:     acmesvc,
 	}
@@ -424,10 +424,10 @@ func (t *agentCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 	return nil
 }
 
-func clearTorrents(c storage.TorrentConfig) chan deployment.DeployResult {
+func clearTorrents(c storage.TorrentConfig) chan *deployment.DeployResult {
 	var (
 		tcu storage.TorrentUtil
-		tdr = make(chan deployment.DeployResult)
+		tdr = make(chan *deployment.DeployResult)
 	)
 
 	go func() {
@@ -439,9 +439,9 @@ func clearTorrents(c storage.TorrentConfig) chan deployment.DeployResult {
 	return tdr
 }
 
-func syncAuthorizations(ns notary.Composite) chan deployment.DeployResult {
+func syncAuthorizations(ns notary.Composite) chan *deployment.DeployResult {
 	var (
-		ndr = make(chan deployment.DeployResult)
+		ndr = make(chan *deployment.DeployResult)
 	)
 
 	go func() {

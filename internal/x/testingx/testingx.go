@@ -1,10 +1,13 @@
 package testingx
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"os"
+	"time"
 
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
 )
@@ -50,9 +53,33 @@ func NewGRPCServer(bind func(s *grpc.Server), options ...grpc.DialOption) (c *gr
 	return c, s
 }
 
+// NewGRPCServer sets up a server and a dialer.
+func NewGRPCServer2(bind func(s *grpc.Server), options ...grpc.DialOption) (d dialers.Direct, s *grpc.Server) {
+	l, err := net.Listen("tcp", ":0")
+	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	s = grpc.NewServer()
+	bind(s)
+	go func() {
+		s.Serve(l)
+	}()
+
+	options = append(
+		options,
+		grpc.WithInsecure(),
+		grpc.WithDialer(func(addr string, to time.Duration) (c net.Conn, err error) {
+			ctx, done := context.WithTimeout(context.Background(), to)
+			defer done()
+			return (&net.Dialer{}).DialContext(ctx, l.Addr().Network(), l.Addr().String())
+		}),
+	)
+	return dialers.NewDirect(l.Addr().String(), dialers.NewDefaults(options...).Defaults()...), s
+}
+
 // GRPCCleanup shuts down the client and server. for use with defer.
 func GRPCCleanup(c *grpc.ClientConn, s *grpc.Server) {
-	gomega.Expect(c.Close()).ToNot(gomega.HaveOccurred())
+	if c != nil {
+		gomega.Expect(c.Close()).ToNot(gomega.HaveOccurred())
+	}
 	s.Stop()
 }
 
@@ -64,4 +91,16 @@ func setup() {
 	if err = os.MkdirAll(rootDir, 0755); err != nil {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
+}
+
+func NewCachedDialer(c *grpc.ClientConn) CachedDialer {
+	return CachedDialer{ClientConn: c}
+}
+
+type CachedDialer struct {
+	*grpc.ClientConn
+}
+
+func (t CachedDialer) DialContext(ctx context.Context, options ...grpc.DialOption) (*grpc.ClientConn, error) {
+	return t.ClientConn, nil
 }

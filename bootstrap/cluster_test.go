@@ -2,15 +2,16 @@ package bootstrap_test
 
 import (
 	"context"
-	"errors"
 	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agenttestutil"
 	"github.com/james-lawrence/bw/agentutil"
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/cluster"
@@ -38,21 +39,24 @@ var _ = Describe("Cluster", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			status: agent.StatusResponse{
-				Deployments: []*agent.Deploy{
-					{
-						Stage:   agent.Deploy_Completed,
-						Archive: &archive1,
-						Options: &dopts1,
+
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				StatusResponse: agent.StatusResponse{
+					Deployments: []*agent.Deploy{
+						{
+							Stage:   agent.Deploy_Completed,
+							Archive: &archive1,
+							Options: &dopts1,
+						},
 					},
 				},
-			},
-		}
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
 
-		fd := fakeDialer{c: fc}
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Succeed())
 	})
@@ -62,15 +66,18 @@ var _ = Describe("Cluster", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			status: agent.StatusResponse{
-				Deployments: []*agent.Deploy{},
-			},
-		}
 
-		fd := fakeDialer{c: fc}
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				StatusResponse: agent.StatusResponse{
+					Deployments: []*agent.Deploy{},
+				},
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
 	})
@@ -80,14 +87,16 @@ var _ = Describe("Cluster", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			errResult: errors.New("boom"),
-		}
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				ErrResult: errors.New("boom"),
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
 
-		fd := fakeDialer{c: fc}
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
-		Expect(err.Error()).To(Equal("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = cluster: failed to determine latest archive to bootstrap: boom"))
+		Expect(err.Error()).To(Equal("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = cluster: failed to determine latest archive to bootstrap: rpc error: code = Unknown desc = boom"))
 	})
 })

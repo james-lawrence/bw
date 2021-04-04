@@ -10,6 +10,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agenttestutil"
 	"github.com/james-lawrence/bw/agentutil"
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/internal/x/testingx"
@@ -35,20 +36,23 @@ var _ = Describe("Local", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			status: agent.StatusResponse{
-				Deployments: []*agent.Deploy{
-					{
-						Stage:   agent.Deploy_Completed,
-						Archive: &archive1,
-						Options: &dopts1,
+
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				StatusResponse: agent.StatusResponse{
+					Deployments: []*agent.Deploy{
+						{
+							Stage:   agent.Deploy_Completed,
+							Archive: &archive1,
+							Options: &dopts1,
+						},
 					},
 				},
-			},
-		}
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
 
-		fd := fakeDialer{local: fc}
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, fd))).To(Succeed())
+		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Succeed())
 	})
@@ -58,14 +62,17 @@ var _ = Describe("Local", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			status: agent.StatusResponse{
-				Deployments: []*agent.Deploy{},
-			},
-		}
 
-		fd := fakeDialer{c: fc}
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, fd))).To(Succeed())
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				StatusResponse: agent.StatusResponse{
+					Deployments: []*agent.Deploy{},
+				},
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
+		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
 	})
@@ -75,13 +82,16 @@ var _ = Describe("Local", func() {
 			Root: testingx.TempDir(),
 		}
 		p := agent.NewPeer("local")
-		fc := fakeClient{
-			errResult: errors.New("boom"),
-		}
 
-		fd := fakeDialer{c: fc}
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, fd))).To(Succeed())
+		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+			(&agenttestutil.FakeAgent{
+				ErrResult: errors.New("boom"),
+			}).Bind(srv)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
+
+		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
-		Expect(err.Error()).To(Equal("no deployments found"))
+		Expect(err).To(MatchError("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = local: failed to determine latest archive to bootstrap: rpc error: code = Unknown desc = boom"))
 	})
 })

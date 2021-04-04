@@ -205,7 +205,6 @@ service Quorum {
 
 message ConnectRequest {}
 message ConnectResponse {
-  bytes secret = 1;
   repeated Peer quorum = 2;
 }
 

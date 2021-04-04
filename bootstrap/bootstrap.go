@@ -81,7 +81,7 @@ type UntilSuccess struct {
 }
 
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol, results chan deployment.DeployResult) (err error) {
+func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol, results chan *deployment.DeployResult) (err error) {
 	var (
 		sctx shell.Context
 	)
@@ -134,12 +134,12 @@ func ignore(err error) error {
 }
 
 // Bootstrap a server with the latest deploy.
-func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator, dresults chan deployment.DeployResult) (err error) {
+func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator, dresults chan *deployment.DeployResult) (err error) {
 	var (
 		current agent.Deploy
 		latest  agent.Deploy
-		deploy  deployment.DeployResult
-		results = make(chan deployment.DeployResult)
+		deploy  *deployment.DeployResult
+		results = make(chan *deployment.DeployResult)
 	)
 
 	log.Println("--------------- bootstrap attempt initiated -------------")

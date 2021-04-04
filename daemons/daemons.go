@@ -61,7 +61,7 @@ type Context struct {
 	RPCCredentials    *tls.Config
 	RPCKeepalive      keepalive.ServerParameters
 	PeeringEvents     *_cluster.EventsQueue
-	Results           chan deployment.DeployResult
+	Results           chan *deployment.DeployResult
 	Debug             bool
 	DebugLog          *log.Logger
 	ACMECache         acme.DiskCache

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -13,7 +14,7 @@ import (
 
 // NewCluster consumes a configuration and generates a bootstrap socket
 // for the agent.
-func NewCluster(c cluster, d dialer) Cluster {
+func NewCluster(c cluster, d dialers.Defaults) Cluster {
 	return Cluster{c: c, d: d}
 }
 
@@ -23,7 +24,7 @@ func NewCluster(c cluster, d dialer) Cluster {
 type Cluster struct {
 	agent.UnimplementedBootstrapServer
 	c cluster
-	d dialer
+	d dialers.Defaults
 }
 
 // Bind the bootstrap service to the provided socket.
