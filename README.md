@@ -2,15 +2,13 @@
 secure, fast, reliable, and self contained configuration management.
 
 #### security
-bearded-wookie uses SSL/TLS to encrypt all data transferred between agents and clients.
-with one caveat - archive transfer between agents is done via torrents, they'll eventually support TLS.
+bearded-wookie uses TLS to encrypt all data transferred between agents and clients.
 
 #### project goals - how features are decided on and accepted. (no particular order)
 - be a secure, resource efficient, and reliable configuration management tool.
 - no centralized server.
 - no required infrastructure. any additional infrastructure should be optional.
-- support different deployment strategies. %age, batch, one at a time.
-- ease of use. mainly around deployment and initial setup.
+- low operational complexity. a.k.a easy to use and operate.
 
 ### quick start - local development (assumes linux).
 ```bash
@@ -30,7 +28,7 @@ systemctl --user restart bearded-wookie@agent4.service
 
 pushd .test && bw deploy && popd
 
-# TODO
+# reset local environment
 systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent4/tls ~/.cache/bearded-wookie/agent4/cached.certs && systemctl --user restart bearded-wookie@agent4.service && journalctl -f --user-unit bearded-wookie@agent4.service
 ```
 
@@ -53,33 +51,30 @@ pushd .examples && bw deploy example && popd
 ```
 
 example commands:  
- - `bw environment create {name} {address}`  
- - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.  
- - `bw deploy {environment}` deploy to the specified environment  
- - `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters. 
- - `bw deploy --canary {environment}` deploy to a single consistent server. 
- - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive  
- - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers  
- - `bw info check {address}:{port}` checks if the cluster is reachable.  
-
-commands only available from rpc endpoint (should only be accessed from inside a secure network):  
- - `bw info {environment}` display information and receive events about the environment.  
+ - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.
+ - `bw environment create {name} {address}` creates a new environment within the workspace.
+ - `bw deploy {environment}` deploy to the specified environment.
+ - `bw deploy --canary {environment}` deploy to a single consistent server.
+ - `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters.
+ - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive.
+ - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers.
+ - `bw info check {address}:{port}` checks if the cluster is reachable.
 
 ### architecture overview
 bearded-wookie is built off 4 main protocols.
 - SWIM - a gossip protocol for discovering peers and agent health checks.
 - RAFT - consensus algorithm for shared state, e.g.) current deployment.
-- Bit torrent - for archive transfer between servers.
 - ACME protocol - for bootstrapping TLS.
+- bittorrent - for transferring deployment archives between servers.
 
-by using these 4 protocols bearded-wookie avoids needing a centralized server, while remaining durable.
-it also makes bearded-wookie easy to operate.
+by using these 4 protocols bearded-wookie avoids needing a centralized server, while remaining durable and easy to operate.
 
 Benefits of bearded-wookie:
-- can work entirely inside of a VPN; no need to expose anything outside of the network. (requires using ACME DNS challenge)
-- No need for remote storage, your servers already have a copy of the latest deploy, no need for a backup unless you literally lose all of the leader nodes and a majority of your entire cluster simultaneously - and honestly if that happens you have bigger issues. (note: BW does support a remote backup for bootstrapping, its just not required for normal operation)
+- can work entirely inside of a VPN; no need to expose anything outside of the network. (requires using ACME DNS challenge, or a custom certificate authority)
+- durable. unless you literally lose all of the nodes and a majority of your entire cluster simultaneously the cluster will continue to operate.
+  - bw does have support for remote bootstrapping, it just not required for normal operation.
+- builtin support for custom bootstrapping services. this allows you to lose all a majority of your servers and continue to operating.
+  - see bootstrap/filesystem.go for an example. the filesystem example allows you to mount NFS to store the last successful deployment.
 - Lower costs by not needing additional infrastructure just to support deployments.
-- when something does go wrong, BW is easy to repair. just destroy its cache (default /var/cache/bearded-wookie/deploys) and reboot the agents.
-- supports single box deployments - canary deploys can be incredibly useful.
-- builtin support for custom bootstrapping - see bootstrap/filesystem.go for an example. the filesystem archives the latest successful deploy to a directory and returns that result when a bootstrap is requested. as a result you can mount a NFS drive, or some other network drive (s3) and use that as a fallback bootstrap source.
-- simple configuration simplest configuration is ~ 40 lines between the agent/clients, a few ports and two DNS records.
+- when something does go wrong, bw is easy to repair. just destroy its cache (default /var/cache/bearded-wookie) and reboot the agents.
+- simple configuration simplest configuration is ~ 40 lines between the agent/clients, one port (tcp and udp), and DNS record.
