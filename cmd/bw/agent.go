@@ -147,7 +147,7 @@ func (t *agentCmd) bind() (err error) {
 		)
 	}
 
-	if tlscreds, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert, tlsx.OptionNextProtocols("bw.mux")); err != nil {
+	if tlscreds, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
 		return err
 	}
 

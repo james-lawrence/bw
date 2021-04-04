@@ -56,6 +56,7 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 		GetClientCertificate: m.GetClientCertificate,
 		ClientCAs:            pool,
 		RootCAs:              pool,
+		NextProtos:           []string{"bw.mux"},
 	}
 
 	for _, opt := range options {

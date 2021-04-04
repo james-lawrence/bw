@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"path/filepath"
 
@@ -15,8 +16,7 @@ import (
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 type agentNotify struct {
@@ -35,7 +35,7 @@ func (t *agentNotify) configure(parent *kingpin.CmdClause) {
 
 func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
-		creds credentials.TransportCredentials
+		tlsconfig *tls.Config
 	)
 	defer t.global.shutdown()
 
@@ -45,7 +45,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(t.config))
 
-	if creds, err = daemons.GRPCGenServer(t.config); err != nil {
+	if tlsconfig, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
 		return err
 	}
 
@@ -60,8 +60,13 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(n))
 
-	d := dialers.NewDirect(agent.RPCAddress(t.config.Peer()), grpc.WithTransportCredentials(creds))
-	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), d)
+	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsconfig)
+	if err != nil {
+		return err
+	}
+	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(t.config.Peer()), d.Defaults()...))
+
+	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), dd)
 
 	return nil
 }

@@ -29,7 +29,7 @@ systemctl --user restart bearded-wookie@agent4.service
 pushd .test && bw deploy && popd
 
 # reset local environment
-systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent4/tls ~/.cache/bearded-wookie/agent4/cached.certs && systemctl --user restart bearded-wookie@agent4.service && journalctl -f --user-unit bearded-wookie@agent4.service
+systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent{1,2,3,4}/tls && systemctl --user restart bearded-wookie@agent{1,2,3,4}.service && systemctl --user restart bearded-wookie-deploy-notifications@agent1.service && journalctl -f --user-unit bearded-wookie@agent4.service
 ```
 
 ### quick start - gcloud (assumes a gcloud project, and terraform).

@@ -14,7 +14,7 @@ import (
 )
 
 // P2PAddress for a peer
-func p2paddress(p *Peer) string {
+func P2PAdddress(p *Peer) string {
 	if p.P2PPort == 0 {
 		return ""
 	}
@@ -63,7 +63,7 @@ func SWIMAddress(p *Peer) string {
 
 // RaftAddress for peer.
 func RaftAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(p2paddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort)))
+	return stringsx.DefaultIfBlank(P2PAdddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort)))
 }
 
 func TorrentPort(p *Peer) int {
