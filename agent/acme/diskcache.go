@@ -33,6 +33,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/protox"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -46,6 +47,7 @@ func newDiskcache(c agent.Config, ac certificatecache.ACMEConfig, u account) Dis
 		ac:       ac,
 		u:        u,
 		m:        new(int64),
+		rate:     rate.NewLimiter(rate.Every(ac.Rate), 1),
 	}
 }
 
@@ -56,6 +58,7 @@ type DiskCache struct {
 	u        account
 	cachedir string
 	m        *int64
+	rate     *rate.Limiter
 }
 
 // Challenge initiate a challenge.
@@ -72,6 +75,12 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 		return resp, status.Error(codes.Unavailable, "challenge in progress")
 	}
 	defer atomic.CompareAndSwapInt64(t.m, 1, 0)
+
+	// let's encrypt has pretty heavy rate limits in production.
+	if err = t.rate.Wait(ctx); err != nil {
+		log.Println("unable to clear registration", err)
+		return resp, status.Error(codes.Internal, "registration reset failure")
+	}
 
 	// LEGO is retarded in its API. and we need to delete the registration so it
 	// is not loaded prematurely by lego (i.e. before the new registration is generated)

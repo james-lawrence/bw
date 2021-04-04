@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"path/filepath"
+	"time"
 
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/pkg/errors"
@@ -21,9 +22,13 @@ import (
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"
 // cd ${HOME}/go/src/github.com/letsencrypt/pebble; pebble -config ./test/config/pebble-config.json
 
-// DefaultACMEConfig ...
+// DefaultACMEConfig defines the default configuration for the ACME
+// protocol.
+// Let's encrypt has some pretty heavy restrictions for rate limiting.
+// 5 per hour. so we'll rate limit to 13 minutes by default.
 func DefaultACMEConfig() ACMEConfig {
 	return ACMEConfig{
+		Rate:  13 * time.Minute,
 		CAURL: lego.LEDirectoryProduction,
 		Challenges: challenges{
 			ALPN: true,
@@ -38,16 +43,17 @@ type challenges struct {
 
 // ACMEConfig configuration for ACME credentials
 type ACMEConfig struct {
-	Challenges         challenges `yaml:"challenges"`
-	CAURL              string     `yaml:"caurl"`
-	Email              string     `yaml:"email"`
-	Network            string     `yaml:"network"`
-	Country            []string   `yaml:"country"`  // Country Codes for the CSR
-	Province           []string   `yaml:"province"` // Provinces for the CSR
-	Locality           []string   `yaml:"locality"`
-	Organization       []string   `yaml:"organization"`
-	OrganizationalUnit []string   `yaml:"organizationalUnit"`
-	DNSNames           []string   `yaml:"dns"` // alternative dns names
+	Rate               time.Duration `yaml:"frequency"` // frequency of attempts.
+	Challenges         challenges    `yaml:"challenges"`
+	CAURL              string        `yaml:"caurl"`
+	Email              string        `yaml:"email"`
+	Network            string        `yaml:"network"`
+	Country            []string      `yaml:"country"`  // Country Codes for the CSR
+	Province           []string      `yaml:"province"` // Provinces for the CSR
+	Locality           []string      `yaml:"locality"`
+	Organization       []string      `yaml:"organization"`
+	OrganizationalUnit []string      `yaml:"organizationalUnit"`
+	DNSNames           []string      `yaml:"dns"` // alternative dns names
 }
 
 type challenger interface {
