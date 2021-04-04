@@ -10,11 +10,11 @@ import (
 	"strings"
 
 	"github.com/james-lawrence/bw/internal/bytesx"
-	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type connector interface {
@@ -76,9 +76,17 @@ func ServerOptionShutdown(cf context.CancelFunc) ServerOption {
 	}
 }
 
+// ServerOptionAuth ...
+func ServerOptionAuth(a auth) ServerOption {
+	return func(s *Server) {
+		s.auth = a
+	}
+}
+
 // NewServer ...
 func NewServer(c connector, options ...ServerOption) Server {
 	s := Server{
+		auth: noauth{},
 		shutdown: context.CancelFunc(func() {
 			log.Println("shutdown isn't implemented")
 		}),
@@ -96,13 +104,24 @@ func NewServer(c connector, options ...ServerOption) Server {
 // Server ...
 type Server struct {
 	UnimplementedAgentServer
+	auth
 	shutdown  context.CancelFunc
 	Deployer  deployer
 	connector connector
 }
 
+// Bind to a grpc server.
+func (t Server) Bind(srv *grpc.Server) Server {
+	RegisterAgentServer(srv, t)
+	return t
+}
+
 // Shutdown when invoked the agent will self shutdown.
 func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownResponse, error) {
+	if err := t.auth.Deploy(ctx); err != nil {
+		return nil, err
+	}
+
 	if err := logx.MaybeLog(errors.Wrap(t.Deployer.Reset(), "failed to reset")); err != nil {
 		return nil, err
 	}
@@ -118,7 +137,10 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 		d   Deploy
 	)
 
-	debugx.Println("deploy initiated", dreq.Archive.Location)
+	if err := t.auth.Deploy(ctx); err != nil {
+		return nil, err
+	}
+
 	if d, err = t.Deployer.Deploy(*dreq.Options, *dreq.Archive); err != nil {
 		return nil, err
 	}
@@ -128,16 +150,23 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 
 // Cancel ...
 func (t Server) Cancel(ctx context.Context, req *CancelRequest) (_ *CancelResponse, err error) {
+	if err := t.auth.Deploy(ctx); err != nil {
+		return nil, err
+	}
+
 	t.Deployer.Cancel()
 	return &CancelResponse{}, nil
 }
 
 // Info ...
-func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, error) {
+func (t Server) Info(ctx context.Context, _ *StatusRequest) (_ *StatusResponse, err error) {
 	var (
-		err error
-		d   []Deploy
+		d []Deploy
 	)
+
+	if err := t.auth.Deploy(ctx); err != nil {
+		return nil, err
+	}
 
 	tmp := t.connector.Local()
 
@@ -154,12 +183,20 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (*StatusResponse, er
 
 // Connect ...
 func (t Server) Connect(ctx context.Context, _ *ConnectRequest) (_zeror *ConnectResponse, err error) {
+	if err := t.auth.Deploy(ctx); err != nil {
+		return nil, err
+	}
+
 	details := t.connector.Connect()
 	return &details, nil
 }
 
 // Logs retrieve logs for the given deploy.
 func (t Server) Logs(req *LogRequest, out Agent_LogsServer) (err error) {
+	if err := t.auth.Deploy(out.Context()); err != nil {
+		return err
+	}
+
 	const KB16 = 16 * bytesx.KiB
 	logs := t.Deployer.Logs(req.DeploymentID)
 

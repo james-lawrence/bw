@@ -76,6 +76,13 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 	configuration := quorum.NewConfiguration(authority, ctx.Cluster, dialer)
 	configurationsvc := quorum.NewConfigurationService(configuration)
 
+	agent.NewServer(
+		ctx.Cluster,
+		agent.ServerOptionAuth(notary.NewAgentAuth(ctx.NotaryAuth)),
+		agent.ServerOptionDeployer(&coordinator),
+		agent.ServerOptionShutdown(ctx.Shutdown),
+	).Bind(server)
+
 	q := quorum.New(
 		observersdir,
 		ctx.Cluster,
@@ -93,21 +100,19 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 	)
 	go (&q).Observe(make(chan raft.Observation, 200))
 
-	a := agent.NewServer(
-		ctx.Cluster,
-		agent.ServerOptionDeployer(&coordinator),
-		agent.ServerOptionShutdown(ctx.Shutdown),
-	)
+	agent.NewQuorum(
+		&q,
+		notary.NewAgentAuth(ctx.NotaryAuth),
+	).Bind(server)
 
-	aq := agent.NewQuorum(&q)
 	notary.New(
 		ctx.Config.ServerName,
 		certificatecache.NewAuthorityCache(ctx.Config.CredentialsDir),
 		ctx.NotaryStorage,
 	).Bind(server)
+
 	proxy.NewDeployment(ctx.NotaryAuth, qdialer).Bind(server)
-	agent.RegisterAgentServer(server, a)
-	agent.RegisterQuorumServer(server, aq)
+
 	agent.RegisterConfigurationServer(server, configurationsvc)
 	acme.RegisterACMEServer(server, acme.NewService(ctx.ACMECache, ctx.NotaryAuth))
 

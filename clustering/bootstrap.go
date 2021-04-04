@@ -160,7 +160,8 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 		log.Printf("located %d peers\n", len(peers))
 
 		if joined, err = c.Join(peers...); err != nil {
-			return errors.Wrap(err, "failed to join peers")
+			log.Println(errors.Wrap(err, "failed to join peers"))
+			continue
 		}
 
 		// if members > 1, then another node discovered us while we were

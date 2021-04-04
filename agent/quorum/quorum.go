@@ -20,7 +20,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
@@ -203,15 +202,10 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 		chunk    *agent.UploadChunk
 	)
 
-	debugx.Println("upload invoked")
-	defer debugx.Println("upload completed")
-
-	debugx.Println("upload: receiving metadata")
 	if chunk, err = stream.Recv(); err != nil {
 		return errors.WithStack(err)
 	}
 
-	debugx.Printf("upload: initializing protocol: %T\n", t.uploads)
 	metadata := chunk.GetMetadata()
 	if dst, err = t.uploads.NewUpload(metadata.Bytes); err != nil {
 		return err
@@ -244,7 +238,6 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 			return err
 		}
 
-		debugx.Println("upload: chunk received")
 		if checksum, err = dst.Upload(bytes.NewBuffer(chunk.Data)); err != nil {
 			log.Println("error uploading chunk", err)
 			return err

@@ -17,8 +17,6 @@ type clusterx interface {
 	GetN(n int, key []byte) []*memberlist.Node
 	Local() *agent.Peer
 	Peers() []*agent.Peer
-	Quorum() []*agent.Peer
-	Connect() agent.ConnectResponse
 }
 
 // NewProxy ...

@@ -314,6 +314,7 @@ var _ = Describe("Raft", func() {
 				}, 10*time.Second).Should(HaveLen(3))
 
 				Expect(current.c.Shutdown()).ToNot(HaveOccurred())
+				current.rc()
 
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
@@ -351,7 +352,7 @@ var _ = Describe("Raft", func() {
 			Eventually(func() *raft.Raft {
 				rafts = gather(obsc, rafts...)
 				return firstRaft(findState(leaderFilter, rafts...)...)
-			}).ShouldNot(BeNil())
+			}, 5*time.Second).ShouldNot(BeNil())
 
 			leader := firstRaft(findState(leaderFilter, rafts...)...)
 			expected := leader.Leader()

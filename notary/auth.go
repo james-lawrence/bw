@@ -16,7 +16,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/rsax"
@@ -334,4 +336,26 @@ func DecodeAuthorization(encoded string) (_ *Authorization, err error) {
 	}
 
 	return &a, nil
+}
+
+type auth interface {
+	Authorize(ctx context.Context) *Permission
+}
+
+func NewAgentAuth(a auth) AgentAuth {
+	return AgentAuth{
+		auth: a,
+	}
+}
+
+type AgentAuth struct {
+	auth
+}
+
+func (t AgentAuth) Deploy(ctx context.Context) error {
+	if t.Authorize(ctx).Deploy {
+		return nil
+	}
+
+	return status.Error(codes.PermissionDenied, "invalid credentials")
 }
