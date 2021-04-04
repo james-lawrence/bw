@@ -2,7 +2,6 @@ package certificatecache
 
 import (
 	"crypto/tls"
-	"log"
 
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 )
@@ -30,7 +29,6 @@ type ALPN struct {
 func (t ALPN) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	for _, proto := range hello.SupportedProtos {
 		if proto == tlsalpn01.ACMETLS1Protocol {
-			log.Println("RECEIVED ACME Challenge")
 			return t.cache.GetCertificate(hello)
 		}
 	}
