@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -22,6 +22,7 @@ type me struct {
 
 func (t *me) configure(parent *kingpin.CmdClause) {
 	parent.Command("show", "show current credentials").Default().Action(t.show)
+	parent.Command("pub", "print public key to stdout").Action(t.pubkey)
 	cmd := parent.Command("init", "initialize the users credentials for a workspace").Action(t.exec)
 	cmd.Arg("environment", "environment to insert the authorized key for deployment").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 	parent.Command("clear", "remove the current credentials from disk").Action(t.reset)
@@ -36,7 +37,23 @@ func (t *me) show(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	log.Printf("fingerprint: %s\npublic key:\n%s\n", print, string(pub))
+	fmt.Println("location:", notary.PublicKeyPath())
+	fmt.Println("fingerprint:", print)
+	fmt.Println("public key:", string(pub))
+
+	return nil
+}
+
+func (t *me) pubkey(ctx *kingpin.ParseContext) (err error) {
+	var (
+		pub []byte
+	)
+
+	if _, pub, err = notary.AutoSignerInfo(); err != nil {
+		return err
+	}
+
+	fmt.Println(string(pub))
 
 	return nil
 }
