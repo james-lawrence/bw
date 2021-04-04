@@ -32,17 +32,17 @@ func (t Directory) lookup(fingerprint string) (key string, g *Grant, err error) 
 	g = &Grant{}
 
 	if strings.TrimSpace(fingerprint) == "" {
-		return key, g, errors.New("can not use an empty fingerprint")
+		return key, nil, errors.New("can not use an empty fingerprint")
 	}
 
 	key = genKey(t.root, fingerprint)
 
 	if encoded, err = ioutil.ReadFile(key); err != nil {
-		return key, g, errors.Wrapf(err, "unable to read %s", key)
+		return key, nil, errors.Wrapf(err, "unable to read %s", key)
 	}
 
 	if err = proto.Unmarshal(encoded, g); err != nil {
-		return key, g, errors.Wrapf(err, "unable to read %s", key)
+		return key, nil, errors.Wrapf(err, "unable to read %s", key)
 	}
 
 	return key, g, err
@@ -66,33 +66,33 @@ func (t Directory) Insert(g *Grant) (_ *Grant, err error) {
 	)
 
 	gd := g.EnsureDefaults()
-	key := genKey(t.root, g.Fingerprint)
+	key := genKey(t.root, gd.Fingerprint)
 
 	if encoded, err = proto.Marshal(gd); err != nil {
-		return g, errors.Wrapf(err, "unable to write %s", key)
+		return nil, errors.Wrapf(err, "unable to write %s", key)
 	}
 
 	t.m.Lock()
 	defer t.m.Unlock()
 
 	if err = os.MkdirAll(filepath.Dir(key), 0700); err != nil {
-		return g, errors.Wrapf(err, "unable to write %s", key)
+		return nil, errors.Wrapf(err, "unable to write %s", key)
 	}
 
 	if dst, err = os.OpenFile(key, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600); err != nil {
-		return g, errors.Wrapf(err, "unable to write %s", key)
+		return nil, errors.Wrapf(err, "unable to write %s", key)
 	}
 	defer dst.Close()
 
 	if _, err = io.Copy(dst, bytes.NewReader(encoded)); err != nil {
-		return g, errors.Wrapf(err, "unable to write %s", key)
+		return nil, errors.Wrapf(err, "unable to write %s", key)
 	}
 
 	if err = dst.Sync(); err != nil {
-		return g, errors.Wrapf(err, "unable to write %s", key)
+		return nil, errors.Wrapf(err, "unable to write %s", key)
 	}
 
-	return g, err
+	return gd, err
 }
 
 // Delete a grant

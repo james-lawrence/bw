@@ -17,7 +17,7 @@ func TestUx(t *testing.T) {
 	go debugx.DumpOnSignal(context.Background(), syscall.SIGUSR2)
 	log.SetOutput(ioutil.Discard)
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Ux Suite")
+	RunSpecs(t, "UX Suite")
 }
 
 var _ = SynchronizedAfterSuite(func() {}, testingx.Cleanup)

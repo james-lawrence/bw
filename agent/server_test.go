@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/icrowley/fake"
 	. "github.com/onsi/ginkgo"
@@ -72,7 +73,7 @@ var _ = Describe("Server", func() {
 			Expect(info.Deployments).To(BeEmpty())
 			tmp := h.cluster.Local()
 			tmp.Status = Peer_Node
-			Expect(info.Peer).To(Equal(&tmp))
+			Expect(proto.Equal(info.Peer, tmp)).To(BeTrue())
 		})
 	})
 

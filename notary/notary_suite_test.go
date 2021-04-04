@@ -1,6 +1,7 @@
 package notary_test
 
 import (
+	"context"
 	"io/ioutil"
 	"log"
 	"testing"
@@ -74,5 +75,9 @@ type StaticDialer struct {
 }
 
 func (t StaticDialer) Dial(_ ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
+	return t.conn, nil
+}
+
+func (t StaticDialer) DialContext(_ context.Context, _ ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
 	return t.conn, nil
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -56,36 +57,35 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 
 func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, c clustering.Joiner, snap peering.File) error {
 	var (
-		clipeers clustering.Source = peering.NewStaticTCP(t.bootstrap...)
-		// awspeers    clustering.Source = peering.NewStaticTCP()
-		// gcloudpeers clustering.Source = peering.NewStaticTCP()
-		// dnspeers    clustering.Source = peering.NewDNS(t.config.SWIMBind.Port)
-		// p2ppeers    clustering.Source = peering.NewDNS(t.config.P2PBind.Port)
+		clipeers    clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		awspeers    clustering.Source = peering.NewStaticTCP()
+		gcloudpeers clustering.Source = peering.NewStaticTCP()
+		dnspeers    clustering.Source = peering.NewStaticTCP()
+		p2ppeers    clustering.Source = peering.NewDNS(t.config.P2PBind.Port)
 	)
 
-	// if t.dnsEnabled {
-	// 	log.Println("dns peering enabled")
-	// 	dnspeers = peering.NewDNS(t.config.SWIMBind.Port, append(t.config.DNSBootstrap, t.config.ServerName)...)
-	// }
+	if t.dnsEnabled {
+		log.Println("dns peering enabled")
+		dnspeers = peering.NewDNS(t.config.P2PBind.Port, append(t.config.DNSBootstrap, t.config.ServerName)...)
+	}
 
-	// if t.awsEnabled {
-	// 	log.Println("aws autoscale groups peering enabled")
-	// 	awspeers = peering.AWSAutoscaling{
-	// 		Port:               conf.SWIMBind.Port,
-	// 		SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
-	// 	}
-	// }
+	if t.awsEnabled {
+		log.Println("aws autoscale groups peering enabled")
+		awspeers = peering.AWSAutoscaling{
+			Port:               conf.P2PBind.Port,
+			SupplimentalGroups: conf.AWSBootstrap.AutoscalingGroups,
+		}
+	}
 
-	// if t.gcloudEnabled {
-	// 	log.Println("gcloud target pool peering enabled")
-	// 	gcloudpeers = peering.GCloudTargetPool{
-	// 		Port:    conf.SWIMBind.Port,
-	// 		Maximum: conf.MinimumNodes,
-	// 	}
-	// }
+	if t.gcloudEnabled {
+		log.Println("gcloud target pool peering enabled")
+		gcloudpeers = peering.GCloudTargetPool{
+			Port:    conf.P2PBind.Port,
+			Maximum: conf.MinimumNodes,
+		}
+	}
 
-	return commandutils.ClusterJoin(ctx, conf, c, clipeers)
-	// return commandutils.ClusterJoin(ctx, conf, c, clipeers, p2ppeers, dnspeers, awspeers, gcloudpeers, snap)
+	return commandutils.ClusterJoin(ctx, conf, c, clipeers, p2ppeers, dnspeers, awspeers, gcloudpeers, snap)
 }
 
 func (t *clusterCmd) Snapshot(c clustering.Rendezvous, fssnapshot peering.File, options ...clustering.SnapshotOption) {

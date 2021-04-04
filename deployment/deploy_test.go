@@ -32,7 +32,7 @@ var _ = Describe("Deploy", func() {
 		c := cluster.New(
 			l,
 			clustering.NewMock(
-				func() *memberlist.Node { n := agent.PeerToNode(*p); return &n }(),
+				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
 				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
 				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
 				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),
@@ -65,7 +65,7 @@ var _ = Describe("Deploy", func() {
 		c := cluster.New(
 			l,
 			clustering.NewMock(
-				func() *memberlist.Node { n := agent.PeerToNode(*p); return &n }(),
+				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
 				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
 				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
 				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),
