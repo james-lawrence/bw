@@ -1,7 +1,9 @@
 package awsx
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
@@ -13,7 +15,7 @@ import (
 
 // AutoscalingPeers return a list of peers for this instance based on the autoscaling group.
 // errors out if no autoscaling group is associated with the instance.
-func AutoscalingPeers(supplimental ...string) (peers []ec2.Instance, err error) {
+func AutoscalingPeers(ctx context.Context, supplimental ...string) (peers []ec2.Instance, err error) {
 	var (
 		sess  *session.Session
 		ident ec2metadata.EC2InstanceIdentityDocument
@@ -29,8 +31,10 @@ func AutoscalingPeers(supplimental ...string) (peers []ec2.Instance, err error) 
 
 	md := ec2metadata.New(sess)
 
+	actx, done := context.WithTimeout(ctx, time.Second)
+	defer done()
 	// if unavailable just return an empty set.
-	if !md.Available() {
+	if !md.AvailableWithContext(actx) {
 		return peers, nil
 	}
 

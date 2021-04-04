@@ -136,7 +136,11 @@ retry:
 		}
 
 		log.Printf("%T: locating peers\n", s)
-		if peers, err = s.Peers(); err != nil {
+		pctx, done := context.WithTimeout(ctx, time.Second)
+		peers, err = s.Peers(pctx)
+		done()
+
+		if err != nil {
 			log.Printf("failed to load peers: %T: %s\n", s, err)
 			continue
 		}

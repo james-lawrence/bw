@@ -1,6 +1,7 @@
 package clustering
 
 import (
+	"context"
 	"net"
 	"time"
 
@@ -49,7 +50,7 @@ type snapshotter interface {
 // Source is used to pull peers from various sources, typically from a snapshot.
 // used when bootstraping a cluster.
 type Source interface {
-	Peers() ([]string, error)
+	Peers(context.Context) ([]string, error)
 }
 
 // Memberlist represents the cluster.

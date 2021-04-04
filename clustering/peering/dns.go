@@ -1,6 +1,7 @@
 package peering
 
 import (
+	"context"
 	"net"
 	"strconv"
 
@@ -22,7 +23,7 @@ type DNS struct {
 }
 
 // Peers - reads peers from a dns record.
-func (t DNS) Peers() (results []string, err error) {
+func (t DNS) Peers(context.Context) (results []string, err error) {
 	var (
 		ips []net.IP
 	)

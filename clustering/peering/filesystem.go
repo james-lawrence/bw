@@ -1,6 +1,7 @@
 package peering
 
 import (
+	"context"
 	"io/ioutil"
 
 	yaml "gopkg.in/yaml.v2"
@@ -14,7 +15,7 @@ type File struct {
 }
 
 // Peers - reads peers from a file.
-func (t File) Peers() (results []string, err error) {
+func (t File) Peers(context.Context) (results []string, err error) {
 	var (
 		data []byte
 	)

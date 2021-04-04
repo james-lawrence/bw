@@ -1,6 +1,7 @@
 package peering
 
 import (
+	"context"
 	"net"
 	"strconv"
 
@@ -14,8 +15,8 @@ type AWSAutoscaling struct {
 }
 
 // Peers - reads peers from aws Autoscaling groups.
-func (t AWSAutoscaling) Peers() (results []string, err error) {
-	instances, err := awsx.AutoscalingPeers(t.SupplimentalGroups...)
+func (t AWSAutoscaling) Peers(ctx context.Context) (results []string, err error) {
+	instances, err := awsx.AutoscalingPeers(ctx, t.SupplimentalGroups...)
 	if err != nil {
 		return []string(nil), err
 	}

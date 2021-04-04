@@ -1,6 +1,7 @@
 package peering
 
 import (
+	"context"
 	"net"
 
 	"github.com/hashicorp/memberlist"
@@ -12,11 +13,11 @@ type cluster interface {
 }
 
 // Closure - allows for a peering strategy that is contained within a function.
-type Closure func() ([]string, error)
+type Closure func(context.Context) ([]string, error)
 
 // Peers - returns the results of the closure.
-func (t Closure) Peers() ([]string, error) {
-	return t()
+func (t Closure) Peers(ctx context.Context) ([]string, error) {
+	return t(ctx)
 }
 
 // NewStaticTCP built a static set of peers from TCPAddr.
@@ -40,6 +41,6 @@ type Static struct {
 }
 
 // Peers - returns the set of peers.
-func (t Static) Peers() ([]string, error) {
+func (t Static) Peers(context.Context) ([]string, error) {
 	return t.peers, nil
 }

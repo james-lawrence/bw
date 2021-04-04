@@ -18,7 +18,7 @@ type GCloudTargetPool struct {
 }
 
 // Peers - reads peers from aws Autoscaling groups.
-func (t GCloudTargetPool) Peers() (results []string, err error) {
+func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err error) {
 	var (
 		c         *compute.Service
 		project   string
@@ -41,7 +41,7 @@ func (t GCloudTargetPool) Peers() (results []string, err error) {
 		return results, errors.WithStack(err)
 	}
 
-	if c, err = compute.NewService(context.Background()); err != nil {
+	if c, err = compute.NewService(ctx); err != nil {
 		return results, errors.WithStack(err)
 	}
 

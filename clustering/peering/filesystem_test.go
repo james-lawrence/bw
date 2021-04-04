@@ -1,6 +1,7 @@
 package peering_test
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -19,6 +20,7 @@ var _ = Describe("File", func() {
 		err    error
 		tmpdir string
 	)
+
 	BeforeEach(func() {
 		tmpdir, err = ioutil.TempDir(".", "fs-peering")
 		Expect(err).ToNot(HaveOccurred())
@@ -33,7 +35,7 @@ var _ = Describe("File", func() {
 		fs := File{Path: filepath.Join(tmpdir, "peers.yml")}
 		Expect(fs.Snapshot(clustering.Peers(c))).ToNot(HaveOccurred())
 
-		peers, err := fs.Peers()
+		peers, err := fs.Peers(context.Background())
 		Expect(err).ToNot(HaveOccurred())
 		Expect(peers).To(ConsistOf(clustering.Peers(c)))
 	})
