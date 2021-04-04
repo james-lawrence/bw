@@ -264,9 +264,9 @@ var _ = Describe("StateMachine", func() {
 		Expect(sm.Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
 
 		for _, m := range messages {
-			var expected agent.Message
-			Eventually(obs).Should(Receive(&expected))
-			Expect(proto.Equal(&expected, m)).To(BeTrue())
+			expected := <-obs
+			// Eventually(obs).Should(Receive(&expected))
+			Expect(proto.Equal(expected, m)).To(BeTrue())
 		}
 	})
 })
