@@ -1,3 +1,69 @@
+commit 797c777852c39ef87e8f822703bf6d285dafc0fb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 13:36:19 2021 -0400
+
+    fix notifications
+
+commit da74cd74322ab2a6b6902f3f1207b94863f53745
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 11:13:45 2021 -0400
+
+    update development configuration
+
+commit 15a5b751d6ccaf625b63fe30518487c8fe843fdb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 11:07:49 2021 -0400
+
+    remove logging
+
+commit c83d7672c8949405e8257b37418f69a4136a5e77
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 10:58:24 2021 -0400
+
+    update readme
+
+commit 32b5025d514384a47d6b4bed4faa8ca18e9441bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 10:37:58 2021 -0400
+
+    rate limit the certificate requests
+
+commit b863a1e8da875b12f0c59b433bb9c6b819ea2c31
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 10:22:27 2021 -0400
+
+    improve me output
+
+commit 7ad24ed4e7e48de042290f32325375c5e069d2d7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 10:01:25 2021 -0400
+
+    fix up client for deployments
+
+commit 84da6bc87bfb8900e7fb3fcb175fbc45775365da
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 08:55:50 2021 -0400
+
+    debugging acme
+
+commit 5043e1faadb6f7af31d947caa460d5a80d9840cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 08:51:33 2021 -0400
+
+    update ports to muxer port
+
+commit 26bed503004c09c264c5c739cfb58ca8d60dc454
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 08:49:15 2021 -0400
+
+    update clustering code
+
+commit 92941c1701b8c49e08f1f3e4af0f7189caccc57e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 3 22:22:04 2021 -0400
+
+    release 0.1.1617502856-5f1fd2a0
+
 commit 5f1fd2a020d754736f86fe5d9e6df2beb536a1a0
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 3 22:20:56 2021 -0400
