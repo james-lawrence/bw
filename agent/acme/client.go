@@ -16,12 +16,8 @@ import (
 // work we just need a constant shared value.
 const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
 
-type dialer interface {
-	Defaults(combined ...grpc.DialOption) []grpc.DialOption
-}
-
 // NewChallenger create a new Client
-func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Challenger {
+func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defaults) Challenger {
 	return Challenger{
 		local:      p,
 		rendezvous: r,
@@ -34,8 +30,8 @@ func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Chall
 type Challenger struct {
 	local *agent.Peer
 	rendezvous
-	dialer
-	cache DiskCache
+	dialer dialers.Defaults
+	cache  DiskCache
 }
 
 // Challenge initiate a challenge.
@@ -94,7 +90,7 @@ func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, autho
 }
 
 // NewResolver create a new Client
-func NewResolver(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Resolver {
+func NewResolver(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defaults) Resolver {
 	return Resolver{
 		local:      p,
 		rendezvous: r,
@@ -107,8 +103,8 @@ func NewResolver(p *agent.Peer, r rendezvous, cache DiskCache, d dialer) Resolve
 type Resolver struct {
 	local *agent.Peer
 	rendezvous
-	dialer
-	cache DiskCache
+	dialer dialers.Defaults
+	cache  DiskCache
 }
 
 // Resolution retrieve a resolution.

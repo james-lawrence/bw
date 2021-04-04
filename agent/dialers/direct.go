@@ -31,6 +31,6 @@ func (t Direct) DialContext(ctx context.Context, options ...grpc.DialOption) (c 
 }
 
 // Defaults return the defaults for this dialer.
-func (t Direct) Defaults(options ...grpc.DialOption) []grpc.DialOption {
+func (t Direct) Defaults(options ...grpc.DialOption) Defaulted {
 	return append(t.defaults, options...)
 }

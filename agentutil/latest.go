@@ -15,7 +15,7 @@ import (
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
 // If no error occurs, latest.Archive is guaranteed to be populated.
-func DetermineLatestDeployment(c cluster, d dialer2) (latest agent.Deploy, err error) {
+func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest agent.Deploy, err error) {
 	type result struct {
 		deploy agent.Deploy
 		count  int
@@ -90,7 +90,7 @@ func quorum(c cluster, votes int) bool {
 
 // QuorumLatestDeployment determines the latest deployment by asking the agents
 // who are in the raft cluster what the latest deployment is.
-func QuorumLatestDeployment(c cluster, d dialer2) (z agent.Deploy, err error) {
+func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z agent.Deploy, err error) {
 	var (
 		conn   *grpc.ClientConn
 		i      agent.InfoResponse
@@ -178,7 +178,7 @@ func FilterDeployID(id string) func(d agent.Deploy) bool {
 }
 
 // LocateDeployment returns the deployment info based on the provided filter.
-func LocateDeployment(c cluster, d dialer2, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
+func LocateDeployment(c cluster, d dialers.Defaults, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
 	const done = errorsx.String("done")
 
 	locate := func(c agent.Client) (err error) {

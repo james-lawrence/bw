@@ -37,7 +37,7 @@ type ContextDialer interface {
 // accepts additional options to merge in.
 // this allows for converting from one dialer to another.
 type Defaults interface {
-	Defaults(combined ...grpc.DialOption) []grpc.DialOption
+	Defaults(combined ...grpc.DialOption) Defaulted
 }
 
 // DefaultsDialer combines both defaults and dialer.
@@ -47,7 +47,7 @@ type DefaultsDialer interface {
 }
 
 // DefaultDialerOptions sets reasonable defaults for dialing the agent.
-func DefaultDialerOptions(options ...grpc.DialOption) (results []grpc.DialOption) {
+func DefaultDialerOptions(options ...grpc.DialOption) (results Defaulted) {
 	defaults := []grpc.DialOption{
 		grpc.WithBackoffMaxDelay(5 * time.Second),
 		grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),

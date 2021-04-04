@@ -17,6 +17,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/deployment"
@@ -32,7 +33,7 @@ type downloader interface {
 }
 
 type dialer interface {
-	Defaults(...grpc.DialOption) []grpc.DialOption
+	Defaults(...grpc.DialOption) dialers.Defaulted
 	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
 }
 

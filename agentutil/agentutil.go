@@ -37,10 +37,6 @@ type dialer interface {
 	Dial(agent.Peer) (zeroc agent.Client, err error)
 }
 
-type dialer2 interface {
-	Defaults(...grpc.DialOption) []grpc.DialOption
-}
-
 type dialer3 interface {
 	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
 }

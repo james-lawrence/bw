@@ -117,7 +117,7 @@ func (t *deployment) deploy(d dialers.Defaults, dopts agent.DeployOptions, a age
 
 // Cancel a ongoing deploy.
 func (t *deployment) cancel(ctx context.Context, req *agent.CancelRequest, d dialers.Defaults, sm stateMachine) (err error) {
-	if err = agentutil.Cancel(t.c, d); err != nil {
+	if err = agentutil.Cancel(t.c, d.Defaults()); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 	}
 
 	log.Println("leadership change detected missing successful deploy, attempting to recover")
-	if deploy, err = agentutil.DetermineLatestDeployment(t.c, d); err != nil {
+	if deploy, err = agentutil.DetermineLatestDeployment(t.c, d.Defaults()); err != nil {
 		return err
 	}
 

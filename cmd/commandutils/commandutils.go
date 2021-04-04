@@ -3,17 +3,17 @@ package commandutils
 
 import (
 	"context"
+	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
@@ -97,7 +97,8 @@ func LoadAgentConfig(path string, proto agent.Config) (c agent.Config, err error
 // LoadConfiguration loads the configuration for the given environment.
 func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
 	var (
-		creds credentials.TransportCredentials
+		d         dialers.Defaults
+		tlsconfig *tls.Config
 	)
 
 	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
@@ -114,7 +115,11 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		return config, errors.Wrap(err, "configuration load failed")
 	}
 
-	if creds, err = daemons.GRPCGenClientNoClientCert(config); err != nil {
+	if tlsconfig, err = daemons.TLSGenClient(config); err != nil {
+		return config, err
+	}
+
+	if d, err = daemons.DefaultDialer(config.Address, tlsconfig); err != nil {
 		return config, err
 	}
 
@@ -125,7 +130,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		cc.DefaultTLSCertClient,
 	)
 
-	if err = discovery.CheckCredentials(config.Address, certpath, grpc.WithTransportCredentials(creds)); err != nil && !grpcx.IsUnimplemented(err) {
+	if err = discovery.CheckCredentials(config.Address, certpath, d); err != nil && !grpcx.IsUnimplemented(err) {
 		log.Println("check credentials", err)
 		if !grpcx.IsNotFound(err) {
 			return config, err

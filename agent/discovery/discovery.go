@@ -91,7 +91,7 @@ func Snapshot(address string, options ...grpc.DialOption) (nodes []*memberlist.N
 }
 
 // CheckCredentials against discovery
-func CheckCredentials(address string, path string, options ...grpc.DialOption) (err error) {
+func CheckCredentials(address string, path string, d dialers.Defaults) (err error) {
 	var (
 		cc *grpc.ClientConn
 	)
@@ -105,7 +105,7 @@ func CheckCredentials(address string, path string, options ...grpc.DialOption) (
 		return errors.New("failed to generate fingerprint")
 	}
 
-	if cc, err = dialers.NewDirect(address).Dial(options...); err != nil {
+	if cc, err = dialers.NewDirect(agent.AgentP2PAddress(address)).Dial(d.Defaults()...); err != nil {
 		return err
 	}
 	defer cc.Close()

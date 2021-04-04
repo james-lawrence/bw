@@ -4,11 +4,11 @@ import "google.golang.org/grpc"
 
 // NewDefaults create a defaults dialer.
 func NewDefaults(options ...grpc.DialOption) Defaults {
-	return defaulted(DefaultDialerOptions(options...))
+	return Defaulted(DefaultDialerOptions(options...))
 }
 
-type defaulted []grpc.DialOption
+type Defaulted []grpc.DialOption
 
-func (t defaulted) Defaults(combined ...grpc.DialOption) []grpc.DialOption {
+func (t Defaulted) Defaults(combined ...grpc.DialOption) Defaulted {
 	return append(t, combined...)
 }

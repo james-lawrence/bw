@@ -37,7 +37,7 @@ func (t Cluster) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *
 		latest agent.Deploy
 	)
 
-	if latest, err = agentutil.DetermineLatestDeployment(t.c, t.d); err != nil {
+	if latest, err = agentutil.DetermineLatestDeployment(t.c, t.d.Defaults()); err != nil {
 		switch cause := errors.Cause(err); cause {
 		case agentutil.ErrNoDeployments:
 			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "cluster: latest deployment discovery found no deployments").Error())

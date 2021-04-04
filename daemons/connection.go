@@ -100,28 +100,37 @@ func ConnectClientUntilSuccess(
 	}
 }
 
+func DefaultDialer(address string, tlsconfig *tls.Config, options ...grpc.DialOption) (d dialers.Defaults, err error) {
+	var (
+		addr *net.TCPAddr
+	)
+
+	if addr, err = net.ResolveTCPAddr("tcp", address); err != nil {
+		return d, err
+	}
+
+	return dialers.NewDefaults(options...).Defaults(
+		dialers.WithMuxer(tlsx.NewDialer(tlsconfig), addr),
+		grpc.WithInsecure(),
+	), nil
+}
+
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
 func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Defaults, c clustering.Static, err error) {
 	var (
-		addr      *net.TCPAddr
 		nodes     []*memberlist.Node
 		tlsconfig *tls.Config
 	)
-
-	if addr, err = net.ResolveTCPAddr("tcp", config.Address); err != nil {
-		return d, c, err
-	}
 
 	if tlsconfig, err = TLSGenClient(config); err != nil {
 		return d, c, err
 	}
 
-	dopts := dialers.NewDefaults(options...).Defaults(
-		dialers.WithMuxer(tlsx.NewDialer(tlsconfig), addr),
-		grpc.WithInsecure(),
-	)
+	if d, err = DefaultDialer(config.Address, tlsconfig, options...); err != nil {
+		return d, c, err
+	}
 
-	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), dopts...); err != nil {
+	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), d.Defaults()...); err != nil {
 		return d, c, err
 	}
 
@@ -131,7 +140,7 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 
 	c = clustering.NewStatic(nodes...)
 
-	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), dopts...), c, err
+	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), d.Defaults()...), c, err
 }
 
 func deprecatedConnect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...ConnectOption) (d dialers.Defaults, c clustering.Memberlist, err error) {

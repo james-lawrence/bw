@@ -34,8 +34,8 @@ func (t PeerSet) Peers() []*agent.Peer {
 }
 
 // NewClusterOperation applies an operation to every node in the cluster.
-func NewClusterOperation(o operation) func(peers, dialer2) error {
-	return func(c peers, d dialer2) (err error) {
+func NewClusterOperation(o operation) func(peers, dialers.Defaults) error {
+	return func(c peers, d dialers.Defaults) (err error) {
 		for _, peer := range c.Peers() {
 			if err = dialAndVisit(d, peer, o); err != nil {
 				return err
@@ -46,7 +46,7 @@ func NewClusterOperation(o operation) func(peers, dialer2) error {
 	}
 }
 
-func dialAndVisit(d dialer2, p *agent.Peer, o operation) (err error) {
+func dialAndVisit(d dialers.Defaults, p *agent.Peer, o operation) (err error) {
 	var (
 		conn *grpc.ClientConn
 	)

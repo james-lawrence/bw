@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/x/iox"
 )
 
@@ -15,7 +16,7 @@ func PrintLogs(ctx context.Context, c agent.DeployClient, p *agent.Peer, did []b
 }
 
 // DeploymentLogs retrieves the logs for the given deployment ID from each server in the cluster.
-func DeploymentLogs(c cluster, d dialer2, deploymentID []byte) io.ReadCloser {
+func DeploymentLogs(c cluster, d dialers.Defaults, deploymentID []byte) io.ReadCloser {
 	r, w := io.Pipe()
 	go func() {
 		ctx, done := context.WithTimeout(context.Background(), 20*time.Second)
