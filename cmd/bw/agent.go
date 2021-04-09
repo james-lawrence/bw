@@ -38,11 +38,12 @@ import (
 
 type agentCmd struct {
 	*global
-	bootstrap   []*net.TCPAddr
-	config      agent.Config
-	configFile  string
-	raftFile    string
-	raftVerbose bool
+	bootstrap      []*net.TCPAddr
+	alternateBinds []*net.TCPAddr
+	config         agent.Config
+	configFile     string
+	raftFile       string
+	raftVerbose    bool
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
@@ -54,26 +55,11 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	).Envar(
 		bw.EnvAgentP2PBind,
 	).TCPVar(&t.config.P2PBind)
-	parent.Flag("agent-bind", "address for the RPC server to bind to").PlaceHolder(
-		t.config.RPCBind.String(),
+	parent.Flag("agent-p2p-alternates", "alternate ip socket for the p2p server to bind to").PlaceHolder(
+		"127.0.0.1:2000",
 	).Envar(
-		bw.EnvAgentRPCBind,
-	).TCPVar(&t.config.RPCBind)
-	parent.Flag("agent-discovery", "address for the discovery server to bind to").PlaceHolder(
-		t.config.DiscoveryBind.String(),
-	).Envar(
-		bw.EnvAgentDiscoveryBind,
-	).TCPVar(&t.config.DiscoveryBind)
-	parent.Flag("agent-torrent", "address for the torrent server to bind to").PlaceHolder(
-		t.config.TorrentBind.String(),
-	).Envar(
-		bw.EnvAgentTorrentBind,
-	).TCPVar(&t.config.TorrentBind)
-	parent.Flag("agent-autocert", "address for the autocert server to bind to").PlaceHolder(
-		t.config.AutocertBind.String(),
-	).Envar(
-		bw.EnvAgentAutocertBind,
-	).TCPVar(&t.config.AutocertBind)
+		bw.EnvAgentP2PAlternatesBind,
+	).TCPListVar(&t.alternateBinds)
 	parent.Flag("agent-bootstrap", "addresses of the cluster to bootstrap from").PlaceHolder(
 		t.config.P2PBind.String(),
 	).Envar(
@@ -91,6 +77,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 func (t *agentCmd) bind() (err error) {
 	var (
 		l        net.Listener
+		bound    []net.Listener
 		p2ppriv  []byte
 		p2ppub   []byte
 		tc       storage.TorrentConfig
@@ -167,6 +154,20 @@ func (t *agentCmd) bind() (err error) {
 	if l, err = net.ListenTCP("tcp", t.config.P2PBind); err != nil {
 		return err
 	}
+	bound = append(bound, l)
+
+	log.Println("alternate bindings", len(t.alternateBinds))
+	for _, alt := range t.alternateBinds {
+		var (
+			l2 net.Listener
+		)
+
+		if l2, err = net.ListenTCP("tcp", alt); err != nil {
+			return err
+		}
+
+		bound = append(bound, l2)
+	}
 
 	// grpc can be insecure because the socket itself has tls.
 	dialer := dialers.NewDefaults(
@@ -229,15 +230,20 @@ func (t *agentCmd) bind() (err error) {
 	// 2. the server we contact also ensures the client is a member of the cluster by validating the request signature.
 	// 3. any individual agent only initiates challenges with servers that do have a valid TLS certificate.
 	unsafedialer := dialers.NewDefaults(dialer.Defaults(dialers.WithMuxer(tlsx.NewDialer(tlscreds, tlsx.OptionInsecureSkipVerify), l.Addr()))...)
-	l = tls.NewListener(
-		l,
-		certificatecache.NewALPN(
-			tlscreds,
-			acme.NewALPNCertCache(acme.NewResolver(t.config.Peer(), dctx.Cluster, acmesvc, unsafedialer)),
-		),
+
+	alpn := certificatecache.NewALPN(
+		tlscreds,
+		acme.NewALPNCertCache(acme.NewResolver(t.config.Peer(), dctx.Cluster, acmesvc, unsafedialer)),
 	)
 
-	dctx.MuxerListen(t.global.ctx, l)
+	for idx, b := range bound {
+		bound[idx] = tls.NewListener(
+			b,
+			alpn,
+		)
+	}
+
+	dctx.MuxerListen(t.global.ctx, bound...)
 
 	if dctx, err = daemons.Peered(dctx, t.global.cluster); err != nil {
 		return errors.Wrap(err, "failed to initialize peering service")

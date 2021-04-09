@@ -74,6 +74,7 @@ func (t *Context) MuxerListen(ctx context.Context, listeners ...net.Listener) {
 	t.shutdown("muxer", listeners...)
 	log.Println("establishing muxer")
 	for _, l := range listeners {
+		log.Println("listening at", l.Addr().String())
 		go func(l net.Listener) {
 			muxer.Listen(ctx, t.Muxer, l)
 		}(l)
