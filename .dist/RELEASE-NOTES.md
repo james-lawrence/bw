@@ -1,3 +1,27 @@
+commit 6515b9c979799b35d03c63a366e87882361b454f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 9 14:16:10 2021 -0400
+
+    allow alternate bind address
+
+commit 4846d2fe6a843bbc081b4077eef2b34569a9de08
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 19:09:18 2021 -0400
+
+    test fixes
+
+commit 083b45a43a04341c9664302f8fab1344d7bc3e0d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 18:39:37 2021 -0400
+
+    test fixes
+
+commit d141d24400d395fc6a80e650deacf021a6dd470b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 13:39:04 2021 -0400
+
+    release 0.1.1617557798-797c7778
+
 commit 797c777852c39ef87e8f822703bf6d285dafc0fb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Apr 4 13:36:19 2021 -0400
