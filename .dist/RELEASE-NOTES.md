@@ -1,3 +1,27 @@
+commit 782b188d942c07cccd2800a1e3daae909006ca13
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 14:25:05 2021 -0400
+
+    update aws dns command
+
+commit 590704dfb10b9b302ab7a454e0c1359edc958376
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 12:21:06 2021 -0400
+
+    adjust clustering timeout to a minute
+
+commit 887d470e9c6d59208cb5dbf74a1fe03cfa136a26
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 11:51:52 2021 -0400
+
+    silence muxer logs on failed connections
+
+commit 24e2fa45ea3408a3f21e32d39953032f0f340cbc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 11:29:51 2021 -0400
+
+    release 0.1.1618068532-55fdd9ad
+
 commit 55fdd9ad5d8c77b01d9f0773e79132b1b00aee02
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 10 11:27:44 2021 -0400
