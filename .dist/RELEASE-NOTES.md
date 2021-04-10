@@ -1,3 +1,21 @@
+commit 2c4c390465229682675b6163a8c9a918c18278e4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 14:57:09 2021 -0400
+
+    allow adjusting the passive checking for the consensus leader
+
+commit f531e70f034e7f8f1a8d7b9db8260bb62f5d86a6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 14:50:29 2021 -0400
+
+    increase passive checkin to an hour
+
+commit 175d065e8298cd749fd086068f772d3cdb023c2b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 14:45:56 2021 -0400
+
+    release 0.1.1618080225-782b188d
+
 commit 782b188d942c07cccd2800a1e3daae909006ca13
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 10 14:25:05 2021 -0400
