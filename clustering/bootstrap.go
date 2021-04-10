@@ -151,6 +151,12 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 	b := newBootstrap(options...)
 
 	for attempts := 0; ; attempts++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
 		peers, _ = b.collect(ctx, b.Peering...)
 		log.Printf("located %d peers\n", len(peers))
 
