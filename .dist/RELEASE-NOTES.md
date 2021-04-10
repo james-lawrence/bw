@@ -1,3 +1,15 @@
+commit 55fdd9ad5d8c77b01d9f0773e79132b1b00aee02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 11:27:44 2021 -0400
+
+    optimize clustering to use all sources at once
+
+commit 9dac1ac35e00be37cef0471df8b12f7b129f24de
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 9 14:41:01 2021 -0400
+
+    release 0.1.1617993564-6515b9c9
+
 commit 6515b9c979799b35d03c63a366e87882361b454f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Apr 9 14:16:10 2021 -0400
