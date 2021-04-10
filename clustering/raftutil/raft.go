@@ -173,7 +173,7 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 		enableSingleNode: false,
 		config:           defaultRaftConfig(),
 		lastContactGrace: time.Minute,
-		PassiveCheckin:   time.Minute,
+		PassiveCheckin:   time.Hour,
 		PassiveReset: func() (Storage, raft.SnapshotStore, error) {
 			return raft.NewInmemStore(), raft.NewInmemSnapshotStore(), nil
 		},
