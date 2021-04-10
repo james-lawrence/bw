@@ -99,8 +99,8 @@ type bootstrap struct {
 func (t bootstrap) retrieve(ctx context.Context, s Source) (peers []string, err error) {
 	log.Printf("%T: locating peers\n", s)
 	pctx, done := context.WithTimeout(ctx, time.Minute)
+	defer done()
 	peers, err = s.Peers(pctx)
-	done()
 	return peers, errorsx.Compact(err, pctx.Err())
 }
 
