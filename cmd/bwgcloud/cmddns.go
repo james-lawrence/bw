@@ -1,9 +1,9 @@
 package main
 
 import (
+	"crypto/tls"
 	"log"
 	"net"
-	"path/filepath"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/alecthomas/kingpin"
@@ -11,13 +11,13 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/cluster"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/dns"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/pkg/errors"
 )
 
@@ -50,56 +50,44 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 	parent.Action(t.exec)
 }
 
-func (t *cmdDNS) exec(ctx *kingpin.ParseContext) error {
+func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
-		err     error
-		c       clustering.Memberlist
-		keyring *memberlist.Keyring
+		nodes     []*memberlist.Node
+		tlsconfig *tls.Config
 	)
+
+	log.SetPrefix("[BWGCLOUD] ")
 
 	defer t.global.shutdown()
 
-	if err = bw.ExpandAndDecodeFile(t.configLocation, &t.config); err != nil {
+	if t.config, err = commandutils.LoadAgentConfig(t.configLocation, t.config); err != nil {
 		return err
 	}
 
 	log.Println("configuration:", spew.Sdump(t.config))
 
+	if tlsconfig, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
+		return err
+	}
+
 	if err = bw.InitializeDeploymentDirectory(t.config.Root); err != nil {
 		return err
 	}
 
-	if keyring, err = t.config.Keyring(); err != nil {
+	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsconfig)
+	if err != nil {
 		return err
 	}
 
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
-
-	fssnapshot := peering.File{
-		Path: filepath.Join(t.config.Root, "cluster.snapshot"),
-	}
-
-	cdialer := daemons.NewClusterDialer(
-		t.config,
-		clustering.OptionNodeID(local.Peer.Name),
-		clustering.OptionBindAddress(local.Peer.Ip),
-		clustering.OptionBindPort(0),
-		clustering.OptionAliveDelegate(cluster.AliveDefault{}),
-		clustering.OptionKeyring(keyring),
-	)
-
-	if c, err = cdialer.Dial(); err != nil {
+	if nodes, err = discovery.Snapshot(agent.DiscoveryAddress(t.config.Peer()), d.Defaults()...); err != nil {
 		return err
 	}
 
-	if err = commandutils.ClusterJoin(t.global.ctx, t.config, c, fssnapshot, peering.NewStaticTCP(t.bootstrap...)); err != nil {
-		return err
+	if len(nodes) == 0 {
+		return errors.New("no agents found")
 	}
 
-	cx := cluster.New(local, c)
+	cx := clustering.NewStatic(nodes...)
 	return dns.NewGoogleCloudDNS(
 		t.projectID,
 		t.zoneID,
