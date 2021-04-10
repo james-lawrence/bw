@@ -97,15 +97,14 @@ type bootstrap struct {
 }
 
 func (t bootstrap) retrieve(ctx context.Context, s Source) (peers []string, err error) {
-	log.Printf("%T: locating peers\n", s)
 	pctx, done := context.WithTimeout(ctx, time.Minute)
 	defer done()
-	peers, err = s.Peers(pctx)
-	return peers, errorsx.Compact(err, pctx.Err())
+	return s.Peers(pctx)
 }
 
 func (t bootstrap) collect(ctx context.Context, sources ...Source) (peers []string, err error) {
 	for _, s := range t.Peering {
+		log.Printf("%T: locating peers\n", s)
 		localpeers, localerr := t.retrieve(ctx, s)
 		if localerr != nil {
 			err = errorsx.Compact(err, localerr)
