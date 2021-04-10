@@ -38,5 +38,6 @@ func (t DNS) Peers(context.Context) (results []string, err error) {
 			results = append(results, net.JoinHostPort(ip.String(), ps))
 		}
 	}
+
 	return results, nil
 }

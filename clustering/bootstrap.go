@@ -7,6 +7,9 @@ import (
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/pkg/errors"
 )
 
 // ErrPeeringOptionsExhausted returned by bootstrap methods when the strategies for peering have been exhausted.
@@ -93,6 +96,30 @@ type bootstrap struct {
 	Peering      []Source
 }
 
+func (t bootstrap) retrieve(ctx context.Context, s Source) (peers []string, err error) {
+	log.Printf("%T: locating peers\n", s)
+	pctx, done := context.WithTimeout(ctx, time.Second)
+	peers, err = s.Peers(pctx)
+	done()
+	return peers, errorsx.Compact(err, pctx.Err())
+}
+
+func (t bootstrap) collect(ctx context.Context, sources ...Source) (peers []string, err error) {
+	for _, s := range t.Peering {
+		localpeers, localerr := t.retrieve(ctx, s)
+		if localerr != nil {
+			err = errorsx.Compact(err, localerr)
+			log.Printf("failed to load peers: %T: %s\n", s, localerr)
+			continue
+		}
+
+		log.Printf("%T: located %d peers\n", s, len(localpeers))
+		peers = append(peers, localpeers...)
+	}
+
+	return peers, err
+}
+
 func newBootstrap(options ...BootstrapOption) bootstrap {
 	b := bootstrap{
 		Backoff:      backoffDefault{},
@@ -108,12 +135,10 @@ func newBootstrap(options ...BootstrapOption) bootstrap {
 }
 
 // Bootstrap - bootstraps the provided cluster using the options provided.
-func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) error {
+func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err error) {
 	var (
-		err      error
-		joined   int
-		peers    []string
-		attempts int
+		joined int
+		peers  []string
 	)
 
 	max := func(a, b int) int {
@@ -125,53 +150,27 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) error 
 
 	b := newBootstrap(options...)
 
-retry:
+	for attempts := 0; ; attempts++ {
+		peers, _ = b.collect(ctx, b.Peering...)
+		log.Printf("located %d peers\n", len(peers))
 
-	for _, s := range b.Peering {
-		// check if the join has been cancelled.
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		log.Printf("%T: locating peers\n", s)
-		pctx, done := context.WithTimeout(ctx, time.Second)
-		peers, err = s.Peers(pctx)
-		done()
-
-		if err != nil {
-			log.Printf("failed to load peers: %T: %s\n", s, err)
-			continue
-		}
-
-		log.Printf("%T: located %d peers\n", s, len(peers))
 		if joined, err = c.Join(peers...); err != nil {
-			log.Printf("failed to join peers: %T: %s\n", s, err)
-			continue
+			return errors.Wrap(err, "failed to join peers")
 		}
 
-		if joined <= 1 {
-			log.Printf("join succeeded but no new peers were located: %T\n", s)
-			continue
+		// if members > 1, then another node discovered us while we were
+		// attempting to join the cluster.
+		joined = max(joined, len(c.Members()))
+
+		if b.JoinStrategy(joined) {
+			return nil
 		}
 
-		log.Println("joined", joined, "peers")
-		break
-	}
+		if !b.AllowRetry(attempts) {
+			break
+		}
 
-	// if members > 1, then another node discovered us while we were
-	// attempting to join the cluster.
-	joined = max(joined, len(c.Members()))
-
-	if b.JoinStrategy(joined) {
-		return nil
-	}
-
-	if b.AllowRetry(attempts) {
 		time.Sleep(b.Backoff.Backoff(attempts))
-		attempts = attempts + 1
-		goto retry
 	}
 
 	if joined == 0 {
