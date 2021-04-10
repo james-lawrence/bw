@@ -1,3 +1,21 @@
+commit 75c879edc6f51a825fa6ec073631fb5abfd59a73
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 15:28:10 2021 -0400
+
+    fix bug in bootstrap
+
+commit bdbfecb168ea2402d59d508b6df94afc7b24f849
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 15:23:29 2021 -0400
+
+    stop bootstrapping when global context is dead
+
+commit 12930637df2fd601c03eb5655b68347904484121
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 10 14:58:58 2021 -0400
+
+    release 0.1.1618081029-2c4c3904
+
 commit 2c4c390465229682675b6163a8c9a918c18278e4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 10 14:57:09 2021 -0400
