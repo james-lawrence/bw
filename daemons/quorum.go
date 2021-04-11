@@ -3,25 +3,21 @@ package daemons
 import (
 	"context"
 
+	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
-	_cluster "github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering/raftutil"
+	"google.golang.org/grpc"
 )
 
 type rafter interface {
-	Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (raftutil.Protocol, error)
+	Raft(ctx context.Context, conf agent.Config, node *memberlist.Node, eq *grpc.ClientConn, options ...raftutil.ProtocolOption) (raftutil.Protocol, error)
 }
 
 // Quorum initialize the quorum daemon service.
 func Quorum(dctx Context, cc rafter) (_ Context, err error) {
-	transport := raftutil.ProtocolOptionMuxerTransport(dctx.Config.P2PBind, dctx.Muxer, dctx.RPCCredentials)
-	sq := raftutil.BacklogQueueWorker{
-		Queue: make(chan *agent.ClusterWatchEvents, 100),
-	}
+	transport := raftutil.ProtocolOptionMuxerTransport(dctx.Config.P2PBind, dctx.Muxer, raftutil.NewTLSStreamDialer(dctx.RPCCredentials))
 
-	go _cluster.NewEventsSubscription(dctx.Inmem, sq.Enqueue)
-
-	if dctx.Raft, err = cc.Raft(dctx.Context, dctx.Config, sq, transport); err != nil {
+	if dctx.Raft, err = cc.Raft(dctx.Context, dctx.Config, dctx.Cluster.LocalNode(), dctx.Inmem, transport); err != nil {
 		return dctx, err
 	}
 

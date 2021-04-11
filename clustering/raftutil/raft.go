@@ -4,7 +4,6 @@ package raftutil
 
 import (
 	"context"
-	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net"
@@ -15,34 +14,26 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/x/contextx"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/muxer"
+	"google.golang.org/grpc"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 )
 
-type addressProdvider interface {
-	RaftAddr(*memberlist.Node) (raft.Server, error)
-}
-
 type rendezvous interface {
 	GetN(int, []byte) []*memberlist.Node
 }
 
-type cluster interface {
-	Members() []*memberlist.Node
-	LocalNode() *memberlist.Node
-	Get([]byte) *memberlist.Node
-	GetN(int, []byte) []*memberlist.Node
-}
-
 type state interface {
-	Update(cluster) state
+	Update(rendezvous) state
 }
 
 type clusterObserver interface {
@@ -72,39 +63,19 @@ func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 	}
 }
 
-// ProtocolOptionTCPTransport set the state machine for the protocol
-func ProtocolOptionMuxerTransport(tcp *net.TCPAddr, m *muxer.M, ts *tls.Config) ProtocolOption {
+// ProtocolOptionMuxerTransport set the transport using a muxer.
+func ProtocolOptionMuxerTransport(addr net.Addr, m *muxer.M, d dialer) ProtocolOption {
 	return ProtocolOptionTransport(func() (_ raft.Transport, err error) {
 		var (
 			l net.Listener
-			d = muxer.NewDialer(bw.ProtocolRAFT, NewTLSStreamDialer(ts))
+			d = muxer.NewDialer(bw.ProtocolRAFT, d)
 		)
 
-		if l, err = m.Bind(bw.ProtocolRAFT, tcp); err != nil {
+		if l, err = m.Bind(bw.ProtocolRAFT, addr); err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		return raft.NewNetworkTransport(NewTLSStreamLayer(l, d), 5, 10*time.Second, os.Stderr), nil
-	})
-}
-
-// ProtocolOptionTCPTransport set the state machine for the protocol
-func ProtocolOptionTCPTransport(tcp *net.TCPAddr, ts *tls.Config) ProtocolOption {
-	return ProtocolOptionTransport(func() (raft.Transport, error) {
-		var (
-			err error
-			l   net.Listener
-		)
-
-		if ts == nil {
-			return raft.NewTCPTransport(tcp.String(), tcp, 5, 10*time.Second, os.Stderr)
-		}
-
-		if l, err = net.ListenTCP(tcp.Network(), tcp); err != nil {
-			return nil, errors.WithStack(err)
-		}
-
-		return raft.NewNetworkTransport(NewTLSStreamLayer(tls.NewListener(l, ts), NewTLSStreamDialer(ts)), 5, 10*time.Second, os.Stderr), nil
+		return raft.NewNetworkTransport(NewStreamTransport(l, d), 5, 10*time.Second, os.Stderr), nil
 	})
 }
 
@@ -119,13 +90,6 @@ func ProtocolOptionObservers(o ...*raft.Observer) ProtocolOption {
 func ProtocolOptionClusterObserver(o clusterObserver) ProtocolOption {
 	return func(p *Protocol) {
 		p.clusterObserver = o
-	}
-}
-
-// ProtocolOptionEnableSingleNode enables single node operation.
-func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
-	return func(p *Protocol) {
-		p.enableSingleNode = b
 	}
 }
 
@@ -157,10 +121,23 @@ func ProtocolOptionPassiveReset(reset func() (Storage, raft.SnapshotStore, error
 	}
 }
 
+// ProtocolOptionEnableSingleNode operation
+func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
+	return func(p *Protocol) {
+		if b {
+			p.minQuorum = 1
+		} else {
+			p.minQuorum = 3
+		}
+	}
+}
+
 // NewProtocol ...
-func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolOption) (_ignored Protocol, err error) {
+func NewProtocol(ctx context.Context, local *memberlist.Node, q *grpc.ClientConn, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
+		minQuorum:      3,
 		Context:        ctx,
+		LocalNode:      local,
 		StabilityQueue: q,
 		getStateMachine: func() raft.FSM {
 			return &noopFSM{}
@@ -170,7 +147,6 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 			return trans, nil
 		},
 		ClusterChange:    sync.NewCond(&sync.Mutex{}),
-		enableSingleNode: false,
 		config:           defaultRaftConfig(),
 		lastContactGrace: time.Minute,
 		PassiveCheckin:   envx.Duration(time.Hour, bw.EnvAgentClusterPassiveCheckin),
@@ -183,29 +159,51 @@ func NewProtocol(ctx context.Context, q BacklogQueueWorker, options ...ProtocolO
 		opt(&p)
 	}
 
+	eq := backlogQueueWorker{Queue: make(chan *agent.ClusterWatchEvents, 100)}
+	if err = cluster.NewEventsSubscription(p.Context, p.StabilityQueue, eq.Enqueue); err != nil {
+		return p, err
+	}
+
+	go func() {
+		for {
+			e, err := eq.Dequeue(p.Context)
+			if err != nil {
+				return // timed out.
+			}
+
+			switch e.Event {
+			case agent.ClusterWatchEvents_Update:
+			default:
+				log.Println("broadcasting cluster change due to unstable cluster", e.Event.String())
+				p.ClusterChange.Broadcast()
+			}
+		}
+	}()
+
 	return p, nil
 }
 
 type stateMeta struct {
-	lastContact time.Time
 	r           *raft.Raft
-	transport   raft.Transport
 	protocol    *Protocol
 	sgroup      *sync.WaitGroup
+	lastContact time.Time
+	q           backlogQueueWorker
+	transport   raft.Transport
 	ctx         context.Context
 	done        context.CancelFunc
 }
 
-func (t *stateMeta) waitShutdown(c cluster) {
-	log.Println(c.LocalNode().Name, "raft protocol shutdown initated")
-	defer log.Println(c.LocalNode().Name, "raft protocol shutdown completed")
+func (t *stateMeta) waitShutdown(c rendezvous) {
+	log.Println(t.protocol.LocalNode.Name, "raft protocol shutdown initated")
+	defer log.Println(t.protocol.LocalNode.Name, "raft protocol shutdown completed")
 	defer contextx.WaitGroupDone(t.protocol.Context)
 
 	<-t.ctx.Done()
 
-	log.Println(c.LocalNode().Name, "initiating shutdown for raft protocol")
+	log.Println(t.protocol.LocalNode.Name, "initiating shutdown for raft protocol")
 	// attempt to cleanly shutdown the local peer.
-	t.cleanShutdown(c)
+	t.cleanShutdown()
 
 	log.Println("waiting for background stability queue to complete")
 
@@ -213,18 +211,22 @@ func (t *stateMeta) waitShutdown(c cluster) {
 	t.sgroup.Wait()
 }
 
-func (t *stateMeta) cleanShutdown(c cluster) {
+func (t *stateMeta) cleanShutdown() {
 	if t.r != nil {
 		if err := t.r.Shutdown().Error(); err != nil {
-			log.Println(c.LocalNode().Name, "failed to shutdown raft", err)
+			log.Println(t.protocol.LocalNode.Name, "failed to shutdown raft", err)
 		}
 	}
 
 	if err := autocloseTransport(t.transport); err == nil {
-		log.Println(c.LocalNode().Name, "closed transport")
+		log.Println(t.protocol.LocalNode.Name, "closed transport")
 	} else {
-		log.Println(c.LocalNode().Name, "failed to close transport", err)
+		log.Println(t.protocol.LocalNode.Name, "failed to close transport", err)
 	}
+}
+
+func (t *stateMeta) connect() (err error) {
+	return cluster.NewEventsSubscription(t.ctx, t.protocol.StabilityQueue, t.q.Enqueue)
 }
 
 func (t *stateMeta) background() {
@@ -232,27 +234,20 @@ func (t *stateMeta) background() {
 	defer t.sgroup.Done()
 
 	for {
-		select {
-		case <-t.ctx.Done():
-			return
-		case e := <-t.protocol.StabilityQueue.Queue:
-			evt := Event{
-				ClusterWatchEvents: e,
-				Raft:               t.r,
-			}
+		e, err := t.q.Dequeue(t.ctx)
+		if err != nil {
+			return // timed out.
+		}
 
-			if t.protocol.clusterObserver != nil {
-				handleClusterEvent(evt, t.protocol.clusterObserver)
-			} else {
-				handleClusterEvent(evt)
-			}
+		evt := Event{
+			ClusterWatchEvents: e,
+			Raft:               t.r,
+		}
 
-			switch e.Event {
-			case agent.ClusterWatchEvents_Update:
-			default:
-				log.Println("broadcasting cluster change due to unstable cluster", e.Event.String())
-				t.protocol.ClusterChange.Broadcast()
-			}
+		if t.protocol.clusterObserver != nil {
+			handleClusterEvent(evt, t.protocol.clusterObserver)
+		} else {
+			handleClusterEvent(evt)
 		}
 	}
 }
@@ -268,23 +263,23 @@ type Storage interface {
 //
 // It cannot be instantiated directly, instead use NewProtocol.
 type Protocol struct {
+	minQuorum        int
+	LocalNode        *memberlist.Node
 	Context          context.Context
-	StabilityQueue   BacklogQueueWorker
+	StabilityQueue   *grpc.ClientConn
 	ClusterChange    *sync.Cond
 	PassiveReset     func() (Storage, raft.SnapshotStore, error)
 	PassiveCheckin   time.Duration
 	getStateMachine  func() raft.FSM
 	getTransport     func() (raft.Transport, error)
-	transport        raft.Transport
 	observers        []*raft.Observer
 	clusterObserver  clusterObserver
-	enableSingleNode bool
 	config           *raft.Config
 	lastContactGrace time.Duration // how long to wait before a missing leader triggers a reset
 }
 
 // Overlay overlays this raft protocol on top of the provided cluster. blocking.
-func (t *Protocol) Overlay(c cluster, options ...ProtocolOption) {
+func (t *Protocol) Overlay(c rendezvous, options ...ProtocolOption) {
 	for _, opt := range options {
 		opt(t)
 	}
@@ -329,19 +324,24 @@ func defaultRaftConfig() *raft.Config {
 }
 
 // connect - connect to the raft protocol overlay within the given cluster.
-func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err error) {
+func (t *Protocol) connect(c rendezvous) (network raft.Transport, r *raft.Raft, err error) {
 	var (
 		conf      raft.Config
 		store     Storage
 		snapshots raft.SnapshotStore
+		quorum    = configuration(c)
 	)
+
+	if len(quorum.Servers) < t.minQuorum {
+		return nil, nil, errors.Errorf("not enough peers for quorum: %d - %s", len(quorum.Servers), quorum.Servers)
+	}
 
 	if network, err = t.getTransport(); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
 
 	conf = *t.config
-	conf.LocalID = raft.ServerID(c.LocalNode().Name)
+	conf.LocalID = raft.ServerID(t.LocalNode.Name)
 
 	log.Println("passive resetting raft state")
 	if store, snapshots, err = t.PassiveReset(); err != nil {
@@ -356,13 +356,28 @@ func (t *Protocol) connect(c cluster) (network raft.Transport, r *raft.Raft, err
 	}
 
 	r.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", c.LocalNode().Name, o.Data, o.Data)
+		switch evt := o.Data.(type) {
+		case raft.RaftState:
+			log.Printf("%s - raft observation (broadcasting change): %T, %s\n", t.LocalNode.Name, evt, evt.String())
+		default:
+			log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", t.LocalNode.Name, evt, evt)
+		}
 		t.ClusterChange.Broadcast()
 		return false
 	}))
 
 	for _, o := range t.observers {
 		r.RegisterObserver(o)
+	}
+
+	if idx := r.LastIndex(); idx == 0 {
+		if err = r.BootstrapCluster(quorum).Error(); err != nil {
+			return network, r, errorsx.Compact(
+				errors.Wrapf(err, "raft bootstrap failed: %d", idx),
+				r.Shutdown().Error(),
+				autocloseTransport(network),
+			)
+		}
 	}
 
 	return network, r, nil
@@ -403,12 +418,21 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 	}
 }
 
-// BacklogQueueWorker ...
-type BacklogQueueWorker struct {
+// backlogQueueWorker ...
+type backlogQueueWorker struct {
 	Queue chan *agent.ClusterWatchEvents
 }
 
-func (t BacklogQueueWorker) Enqueue(ctx context.Context, evt *agent.ClusterWatchEvents) error {
+func (t backlogQueueWorker) Dequeue(ctx context.Context) (evt *agent.ClusterWatchEvents, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case evt := <-t.Queue:
+		return evt, nil
+	}
+}
+
+func (t backlogQueueWorker) Enqueue(ctx context.Context, evt *agent.ClusterWatchEvents) error {
 	if envx.Boolean(false, bw.EnvLogsGossip, bw.EnvLogsVerbose) {
 		log.Println("BacklogQueueWorker.Enqueue", evt.Event.String(), evt.Node.Ip, evt.Node.Name, "initiated")
 		log.Println("BacklogQueueWorker.Enqueue", evt.Event.String(), evt.Node.Ip, evt.Node.Name, "completed")
@@ -422,7 +446,7 @@ func (t BacklogQueueWorker) Enqueue(ctx context.Context, evt *agent.ClusterWatch
 	}
 }
 
-func leave(c cluster, sm stateMeta) state {
+func leave(sm stateMeta) state {
 	sm.done()
 
 	return passive{
@@ -434,21 +458,22 @@ func leave(c cluster, sm stateMeta) state {
 // maybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
 // returns true if it left the raft protocol.
-func maybeLeave(c cluster) bool {
-	if isMember(c) {
+func (t Protocol) maybeLeave(c rendezvous) bool {
+	if t.isMember(c) {
 		return false
 	}
 
-	log.Println(c.LocalNode().Name, "no longer a possible member of quorum, leaving raft cluster")
+	log.Println(t.LocalNode.Name, "no longer a possible member of quorum, leaving raft cluster")
 	return true
 }
 
 // isMember utility function for checking if the local node of the cluster is a member
 // of the possiblePeers set.
-func isMember(c cluster) bool {
-	return isPossiblePeer(c.LocalNode(), agent.QuorumNodes(c)...)
+func (t Protocol) isMember(c rendezvous) bool {
+	return isPossiblePeer(t.LocalNode, agent.QuorumNodes(c)...)
 }
-func configuration(c cluster) (conf raft.Configuration) {
+
+func configuration(c rendezvous) (conf raft.Configuration) {
 	var (
 		err error
 		rs  raft.Server

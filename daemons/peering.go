@@ -90,7 +90,6 @@ func Peering(dctx Context) (_ Context, err error) {
 
 // Peered establish peering.
 func Peered(dctx Context, cc connecter) (_ Context, err error) {
-
 	fssnapshot := peering.File{
 		Path: filepath.Join(dctx.Config.Root, "cluster.snapshot"),
 	}

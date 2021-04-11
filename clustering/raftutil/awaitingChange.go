@@ -10,7 +10,7 @@ type conditionTransition struct {
 	cond *sync.Cond
 }
 
-func (t conditionTransition) Update(c cluster) state {
+func (t conditionTransition) Update(c rendezvous) state {
 	// xx := time.NewTimer(t.Duration)
 	// done := make(chan struct{})
 	// defer close(done)
@@ -36,7 +36,7 @@ type delayedTransition struct {
 	time.Duration
 }
 
-func (t delayedTransition) Update(c cluster) state {
+func (t delayedTransition) Update(c rendezvous) state {
 	time.Sleep(t.Duration)
 	return t.next
 }

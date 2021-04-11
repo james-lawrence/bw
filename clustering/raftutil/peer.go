@@ -40,16 +40,14 @@ func (t peer) updateLastContact(p *raft.Raft, n time.Time) peer {
 	}
 }
 
-func (t peer) Update(c cluster) state {
+func (t peer) Update(c rendezvous) state {
 	switch s := t.r.State(); s {
 	case raft.Leader:
-		return leader{
-			stateMeta: t.stateMeta,
-		}.Update(c)
+		return leader(t).Update(c)
 	default:
 		debugx.Println("peer current state", s)
-		if maybeLeave(c) || t.deadleadership(t.r) {
-			return leave(c, t.stateMeta)
+		if t.protocol.maybeLeave(c) || t.deadleadership(t.r) {
+			return leave(t.stateMeta)
 		}
 
 		return conditionTransition{

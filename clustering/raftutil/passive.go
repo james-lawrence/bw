@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/contextx"
 
 	"github.com/hashicorp/raft"
@@ -17,36 +18,39 @@ type passive struct {
 	sgroup   *sync.WaitGroup
 }
 
-func (t passive) Update(c cluster) state {
+func (t passive) Update(c rendezvous) state {
 	var (
 		err     error
 		r       *raft.Raft
 		network raft.Transport
 	)
 
-	// log.Println(c.LocalNode().Name, "passive update invoked")
+	unstable := delayedTransition{
+		next:     t,
+		Duration: time.Second,
+	}
+
+	quorum := t.protocol.isMember(c)
 	maintainState := conditionTransition{
 		next: t,
 		cond: t.protocol.ClusterChange,
 	}
 
-	if !isMember(c) {
-		return delayedTransition{
-			next:     t,
-			Duration: t.protocol.PassiveCheckin,
-		}
+	if !quorum {
+		return maintainState
 	}
 
-	log.Println(c.LocalNode().Name, "promoting self into raft protocol")
+	log.Println(t.protocol.LocalNode.Name, "promoting self into raft protocol")
 
 	if network, r, err = t.protocol.connect(c); err != nil {
 		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state"))
-		return maintainState
+		return unstable
 	}
 
 	ctx, done := context.WithCancel(t.protocol.Context)
 	sm := stateMeta{
 		r:           r,
+		q:           backlogQueueWorker{Queue: make(chan *agent.ClusterWatchEvents, 100)},
 		transport:   network,
 		protocol:    t.protocol,
 		sgroup:      t.sgroup,
@@ -58,9 +62,13 @@ func (t passive) Update(c cluster) state {
 	if r.LastIndex() == 0 {
 		if err = r.BootstrapCluster(configuration(c)).Error(); err != nil {
 			log.Println("raft bootstrap failed", r.LastIndex(), err)
-			sm.cleanShutdown(c)
-			return maintainState
+			sm.cleanShutdown()
+			return unstable
 		}
+	}
+
+	if err = sm.connect(); err != nil {
+		return unstable
 	}
 
 	// add this to the parent context waitgroup

@@ -46,12 +46,12 @@ func Inmem(dctx Context) (_ Context, err error) {
 		return dctx, err
 	}
 
-	if err = _cluster.NewEventsSubscription(dctx.Inmem, _cluster.LoggingSubscription); err != nil {
+	if err = _cluster.NewEventsSubscription(dctx.Context, dctx.Inmem, _cluster.LoggingSubscription); err != nil {
 		return dctx, err
 	}
 
 	// Notary Subscriptions to node events. tracks the public key signatures for nodes in the cluster.
-	err = _cluster.NewEventsSubscription(dctx.Inmem, func(ctx context.Context, evt *agent.ClusterWatchEvents) (err error) {
+	err = _cluster.NewEventsSubscription(dctx.Context, dctx.Inmem, func(ctx context.Context, evt *agent.ClusterWatchEvents) (err error) {
 		if len(evt.Node.PublicKey) == 0 {
 			if envx.Boolean(false, bw.EnvLogsVerbose) {
 				log.Println("Notary.Subscription ignoring event - no public key", evt.Event.String(), evt.Node.Ip, evt.Node.Name)

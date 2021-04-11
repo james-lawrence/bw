@@ -2,6 +2,7 @@ package raftutil
 
 import (
 	"crypto/tls"
+	"net"
 	"os"
 	"time"
 
@@ -16,18 +17,17 @@ var _ = Describe("TLSTransport", func() {
 			InsecureSkipVerify: true,
 		}
 
-		sl, err := NewTLSTCP("127.1.1.2:9999", c)
+		l, err := net.Listen("tcp", "127.1.1.2:9999")
 		Expect(err).To(Succeed())
-
-		// check that we do fail without closing.
-		_, err = NewTLSTCP("127.1.1.2:9999", c)
-		Expect(err).ToNot(Succeed())
+		sl := NewStreamTransport(l, NewTLSStreamDialer(c))
 
 		nt := raft.NewNetworkTransport(sl, 5, 10*time.Second, os.Stderr)
 		Expect(autocloseTransport(nt)).To(Succeed())
 
-		sl, err = NewTLSTCP("127.1.1.2:9999", c)
+		l, err = net.Listen("tcp", "127.1.1.2:9999")
 		Expect(err).To(Succeed())
+
+		sl = NewStreamTransport(l, NewTLSStreamDialer(c))
 		nt = raft.NewNetworkTransport(sl, 5, 10*time.Second, os.Stderr)
 		Expect(autocloseTransport(nt)).To(Succeed())
 	})

@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
@@ -42,12 +43,12 @@ func LoggingSubscription(ctx context.Context, evt *agent.ClusterWatchEvents) err
 
 type EventsSubscriber func(ctx context.Context, evt *agent.ClusterWatchEvents) error
 
-func NewEventsSubscription(conn *grpc.ClientConn, s EventsSubscriber) (err error) {
+func NewEventsSubscription(ctx context.Context, conn *grpc.ClientConn, s EventsSubscriber) (err error) {
 	var (
 		client agent.Cluster_WatchClient
 	)
 
-	if client, err = agent.NewClusterClient(conn).Watch(context.Background(), &agent.ClusterWatchRequest{}); err != nil {
+	if client, err = agent.NewClusterClient(conn).Watch(ctx, &agent.ClusterWatchRequest{}); err != nil {
 		return err
 	}
 
@@ -63,10 +64,11 @@ func NewEventsSubscription(conn *grpc.ClientConn, s EventsSubscriber) (err error
 			evt *agent.ClusterWatchEvents
 		)
 
+		defer log.Println("event subscription done")
 		defer client.CloseSend()
 		for {
 			if evt, err = client.Recv(); err != nil {
-				log.Println("unable to receive event", err)
+				log.Printf("%T - %s\n", s, errors.Wrap(err, "unable to receive event"))
 				return
 			}
 
@@ -149,7 +151,6 @@ func (t *EventsQueue) enqueueNode(typ agent.ClusterWatchEvents_Event, n *memberl
 		return
 	}
 
-	log.Println("Node To Peer", n.Name, n.Addr.String())
 	t.enqueue(typ, p)
 }
 

@@ -18,7 +18,7 @@ type leader struct {
 	stateMeta
 }
 
-func (t leader) Update(c cluster) state {
+func (t leader) Update(c rendezvous) state {
 	var (
 		maintainState state = delayedTransition{
 			next:     t,
@@ -29,7 +29,7 @@ func (t leader) Update(c cluster) state {
 	log.Printf("leader update invoked: %p - %s\n", t.r, t.protocol.PassiveCheckin)
 	switch t.r.State() {
 	case raft.Leader:
-		if t.cleanupPeers(c.LocalNode(), agent.QuorumNodes(c)...) {
+		if t.cleanupPeers(t.protocol.LocalNode, agent.QuorumNodes(c)...) {
 			refresh := time.Second
 			log.Println("peers unstable, will refresh in", refresh)
 			return delayedTransition{

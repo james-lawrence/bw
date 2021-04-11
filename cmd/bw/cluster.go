@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/alecthomas/kingpin"
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/james-lawrence/bw"
@@ -18,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type clusterCmd struct {
@@ -96,7 +98,7 @@ func (t *clusterCmd) Snapshot(c clustering.Rendezvous, fssnapshot peering.File, 
 	)
 }
 
-func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.BacklogQueueWorker, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
+func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, node *memberlist.Node, eq *grpc.ClientConn, options ...raftutil.ProtocolOption) (p raftutil.Protocol, err error) {
 	var (
 		dir = filepath.Join(conf.Root, "raft.d")
 	)
@@ -126,7 +128,8 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, sq raftutil.Ba
 
 	return raftutil.NewProtocol(
 		ctx,
-		sq,
+		node,
+		eq,
 		append(defaultOptions, options...)...,
 	)
 }

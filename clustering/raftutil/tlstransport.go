@@ -30,8 +30,8 @@ func NewTLSStreamDialer(cs *tls.Config) dialer {
 	}
 }
 
-// NewTLSStreamLayer ...
-func NewTLSStreamLayer(l net.Listener, d dialer) StreamLayer {
+// NewStreamTransport ...
+func NewStreamTransport(l net.Listener, d dialer) StreamLayer {
 	return StreamLayer{
 		d:        d,
 		Listener: l,
@@ -54,22 +54,4 @@ func (t StreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (co
 	}
 
 	return conn, nil
-}
-
-// NewTLSTCP StreamLayer
-func NewTLSTCP(s string, cs *tls.Config) (sl StreamLayer, err error) {
-	var (
-		addr *net.TCPAddr
-		l    net.Listener
-	)
-
-	if addr, err = net.ResolveTCPAddr("tcp", s); err != nil {
-		return sl, err
-	}
-
-	if l, err = net.ListenTCP(addr.Network(), addr); err != nil {
-		return sl, errors.WithStack(err)
-	}
-
-	return NewTLSStreamLayer(tls.NewListener(l, cs), NewTLSStreamDialer(cs)), nil
 }

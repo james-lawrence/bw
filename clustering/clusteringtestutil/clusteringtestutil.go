@@ -58,6 +58,7 @@ func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) 
 	defaultOpts := []clustering.Option{
 		clustering.OptionNodeID(bw.MustGenerateID().String()),
 		clustering.OptionTransport(transport),
+		clustering.OptionBindPort(transport.GetAutoBindPort()),
 	}
 
 	options = append(defaultOpts, options...)
