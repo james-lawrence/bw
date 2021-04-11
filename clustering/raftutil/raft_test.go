@@ -232,7 +232,7 @@ var _ = Describe("Raft", func() {
 			}
 		})
 
-		It("should gracefully handle departures", func() {
+		FIt("should gracefully handle departures", func() {
 			var (
 				network memberlist.MockNetwork
 				rafts   []*raft.Raft

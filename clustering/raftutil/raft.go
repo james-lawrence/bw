@@ -448,12 +448,6 @@ func maybeLeave(c cluster) bool {
 func isMember(c cluster) bool {
 	return isPossiblePeer(c.LocalNode(), agent.QuorumNodes(c)...)
 }
-
-// possiblePeers utility function for locating N possible peers for the raft protocol.
-func possiblePeers(n int, c cluster) []*memberlist.Node {
-	return c.GetN(n, []byte(agent.QuorumKey))
-}
-
 func configuration(c cluster) (conf raft.Configuration) {
 	var (
 		err error
@@ -482,15 +476,6 @@ func isPossiblePeer(local *memberlist.Node, peers ...*memberlist.Node) bool {
 	}
 
 	return false
-}
-
-// peersToString ...
-func peersToString(peers ...*memberlist.Node) []string {
-	results := make([]string, 0, len(peers))
-	for _, peer := range peers {
-		results = append(results, peer.Name)
-	}
-	return results
 }
 
 func nodeToserver(n *memberlist.Node) (_zero raft.Server, err error) {
