@@ -4,17 +4,33 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/pkg/errors"
 
 	"github.com/hashicorp/memberlist"
 )
 
+var (
+	incr uint8
+	m    sync.Mutex
+)
+
+func nextPeer() string {
+	m.Lock()
+	defer m.Unlock()
+	incr++
+	return fmt.Sprintf("127.0.0.%d", incr)
+}
+
 func defaultLocalConfig() *memberlist.Config {
 	conf := memberlist.DefaultLANConfig()
+	conf.BindAddr = nextPeer()
+	conf.BindPort = 0
 	conf.TCPTimeout = time.Second
 	conf.IndirectChecks = 1
 	conf.RetransmitMult = 2
@@ -31,15 +47,16 @@ func defaultLocalConfig() *memberlist.Config {
 func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) (c clustering.Memberlist, err error) {
 	// The mock network cannot be shutdown cleanly, so ignore it, even though it would be ideal
 	// for this use case.
+	// transport := network.NewTransport()
 	transport, err := memberlist.NewNetTransport(&memberlist.NetTransportConfig{
-		BindAddrs: []string{"127.0.0.1"},
+		BindAddrs: []string{stringsx.DefaultIfBlank(config.BindAddr, "127.0.0.1")},
+		BindPort:  config.BindPort,
 	})
 	if err != nil {
 		return c, errors.WithMessage(err, "new cluster failed")
 	}
 	defaultOpts := []clustering.Option{
 		clustering.OptionNodeID(bw.MustGenerateID().String()),
-		// clustering.OptionTransport(network.NewTransport()),
 		clustering.OptionTransport(transport),
 	}
 

@@ -167,6 +167,8 @@ func (t *SWIMTransport) FinalAdvertiseAddr(ip string, port int) (_ net.IP, _ int
 			} else {
 				advertiseAddr = s.IP
 			}
+		case *net.UnixAddr:
+			return
 		default:
 			return nil, 0, errors.Errorf("unknown network type: %T unable to determine IP/Port", s)
 		}

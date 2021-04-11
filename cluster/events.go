@@ -149,6 +149,7 @@ func (t *EventsQueue) enqueueNode(typ agent.ClusterWatchEvents_Event, n *memberl
 		return
 	}
 
+	log.Println("Node To Peer", n.Name, n.Addr.String())
 	t.enqueue(typ, p)
 }
 
@@ -180,6 +181,10 @@ func (t *EventsQueue) NotifyUpdate(n *memberlist.Node) {
 
 // NodeMeta provides the metadata about the node.
 func (t *EventsQueue) NodeMeta(limit int) []byte {
+	if t.local == nil {
+		return []byte(nil)
+	}
+
 	log.Println("NodeMeta invoked limit:", limit, len(t.local.metadata))
 	if limit < len(t.local.metadata) {
 		log.Println("insufficient room to send metadata")
@@ -191,6 +196,9 @@ func (t *EventsQueue) NodeMeta(limit int) []byte {
 
 // LocalState local state of the node.
 func (t *EventsQueue) LocalState(join bool) []byte {
+	if t.local == nil {
+		return []byte(nil)
+	}
 	return t.local.encoded
 }
 

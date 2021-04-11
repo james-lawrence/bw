@@ -10,10 +10,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 	. "github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/x/testingx"
+	"google.golang.org/grpc"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -174,16 +177,24 @@ func clusters(peers ...peer) (o []clustering.Memberlist) {
 	return o
 }
 
-func newPeer(ctx context.Context, provider UnixAddressProvider, tmpdir string, obs *raft.Observer, network *memberlist.MockNetwork, peers ...peer) peer {
-	sq := BacklogQueueWorker{Queue: make(chan Event)}
-	bq := BacklogQueue{Backlog: make(chan QueuedEvent, 100)}
-	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(bq), clustering.OptionLogOutput(ioutil.Discard))
+func newPeer(ctx context.Context, tmpdir string, obs *raft.Observer, network *memberlist.MockNetwork, peers ...peer) peer {
+	events := cluster.NewEventsQueue(nil)
+	conn, _ := testingx.NewGRPCServer(func(srv *grpc.Server) {
+		events.Bind(srv)
+	})
+
+	sq := BacklogQueueWorker{Queue: make(chan *agent.ClusterWatchEvents)}
+
+	Expect(
+		cluster.NewEventsSubscription(conn, sq.Enqueue),
+	).To(Succeed())
+
+	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(events), clustering.OptionLogOutput(ioutil.Discard))
 	Expect(err).ToNot(HaveOccurred())
 	_, err = clusteringtestutil.Connect(c, clusters(peers...)...)
 	Expect(err).ToNot(HaveOccurred())
 	rctx, rcancel := context.WithCancel(ctx)
 	r := overlayRaft(rctx, sq, tmpdir, c)
-	go sq.Background(bq)
 	go r.Overlay(c, ProtocolOptionObservers(obs))
 	return peer{c: c, r: &r, rc: rcancel}
 }
@@ -200,12 +211,11 @@ var _ = Describe("Raft", func() {
 			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
-			provider := UnixAddressProvider{Dir: tmpdir}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			for i := 0; i < 3; i++ {
-				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
 			}
 
 			Eventually(func() []raft.Server {
@@ -214,7 +224,7 @@ var _ = Describe("Raft", func() {
 			}, 30*time.Second).Should(HaveLen(3))
 
 			for i := 0; i < 5; i++ {
-				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
 					return getServers(rafts...)
@@ -232,12 +242,11 @@ var _ = Describe("Raft", func() {
 			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
-			provider := UnixAddressProvider{Dir: tmpdir}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			for i := 0; i < 5; i++ {
-				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
 			}
 
 			Eventually(func() *raft.Raft {
@@ -275,12 +284,11 @@ var _ = Describe("Raft", func() {
 			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
-			provider := UnixAddressProvider{Dir: tmpdir}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			for i := 0; i < 2; i++ {
-				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
 			}
 
 			Eventually(func() []raft.Server {
@@ -288,7 +296,7 @@ var _ = Describe("Raft", func() {
 				return getServers(rafts...)
 			}, 30*time.Second).Should(HaveLen(2))
 
-			peer := newPeer(ctx, provider, tmpdir, obs, &network, peers...)
+			peer := newPeer(ctx, tmpdir, obs, &network, peers...)
 			for i := 0; i < 5; i++ {
 				Eventually(func() []raft.Server {
 					rafts = gather(obsc, rafts...)
@@ -324,12 +332,11 @@ var _ = Describe("Raft", func() {
 			tmpdir := testingx.TempDir()
 			obsc := make(chan raft.Observation, 100)
 			obs := raft.NewObserver(obsc, true, nil)
-			provider := UnixAddressProvider{Dir: tmpdir}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			for i := 0; i < 3; i++ {
-				peers = append(peers, newPeer(ctx, provider, tmpdir, obs, &network, peers...))
+				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
 			}
 
 			Eventually(func() *raft.Raft {
@@ -341,7 +348,7 @@ var _ = Describe("Raft", func() {
 			expected := leader.Leader()
 
 			Eventually(func() bool {
-				newPeer(ctx, provider, tmpdir, obs, &network, peers...)
+				newPeer(ctx, tmpdir, obs, &network, peers...)
 				time.Sleep(500 * time.Millisecond)
 				rafts = gather(obsc, rafts...)
 				if l2 := firstRaft(findState(leaderFilter, rafts...)...); l2 != nil && l2.Leader() != expected {

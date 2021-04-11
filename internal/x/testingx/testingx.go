@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/akutz/memconn"
+	"github.com/gofrs/uuid"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
@@ -37,7 +39,8 @@ func Cleanup() {
 
 // NewGRPCServer sets up a server and a connection.
 func NewGRPCServer(bind func(s *grpc.Server), options ...grpc.DialOption) (c *grpc.ClientConn, s *grpc.Server) {
-	l, err := net.Listen("tcp", ":0")
+	inmemconn := uuid.Must(uuid.NewV4()).String()
+	l, err := memconn.Listen("memu", inmemconn)
 	gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	s = grpc.NewServer()
 	bind(s)
@@ -45,10 +48,17 @@ func NewGRPCServer(bind func(s *grpc.Server), options ...grpc.DialOption) (c *gr
 		s.Serve(l)
 	}()
 
-	options = append([]grpc.DialOption{grpc.WithInsecure()}, options...)
+	options = append([]grpc.DialOption{
+		grpc.WithInsecure(),
+		grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
+			ctx, done := context.WithTimeout(ctx, time.Second)
+			defer done()
+			return memconn.DialContext(ctx, "memu", address)
+		}),
+	}, options...)
 	c, err = grpc.Dial(l.Addr().String(), options...)
 
-	gomega.Expect(err).ToNot(gomega.HaveOccurred())
+	gomega.Expect(err).To(gomega.Succeed())
 
 	return c, s
 }
