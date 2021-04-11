@@ -1,3 +1,15 @@
+commit e6d961b3874634c7387e0043c370fe767e84b6aa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 4 19:24:19 2021 -0400
+
+    add authentication requirements to server and quorum
+
+commit bb0b9906da971320ee7ee92f7081c6079cacb7ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 11 11:56:55 2021 -0400
+
+    release 0.1.1618154707-9c582067
+
 commit 9c582067c4d5ee3cc21b14d362c20f2922a45edd
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Apr 11 09:07:41 2021 -0400
