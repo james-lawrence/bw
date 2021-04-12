@@ -17,6 +17,8 @@ import (
 	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/notary"
+	"google.golang.org/grpc"
 )
 
 type agentNotify struct {
@@ -35,6 +37,7 @@ func (t *agentNotify) configure(parent *kingpin.CmdClause) {
 
 func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
+		ss        notary.Signer
 		tlsconfig *tls.Config
 	)
 	defer t.global.shutdown()
@@ -46,6 +49,10 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	log.Println(spew.Sdump(t.config))
 
 	if tlsconfig, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
+		return err
+	}
+
+	if ss, err = notary.NewAgentSigner(t.config.Root); err != nil {
 		return err
 	}
 
@@ -64,7 +71,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	if err != nil {
 		return err
 	}
-	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(t.config.Peer()), d.Defaults()...))
+	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(t.config.Peer()), d.Defaults(grpc.WithPerRPCCredentials(ss))...))
 
 	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), dd)
 

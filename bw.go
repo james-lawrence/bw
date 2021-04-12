@@ -70,8 +70,10 @@ const (
 	DefaultAutocertPort = 2006
 	// DefaultDirAgentCredentials ...
 	DefaultDirAgentCredentials = "tls"
-	// DefaultNotaryKey ...
+	// DefaultNotaryKey rsa key used by clients to identify themselves.
 	DefaultNotaryKey = "private.key"
+	// DefaultAgentNotaryKey rsa key used by agents to identify themselves.
+	DefaultAgentNotaryKey = "p2p.pkey"
 	// DefaultTLSKeyCA default name for the certificate authority key.
 	DefaultTLSKeyCA = "tlsca.key"
 	// DefaultTLSCertCA default name for the certificate authority certificate.

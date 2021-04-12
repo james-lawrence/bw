@@ -103,7 +103,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if p2ppriv, err = rsax.CachedAuto(filepath.Join(t.config.Root, "p2p.pkey")); err != nil {
+	if p2ppriv, err = rsax.CachedAuto(filepath.Join(t.config.Root, bw.DefaultAgentNotaryKey)); err != nil {
 		return err
 	}
 

@@ -127,7 +127,7 @@ func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
 		if b {
 			p.minQuorum = 1
 		} else {
-			p.minQuorum = 3
+			p.minQuorum = agent.QuorumDefault
 		}
 	}
 }
@@ -135,7 +135,7 @@ func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
 // NewProtocol ...
 func NewProtocol(ctx context.Context, local *memberlist.Node, q *grpc.ClientConn, options ...ProtocolOption) (_ignored Protocol, err error) {
 	p := Protocol{
-		minQuorum:      3,
+		minQuorum:      agent.QuorumDefault,
 		Context:        ctx,
 		LocalNode:      local,
 		StabilityQueue: q,
@@ -333,7 +333,7 @@ func (t *Protocol) connect(c rendezvous) (network raft.Transport, r *raft.Raft, 
 	)
 
 	if len(quorum.Servers) < t.minQuorum {
-		return nil, nil, errors.Errorf("not enough peers for quorum: %d - %s", len(quorum.Servers), quorum.Servers)
+		return nil, nil, errors.Errorf("not enough peers for quorum: %d/%d - %s", len(quorum.Servers), t.minQuorum, quorum.Servers)
 	}
 
 	if network, err = t.getTransport(); err != nil {
@@ -477,9 +477,11 @@ func configuration(c rendezvous) (conf raft.Configuration) {
 	var (
 		err error
 		rs  raft.Server
+		q   = agent.QuorumNodes(c)
 	)
 
-	for _, peer := range agent.QuorumNodes(c) {
+	log.Println("potential quorum peers", len(q))
+	for _, peer := range q {
 		if rs, err = nodeToserver(peer); err != nil {
 			log.Println("ignoring peer, unable to compute address", peer.String(), err)
 			continue

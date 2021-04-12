@@ -9,9 +9,6 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 )
 
-// TODO:
-// bwcreds awskms default {key-name}
-
 func main() {
 	var (
 		err       error

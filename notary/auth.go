@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -65,6 +66,12 @@ func ClearAutoSignerKey() error {
 		os.Remove(PrivateKeyPath()),
 		os.Remove(PublicKeyPath()),
 	)
+}
+
+// NewAgentSigner - loads or generates a ssh key to sign RPC requests with.
+// this method is only for use by agents.
+func NewAgentSigner(root string) (s Signer, err error) {
+	return newAutoSignerPath(filepath.Join(root, bw.DefaultAgentNotaryKey), "", rsax.Auto)
 }
 
 // NewAutoSigner - loads or generates a ssh key to sign RPC requests with.

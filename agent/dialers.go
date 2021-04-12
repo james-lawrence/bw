@@ -39,7 +39,12 @@ func QuorumPeers(c rendezvous) []*Peer {
 
 // QuorumNodes return the quorum nodes.
 func QuorumNodes(c rendezvous) []*memberlist.Node {
-	return c.GetN(3, []byte(QuorumKey))
+	return c.GetN(QuorumDefault, []byte(QuorumKey))
+}
+
+// LargeQuorum returns 2x the nodes required to achieve quorum.
+func LargeQuorum(c rendezvous) []*memberlist.Node {
+	return c.GetN(2*QuorumDefault, []byte(QuorumKey))
 }
 
 func shuffleQuorum(q []*Peer) []*Peer {

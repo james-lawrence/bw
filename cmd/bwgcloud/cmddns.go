@@ -18,7 +18,9 @@ import (
 	"github.com/james-lawrence/bw/dns"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc"
 )
 
 type cmdDNS struct {
@@ -52,6 +54,7 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 
 func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
+		ss        notary.Signer
 		nodes     []*memberlist.Node
 		tlsconfig *tls.Config
 	)
@@ -74,7 +77,11 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsconfig)
+	if ss, err = notary.NewAgentSigner(t.config.Root); err != nil {
+		return err
+	}
+
+	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsconfig, grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}
