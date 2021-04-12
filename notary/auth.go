@@ -249,6 +249,7 @@ func (t Auth) Authorize(ctx context.Context) *Permission {
 	)
 
 	if md, ok = metadata.FromIncomingContext(ctx); !ok {
+		log.Println("token missing")
 		return none()
 	}
 
