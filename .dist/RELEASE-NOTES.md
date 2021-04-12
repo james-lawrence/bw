@@ -1,3 +1,33 @@
+commit 0404ef546abf1f5e8ee464bd5e7b58de49df7251
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 07:55:11 2021 -0400
+
+    adjustments to bootstrapping
+
+commit 4070a4ac7a7dabc21026cde014682bbd65e1e7d9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 07:28:18 2021 -0400
+
+    logging
+
+commit 93c0f4bd51d0b431aa1ce0321698dd5d956cf49e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 07:23:09 2021 -0400
+
+    fix archive deploy
+
+commit 8218bd2f931ec80eb9f4ac86127d02ae31318916
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 06:21:12 2021 -0400
+
+    client fixes
+
+commit 9273262fd4877b55a28b85a64a4bc8ddd1558dc0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 05:55:09 2021 -0400
+
+    release 0.1.1618221250-481da0a5
+
 commit 481da0a5d3f867bccc05f2ddd1f6d3a47b3c4225
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Apr 12 05:54:10 2021 -0400
