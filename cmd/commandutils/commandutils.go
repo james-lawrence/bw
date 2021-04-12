@@ -101,7 +101,10 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		tlsconfig *tls.Config
 	)
 
-	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	path := bw.LocateFirst(
+		filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment, bw.DefaultClientConfig),
+		filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment),
+	)
 	if _, err = os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return config, errorsx.UserFriendly(errors.Errorf("unknown environment: %s - %s", environment, path))

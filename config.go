@@ -88,6 +88,17 @@ func LocateFirstInDir(dir string, names ...string) (result string) {
 	return result
 }
 
+// LocateFirst locates the first file that exists
+func LocateFirst(paths ...string) (name string) {
+	for _, name = range paths {
+		if _, err := os.Stat(name); err == nil {
+			break
+		}
+	}
+
+	return name
+}
+
 // DefaultUserDirLocation returns the user directory location.
 func DefaultUserDirLocation(name string) string {
 	user := systemx.CurrentUserOrDefault(fallbackUser)

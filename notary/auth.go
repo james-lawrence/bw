@@ -249,12 +249,12 @@ func (t Auth) Authorize(ctx context.Context) *Permission {
 	)
 
 	if md, ok = metadata.FromIncomingContext(ctx); !ok {
-		log.Println("token missing")
+		log.Println("token metadata")
 		return none()
 	}
 
 	if vals = md.Get(mdkey); len(vals) != 1 {
-		log.Println("recieved invalid token")
+		log.Println("recieved invalid token", len(vals))
 		return none()
 	}
 
@@ -264,7 +264,7 @@ func (t Auth) Authorize(ctx context.Context) *Permission {
 	}
 
 	if a.Token == nil || a.Signature == nil {
-		log.Println(errors.Wrap(err, "failed to decode authorization"))
+		log.Println(errors.Wrap(err, "missing token/signature"))
 		return none()
 	}
 
