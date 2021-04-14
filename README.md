@@ -21,6 +21,7 @@ bw me init
 # use bearded wookie to bootstrap the local development cluster
 bw deploy local linux-dev
 
+systemctl --user restart bearded-wookie-pebble.service
 systemctl --user restart bearded-wookie@agent1.service
 systemctl --user restart bearded-wookie@agent2.service
 systemctl --user restart bearded-wookie@agent3.service

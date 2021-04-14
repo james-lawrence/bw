@@ -55,7 +55,7 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20191021154308-4207f1bf0617
 	github.com/hashicorp/vault v0.10.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190318174639-195e0e9d07f1 // indirect
-	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
+	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 	github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
 	github.com/jefferai/jsonx v1.0.1 // indirect

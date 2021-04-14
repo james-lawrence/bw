@@ -12,7 +12,6 @@ import (
 	sync "sync"
 	"time"
 
-	"github.com/hashicorp/yamux"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -118,9 +117,7 @@ func accept1(ctx context.Context, m *M, inbound chan net.Conn) (err error) {
 
 func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
 	var (
-		session *yamux.Session
-		stream  net.Conn
-		req     Protocol
+		req Protocol
 	)
 
 	cctx, done := context.WithTimeout(ctx, m.acceptTimeout)
@@ -145,18 +142,8 @@ func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
 		}
 	}
 
-	if session, err = yamux.Server(conn, nil); err != nil {
+	if req, err = handshakeInbound(m, conn); err != nil {
 		conn.Close()
-		return errors.Wrap(err, "failed to create session")
-	}
-
-	if stream, err = session.Accept(); err != nil {
-		session.Close()
-		return errors.Wrap(err, "failed to create stream")
-	}
-
-	if req, err = handshakeInbound(m, stream); err != nil {
-		session.Close()
 		return errors.Wrap(err, "muxer.handshakeInbound failed")
 	}
 
@@ -165,16 +152,16 @@ func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
 	m.m.RUnlock()
 
 	if !ok {
-		session.Close()
+		conn.Close()
 		return errors.Errorf("unknown protocol: %s", hex.EncodeToString(req[:]))
 	}
 
 	// log.Println("muxer.Accept", protocol.protocol, conn.RemoteAddr().String(), "->", conn.LocalAddr().String())
 	select {
-	case protocol.inbound <- stream:
+	case protocol.inbound <- conn:
 		return nil
 	case <-cctx.Done():
-		session.Close()
+		conn.Close()
 		return cctx.Err()
 	}
 }

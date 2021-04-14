@@ -7,7 +7,6 @@ import (
 	"net"
 	"sync/atomic"
 
-	"github.com/hashicorp/yamux"
 	"github.com/pkg/errors"
 )
 
@@ -40,10 +39,6 @@ func (t Dialer) Dial(network string, address string) (conn net.Conn, err error) 
 }
 
 func (t Dialer) DialContext(ctx context.Context, network string, address string) (conn net.Conn, err error) {
-	var (
-		session *yamux.Session
-	)
-
 	// log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
 	// defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
 
@@ -63,21 +58,9 @@ func (t Dialer) DialContext(ctx context.Context, network string, address string)
 		}
 	}
 
-	if session, err = yamux.Client(conn, nil); err != nil {
-		log.Println("muxer.DialContext session creation failed", t.protocol, network, address, err)
-		conn.Close()
-		return nil, err
-	}
-
-	if conn, err = session.Open(); err != nil {
-		log.Println("muxer.DialContext session open failed", t.protocol, network, address, err)
-		session.Close()
-		return nil, err
-	}
-
 	if err = handshakeOutbound(t.digest[:], conn); err != nil {
 		log.Println("muxer.DialContext handshakeOutbound", t.protocol, network, address, err)
-		session.Close()
+		conn.Close()
 		return nil, err
 	}
 
