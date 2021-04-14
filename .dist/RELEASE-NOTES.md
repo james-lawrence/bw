@@ -1,3 +1,15 @@
+commit 8f1db21aeaebb993ee29b488f7e9c0bcf70cbf07
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Apr 14 17:40:26 2021 -0400
+
+    remove yamux from muxer code
+
+commit a792e6ecb6c3c25ec03fe59f53975f019d68b70d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Apr 12 08:09:15 2021 -0400
+
+    release 0.1.1618229170-0404ef54
+
 commit 0404ef546abf1f5e8ee464bd5e7b58de49df7251
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Apr 12 07:55:11 2021 -0400
