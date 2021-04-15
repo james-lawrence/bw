@@ -63,8 +63,9 @@ func (t Notary) Refresh() (err error) {
 		RootCAs:    pool,
 	}
 
-	log.Println("dialing discovery service", t.CommonName, t.Discovery)
-	d := dialers.NewDirect(t.Discovery)
+	// FIXME
+	log.Println("dialing discovery service", t.CommonName, t.Address)
+	d := dialers.NewDirect(t.Address)
 
 	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
 
