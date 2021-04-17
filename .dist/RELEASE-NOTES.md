@@ -1,3 +1,27 @@
+commit a823d1cff072d0a6fc4cf827aa4efe7a2bd9c087
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 17 08:30:11 2021 -0400
+
+    remove comment from notary.proto
+
+commit f46cd5930a3c46d3ebd3bc9b133e47b143904bbc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 17 08:29:19 2021 -0400
+
+    ensure ssh comment is maintained when modifying the auths files
+
+commit 4ff8b62c8071997adfed95ce5636882f2d24c910
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 15 06:54:08 2021 -0400
+
+    small patch to fix client notary behavior
+
+commit c68ab6832736f514738239b55046820c276289a0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Apr 14 17:50:27 2021 -0400
+
+    release 0.1.1618436426-8f1db21a
+
 commit 8f1db21aeaebb993ee29b488f7e9c0bcf70cbf07
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Apr 14 17:40:26 2021 -0400
