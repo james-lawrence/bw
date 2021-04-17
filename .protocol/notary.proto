@@ -84,5 +84,4 @@ service Notary {
   rpc Revoke(RevokeRequest) returns (RevokeResponse) {}
   rpc Refresh(RefreshRequest) returns (RefreshResponse) {}
   rpc Search(SearchRequest) returns (stream SearchResponse) {}
-  // rpc Sync(SyncRequest) returns (stream SyncResponse) {}
 }
