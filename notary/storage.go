@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -119,20 +118,6 @@ func genFingerprint(d []byte) string {
 	return hex.EncodeToString(digest[:])
 }
 
-func defaultAuthorizationsPath() []string {
-	var (
-		err error
-		u   *user.User
-	)
-
-	if u, err = user.Current(); err != nil {
-		log.Println("failed to load current user for authorized keys", err)
-		return []string{}
-	}
-
-	return []string{filepath.Join(u.HomeDir, ".ssh", "authorized_keys")}
-}
-
 func loadAuthorizedKeys(s storage, path string) (err error) {
 	var (
 		encoded []byte
@@ -203,10 +188,12 @@ func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
 
 	for len(encoded) != 0 {
 		var (
-			key ssh.PublicKey
+			pubencoded []byte
+			comment    string
+			key        ssh.PublicKey
 		)
 
-		if key, _, _, encoded, err = ssh.ParseAuthorizedKey(encoded); err != nil {
+		if key, comment, _, encoded, err = ssh.ParseAuthorizedKey(encoded); err != nil {
 			if sshx.IsNoKeyFound(err) {
 				continue
 			}
@@ -214,11 +201,13 @@ func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
 			continue
 		}
 
-		if genFingerprint(ssh.MarshalAuthorizedKey(key)) == fingerprint {
+		pubencoded = ssh.MarshalAuthorizedKey(key)
+
+		if genFingerprint(pubencoded) == fingerprint {
 			continue
 		}
 
-		if _, err = buf.Write(ssh.MarshalAuthorizedKey(key)); err != nil {
+		if _, err = buf.Write(sshx.Comment(pubencoded, comment)); err != nil {
 			return err
 		}
 	}

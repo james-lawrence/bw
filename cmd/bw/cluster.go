@@ -108,7 +108,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, node *memberli
 	}
 
 	defaultOptions := []raftutil.ProtocolOption{
-		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes == 0),
+		raftutil.ProtocolOptionEnableSingleNode(conf.MinimumNodes <= 1),
 		raftutil.ProtocolOptionPassiveReset(func() (s raftutil.Storage, ss raft.SnapshotStore, err error) {
 			if err = errorsx.Compact(os.RemoveAll(dir), os.MkdirAll(dir, 0700)); err != nil {
 				return s, ss, errors.WithStack(err)

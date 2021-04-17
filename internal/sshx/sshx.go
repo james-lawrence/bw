@@ -1,9 +1,11 @@
 package sshx
 
 import (
+	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -31,4 +33,14 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 // IsNoKeyFound check if ssh key is not found.
 func IsNoKeyFound(err error) bool {
 	return err.Error() == "ssh: no key found"
+}
+
+// Comment adds comment to the ssh public key.
+func Comment(encoded []byte, comment string) []byte {
+	if strings.TrimSpace(comment) == "" {
+		return encoded
+	}
+
+	comment = " " + comment + "\r\n"
+	return append(bytes.TrimSpace(encoded), []byte(comment)...)
 }

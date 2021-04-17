@@ -1,7 +1,6 @@
 package notary
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gofrs/uuid"
@@ -131,12 +129,7 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		return s, errors.Wrap(err, "failed to generate authorization key")
 	}
 
-	if strings.TrimSpace(comment) != "" {
-		comment = " " + comment + "\r\n"
-		pubencoded = append(bytes.TrimSpace(pubencoded), []byte(comment)...)
-	}
-
-	if err = ioutil.WriteFile(pub, pubencoded, 0600); err != nil {
+	if err = ioutil.WriteFile(pub, sshx.Comment(pubencoded, comment), 0600); err != nil {
 		return s, errors.Wrap(err, "failed to generate authorization key")
 	}
 

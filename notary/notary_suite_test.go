@@ -53,6 +53,12 @@ func QuickStorage() (encoded []byte, s notary.Directory) {
 	return pkey, storage
 }
 
+func QuickSigner() (notary.Signer, error) {
+	pkey, err := rsax.UnsafeAuto()
+	Expect(err).To(Succeed())
+	return notary.NewSigner(pkey)
+}
+
 // QuickKey generate a quick keypair.
 func QuickKey() ([]byte, []byte) {
 	// generate a new key to add.
