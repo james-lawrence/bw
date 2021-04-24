@@ -11,7 +11,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	_cluster "github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 )
@@ -27,8 +26,8 @@ func Inmem(dctx Context) (_ Context, err error) {
 	}
 
 	srv := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(dctx.RPCKeepalive),
 	)
 

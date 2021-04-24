@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/james-lawrence/bw/internal/md5x"
+	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/pkg/errors"
 	"github.com/willf/bloom"
 	"google.golang.org/grpc"
@@ -22,6 +23,34 @@ func NewSyncRequest(b *bloom.BloomFilter) (r *SyncRequest, err error) {
 	}
 
 	return &SyncRequest{Bloom: buf.Bytes()}, nil
+}
+
+// Sync from a client connection
+func Sync(stream Sync_StreamClient, b Bloomy, s storage) (err error) {
+	for {
+		var (
+			event *SyncStream
+		)
+
+		if event, err = stream.Recv(); err != nil {
+			err = iox.IgnoreEOF(err)
+			break
+		}
+
+		switch evt := event.Events.(type) {
+		case *SyncStream_Chunk:
+			for _, g := range evt.Chunk.Grants {
+				log.Println("retrieved", g.Fingerprint)
+				if _, err := s.Insert(g); err != nil {
+					return err
+				}
+
+				b.Add([]byte(g.Fingerprint))
+			}
+		}
+	}
+
+	return err
 }
 
 // NewSyncService ...
@@ -54,7 +83,7 @@ func (t SyncService) Stream(r *SyncRequest, s Sync_StreamServer) (err error) {
 		}
 	}
 
-	if p := t.auth.Authorize(s.Context()); !p.Grant {
+	if p := t.auth.Authorize(s.Context()); !p.Sync {
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 

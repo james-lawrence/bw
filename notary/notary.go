@@ -12,6 +12,7 @@ import (
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/willf/bloom"
 )
 
 func AgentGrant(pub []byte) *Grant {
@@ -29,6 +30,7 @@ func UserFull() *Permission {
 		Search:   true,
 		Refresh:  true,
 		Deploy:   true,
+		Sync:     true,
 		Autocert: false,
 	}
 }
@@ -41,6 +43,7 @@ func agent() *Permission {
 		Refresh:  false,
 		Deploy:   true,
 		Autocert: true,
+		Sync:     true,
 	}
 }
 
@@ -51,6 +54,7 @@ func none() *Permission {
 
 type Bloomy interface {
 	Test([]byte) bool
+	Add([]byte) *bloom.BloomFilter
 }
 
 type SyncStorage interface {

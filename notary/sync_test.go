@@ -2,7 +2,6 @@ package notary_test
 
 import (
 	"context"
-	"log"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -10,35 +9,9 @@ import (
 	"github.com/willf/bloom"
 	"google.golang.org/grpc"
 
-	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/testingx"
 	"github.com/james-lawrence/bw/notary"
 )
-
-func synced(stream notary.Sync_StreamClient, s storage) (err error) {
-	for {
-		var (
-			event *notary.SyncStream
-		)
-
-		if event, err = stream.Recv(); err != nil {
-			err = iox.IgnoreEOF(err)
-			break
-		}
-
-		switch evt := event.Events.(type) {
-		case *notary.SyncStream_Chunk:
-			for _, g := range evt.Chunk.Grants {
-				log.Println("retrieved", g.Fingerprint)
-				if _, err := s.Insert(g); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	return err
-}
 
 func newBloom(b *bloom.BloomFilter, grants ...*notary.Grant) *bloom.BloomFilter {
 	for _, g := range grants {
@@ -72,7 +45,7 @@ var _ = Describe("SyncServer", func() {
 
 		stream, err := client.Stream(context.Background(), req)
 		Expect(err).To(Succeed())
-		Expect(synced(stream, s2)).To(Succeed())
+		Expect(notary.Sync(stream, b, s2)).To(Succeed())
 		for _, g := range expected {
 			_, err := s2.Lookup(g.Fingerprint)
 			Expect(err).To(Succeed())

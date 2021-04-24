@@ -244,7 +244,11 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c clu
 	remaining := make([]*agent.Peer, 0, len(peers))
 	failed := error(nil)
 
-	b := backoff.Maximum(timex.DurationMin(time.Minute, timeout/4), backoff.Exponential(time.Second))
+	b := backoff.New(
+		backoff.Exponential(time.Second),
+		backoff.Maximum(timex.DurationMin(time.Minute, timeout/4)),
+		backoff.Jitter(0.25),
+	)
 	deadline := time.Now().Add(timeout)
 
 	for attempt := 0; len(peers) > 0; attempt++ {

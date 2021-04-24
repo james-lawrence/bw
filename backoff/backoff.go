@@ -11,23 +11,38 @@ type Strategy interface {
 	Backoff(attempt int) time.Duration
 }
 
-// Maximum sets an upper bound for the strategy.
-func Maximum(d time.Duration, s Strategy) Strategy {
-	return StrategyFunc(func(attempt int) time.Duration {
-		if x := s.Backoff(attempt); x < d {
-			return x
-		}
+// Option consumes a strategy and returns a new strategy.
+type Option func(Strategy) Strategy
 
-		return d
-	})
+// Maximum sets an upper bound for the strategy.
+func Maximum(d time.Duration) Option {
+	return func(s Strategy) Strategy {
+		return StrategyFunc(func(attempt int) time.Duration {
+			if x := s.Backoff(attempt); x < d {
+				return x
+			}
+
+			return d
+		})
+	}
 }
 
 // Jitter set a jitter frame for the strategy.
-func Jitter(maximum time.Duration, s Strategy) Strategy {
-	return StrategyFunc(func(attempt int) time.Duration {
-		x := s.Backoff(attempt)
-		return x + time.Duration(rand.Intn(int(maximum)))
-	})
+func Jitter(multiplier float64) Option {
+	return func(s Strategy) Strategy {
+		return StrategyFunc(func(attempt int) time.Duration {
+			x := s.Backoff(attempt)
+			return x + time.Duration(rand.Intn(int(math.Floor(float64(x)*multiplier))))
+		})
+	}
+}
+
+// New backoff
+func New(s Strategy, options ...Option) Strategy {
+	for _, opt := range options {
+		s = opt(s)
+	}
+	return s
 }
 
 // StrategyFunc convience helper to convert a pure function into a backoff strategy.
@@ -63,6 +78,7 @@ func Exponential(scale time.Duration) Strategy {
 	if scale == 0 {
 		panic("exponential backoff can't be scaled by 0")
 	}
+
 	return &exponential{
 		scale: scale,
 	}
@@ -80,4 +96,15 @@ type explicit struct {
 
 func (t explicit) Backoff(attempt int) time.Duration {
 	return t.delays[attempt%len(t.delays)]
+}
+
+// Attempt with a backoff strategy.
+func Attempt(d Strategy, do func(int) int) {
+	attempt := do(0)
+	for {
+		duration := d.Backoff(attempt)
+		// log.Println("BACKOFF ATTEMPT SLEEPING", duration)
+		time.Sleep(duration)
+		attempt = do(attempt)
+	}
 }

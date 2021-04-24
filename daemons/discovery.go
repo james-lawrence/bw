@@ -10,7 +10,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 )
 
 // Discovery initiates the discovery backend.
@@ -21,8 +20,8 @@ func Discovery(ctx Context) (err error) {
 	)
 
 	server = grpc.NewServer(
-		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(ctx.RPCKeepalive),
 	)
 

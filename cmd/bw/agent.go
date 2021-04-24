@@ -19,7 +19,6 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
@@ -173,7 +172,6 @@ func (t *agentCmd) bind() (err error) {
 	dialer := dialers.NewDefaults(
 		dialers.WithMuxer(tlsx.NewDialer(tlscreds), l.Addr()),
 		grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
 		grpc.WithPerRPCCredentials(ss),
 	)
 

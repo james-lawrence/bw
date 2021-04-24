@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"google.golang.org/grpc"
@@ -50,8 +49,15 @@ type DefaultsDialer interface {
 func DefaultDialerOptions(options ...grpc.DialOption) (results Defaulted) {
 	defaults := []grpc.DialOption{
 		grpc.WithBackoffMaxDelay(5 * time.Second),
-		grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
-		grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter),
+		// grpc.WithConnectParams(grpc.ConnectParams{
+		// 	Backoff: backoff.Config{
+		// 		Jitter:     0.25,
+		// 		Multiplier: 1.1,
+		// 		MaxDelay:   5 * time.Second,
+		// 	},
+		// }),
+		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
+		// grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter),
 	}
 
 	return append(

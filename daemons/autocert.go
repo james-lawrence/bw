@@ -9,7 +9,6 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/acme"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 )
 
 // Autocert - used to bootstrap certificates.
@@ -19,8 +18,8 @@ func Autocert(ctx Context) (err error) {
 	)
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(ctx.RPCKeepalive),
 	)
 	acme.RegisterACMEServer(server, acme.NewService(ctx.ACMECache, ctx.NotaryAuth))

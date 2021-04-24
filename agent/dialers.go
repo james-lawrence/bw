@@ -47,6 +47,11 @@ func LargeQuorum(c rendezvous) []*memberlist.Node {
 	return c.GetN(2*QuorumDefault, []byte(QuorumKey))
 }
 
+// SynchronizationPeers based on the provided k generate the peers to synchronize with
+func SynchronizationPeers(k []byte, c rendezvous) []*Peer {
+	return Shuffle(NodesToPeers(c.GetN(2*QuorumDefault, k)...))
+}
+
 func shuffleQuorum(q []*Peer) []*Peer {
 	rand.Shuffle(len(q), func(i int, j int) {
 		q[i], q[j] = q[j], q[i]

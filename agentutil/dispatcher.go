@@ -32,7 +32,11 @@ func Dispatch(d dispatcher, m ...*agent.Message) error {
 // ReliableDispatch repeatedly attempts to deliver messages using the provided
 // context and dispatcher until the context is cancelled.
 func ReliableDispatch(ctx context.Context, d dispatcher, m ...*agent.Message) (err error) {
-	bs := backoff.Maximum(10*time.Second, backoff.Exponential(200*time.Millisecond))
+	bs := backoff.New(
+		backoff.Exponential(200*time.Millisecond),
+		backoff.Maximum(10*time.Second),
+	)
+
 	for i := 0; ; i++ {
 		if err = _dispatch(ctx, d, dispatchTimeout, m...); err == nil {
 			return nil

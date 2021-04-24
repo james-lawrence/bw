@@ -26,6 +26,7 @@ message Permission {
   bool revoke = 4;
   bool deploy = 5;
   bool autocert = 6;
+  bool sync = 7;
 }
 
 message Grant {

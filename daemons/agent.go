@@ -2,12 +2,14 @@ package daemons
 
 import (
 	"context"
+	"log"
 	"net"
 	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
+	"github.com/willf/bloom"
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
@@ -18,18 +20,16 @@ import (
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 )
 
 // Agent daemon - rpc endpoint for the system.
-func Agent(ctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
+func Agent(dctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
 	var (
 		bind         net.Listener
 		sctx         shell.Context
@@ -41,15 +41,15 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 		return err
 	}
 
-	if observersdir, err = observers.NewDirectory(filepath.Join(ctx.Config.Root, "observers")); err != nil {
+	if observersdir, err = observers.NewDirectory(filepath.Join(dctx.Config.Root, "observers")); err != nil {
 		return err
 	}
 
 	qdialer := dialers.NewQuorum(
-		ctx.Cluster,
-		ctx.Dialer.Defaults()...,
+		dctx.Cluster,
+		dctx.Dialer.Defaults()...,
 	)
-	dialer := agent.NewDialer(ctx.Dialer.Defaults()...)
+	dialer := agent.NewDialer(dctx.Dialer.Defaults()...)
 	dispatcher := agentutil.NewDispatcher(qdialer)
 
 	deploy := deployment.NewDirective(
@@ -57,42 +57,42 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 	)
 
 	coordinator := deployment.New(
-		ctx.Config.Peer(),
+		dctx.Config.Peer(),
 		deploy,
 		deployment.CoordinatorOptionDispatcher(dispatcher),
-		deployment.CoordinatorOptionRoot(ctx.Config.Root),
-		deployment.CoordinatorOptionKeepN(ctx.Config.KeepN),
-		deployment.CoordinatorOptionDeployResults(ctx.Results),
+		deployment.CoordinatorOptionRoot(dctx.Config.Root),
+		deployment.CoordinatorOptionKeepN(dctx.Config.KeepN),
+		deployment.CoordinatorOptionDeployResults(dctx.Results),
 		deployment.CoordinatorOptionStorage(dlreg),
 	)
 
 	server := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcx.DebugIntercepter),
-		grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
-		grpc.KeepaliveParams(ctx.RPCKeepalive),
+		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
+		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
+		grpc.KeepaliveParams(dctx.RPCKeepalive),
 	)
-	authority := quorum.NewAuthority(ctx.Config)
+	authority := quorum.NewAuthority(dctx.Config)
 
-	configuration := quorum.NewConfiguration(authority, ctx.Cluster, dialer)
+	configuration := quorum.NewConfiguration(authority, dctx.Cluster, dialer)
 	configurationsvc := quorum.NewConfigurationService(configuration)
 
 	agent.NewServer(
-		ctx.Cluster,
-		agent.ServerOptionAuth(notary.NewAgentAuth(ctx.NotaryAuth)),
+		dctx.Cluster,
+		agent.ServerOptionAuth(notary.NewAgentAuth(dctx.NotaryAuth)),
 		agent.ServerOptionDeployer(&coordinator),
-		agent.ServerOptionShutdown(ctx.Shutdown),
+		agent.ServerOptionShutdown(dctx.Shutdown),
 	).Bind(server)
 
 	q := quorum.New(
 		observersdir,
-		ctx.Cluster,
-		proxy.NewProxy(ctx.Cluster),
+		dctx.Cluster,
+		proxy.NewProxy(dctx.Cluster),
 		quorum.NewTranscoder(
 			authority,
 			configuration,
 		),
 		upload,
-		ctx.Raft,
+		dctx.Raft,
 		quorum.OptionDialer(qdialer),
 		quorum.OptionInitializers(
 			authority,
@@ -102,56 +102,75 @@ func Agent(ctx Context, upload storage.UploadProtocol, download storage.Download
 
 	agent.NewQuorum(
 		&q,
-		notary.NewAgentAuth(ctx.NotaryAuth),
+		notary.NewAgentAuth(dctx.NotaryAuth),
 	).Bind(server)
 
 	notary.New(
-		ctx.Config.ServerName,
-		certificatecache.NewAuthorityCache(ctx.Config.CredentialsDir),
-		ctx.NotaryStorage,
+		dctx.Config.ServerName,
+		certificatecache.NewAuthorityCache(dctx.Config.CredentialsDir),
+		dctx.NotaryStorage,
+	).Bind(server)
+	notary.NewSyncService(
+		dctx.NotaryAuth,
+		dctx.NotaryStorage,
 	).Bind(server)
 
-	proxy.NewDeployment(ctx.NotaryAuth, qdialer).Bind(server)
+	proxy.NewDeployment(dctx.NotaryAuth, qdialer).Bind(server)
 
 	agent.RegisterConfigurationServer(server, configurationsvc)
-	acme.RegisterACMEServer(server, acme.NewService(ctx.ACMECache, ctx.NotaryAuth))
+	acme.RegisterACMEServer(server, acme.NewService(dctx.ACMECache, dctx.NotaryAuth))
 
-	// hack to propagate TLS to agents who are not in the quorum.
-	// this can be removed once per request credentials is fully implemented.
-	go timex.NowAndEvery(1*time.Hour, func() {
-		attempt := func() error {
-			// request the TLS certificate from the cluster.
-			// log.Println("tls request initiated")
-			// defer log.Println("tls request completed")
+	// sync credentials between servers
+	b := bloom.NewWithEstimates(1000, 0.0001)
+	s := backoff.New(
+		backoff.Exponential(time.Minute),
+		backoff.Maximum(8*time.Hour),
+		backoff.Jitter(0.25),
+	)
 
-			tctx, done := context.WithTimeout(ctx.Context, 10*time.Second)
-			defer done()
-			return errors.Wrap(
-				agentutil.ReliableDispatch(
-					tctx, dispatcher,
-					agentutil.TLSRequest(ctx.Cluster.Local()),
-				),
-				"failed to dispatch tls request",
-			)
-		}
-
-		for deadline := time.Now().Add(10 * time.Minute); deadline.After(time.Now()); {
-			if agent.DetectQuorum(ctx.Cluster, agent.IsInQuorum(ctx.Cluster.Local())) != nil {
-				// skip tls request
-				return
+	go backoff.Attempt(s, func(previous int) int {
+		for _, p := range agent.SynchronizationPeers(dctx.P2PPublicKey, dctx.Cluster) {
+			// Notary Subscriptions to node events. syncs authorization between agents
+			req, err := notary.NewSyncRequest(b)
+			if err != nil {
+				log.Println("unable generate request", err)
+				return 0
 			}
 
-			if logx.MaybeLog(attempt()) == nil {
-				return
+			d := dialers.NewDirect(agent.RPCAddress(p), dctx.Dialer.Defaults()...)
+			ctx, done := context.WithTimeout(context.Background(), 5*time.Minute)
+			conn, err := d.DialContext(ctx)
+			done()
+			if err != nil {
+				log.Println("unable to connect", err)
+				continue
+			}
+
+			client := notary.NewSyncClient(conn)
+			stream, err := client.Stream(context.Background(), req)
+			if err != nil {
+				log.Println("unable to stream", err)
+				continue
+			}
+
+			log.Println("syncing credentials initiated", agent.RPCAddress(p))
+			err = notary.Sync(stream, b, dctx.NotaryStorage)
+			if err != nil {
+				log.Println("syncing credentials failed", err)
+				continue
+			} else {
+				log.Println("syncing credentials completed", agent.RPCAddress(p))
 			}
 		}
+
+		return previous + 1
 	})
 
-	if bind, err = ctx.Muxer.Bind(bw.ProtocolAgent, ctx.Listener.Addr()); err != nil {
+	if bind, err = dctx.Muxer.Bind(bw.ProtocolAgent, dctx.Listener.Addr()); err != nil {
 		return errors.Wrap(err, "failed to bind agent protocol")
 	}
 
-	ctx.grpc("agent", server, bind)
+	dctx.grpc("agent", server, bind)
 
 	return nil
 }

@@ -64,7 +64,10 @@ func OptionBackoff(bs backoff.Strategy) func(*UntilSuccess) {
 func NewUntilSuccess(options ...option) UntilSuccess {
 	us := UntilSuccess{
 		maxAttempts: math.MaxInt64, // effectively forever.
-		bs:          backoff.Maximum(time.Minute, backoff.Exponential(2*time.Second)),
+		bs: backoff.New(
+			backoff.Exponential(2*time.Second),
+			backoff.Maximum(time.Minute),
+		),
 	}
 
 	for _, opt := range options {
