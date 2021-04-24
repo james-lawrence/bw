@@ -9,11 +9,10 @@ in front of the socket should resolve a huge chunk of that complexity.
 - [x] move grpc services to muxer
 - [x] move gossip protocol to muxer, memberlist has a Transport config option
 - [x] move raft protocol to muxer, care may have to be taken that it doesn't destroy the socket during shutdown.
-- [x] move torrent protocol to muxer, this should (hopefully) be straight forward due to the work I did on the custom torrent library.
-- [ ] implement merge state for the TLSCA instead of the shitty 1 hour polling.
-- [ ] implement merge state for agent notary key
-- [ ] switch to using signed requests everywhere.
-- [ ] fix tests
+- [x] move torrent protocol to muxer, this should (hopefully) be straight forward due to the work done on the custom torrent library.
+- [x] implement merge state for agent notary key
+- [x] switch to using signed requests everywhere.
+- [x] fix tests
 
 ### muxer nice to haves
 - [ ] automatic tunneling to internal services (quorum, deployments) so we don't have to implement additional proxy grpc services.

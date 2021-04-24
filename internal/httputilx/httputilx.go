@@ -82,7 +82,11 @@ func RouteInvokedHandler(original http.Handler) http.Handler {
 func RouteRateLimited(l *rate.Limiter) func(http.Handler) http.Handler {
 	return func(original http.Handler) http.Handler {
 		attempts := int64(0)
-		b := backoff.Maximum(2*time.Second, backoff.Exponential(32*time.Millisecond))
+		b := backoff.New(
+			backoff.Exponential(32*time.Millisecond),
+			backoff.Maximum(2*time.Second),
+		)
+
 		return http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 			if l.Allow() {
 				atomic.StoreInt64(&attempts, 0)

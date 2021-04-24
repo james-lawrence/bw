@@ -76,6 +76,7 @@ func all() *notary.Permission {
 		Refresh:  true,
 		Deploy:   true,
 		Autocert: true,
+		Sync:     true,
 	}
 }
 
