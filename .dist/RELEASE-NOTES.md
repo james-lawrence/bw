@@ -1,3 +1,25 @@
+commit 0fb4861b0340d504fc35da5b8844097597cddde3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 24 12:36:41 2021 -0400
+
+    implement notary synchronization.
+    
+    - uses a bloomfilter to keep track of seen grants.
+    - initially synchronizes pretty rapidly, and as time goes on slows down
+      to around once every ~8 hours.
+
+commit 675b010d2c65372f5b57e713fbd4ef7670b03731
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 24 11:01:35 2021 -0400
+
+    notary sync backend
+
+commit 2ae54307ae1363633db25d40b55c565300ffe52b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 17 09:33:26 2021 -0400
+
+    release 0.1.1618662611-a823d1cf
+
 commit a823d1cff072d0a6fc4cf827aa4efe7a2bd9c087
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 17 08:30:11 2021 -0400
