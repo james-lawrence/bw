@@ -2,8 +2,10 @@ package notary
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,27 +27,32 @@ type Directory struct {
 }
 
 func (t Directory) lookup(fingerprint string) (key string, g *Grant, err error) {
+	if strings.TrimSpace(fingerprint) == "" {
+		return key, nil, errors.New("can not use an empty fingerprint")
+	}
+
+	key = genKey(t.root, fingerprint)
+	g, err = t.read(key)
+
+	return key, g, err
+}
+
+func (t Directory) read(path string) (g *Grant, err error) {
 	var (
 		encoded []byte
 	)
 
 	g = &Grant{}
 
-	if strings.TrimSpace(fingerprint) == "" {
-		return key, nil, errors.New("can not use an empty fingerprint")
-	}
-
-	key = genKey(t.root, fingerprint)
-
-	if encoded, err = ioutil.ReadFile(key); err != nil {
-		return key, nil, errors.Wrapf(err, "unable to read %s", key)
+	if encoded, err = ioutil.ReadFile(path); err != nil {
+		return nil, errors.Wrapf(err, "unable to read %s", path)
 	}
 
 	if err = proto.Unmarshal(encoded, g); err != nil {
-		return key, nil, errors.Wrapf(err, "unable to read %s", key)
+		return nil, errors.Wrapf(err, "unable to read %s", path)
 	}
 
-	return key, g, err
+	return g, nil
 }
 
 // Lookup a grant.
@@ -56,6 +63,34 @@ func (t Directory) Lookup(fingerprint string) (g *Grant, err error) {
 	_, g, err = t.lookup(fingerprint)
 
 	return g, err
+}
+
+func (t Directory) Sync(ctx context.Context, b Bloomy, c chan *Grant) error {
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return filepath.Walk(t.root, func(path string, d os.FileInfo, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
+		g, err := t.read(path)
+		if err != nil {
+			log.Println("unable to read", path, "skipping")
+			return nil
+		}
+
+		if b.Test([]byte(g.Fingerprint)) {
+			return nil
+		}
+
+		select {
+		case c <- g:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		return nil
+	})
 }
 
 // Insert a grant

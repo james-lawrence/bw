@@ -39,6 +39,12 @@ func QuickService() (notary.Client, func()) {
 	return notary.NewClient(NewStaticDialer(conn)), func() { testingx.GRPCCleanup(conn, server) }
 }
 
+type storage interface {
+	Lookup(fingerprint string) (*notary.Grant, error)
+	Insert(*notary.Grant) (*notary.Grant, error)
+	Delete(*notary.Grant) (*notary.Grant, error)
+}
+
 // QuickStorage ...
 func QuickStorage() (encoded []byte, s notary.Directory) {
 	pkey, err := rsax.Generate(1024)
@@ -51,6 +57,26 @@ func QuickStorage() (encoded []byte, s notary.Directory) {
 	Expect(err).To(Succeed())
 
 	return pkey, storage
+}
+
+type staticauth struct {
+	*notary.Permission
+}
+
+func (t staticauth) Authorize(ctx context.Context) *notary.Permission {
+	return t.Permission
+}
+
+// grant all permissions
+func all() *notary.Permission {
+	return &notary.Permission{
+		Grant:    true,
+		Revoke:   true,
+		Search:   true,
+		Refresh:  true,
+		Deploy:   true,
+		Autocert: true,
+	}
 }
 
 func QuickSigner() (notary.Signer, error) {
@@ -68,6 +94,15 @@ func QuickKey() ([]byte, []byte) {
 	Expect(err).To(Succeed())
 
 	return pkey, pubkey
+}
+
+// QuickGrant generate a grant
+func QuickGrant() *notary.Grant {
+	_, pubkey := QuickKey()
+	return notary.Grant{
+		Permission:    all(),
+		Authorization: pubkey,
+	}.EnsureDefaults()
 }
 
 // NewStaticDialer ...

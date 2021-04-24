@@ -36,7 +36,7 @@ func newFile(path string) (s *file, err error) {
 	return (&file{
 		w:       w,
 		source:  path,
-		storage: newMem(),
+		storage: NewMem(),
 	}).background(), nil
 }
 
@@ -66,7 +66,7 @@ func (t *file) background() *file {
 				}
 
 				log.Println("change detected", t.source, evt.Op)
-				m := newMem()
+				m := NewMem()
 				if err = loadAuthorizedKeys(m, t.source); err != nil {
 					log.Println("failed to load keys", err)
 					continue

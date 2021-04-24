@@ -235,3 +235,116 @@ var Notary_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "notary.proto",
 }
+
+// SyncClient is the client API for Sync service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SyncClient interface {
+	Stream(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Sync_StreamClient, error)
+}
+
+type syncClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSyncClient(cc grpc.ClientConnInterface) SyncClient {
+	return &syncClient{cc}
+}
+
+func (c *syncClient) Stream(ctx context.Context, in *SyncRequest, opts ...grpc.CallOption) (Sync_StreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Sync_ServiceDesc.Streams[0], "/notary.Sync/Stream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &syncStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Sync_StreamClient interface {
+	Recv() (*SyncStream, error)
+	grpc.ClientStream
+}
+
+type syncStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *syncStreamClient) Recv() (*SyncStream, error) {
+	m := new(SyncStream)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+// SyncServer is the server API for Sync service.
+// All implementations must embed UnimplementedSyncServer
+// for forward compatibility
+type SyncServer interface {
+	Stream(*SyncRequest, Sync_StreamServer) error
+	mustEmbedUnimplementedSyncServer()
+}
+
+// UnimplementedSyncServer must be embedded to have forward compatible implementations.
+type UnimplementedSyncServer struct {
+}
+
+func (UnimplementedSyncServer) Stream(*SyncRequest, Sync_StreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
+}
+func (UnimplementedSyncServer) mustEmbedUnimplementedSyncServer() {}
+
+// UnsafeSyncServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SyncServer will
+// result in compilation errors.
+type UnsafeSyncServer interface {
+	mustEmbedUnimplementedSyncServer()
+}
+
+func RegisterSyncServer(s grpc.ServiceRegistrar, srv SyncServer) {
+	s.RegisterService(&Sync_ServiceDesc, srv)
+}
+
+func _Sync_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SyncRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SyncServer).Stream(m, &syncStreamServer{stream})
+}
+
+type Sync_StreamServer interface {
+	Send(*SyncStream) error
+	grpc.ServerStream
+}
+
+type syncStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *syncStreamServer) Send(m *SyncStream) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+// Sync_ServiceDesc is the grpc.ServiceDesc for Sync service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Sync_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "notary.Sync",
+	HandlerType: (*SyncServer)(nil),
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Stream",
+			Handler:       _Sync_Stream_Handler,
+			ServerStreams: true,
+		},
+	},
+	Metadata: "notary.proto",
+}

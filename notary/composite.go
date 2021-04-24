@@ -1,5 +1,12 @@
 package notary
 
+import (
+	"context"
+
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/willf/bloom"
+)
+
 // NewComposite storage.
 func NewComposite(root string, p storage, buckets ...storage) Composite {
 	return Composite{
@@ -30,6 +37,38 @@ func (t Composite) Lookup(fingerprint string) (g *Grant, err error) {
 	}
 
 	return g, err
+}
+
+// SyncRequest generates a bloom filter representing the current state of the notary system.
+func (t Composite) SyncRequest(ctx context.Context, b *bloom.BloomFilter) (err error) {
+	// TODO: implement populating the bloom filter.
+	return err
+}
+
+// Sync find grants not in the bloom filter and insert them into the channel.
+// because we're syncing we handle errors loosely. every bucket will be attempted
+// before returning the first error encountered.
+func (t Composite) Sync(ctx context.Context, b Bloomy, c chan *Grant) (err error) {
+	err = t.sync(ctx, t.primary, b, c)
+
+	for _, s := range t.buckets {
+		err = errorsx.Compact(err, t.sync(ctx, s, b, c))
+	}
+
+	return err
+}
+
+func (t Composite) sync(ctx context.Context, s storage, b Bloomy, c chan *Grant) error {
+	var (
+		ok bool
+		ss SyncStorage
+	)
+
+	if ss, ok = s.(SyncStorage); !ok {
+		return nil
+	}
+
+	return ss.Sync(ctx, b, c)
 }
 
 // Insert the grant into the primary.

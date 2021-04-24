@@ -78,10 +78,29 @@ message RefreshResponse {
   bytes certificate = 3;
 }
 
-// Notary service used for generating certificates to interact with the cluster.
+// Notary service used for generating credentials to interact with the cluster.
 service Notary {
   rpc Grant(GrantRequest) returns (GrantResponse) {}
   rpc Revoke(RevokeRequest) returns (RevokeResponse) {}
   rpc Refresh(RefreshRequest) returns (RefreshResponse) {}
   rpc Search(SearchRequest) returns (stream SearchResponse) {}
+}
+
+message SyncRequest {
+  bytes entropy = 1; // used to help deal with false positives over time.
+  bytes bloom = 2;
+}
+
+message SyncGrants {
+  repeated Grant grants = 1;
+}
+
+message SyncStream {
+  oneof events {
+    SyncGrants chunk = 1;
+  }
+}
+
+service Sync {
+  rpc Stream(SyncRequest) returns ( stream SyncStream ) {}
 }

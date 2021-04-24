@@ -15,3 +15,9 @@ func Digest(b []byte) string {
 func DigestString(s string) string {
 	return Digest([]byte(s))
 }
+
+// DigestX digest byte slice
+func DigestX(b []byte) []byte {
+	d := md5.Sum(b)
+	return d[:]
+}

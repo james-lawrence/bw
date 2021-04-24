@@ -23,7 +23,14 @@ func AgentGrant(pub []byte) *Grant {
 
 // UserFull all the permissions.
 func UserFull() *Permission {
-	return all()
+	return &Permission{
+		Grant:    true,
+		Revoke:   true,
+		Search:   true,
+		Refresh:  true,
+		Deploy:   true,
+		Autocert: false,
+	}
 }
 
 func agent() *Permission {
@@ -37,29 +44,17 @@ func agent() *Permission {
 	}
 }
 
-// grant all permissions
-func all() *Permission {
-	return &Permission{
-		Grant:    true,
-		Revoke:   true,
-		Search:   true,
-		Refresh:  true,
-		Deploy:   true,
-		Autocert: false,
-	}
-}
-
 // grant no permissions
 func none() *Permission {
 	return &Permission{}
 }
 
-func unwrap(p *Permission) Permission {
-	if p == nil {
-		p = none()
-	}
+type Bloomy interface {
+	Test([]byte) bool
+}
 
-	return *p
+type SyncStorage interface {
+	Sync(ctx context.Context, b Bloomy, c chan *Grant) (err error)
 }
 
 type storage interface {
@@ -182,5 +177,5 @@ func (t Service) Search(req *SearchRequest, dst Notary_SearchServer) (err error)
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	return errorsx.String("not implemented")
+	return status.Error(codes.Unimplemented, "not implemented")
 }

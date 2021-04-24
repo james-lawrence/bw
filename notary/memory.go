@@ -1,13 +1,19 @@
 package notary
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
 
-func newMem() memory {
+func NewMem(grants ...*Grant) memory {
+	m := make(map[string]*Grant, len(grants))
+	for _, g := range grants {
+		m[g.Fingerprint] = g
+	}
+
 	return memory{
-		mem: map[string]*Grant{},
+		mem: m,
 		m:   &sync.RWMutex{},
 	}
 }
@@ -16,6 +22,15 @@ func newMem() memory {
 type memory struct {
 	mem map[string]*Grant
 	m   *sync.RWMutex
+}
+
+func (t memory) UnsafeSnapshot() (dst []*Grant) {
+	dst = make([]*Grant, 0, len(t.mem))
+	for _, v := range t.mem {
+		dst = append(dst, v)
+	}
+
+	return dst
 }
 
 func (t memory) Lookup(fingerprint string) (g *Grant, err error) {
@@ -54,4 +69,23 @@ func (t memory) Delete(g *Grant) (r *Grant, err error) {
 	delete(t.mem, g.Fingerprint)
 
 	return g, nil
+}
+
+func (t memory) Sync(ctx context.Context, b Bloomy, c chan *Grant) (err error) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	for k, g := range t.mem {
+		if b.Test([]byte(k)) {
+			continue
+		}
+
+		select {
+		case c <- g:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+
+	return nil
 }
