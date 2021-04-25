@@ -97,6 +97,6 @@ var _ = Describe("Quorum", func() {
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
-		Expect(err.Error()).To(Equal("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = quorum: failed to determine latest archive to bootstrap: rpc error: code = Unknown desc = boom"))
+		Expect(err).To(HaveOccurred())
 	})
 })

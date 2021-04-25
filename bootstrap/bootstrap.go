@@ -6,7 +6,6 @@ package bootstrap
 
 import (
 	"context"
-	"io"
 	"log"
 	"math"
 	"time"
@@ -25,12 +24,9 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
-
-// downloader ...
-type downloader interface {
-	Download(context.Context, agent.Archive) io.ReadCloser
-}
 
 type dialer interface {
 	Defaults(...grpc.DialOption) dialers.Defaulted
@@ -125,17 +121,6 @@ func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.Downlo
 	return errorsx.String("bootstrap failed")
 }
 
-func ignore(err error) error {
-	switch errors.Cause(err) {
-	case agentutil.ErrNoDeployments:
-		return nil
-	case agentutil.ErrActiveDeployment:
-		return nil
-	}
-
-	return err
-}
-
 // Bootstrap a server with the latest deploy.
 func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator, dresults chan *deployment.DeployResult) (err error) {
 	var (
@@ -177,7 +162,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	}
 
 	if agentutil.SameArchive(current.Archive, latest.Archive) {
-		log.Println("latest already deployed -", spew.Sdump(current))
+		log.Println("latest already deployed -", bw.RandomID(current.Archive.DeploymentID))
 		return nil
 	}
 
@@ -220,4 +205,22 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	}
 
 	return nil
+}
+
+func ignore(err error) error {
+	cause := errors.Cause(err)
+
+	switch status.Code(cause) {
+	case codes.Unavailable:
+		return nil
+	}
+
+	switch cause {
+	case agentutil.ErrNoDeployments:
+		return nil
+	case agentutil.ErrActiveDeployment:
+		return nil
+	}
+
+	return err
 }

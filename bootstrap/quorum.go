@@ -35,17 +35,18 @@ func (t Quorum) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *a
 	var (
 		latest agent.Deploy
 	)
+
 	if latest, err = agentutil.QuorumLatestDeployment(t.c, t.d.Defaults()); err != nil {
 		switch cause := errors.Cause(err); cause {
-		case agentutil.ErrNoDeployments:
-			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "quorum").Error())
 		case agentutil.ErrActiveDeployment:
 			return &agent.ArchiveResponse{
 				Info:   agent.ArchiveResponse_ActiveDeploy,
 				Deploy: &latest,
 			}, nil
+		case agentutil.ErrNoDeployments:
+			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "quorum: no deployments").Error())
 		default:
-			return nil, status.Error(codes.Internal, errors.Wrap(cause, "quorum: failed to determine latest archive to bootstrap").Error())
+			return nil, status.Error(codes.Unavailable, errors.Wrap(cause, "quorum: failed to determine latest archive to bootstrap").Error())
 		}
 	}
 

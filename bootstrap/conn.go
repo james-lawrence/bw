@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -37,6 +36,7 @@ func getfallback(c agent.Config, options ...grpc.DialOption) (latest agent.Deplo
 	var (
 		compacted error = agentutil.ErrNoDeployments
 	)
+
 	qs := SocketQuorum(c)
 	ls := SocketLocal(c)
 
@@ -54,7 +54,7 @@ func getfallback(c agent.Config, options ...grpc.DialOption) (latest agent.Deplo
 		case ls:
 			return nil
 		default:
-			log.Println("checking", path)
+
 			if latest, err = Latest(context.Background(), path, options...); err == nil {
 				return done
 			}
@@ -81,9 +81,13 @@ func dial(ctx context.Context, uds string, options ...grpc.DialOption) (c Conn, 
 		conn *grpc.ClientConn
 	)
 
-	options = append(options, grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-		return net.DialTimeout("unix", addr, timeout)
-	}))
+	options = append(options,
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "unix", addr)
+		}),
+		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
+		// grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter),
+	)
 
 	if conn, err = grpc.DialContext(ctx, uds, options...); err != nil {
 		return c, err
@@ -111,7 +115,7 @@ func (t Conn) Archive(ctx context.Context) (latest agent.Deploy, err error) {
 		case codes.NotFound:
 			return latest, agentutil.ErrNoDeployments
 		default:
-			return latest, errors.Wrap(err, "failed to retrieve latest archive from bootstrap service")
+			return latest, errors.Wrapf(err, "bootstrap service: %s", t.conn.Target())
 		}
 	}
 

@@ -43,7 +43,7 @@ func (t Cluster) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *
 		case agentutil.ErrNoDeployments:
 			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "cluster: latest deployment discovery found no deployments").Error())
 		default:
-			return nil, status.Error(codes.Internal, errors.Wrap(cause, "cluster: failed to determine latest archive to bootstrap").Error())
+			return nil, status.Error(codes.Unavailable, errors.Wrap(cause, "cluster: failed to determine latest archive to bootstrap").Error())
 		}
 	}
 

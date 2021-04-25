@@ -11,10 +11,9 @@ import (
 )
 
 // Run a bootstrap socket
-func Run(ctx context.Context, socket string, o agent.BootstrapServer, options ...grpc.ServerOption) error {
+func Run(ctx context.Context, socket string, o agent.BootstrapServer, options ...grpc.ServerOption) (err error) {
 	var (
-		err error
-		l   net.Listener
+		l net.Listener
 	)
 
 	if len(socket) == 0 {

@@ -92,6 +92,6 @@ var _ = Describe("Local", func() {
 
 		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
-		Expect(err).To(MatchError("failed to retrieve latest archive from bootstrap service: rpc error: code = Internal desc = local: failed to determine latest archive to bootstrap: rpc error: code = Unknown desc = boom"))
+		Expect(err).To(HaveOccurred())
 	})
 })
