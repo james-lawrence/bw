@@ -1,3 +1,21 @@
+commit 308de9aa4ea9b5e492d0242cb997ab4b067791c1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 25 10:53:42 2021 -0400
+
+    cleanup bootstrap errors
+
+commit 46d974df4058b5591b884774b71e971b2a9b3042
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 24 13:07:29 2021 -0400
+
+    test fixes
+
+commit 65c5e19cdab2a840710a4fbc0532d2eb29cbd091
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Apr 24 12:53:09 2021 -0400
+
+    release 0.1.1619283130-0fb4861b
+
 commit 0fb4861b0340d504fc35da5b8844097597cddde3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Apr 24 12:36:41 2021 -0400
