@@ -76,17 +76,18 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 	New(b).Bind(s)
 
 	go func() {
-		log.Println("observer disconnecting", id)
 		if err = s.Serve(l); err != nil {
 			log.Println("client observer completed", err)
 		}
+
+		log.Println("observer disconnecting", id, len(t.observers))
 
 		if err = t.disconnect(id); err != nil {
 			log.Println("client observer disconnect failed", err)
 		}
 	}()
 
-	log.Println("observer connecting", id)
+	log.Println("observer connecting", id, len(t.observers))
 
 	return l, s, t.connect(id)
 }

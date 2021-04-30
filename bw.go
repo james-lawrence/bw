@@ -31,8 +31,6 @@ const (
 	DirCache = "cache.d"
 	// DirDeploys the name of the deploys directory.
 	DirDeploys = "deploys"
-	// DirObservers name of the observer directory.
-	DirObservers = "observers"
 	// DirRaft the name of the directory dealing with the raft state.
 	DirRaft = "raft"
 	// DirTorrents the name of the directory for storing torrent information.
