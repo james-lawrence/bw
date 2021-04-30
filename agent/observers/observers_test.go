@@ -2,17 +2,12 @@ package observers_test
 
 import (
 	"context"
-	"fmt"
-	"io/ioutil"
-	"net"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/x/testingx"
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo"
@@ -21,19 +16,17 @@ import (
 
 var _ = Describe("Observers", func() {
 	It("should be able to receive messages", func() {
-		dir, err := ioutil.TempDir(".", "observers")
-		Expect(err).ToNot(HaveOccurred())
-		defer os.RemoveAll(dir)
-		addr := filepath.Join(dir, fmt.Sprintf("%s.sock", bw.MustGenerateID().String()))
-		l, err := net.Listen("unix", addr)
-		Expect(err).ToNot(HaveOccurred())
-		defer l.Close()
-		dst := make(chan agent.Message, 10)
-		gs := New(dst)
-		go gs.Serve(l)
+		dst := make(chan *agent.Message, 10)
+		d, srv := testingx.NewGRPCServer2(func(s *grpc.Server) {
+			New(dst).Bind(s)
+		})
+		defer testingx.GRPCCleanup(nil, srv)
 
-		obsc, err := NewDialer(context.Background(), addr, grpc.WithInsecure(), grpc.WithBlock())
-		Expect(err).ToNot(HaveOccurred())
+		conn, err := d.DialContext(context.Background(), grpc.WithBlock())
+		Expect(err).To(Succeed())
+
+		obsc := NewConn(conn)
+		Expect(err).To(Succeed())
 		Expect(
 			obsc.Dispatch(
 				context.Background(),
@@ -48,7 +41,7 @@ var _ = Describe("Observers", func() {
 				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 8"),
 				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 9"),
 			),
-		).ToNot(HaveOccurred())
+		).To(Succeed())
 
 		// 2nd batch, should time out due to a full buffer.
 		ctx, done := context.WithTimeout(context.Background(), time.Second)

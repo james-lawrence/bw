@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net"
-	"path/filepath"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -33,7 +32,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	var (
 		bind         net.Listener
 		sctx         shell.Context
-		observersdir observers.Directory
+		observersmem observers.Memory
 		dlreg        = storage.New(storage.OptionProtocols(download))
 	)
 
@@ -41,7 +40,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		return err
 	}
 
-	if observersdir, err = observers.NewDirectory(filepath.Join(dctx.Config.Root, "observers")); err != nil {
+	if observersmem, err = observers.NewMemory(); err != nil {
 		return err
 	}
 
@@ -84,7 +83,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	).Bind(server)
 
 	q := quorum.New(
-		observersdir,
+		observersmem,
 		dctx.Cluster,
 		proxy.NewProxy(dctx.Cluster),
 		quorum.NewTranscoder(

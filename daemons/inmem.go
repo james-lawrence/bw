@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	_cluster "github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 )
@@ -35,18 +36,23 @@ func Inmem(dctx Context) (_ Context, err error) {
 
 	dctx.grpc("inmem", srv, l)
 
-	dctx.Inmem, err = grpc.DialContext(dctx.Context, inmemconn, grpc.WithInsecure(), grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
-		ctx, done := context.WithTimeout(ctx, time.Second)
-		defer done()
-		return memconn.DialContext(ctx, "memu", address)
-	}))
-
+	dialctx, done := context.WithTimeout(dctx.Context, time.Second)
+	dctx.Inmem, err = grpc.DialContext(
+		dialctx,
+		inmemconn,
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpcx.DialInmem(),
+	)
+	done()
 	if err != nil {
 		return dctx, err
 	}
 
-	if err = _cluster.NewEventsSubscription(dctx.Context, dctx.Inmem, _cluster.LoggingSubscription); err != nil {
-		return dctx, err
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		if err = _cluster.NewEventsSubscription(dctx.Context, dctx.Inmem, _cluster.LoggingSubscription); err != nil {
+			return dctx, err
+		}
 	}
 
 	// Notary Subscriptions to node events. tracks the public key signatures for nodes in the cluster.

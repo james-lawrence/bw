@@ -7,6 +7,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/akutz/memconn"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -150,4 +151,10 @@ func (t *CachedClient) Dial(addr string, options ...grpc.DialOption) (conn *grpc
 
 	t.conn, err = grpc.Dial(addr, options...)
 	return t.conn, err
+}
+
+func DialInmem() grpc.DialOption {
+	return grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
+		return memconn.DialContext(ctx, "memu", address)
+	})
 }

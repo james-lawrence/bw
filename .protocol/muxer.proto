@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package muxer;
 
-option go_package = "github.com/james-lawrence/muxer";
+option go_package = "github.com/james-lawrence/bw/muxer";
 
 message Requested {
   int32 version  = 1;

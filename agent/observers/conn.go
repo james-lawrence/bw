@@ -2,8 +2,6 @@ package observers
 
 import (
 	"context"
-	"net"
-	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -11,21 +9,9 @@ import (
 	"google.golang.org/grpc"
 )
 
-// NewDialer connect to a unix domain socket.
-func NewDialer(ctx context.Context, uds string, options ...grpc.DialOption) (c Conn, err error) {
-	var (
-		conn *grpc.ClientConn
-	)
-
-	options = append(options, grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-		return net.DialTimeout("unix", addr, timeout)
-	}))
-
-	if conn, err = grpc.DialContext(ctx, uds, options...); err != nil {
-		return c, err
-	}
-
-	return Conn{conn: conn}, nil
+// NewConn observing connection.
+func NewConn(c *grpc.ClientConn) Conn {
+	return Conn{conn: c}
 }
 
 // Conn connection to the observer

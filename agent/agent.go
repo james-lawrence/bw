@@ -24,7 +24,7 @@ type Dispatcher interface {
 // ConnectableDispatcher ...
 type ConnectableDispatcher interface {
 	Dispatcher
-	Connect(chan Message) (net.Listener, *grpc.Server, error)
+	Connect(chan *Message) (net.Listener, *grpc.Server, error)
 }
 
 // Client - client facade interface.
