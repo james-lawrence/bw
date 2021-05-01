@@ -1,3 +1,27 @@
+commit 0b836a2147103cebd8a95a15c9990a7f709c2cff
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 30 20:28:17 2021 -0400
+
+    cleanup
+
+commit f252612873458eb95d7e13a3bde6f7ce01a74c4b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 30 19:05:42 2021 -0400
+
+    minor log changes
+
+commit ce169220b25004ee4a668aec0c1b5b86bdcbeabf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 30 18:59:26 2021 -0400
+
+    convert to inmemory servers for observers vs sockets
+
+commit 670fb1be1e2c47b37dcdefce7b4fa194263aa993
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Apr 25 10:54:46 2021 -0400
+
+    release 0.1.1619362422-308de9aa
+
 commit 308de9aa4ea9b5e492d0242cb997ab4b067791c1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Apr 25 10:53:42 2021 -0400
