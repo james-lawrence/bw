@@ -7,11 +7,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 // interface for retrieving a raft.FSM

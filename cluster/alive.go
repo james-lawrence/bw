@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 // AliveDefault - default alive handler for the cluster.

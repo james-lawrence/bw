@@ -13,12 +13,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"google.golang.org/protobuf/proto"
 )
 
 // NewAuthority from agent configuration.

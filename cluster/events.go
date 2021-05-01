@@ -7,7 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -15,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 // LoggingEventHandler ...

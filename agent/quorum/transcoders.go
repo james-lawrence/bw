@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/james-lawrence/bw/agent"
+	"google.golang.org/protobuf/proto"
 )
 
 // Different states the WAL can be in.

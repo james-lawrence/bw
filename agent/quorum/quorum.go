@@ -280,7 +280,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 
 // Dispatch record deployment events.
 func (t *Quorum) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
-	return logx.MaybeLog(errors.Wrap(t.proxy().Dispatch(ctx, m...), "failed to dispatch"))
+	return logx.MaybeLog(t.proxy().Dispatch(ctx, m...))
 }
 
 func (t *Quorum) proxy() stateMachine {

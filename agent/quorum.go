@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"google.golang.org/grpc"
 )
 
@@ -61,7 +62,11 @@ func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *Deplo
 		return nil, err
 	}
 
-	return &_zero, t.q.Deploy(*req.Options, *req.Archive, req.Peers...)
+	if err = t.q.Deploy(*req.Options, *req.Archive, req.Peers...); grpcx.IsUnavailable(err) {
+		return nil, err
+	}
+
+	return &_zero, err
 }
 
 // Upload ...

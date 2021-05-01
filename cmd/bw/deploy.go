@@ -16,6 +16,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -30,6 +31,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/notary"
@@ -200,8 +202,6 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		}
 	}
 
-	events <- agentutil.LogEvent(local, "archive upload initiated")
-
 	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
 		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
 		events <- agentutil.LogEvent(local, "deployment failed")
@@ -220,17 +220,22 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}
 
-	if _, err = dst.Seek(0, io.SeekStart); err != nil {
-		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local, "deployment failed")
-		return nil
-	}
+	events <- agentutil.LogEvent(local, "archive upload initiated")
+	err = grpcx.Retry(func() error {
+		if _, err = dst.Seek(0, io.SeekStart); err != nil {
+			events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
+			events <- agentutil.LogEvent(local, "deployment failed")
+			return nil
+		}
 
-	if archive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
-		events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
-		events <- agentutil.LogEvent(local, "deployment failed")
+		if archive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
+			events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
+			events <- agentutil.LogEvent(local, "deployment failed")
+			return nil
+		}
+
 		return nil
-	}
+	}, codes.Unavailable)
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
@@ -258,8 +263,8 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
-		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed", cause))
+	if cause := client.RemoteDeploy(t.global.ctx, dopts, archive, peers...); cause != nil {
+		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed xxx", cause))
 	}
 
 	return err
@@ -562,7 +567,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(t.global.ctx, dopts, archive, peers...); cause != nil {
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 	}
 

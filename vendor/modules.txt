@@ -305,7 +305,6 @@ github.com/hashicorp/vault/helper/strutil
 ## explicit
 # github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864
 ## explicit
-github.com/hashicorp/yamux
 # github.com/huandu/xstrings v1.3.0
 github.com/huandu/xstrings
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
@@ -473,6 +472,7 @@ github.com/traefik/yaegi/stdlib
 # github.com/willf/bitset v1.1.10
 github.com/willf/bitset
 # github.com/willf/bloom v2.0.3+incompatible
+## explicit
 github.com/willf/bloom
 # go.opencensus.io v0.22.5
 go.opencensus.io

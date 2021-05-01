@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 // Initializer for the state machine.

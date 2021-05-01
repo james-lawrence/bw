@@ -11,8 +11,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 // NewDirectory store credentials in the given directory.

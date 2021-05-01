@@ -197,10 +197,6 @@ func InitializeDeploymentDirectory(root string) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if err = os.MkdirAll(filepath.Join(root, DirObservers), 0700); err != nil {
-		return errors.WithStack(err)
-	}
-
 	return nil
 }
 

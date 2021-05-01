@@ -132,5 +132,5 @@ func (t *Dispatcher) dropClient(bad agent.Client, err error) error {
 	t.c = nil
 	t.m.Unlock()
 
-	return errors.Wrap(err, "dropped client due to error")
+	return err
 }

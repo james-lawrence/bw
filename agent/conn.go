@@ -154,7 +154,7 @@ func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archiv
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
+func (t Conn) RemoteDeploy(ctx context.Context, dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
 		Archive: &a,
@@ -162,7 +162,7 @@ func (t Conn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) (err 
 		Peers:   peers,
 	}
 
-	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
+	if _, err = rpc.Deploy(ctx, &req); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -248,7 +248,7 @@ func (t Conn) Dispatch(ctx context.Context, messages ...*Message) (err error) {
 	c := NewQuorumClient(t.conn)
 
 	if _, err = c.Dispatch(ctx, &out); err != nil {
-		return errors.WithStack(err)
+		return err
 	}
 
 	return nil

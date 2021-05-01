@@ -5,12 +5,12 @@ import (
 	"log"
 	"net"
 
-	proto "github.com/golang/protobuf/proto"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
+	proto "google.golang.org/protobuf/proto"
 )
 
 // P2PAddress for a peer
@@ -19,7 +19,7 @@ func P2PAdddress(p *Peer) string {
 		return ""
 	}
 
-	return fmt.Sprintf(net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort))
 }
 
 // AgentP2PAddress generate a muxer protocol address.
@@ -142,14 +142,13 @@ func NewPeer(id string, opts ...PeerOption) *Peer {
 	p := Peer{
 		Name:          id,
 		Ip:            systemx.HostIP(hn).String(),
-		RPCPort:       bw.DefaultRPCPort,
-		SWIMPort:      bw.DefaultSWIMPort,
-		RaftPort:      bw.DefaultRaftPort,
-		TorrentPort:   bw.DefaultTorrentPort,
-		DiscoveryPort: bw.DefaultDiscoveryPort,
-		AutocertPort:  bw.DefaultAutocertPort,
+		RPCPort:       bw.DefaultP2PPort,
+		SWIMPort:      bw.DefaultP2PPort,
+		RaftPort:      bw.DefaultP2PPort,
+		TorrentPort:   bw.DefaultP2PPort,
+		DiscoveryPort: bw.DefaultP2PPort,
+		AutocertPort:  bw.DefaultP2PPort,
 		Status:        Peer_Node,
-		// P2PPort:       bw.DefaultP2PPort,
 	}
 
 	return NewPeerFromTemplate(&p, opts...)

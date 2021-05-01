@@ -1,8 +1,8 @@
 package cluster
 
 import (
-	"github.com/golang/protobuf/proto"
 	"github.com/james-lawrence/bw/agent"
+	"google.golang.org/protobuf/proto"
 )
 
 type localOption func(*Local)

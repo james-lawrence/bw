@@ -7,11 +7,16 @@ import (
 	"encoding/hex"
 	"io"
 	"io/ioutil"
+	"time"
 
+	"github.com/anacrolix/stm/rate"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 )
 
@@ -95,7 +100,8 @@ func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info 
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t DeployConn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
+func (t DeployConn) RemoteDeploy(ctx context.Context, dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
+	l := rate.NewLimiter(rate.Every(time.Second), 1)
 	rpc := NewDeploymentsClient(t.conn)
 	req := DeployCommandRequest{
 		Archive: &a,
@@ -103,11 +109,11 @@ func (t DeployConn) RemoteDeploy(dopts DeployOptions, a Archive, peers ...*Peer)
 		Peers:   peers,
 	}
 
-	if _, err = rpc.Deploy(context.Background(), &req); err != nil {
-		return errors.WithStack(err)
+	for err = status.Error(codes.Unavailable, ""); grpcx.IsUnavailable(err); l.Wait(ctx) {
+		_, err = rpc.Deploy(context.Background(), &req)
 	}
 
-	return nil
+	return errors.WithStack(err)
 }
 
 // Watch for messages sent to the leader. blocks.
@@ -123,7 +129,11 @@ func (t DeployConn) Watch(ctx context.Context, out chan<- *Message) (err error) 
 	}
 
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
-		out <- msg
+		select {
+		case out <- msg:
+		case <-ctx.Done():
+			return errors.WithStack(ctx.Err())
+		}
 	}
 
 	return errorsx.Compact(errors.WithStack(err), src.CloseSend())

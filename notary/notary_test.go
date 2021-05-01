@@ -1,9 +1,9 @@
 package notary_test
 
 import (
-	"github.com/golang/protobuf/proto"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"google.golang.org/protobuf/proto"
 
 	. "github.com/james-lawrence/bw/notary"
 

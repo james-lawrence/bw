@@ -34,7 +34,7 @@ require (
 	github.com/go-test/deep v1.0.2 // indirect
 	github.com/gocql/gocql v0.0.0-20190910075112-d63913db787c // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible
-	github.com/golang/protobuf v1.5.1
+	github.com/golang/protobuf v1.5.1 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
@@ -86,6 +86,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/subosito/gotenv v1.2.0
 	github.com/traefik/yaegi v0.9.8
+	github.com/willf/bloom v2.0.3+incompatible
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 // indirect
 	golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5

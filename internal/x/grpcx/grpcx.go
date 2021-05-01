@@ -6,8 +6,10 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/akutz/memconn"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -92,10 +94,43 @@ func IsUnimplemented(err error) bool {
 	return false
 }
 
-// IsUnauthorized checks if its a grpc unauthorized error..
+// IsUnauthorized checks if its a grpc unauthorized error.
 func IsUnauthorized(err error) bool {
 	if s, ok := status.FromError(err); ok {
 		return s.Code() == codes.PermissionDenied
+	}
+
+	return false
+}
+
+// IsUnavailable ...
+func IsUnavailable(err error) bool {
+	if s, ok := status.FromError(err); ok {
+		return s.Code() == codes.Unavailable
+	}
+
+	return false
+}
+
+// Retry the given function if error matches a grpc code.
+func Retry(op func() error, retry ...codes.Code) (err error) {
+	l := rate.NewLimiter(rate.Every(time.Second), 1)
+	for {
+		if err = op(); !IsCode(err, retry...) {
+			return err
+		}
+
+		l.Wait(context.Background())
+	}
+}
+
+func IsCode(err error, check ...codes.Code) bool {
+	if s, ok := status.FromError(err); ok {
+		for _, c := range check {
+			if s.Code() == c {
+				return true
+			}
+		}
 	}
 
 	return false

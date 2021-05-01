@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid"
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 // PeersFoundEvent ...

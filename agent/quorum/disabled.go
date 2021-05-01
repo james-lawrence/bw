@@ -2,15 +2,13 @@ package quorum
 
 import (
 	"context"
-	"errors"
 
 	"github.com/hashicorp/raft"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw/agent"
 )
-
-// ErrDisabledMachine returned when the state machine interface is disabled.
-var ErrDisabledMachine = errors.New("this node is not a member of the quorum")
 
 // DisabledMachine implements the machine api but errors out or
 // returns reasonable results on every method.
@@ -26,5 +24,5 @@ func (t DisabledMachine) State() raft.RaftState {
 
 // Dispatch a message to the WAL.
 func (t DisabledMachine) Dispatch(_ context.Context, m ...*agent.Message) (err error) {
-	return ErrDisabledMachine
+	return status.Error(codes.Unavailable, agent.ErrDisabledMachine.Error())
 }

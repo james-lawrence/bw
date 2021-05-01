@@ -51,21 +51,21 @@ const (
 	ArchiveFile = "archive.tar.gz"
 	// DefaultP2PPort port which will replace all other ports
 	DefaultP2PPort = 2000
-	// DefaultDiscoveryPort default port for the public service.
-	// discovery is special because it expects to be accessed globally.
-	DefaultDiscoveryPort = 2001
-	// DefaultRPCPort default port for RPC service.
-	DefaultRPCPort = 2002
-	// DefaultSWIMPort default port for peering service.
-	DefaultSWIMPort = 2003
-	// DefaultRaftPort default port for consensus service.
-	DefaultRaftPort = 2004
-	// DefaultTorrentPort default port for torrent service.
-	DefaultTorrentPort = 2005
-	// DefaultAutocertPort port for automatic certificate generation.
-	// hopefully will be able to drop this port once RPC credentials are used
-	// instead of client certificates.
-	DefaultAutocertPort = 2006
+	// // DefaultDiscoveryPort default port for the public service.
+	// // discovery is special because it expects to be accessed globally.
+	// DefaultDiscoveryPort = 2001
+	// // DefaultRPCPort default port for RPC service.
+	// DefaultRPCPort = 2002
+	// // DefaultSWIMPort default port for peering service.
+	// DefaultSWIMPort = 2003
+	// // DefaultRaftPort default port for consensus service.
+	// DefaultRaftPort = 2004
+	// // DefaultTorrentPort default port for torrent service.
+	// DefaultTorrentPort = 2005
+	// // DefaultAutocertPort port for automatic certificate generation.
+	// // hopefully will be able to drop this port once RPC credentials are used
+	// // instead of client certificates.
+	// DefaultAutocertPort = 2006
 	// DefaultDirAgentCredentials ...
 	DefaultDirAgentCredentials = "tls"
 	// DefaultNotaryKey rsa key used by clients to identify themselves.

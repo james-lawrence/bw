@@ -7,8 +7,8 @@ import (
 	"log"
 	"runtime"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"

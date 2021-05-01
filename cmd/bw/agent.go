@@ -27,12 +27,13 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/proto"
 )
 
 type agentCmd struct {
@@ -343,7 +344,7 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 				fmt.Println("decode failed", i, err)
 				continue
 			}
-			fmt.Println("message", proto.MarshalTextString(&decoded))
+			fmt.Println("message", prototext.Format(&decoded))
 		case raft.LogNoop:
 			lstats.noops++
 			fmt.Println("noop invoked", current.Index, current.Term)
