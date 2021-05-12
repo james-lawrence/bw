@@ -1,3 +1,15 @@
+commit f36df42e1bc7abdae0d5d74107dbed1ae8e96147
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 12 16:17:55 2021 -0400
+
+    properly return an error on grpc request
+
+commit b6a9551aed77b5566efde889cfd8e1dabb59c277
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Apr 30 20:34:03 2021 -0400
+
+    release 0.1.1619828897-0b836a21
+
 commit 0b836a2147103cebd8a95a15c9990a7f709c2cff
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Apr 30 20:28:17 2021 -0400
