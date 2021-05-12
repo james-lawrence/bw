@@ -231,7 +231,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		if archive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
 			events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
 			events <- agentutil.LogEvent(local, "deployment failed")
-			return nil
+			return err
 		}
 
 		return nil
