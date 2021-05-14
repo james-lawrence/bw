@@ -8,10 +8,13 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/elb"
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/pkg/errors"
 )
 
@@ -71,13 +74,25 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocument(); err != nil {
+	// if we're not on an ec2 instance, nothing to do.
+	if !ec2metadata.New(sess).AvailableWithContext(ctx) {
+		return nil
+	}
+
+	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocumentWithContext(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 
-	sess = sess.Copy(&aws.Config{
+	cfg := &aws.Config{
 		Region: aws.String(ident.Region),
+	}
+	cfg = request.WithRetryer(cfg, client.DefaultRetryer{
+		NumMaxRetries:    5,
+		MinRetryDelay:    200 * time.Millisecond,
+		MaxRetryDelay:    30 * time.Second,
+		MaxThrottleDelay: 30 * time.Second,
 	})
+	sess = sess.Copy(cfg)
 
 	if lbs, err = loadbalancers(sess, ident); err != nil {
 		return errors.WithStack(err)
@@ -160,10 +175,16 @@ const (
 )
 
 func waitForHealth(ctx context.Context, e *elb.ELB, lbd *elb.LoadBalancerDescription, i ec2metadata.EC2InstanceIdentityDocument) (err error) {
-	for {
+	b := backoff.New(
+		backoff.Exponential(time.Second),
+		backoff.Maximum(time.Minute),
+		backoff.Jitter(0.25),
+	)
+
+	for attempt := 0; ; attempt++ {
 		if err = healthyInstance(ctx, e, lbd, i); err == errUnhealthy {
 			log.Println("instance unhealthy retrying")
-			time.Sleep(2 * time.Second)
+			time.Sleep(b.Backoff(attempt))
 			continue
 		}
 
@@ -172,10 +193,16 @@ func waitForHealth(ctx context.Context, e *elb.ELB, lbd *elb.LoadBalancerDescrip
 }
 
 func waitForAttach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
-	for {
+	b := backoff.New(
+		backoff.Exponential(time.Second),
+		backoff.Maximum(time.Minute),
+		backoff.Jitter(0.25),
+	)
+
+	for attempt := 0; ; attempt++ {
 		if err = hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
 			log.Println("instance missing retrying")
-			time.Sleep(2 * time.Second)
+			time.Sleep(b.Backoff(attempt))
 			continue
 		}
 
@@ -184,12 +211,18 @@ func waitForAttach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDesc
 }
 
 func waitForDetach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDescription, ident ec2metadata.EC2InstanceIdentityDocument) (err error) {
-	for {
+	b := backoff.New(
+		backoff.Exponential(time.Second),
+		backoff.Maximum(time.Minute),
+		backoff.Jitter(0.25),
+	)
+
+	for attempt := 0; ; attempt++ {
 		if err := hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
 			return nil
 		}
 		log.Println("instance found retrying")
-		time.Sleep(2 * time.Second)
+		time.Sleep(b.Backoff(attempt))
 	}
 }
 

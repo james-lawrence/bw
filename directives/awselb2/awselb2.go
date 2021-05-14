@@ -9,9 +9,12 @@ package awselb2
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/elbv2"
@@ -25,10 +28,19 @@ func LoadbalancersDetach(ctx context.Context) (err error) {
 		instance *autoscaling.InstanceDetails
 		lbs      []*elbv2.LoadBalancer
 	)
+	cfg := &aws.Config{}
+	cfg = request.WithRetryer(cfg, client.DefaultRetryer{
+		NumMaxRetries:    5,
+		MinRetryDelay:    200 * time.Millisecond,
+		MaxRetryDelay:    30 * time.Second,
+		MaxThrottleDelay: 30 * time.Second,
+	})
 
 	if sess, err = session.NewSession(); err != nil {
 		return errors.WithStack(err)
 	}
+
+	sess = sess.Copy(cfg)
 
 	// if we're not on an ec2 instance, nothing to do.
 	if !ec2metadata.New(sess).Available() {
