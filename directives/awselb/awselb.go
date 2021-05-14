@@ -201,8 +201,9 @@ func waitForAttach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDesc
 
 	for attempt := 0; ; attempt++ {
 		if err = hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
-			log.Println("instance missing retrying")
-			time.Sleep(b.Backoff(attempt))
+			d := b.Backoff(attempt)
+			log.Println("instance missing retrying", d)
+			time.Sleep(d)
 			continue
 		}
 
@@ -221,7 +222,7 @@ func waitForDetach(ctx context.Context, elb1 *elb.ELB, lbd *elb.LoadBalancerDesc
 		if err := hasInstance(ctx, elb1, lbd, ident); err == errInstanceNotFound {
 			return nil
 		}
-		log.Println("instance found retrying")
+
 		time.Sleep(b.Backoff(attempt))
 	}
 }
