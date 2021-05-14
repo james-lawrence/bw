@@ -1,3 +1,15 @@
+commit 5417796c837ddf1715bdf6558f909414cf4b9311
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 14 09:24:20 2021 -0400
+
+    implement retries for aws loadbalancers
+
+commit 1d629e42b2e15bc1a84343bd822c5f003efd33f3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 12 16:19:07 2021 -0400
+
+    release 0.1.1620850675-f36df42e
+
 commit f36df42e1bc7abdae0d5d74107dbed1ae8e96147
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed May 12 16:17:55 2021 -0400
