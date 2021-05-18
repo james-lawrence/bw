@@ -1,3 +1,15 @@
+commit 32c479fa5ee6a035d64da63018b685315c7a4461
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 14 09:37:07 2021 -0400
+
+    logging adjutment
+
+commit 656996671d8c3e062f9105643a987f2f0d153354
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 14 09:25:36 2021 -0400
+
+    release 0.1.1620998660-5417796c
+
 commit 5417796c837ddf1715bdf6558f909414cf4b9311
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri May 14 09:24:20 2021 -0400
