@@ -1,3 +1,15 @@
+commit fb3dbe304edf4aa4078bc4c497cd7ab3cbbd44aa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 19 14:58:20 2021 -0400
+
+    attempt to properly handle rate limits
+
+commit 85d63cf2ab4e38daae8277ecd3bb0bc7a1ba2228
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 18 07:21:10 2021 -0400
+
+    release 0.1.1620999427-32c479fa
+
 commit 32c479fa5ee6a035d64da63018b685315c7a4461
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri May 14 09:37:07 2021 -0400
