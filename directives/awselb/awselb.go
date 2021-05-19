@@ -27,13 +27,24 @@ func LoadbalancersDetach(ctx context.Context) (err error) {
 	)
 
 	log.Println("attempting to detach instance")
+	cfg := request.WithRetryer(aws.NewConfig(), client.DefaultRetryer{
+		NumMaxRetries:    5,
+		MinRetryDelay:    200 * time.Millisecond,
+		MaxRetryDelay:    30 * time.Second,
+		MaxThrottleDelay: 30 * time.Second,
+	})
 
-	if sess, err = session.NewSession(); err != nil {
-		return errors.WithStack(err)
+	if sess, err = session.NewSession(cfg); err != nil {
+		return errors.Wrap(err, "session creation failed")
 	}
 
-	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocument(); err != nil {
-		return errors.WithStack(err)
+	// if we're not on an ec2 instance, nothing to do.
+	if !ec2metadata.New(sess).AvailableWithContext(ctx) {
+		return nil
+	}
+
+	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocumentWithContext(ctx); err != nil {
+		return errors.Wrap(err, "metadata retrieval failed")
 	}
 
 	sess = sess.Copy(&aws.Config{
@@ -41,7 +52,7 @@ func LoadbalancersDetach(ctx context.Context) (err error) {
 	})
 
 	if lbs, err = loadbalancers(sess, ident); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "load balancer retrieval failed")
 	}
 
 	elb1 := elb.New(sess)
@@ -70,8 +81,15 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 	)
 	log.Println("attempting to attach instance")
 
-	if sess, err = session.NewSession(); err != nil {
-		return errors.WithStack(err)
+	cfg := request.WithRetryer(aws.NewConfig(), client.DefaultRetryer{
+		NumMaxRetries:    5,
+		MinRetryDelay:    200 * time.Millisecond,
+		MaxRetryDelay:    30 * time.Second,
+		MaxThrottleDelay: 30 * time.Second,
+	})
+
+	if sess, err = session.NewSession(cfg); err != nil {
+		return errors.Wrap(err, "session creation failed")
 	}
 
 	// if we're not on an ec2 instance, nothing to do.
@@ -80,22 +98,15 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 	}
 
 	if ident, err = ec2metadata.New(sess).GetInstanceIdentityDocumentWithContext(ctx); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "metadata retrieval failed")
 	}
 
-	cfg := &aws.Config{
+	sess = sess.Copy(&aws.Config{
 		Region: aws.String(ident.Region),
-	}
-	cfg = request.WithRetryer(cfg, client.DefaultRetryer{
-		NumMaxRetries:    5,
-		MinRetryDelay:    200 * time.Millisecond,
-		MaxRetryDelay:    30 * time.Second,
-		MaxThrottleDelay: 30 * time.Second,
 	})
-	sess = sess.Copy(cfg)
 
 	if lbs, err = loadbalancers(sess, ident); err != nil {
-		return errors.WithStack(err)
+		return errors.Wrap(err, "load balancer retrieval failed")
 	}
 
 	elb1 := elb.New(sess)
@@ -103,15 +114,15 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 	for _, lb := range lbs {
 		req := &elb.RegisterInstancesWithLoadBalancerInput{LoadBalancerName: lb.LoadBalancerName, Instances: instances}
 		if _, err = elb1.RegisterInstancesWithLoadBalancerWithContext(ctx, req); err != nil {
-			return errors.WithStack(err)
+			return errors.Wrap(err, "register with load balancer failed")
 		}
 
 		if err = waitForAttach(ctx, elb1, lb, ident); err != nil {
-			return err
+			return errors.Wrap(err, "failed to reattach to load balancer")
 		}
 
 		if err = waitForHealth(ctx, elb1, lb, ident); err != nil {
-			return err
+			return errors.Wrap(err, "health check with load balancer failed")
 		}
 	}
 
@@ -153,7 +164,6 @@ func loadbalancers(sess *session.Session, ident ec2metadata.EC2InstanceIdentityD
 	elb1 := elb.New(sess)
 
 	for _, group := range asg.AutoScalingGroups {
-		log.Println("group loadbalancers", aws.StringValueSlice(group.LoadBalancerNames))
 		if dio, err = elb1.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{LoadBalancerNames: group.LoadBalancerNames}); err != nil {
 			return lbs, errors.WithStack(err)
 		}

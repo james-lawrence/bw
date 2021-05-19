@@ -28,19 +28,17 @@ func LoadbalancersDetach(ctx context.Context) (err error) {
 		instance *autoscaling.InstanceDetails
 		lbs      []*elbv2.LoadBalancer
 	)
-	cfg := &aws.Config{}
-	cfg = request.WithRetryer(cfg, client.DefaultRetryer{
+
+	cfg := request.WithRetryer(aws.NewConfig(), client.DefaultRetryer{
 		NumMaxRetries:    5,
 		MinRetryDelay:    200 * time.Millisecond,
 		MaxRetryDelay:    30 * time.Second,
 		MaxThrottleDelay: 30 * time.Second,
 	})
 
-	if sess, err = session.NewSession(); err != nil {
+	if sess, err = session.NewSession(cfg); err != nil {
 		return errors.WithStack(err)
 	}
-
-	sess = sess.Copy(cfg)
 
 	// if we're not on an ec2 instance, nothing to do.
 	if !ec2metadata.New(sess).Available() {
@@ -70,7 +68,14 @@ func LoadbalancersAttach(ctx context.Context) (err error) {
 		lbs      []*elbv2.LoadBalancer
 	)
 
-	if sess, err = session.NewSession(); err != nil {
+	cfg := request.WithRetryer(aws.NewConfig(), client.DefaultRetryer{
+		NumMaxRetries:    5,
+		MinRetryDelay:    200 * time.Millisecond,
+		MaxRetryDelay:    30 * time.Second,
+		MaxThrottleDelay: 30 * time.Second,
+	})
+
+	if sess, err = session.NewSession(cfg); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -110,10 +115,10 @@ func loadbalancers(sess *session.Session) (lbs []*elbv2.LoadBalancer, err error)
 		return lbs, errors.WithStack(err)
 	}
 
-	sess = sess.Copy(&aws.Config{
+	cfg := &aws.Config{
 		Region: aws.String(ident.Region),
-	})
-
+	}
+	sess = sess.Copy(cfg)
 	asgs = autoscaling.New(sess)
 
 	if iao, err = asgs.DescribeAutoScalingInstances(&autoscaling.DescribeAutoScalingInstancesInput{InstanceIds: []*string{&ident.InstanceID}}); err != nil {
