@@ -136,10 +136,7 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	local := cluster.NewLocal(
-		agent.NewPeerFromTemplate(
-			t.config.Peer(),
-			agent.PeerOptionPublicKey(localpub),
-		),
+		t.config.Peer(),
 	)
 
 	clusterevents := cluster.NewEventsQueue(local)

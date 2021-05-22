@@ -2,17 +2,14 @@ package daemons
 
 import (
 	"context"
-	"log"
 	"net"
 	"time"
 
 	"github.com/akutz/memconn"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/agent"
 	_cluster "github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 )
 
@@ -54,31 +51,6 @@ func Inmem(dctx Context) (_ Context, err error) {
 			return dctx, err
 		}
 	}
-
-	// Notary Subscriptions to node events. tracks the public key signatures for nodes in the cluster.
-	err = _cluster.NewEventsSubscription(dctx.Context, dctx.Inmem, func(ctx context.Context, evt *agent.ClusterWatchEvents) (err error) {
-		if len(evt.Node.PublicKey) == 0 {
-			if envx.Boolean(false, bw.EnvLogsVerbose) {
-				log.Println("Notary.Subscription ignoring event - no public key", evt.Event.String(), evt.Node.Ip, evt.Node.Name)
-			}
-			return nil
-		}
-
-		if envx.Boolean(false, bw.EnvLogsVerbose) {
-			log.Println("Notary.Subscription", evt.Event.String(), evt.Node.Ip, evt.Node.Name)
-		}
-
-		switch evt.Event {
-		case agent.ClusterWatchEvents_Joined, agent.ClusterWatchEvents_Update:
-			_, err = dctx.NotaryStorage.Insert(notary.AgentGrant(evt.Node.PublicKey))
-			return err
-		case agent.ClusterWatchEvents_Depart:
-			_, err = dctx.NotaryStorage.Delete(notary.AgentGrant(evt.Node.PublicKey))
-			return err
-		default:
-			return nil
-		}
-	})
 
 	return dctx, err
 }
