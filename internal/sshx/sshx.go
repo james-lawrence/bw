@@ -3,12 +3,19 @@ package sshx
 import (
 	"bytes"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"encoding/pem"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
+
+func FingerprintSHA256(d []byte) string {
+	digest := sha256.Sum256(d)
+	return hex.EncodeToString(digest[:])
+}
 
 // PublicKey returns a public key from the pem encoded private key.
 func PublicKey(pemkey []byte) (pub []byte, err error) {

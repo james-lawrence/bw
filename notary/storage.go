@@ -1,8 +1,6 @@
 package notary
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -113,11 +111,6 @@ func genKey(root, fingerprint string) string {
 	return filepath.Join(root, bw.DirAuthorizations, fingerprint)
 }
 
-func genFingerprint(d []byte) string {
-	digest := sha256.Sum256(d)
-	return hex.EncodeToString(digest[:])
-}
-
 func loadAuthorizedKeys(s storage, path string) (err error) {
 	var (
 		encoded []byte
@@ -203,7 +196,7 @@ func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
 
 		pubencoded = ssh.MarshalAuthorizedKey(key)
 
-		if genFingerprint(pubencoded) == fingerprint {
+		if sshx.FingerprintSHA256(pubencoded) == fingerprint {
 			continue
 		}
 

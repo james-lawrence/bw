@@ -60,6 +60,7 @@ github.com/anacrolix/mmsg/socket
 # github.com/anacrolix/multiless v0.0.0-20191223025854-070b7994e841
 github.com/anacrolix/multiless
 # github.com/anacrolix/stm v0.2.0
+## explicit
 github.com/anacrolix/stm
 github.com/anacrolix/stm/rate
 github.com/anacrolix/stm/stmutil

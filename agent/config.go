@@ -295,6 +295,12 @@ type Config struct {
 	} `yaml:"awsBootstrap"`
 }
 
+func (t Config) Sanitize() Config {
+	dup := t
+	dup.ClusterTokens = []string{}
+	return dup
+}
+
 // EnsureDefaults values after configuration load
 func (t Config) EnsureDefaults() Config {
 	if t.CredentialsDir == "" {
