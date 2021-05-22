@@ -1,3 +1,15 @@
+commit c4ef809fd680340579ee4851c96ca8b44384e41b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 11:05:49 2021 -0400
+
+    deterministic ssh key for agents
+
+commit 95b7ceddb204827f61eab8208e3f77b8f4ed5cd8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 19 15:01:13 2021 -0400
+
+    release 0.1.1621450816-fb3dbe30
+
 commit fb3dbe304edf4aa4078bc4c497cd7ab3cbbd44aa
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed May 19 14:58:20 2021 -0400
