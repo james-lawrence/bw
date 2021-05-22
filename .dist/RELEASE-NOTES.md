@@ -1,3 +1,15 @@
+commit 69f506390d853b62fd348f1a1dc5a3fcf3164ac7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 12:02:11 2021 -0400
+
+    remove detecting public keys from node events
+
+commit 350f5592ce00ca8bb6b69389f866865498004ef0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 11:57:10 2021 -0400
+
+    release 0.1.1621698926-c4ef809f
+
 commit c4ef809fd680340579ee4851c96ca8b44384e41b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat May 22 11:05:49 2021 -0400
