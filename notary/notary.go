@@ -10,16 +10,32 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/willf/bloom"
 )
 
-func AgentGrant(pub []byte) *Grant {
-	return Grant{
+// GrantOption
+type GrantOption func(*Grant)
+
+func GrantOptionGenerateFingerprint(data []byte) GrantOption {
+	return func(g *Grant) {
+		g.Fingerprint = sshx.FingerprintSHA256(data)
+	}
+}
+
+func AgentGrant(pub []byte, options ...GrantOption) *Grant {
+	g := Grant{
 		Permission:    agent(),
 		Authorization: pub,
-	}.EnsureDefaults()
+	}
+
+	for _, opt := range options {
+		opt(&g)
+	}
+
+	return g.EnsureDefaults()
 }
 
 // UserFull all the permissions.

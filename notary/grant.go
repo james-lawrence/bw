@@ -8,7 +8,9 @@ func (t Grant) EnsureDefaults() *Grant {
 		t.Permission = none()
 	}
 
-	t.Fingerprint = sshx.FingerprintSHA256(t.Authorization)
+	if t.Fingerprint == "" {
+		t.Fingerprint = sshx.FingerprintSHA256(t.Authorization)
+	}
 
 	return &t
 }
