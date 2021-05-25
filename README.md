@@ -81,3 +81,4 @@ Benefits of bearded-wookie:
 - Lower costs by not needing additional infrastructure just to support deployments.
 - when something does go wrong, bw is easy to repair. just destroy its cache (default /var/cache/bearded-wookie) and reboot the agents.
 - simple configuration simplest configuration is ~ 40 lines between the agent/clients, one port (tcp and udp), and DNS record.
+
