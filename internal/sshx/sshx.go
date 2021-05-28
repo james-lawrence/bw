@@ -30,6 +30,7 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 		return pub, err
 	}
 
+	// log.Println("PUBKEY", spew.Sdump(pkey.N), spew.Sdump(pkey.PublicKey))
 	if pubkey, err = ssh.NewPublicKey(&pkey.PublicKey); err != nil {
 		return pub, err
 	}

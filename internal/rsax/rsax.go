@@ -66,7 +66,7 @@ func AutoDeterministic(key []byte) (pkey []byte, err error) {
 // a csprng.
 func Deterministic(seed []byte, bits int) (pkey []byte, err error) {
 	// TODO key stretch.
-	return generate(NewSHA512CSPRNG(seed), bits)
+	return generate(NewSHA512CSPRNG(seed), bits, deterministicGenerateKey)
 }
 
 // UnsafeAuto generates a ssh key using unsafe defaults, this method is used to
@@ -78,15 +78,15 @@ func UnsafeAuto() (pkey []byte, err error) {
 
 // Generate a RSA private key with the given bits size, returns the pem encoded bytes.
 func Generate(bits int) (encoded []byte, err error) {
-	return generate(rand.Reader, bits)
+	return generate(rand.Reader, bits, rsa.GenerateKey)
 }
 
-func generate(r io.Reader, bits int) (encoded []byte, err error) {
+func generate(r io.Reader, bits int, gen func(io.Reader, int) (*rsa.PrivateKey, error)) (encoded []byte, err error) {
 	var (
 		pkey *rsa.PrivateKey
 	)
 
-	if pkey, err = private(r, bits); err != nil {
+	if pkey, err = private(r, bits, gen); err != nil {
 		return encoded, err
 	}
 
@@ -100,9 +100,9 @@ func generate(r io.Reader, bits int) (encoded []byte, err error) {
 }
 
 // generatePrivateKey creates a RSA Private Key of specified byte size
-func private(r io.Reader, bits int) (k *rsa.PrivateKey, err error) {
+func private(r io.Reader, bits int, gen func(io.Reader, int) (*rsa.PrivateKey, error)) (k *rsa.PrivateKey, err error) {
 	// Private Key generation
-	if k, err = rsa.GenerateKey(r, bits); err != nil {
+	if k, err = gen(r, bits); err != nil {
 		return k, err
 	}
 
