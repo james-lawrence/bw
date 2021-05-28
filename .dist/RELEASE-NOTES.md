@@ -1,3 +1,28 @@
+commit 7277ae962eb9e161fa9fb42830849205bcebd5e0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 28 13:38:21 2021 -0400
+
+    fix keygen
+
+commit 708d091b3464b86c0632689d8f42a88b102b4881
+Merge: 7dbd0a0a 8f49ab8e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 28 11:07:34 2021 -0400
+
+    Merge branch 'notary/agent-key-gen'
+
+commit 8f49ab8e3ca30b87a6d34e3b0f100209aec0d1bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 28 11:06:44 2021 -0400
+
+    fix non-determistic rsa key gen
+
+commit 7dbd0a0a4f650af16ed51fe57921fbee23b7685e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 25 14:51:37 2021 -0400
+
+    release 0.1.1621968591-622a866f
+
 commit 622a866f3864ad9d7f90e32369d953287989fc16
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 25 14:49:51 2021 -0400
@@ -9,6 +34,36 @@ Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 25 11:47:18 2021 -0400
 
     release 0.1.1621450873-95b7cedd
+
+commit 51f00a4e737b73180ac333758a26602e64acefd0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 25 11:39:16 2021 -0400
+
+    debugging
+
+commit 7a1f1abe1d102c100c1605e0b4b2e824eab6960a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 12:03:07 2021 -0400
+
+    release 0.1.1621699331-69f50639
+
+commit 69f506390d853b62fd348f1a1dc5a3fcf3164ac7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 12:02:11 2021 -0400
+
+    remove detecting public keys from node events
+
+commit 350f5592ce00ca8bb6b69389f866865498004ef0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 11:57:10 2021 -0400
+
+    release 0.1.1621698926-c4ef809f
+
+commit c4ef809fd680340579ee4851c96ca8b44384e41b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 22 11:05:49 2021 -0400
+
+    deterministic ssh key for agents
 
 commit 95b7ceddb204827f61eab8208e3f77b8f4ed5cd8
 Author: James Lawrence <jljatone@gmail.com>
