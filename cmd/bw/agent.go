@@ -300,12 +300,11 @@ func (t *agentCmd) generatecredentials(config agent.Config, n notary.Composite) 
 	}
 
 	for _, k := range ring.GetKeys() {
-		if dpriv, dpub, err = t.genkey(k); err != nil {
+		if _, dpub, err = t.genkey(k); err != nil {
 			return ss, err
 		}
-		g := notary.AgentGrant(dpub, notary.GrantOptionGenerateFingerprint(dpriv))
-		log.Println("GENERATED FINGERPRINT", sshx.FingerprintSHA256(dpriv), "->", sshx.FingerprintSHA256(dpub))
-		if _, err = n.Insert(g); err != nil {
+
+		if _, err = n.Insert(notary.AgentGrant(dpub)); err != nil {
 			return ss, err
 		}
 	}
@@ -321,6 +320,7 @@ func (t *agentCmd) generatecredentials(config agent.Config, n notary.Composite) 
 	if fp, _, cause := ss.AutoSignerInfo(); cause == nil {
 		log.Println("SIGNER FINGERPRINT", fp)
 	}
+
 	return ss, err
 }
 
