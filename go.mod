@@ -11,6 +11,7 @@ require (
 	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/akutz/memconn v0.1.0
 	github.com/alecthomas/kingpin v0.0.0-20180205015504-2a5eb223fafe
+	github.com/anacrolix/stm v0.2.0
 	github.com/armon/go-metrics v0.3.5 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect

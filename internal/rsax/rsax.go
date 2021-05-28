@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
+	"io"
 	"io/ioutil"
 
 	"github.com/james-lawrence/bw/internal/x/systemx"
@@ -56,6 +57,18 @@ func CachedGenerate(path string, bits int) (pkey []byte, err error) {
 	return pkey, nil
 }
 
+// AutoDerive ...
+func AutoDeterministic(key []byte) (pkey []byte, err error) {
+	return Deterministic(key, defaultBits)
+}
+
+// Deterministic rsa private key based on the seed. uses a SHA512 hash as
+// a csprng.
+func Deterministic(seed []byte, bits int) (pkey []byte, err error) {
+	// TODO key stretch.
+	return generate(NewSHA512CSPRNG(seed), bits, deterministicGenerateKey)
+}
+
 // UnsafeAuto generates a ssh key using unsafe defaults, this method is used to
 // generate an ssh key quickly for cases were we do not care about safety, i.e.
 // tests.
@@ -65,11 +78,15 @@ func UnsafeAuto() (pkey []byte, err error) {
 
 // Generate a RSA private key with the given bits size, returns the pem encoded bytes.
 func Generate(bits int) (encoded []byte, err error) {
+	return generate(rand.Reader, bits, rsa.GenerateKey)
+}
+
+func generate(r io.Reader, bits int, gen func(io.Reader, int) (*rsa.PrivateKey, error)) (encoded []byte, err error) {
 	var (
 		pkey *rsa.PrivateKey
 	)
 
-	if pkey, err = private(bits); err != nil {
+	if pkey, err = private(r, bits, gen); err != nil {
 		return encoded, err
 	}
 
@@ -83,9 +100,9 @@ func Generate(bits int) (encoded []byte, err error) {
 }
 
 // generatePrivateKey creates a RSA Private Key of specified byte size
-func private(bits int) (k *rsa.PrivateKey, err error) {
+func private(r io.Reader, bits int, gen func(io.Reader, int) (*rsa.PrivateKey, error)) (k *rsa.PrivateKey, err error) {
 	// Private Key generation
-	if k, err = rsa.GenerateKey(rand.Reader, bits); err != nil {
+	if k, err = gen(r, bits); err != nil {
 		return k, err
 	}
 

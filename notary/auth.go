@@ -93,7 +93,7 @@ func AutoSignerInfo() (fp string, pub []byte, err error) {
 		return fp, pub, err
 	}
 
-	return genFingerprint(ssh.MarshalAuthorizedKey(pubk)), encoded, nil
+	return sshx.FingerprintSHA256(ssh.MarshalAuthorizedKey(pubk)), encoded, nil
 }
 
 func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, err error) {
@@ -152,7 +152,7 @@ func NewSigner(pkey []byte) (s Signer, err error) {
 	}
 
 	return Signer{
-		fingerprint: genFingerprint(pubkey),
+		fingerprint: sshx.FingerprintSHA256(pubkey),
 		signer:      ss,
 	}, nil
 }

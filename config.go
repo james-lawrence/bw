@@ -188,6 +188,7 @@ func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) st
 	if envx.Boolean(false, EnvLogsConfiguration, EnvLogsVerbose) {
 		log.Println(os.Expand(string(raw), m))
 	}
+
 	return yaml.Unmarshal([]byte(os.Expand(string(raw), m)), dst)
 }
 

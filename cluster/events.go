@@ -37,7 +37,7 @@ func (t LoggingEventHandler) NotifyUpdate(peer *memberlist.Node) {
 
 // LogingSubscription logs out the events as they arrive.
 func LoggingSubscription(ctx context.Context, evt *agent.ClusterWatchEvents) error {
-	log.Println("LoggingSubscription", evt.Event.String(), evt.Node.Ip, evt.Node.Name)
+	log.Println("LoggingSubscription", evt.Event.String(), evt.Node.Ip, evt.Node.Name, len(evt.Node.PublicKey))
 	return nil
 }
 

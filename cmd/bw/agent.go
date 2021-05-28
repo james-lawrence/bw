@@ -27,6 +27,7 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -76,15 +77,15 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 func (t *agentCmd) bind() (err error) {
 	var (
-		l        net.Listener
-		bound    []net.Listener
-		p2ppriv  []byte
-		p2ppub   []byte
-		tc       storage.TorrentConfig
-		tlscreds *tls.Config
-		ns       notary.Composite
-		ss       notary.Signer
-		acmesvc  acme.DiskCache
+		l         net.Listener
+		bound     []net.Listener
+		localpriv []byte
+		localpub  []byte
+		tc        storage.TorrentConfig
+		tlscreds  *tls.Config
+		ns        notary.Composite
+		ss        notary.Signer
+		acmesvc   acme.DiskCache
 	)
 
 	if t.config, err = commandutils.LoadAgentConfig(t.configFile, t.config); err != nil {
@@ -92,7 +93,7 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	log.SetPrefix("[AGENT] ")
-	log.Println("configuration:", spew.Sdump(t.config))
+	log.Println("configuration:", spew.Sdump(t.config.Sanitize()))
 
 	if err = bw.InitializeDeploymentDirectory(t.config.Root); err != nil {
 		return err
@@ -103,35 +104,27 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if p2ppriv, err = rsax.CachedAuto(filepath.Join(t.config.Root, bw.DefaultAgentNotaryKey)); err != nil {
+	if localpriv, err = rsax.CachedAuto(filepath.Join(t.config.Root, bw.DefaultAgentNotaryKey)); err != nil {
 		return err
 	}
 
-	if p2ppub, err = sshx.PublicKey(p2ppriv); err != nil {
+	if localpub, err = sshx.PublicKey(localpriv); err != nil {
 		return err
 	}
 
-	if ss, err = notary.NewSigner(p2ppriv); err != nil {
-		return err
-	}
+	// important to maintain the agent name overtime and restarts.
+	// otherwise raft will get upset over duplicate addresses for different.
+	// server names.
+	t.config = t.config.Clone(
+		agent.ConfigOptionName(sshx.FingerprintSHA256(localpub)),
+	)
 
 	if ns, err = notary.NewFromFile(filepath.Join(t.config.Root, bw.DirAuthorizations), t.configFile); err != nil {
 		return err
 	}
 
-	if _, err = ns.Insert(notary.AgentGrant(p2ppub)); err != nil {
+	if ss, err = t.generatecredentials(t.config, ns); err != nil {
 		return err
-	}
-
-	if fingerprint, _, err := ss.AutoSignerInfo(); err != nil {
-		return err
-	} else {
-		// important to maintain the agent name overtime and restarts.
-		// otherwise raft will get upset over duplicate addresses for different.
-		// server names.
-		t.config = t.config.Clone(
-			agent.ConfigOptionName(fingerprint),
-		)
 	}
 
 	if tlscreds, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
@@ -143,10 +136,7 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	local := cluster.NewLocal(
-		agent.NewPeerFromTemplate(
-			t.config.Peer(),
-			agent.PeerOptionPublicKey(p2ppub),
-		),
+		t.config.Peer(),
 	)
 
 	clusterevents := cluster.NewEventsQueue(local)
@@ -284,6 +274,54 @@ func (t *agentCmd) bind() (err error) {
 	}
 
 	return nil
+}
+
+func (t *agentCmd) genkey(k []byte) (dpriv []byte, dpub []byte, err error) {
+	if dpriv, err = rsax.AutoDeterministic(k); err != nil {
+		return dpriv, dpub, err
+	}
+
+	if dpub, err = sshx.PublicKey(dpriv); err != nil {
+		return dpriv, dpub, err
+	}
+
+	return dpriv, dpub, err
+}
+
+func (t *agentCmd) generatecredentials(config agent.Config, n notary.Composite) (ss notary.Signer, err error) {
+	var (
+		ring  *memberlist.Keyring
+		dpriv []byte
+		dpub  []byte
+	)
+
+	if ring, err = config.Keyring(); err != nil {
+		return ss, err
+	}
+
+	for _, k := range ring.GetKeys() {
+		if dpriv, dpub, err = t.genkey(k); err != nil {
+			return ss, err
+		}
+		g := notary.AgentGrant(dpub, notary.GrantOptionGenerateFingerprint(dpriv))
+		log.Println("GENERATED FINGERPRINT", sshx.FingerprintSHA256(dpriv), "->", sshx.FingerprintSHA256(dpub))
+		if _, err = n.Insert(g); err != nil {
+			return ss, err
+		}
+	}
+
+	if dpriv, _, err = t.genkey(ring.GetPrimaryKey()); err != nil {
+		return ss, err
+	}
+
+	if ss, err = notary.NewSigner(dpriv); err != nil {
+		return ss, err
+	}
+
+	if fp, _, cause := ss.AutoSignerInfo(); cause == nil {
+		log.Println("SIGNER FINGERPRINT", fp)
+	}
+	return ss, err
 }
 
 func (t *agentCmd) displayCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
