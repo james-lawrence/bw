@@ -21,7 +21,7 @@ func NewTermui(ctx context.Context, done context.CancelFunc, wg *sync.WaitGroup,
 
 	var (
 		storage = state{
-			Peers: map[string]agent.Peer{},
+			Peers: map[string]*agent.Peer{},
 			Logs:  newLBuffer(300),
 		}
 	)
@@ -64,7 +64,7 @@ func mergeEvent(s state, m *agent.Message) state {
 	case agent.Message_LogEvent:
 		s.Logs = s.Logs.Add(m)
 	case agent.Message_PeerEvent:
-		s.Peers[m.Peer.Name] = *m.Peer
+		s.Peers[m.Peer.Name] = m.Peer
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()
 		s.Logs = s.Logs.Add(agentutil.LogEvent(m.Peer, fmt.Sprintf("%s - %s %s", m.Type, bw.RandomID(d.Archive.DeploymentID), d.Stage)))
@@ -134,7 +134,7 @@ func logsToList(s state) []string {
 }
 
 func peersToList(s state) []string {
-	peers := make([]agent.Peer, 0, len(s.Peers))
+	peers := make([]*agent.Peer, 0, len(s.Peers))
 	for _, peer := range s.Peers {
 		peers = append(peers, peer)
 	}
@@ -151,11 +151,11 @@ func peersToList(s state) []string {
 type state struct {
 	NodesFound     int64
 	NodesCompleted int64
-	Peers          map[string]agent.Peer
+	Peers          map[string]*agent.Peer
 	Logs           lbuffer
 }
 
-type sortablePeers []agent.Peer
+type sortablePeers []*agent.Peer
 
 // Len is part of sort.Interface.
 func (t sortablePeers) Len() int {

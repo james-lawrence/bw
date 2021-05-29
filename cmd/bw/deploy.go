@@ -11,7 +11,6 @@ import (
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/logrusorgru/aurora"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -141,13 +140,13 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	log.Println("pid", os.Getpid())
-	log.Println("configuration:", spew.Sdump(config))
 
 	if len(config.DeployPrompt) > 0 {
 		_, err := (&promptui.Prompt{
 			Label:     config.DeployPrompt,
 			IsConfirm: true,
 		}).Run()
+
 		// we're done.
 		if err != nil {
 			return nil
@@ -290,8 +289,6 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	log.Println("configuration:", spew.Sdump(config))
-
 	events := make(chan *agent.Message, 100)
 
 	local := commandutils.NewClientPeer()
@@ -352,8 +349,6 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	if config, err = commandutils.ReadConfiguration(t.environment); err != nil {
 		return err
 	}
-
-	log.Println("configuration:", spew.Sdump(config))
 
 	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
@@ -465,12 +460,10 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		ss      notary.Signer
 	)
 
+	log.Println("pid", os.Getpid())
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return err
 	}
-
-	log.Println("pid", os.Getpid())
-	log.Println("configuration:", spew.Sdump(config))
 
 	if len(config.DeployPrompt) > 0 {
 		_, err := (&promptui.Prompt{

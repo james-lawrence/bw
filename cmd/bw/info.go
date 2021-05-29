@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/davecgh/go-spew/spew"
@@ -23,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/uxterm"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -40,13 +40,18 @@ func (t *agentInfo) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.infoCmd(common(parent.Command("all", "retrieve info from all nodes within the cluster").Default()))
+	t.watchCmd(common(parent.Command("watch", "watch cluster activity").Default()))
+	t.nodesCmd(common(parent.Command("nodes", "retrieve info from ")))
 	t.logCmd(common(parent.Command("logs", "log retrieval for the latest deployment")))
 	t.checkCmd(parent.Command("check", "check connectivity with the discovery service"))
 }
 
-func (t *agentInfo) infoCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	return parent.Action(t.info)
+func (t *agentInfo) watchCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.watch)
+}
+
+func (t *agentInfo) nodesCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	return parent.Action(t.nodes)
 }
 
 func (t *agentInfo) logCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
@@ -72,8 +77,6 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	log.Println("configuration", spew.Sdump(config))
-
 	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
 		return err
 	}
@@ -96,8 +99,12 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	return iox.Error(io.Copy(os.Stderr, logs))
 }
 
-func (t *agentInfo) info(ctx *kingpin.ParseContext) error {
-	return t._info()
+func (t *agentInfo) watch(ctx *kingpin.ParseContext) error {
+	return t._watch()
+}
+
+func (t *agentInfo) nodes(ctx *kingpin.ParseContext) error {
+	return t._nodes()
 }
 
 func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
@@ -120,13 +127,14 @@ func (t *agentInfo) check(ctx *kingpin.ParseContext) (err error) {
 	return nil
 }
 
-func (t *agentInfo) _info() (err error) {
+func (t *agentInfo) _watch() (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.C
 		d      dialers.Defaults
 		config agent.ConfigClient
 		client agent.DeployClient
+		quorum *agent.InfoResponse
 		ss     notary.Signer
 	)
 	defer t.global.shutdown()
@@ -139,7 +147,6 @@ func (t *agentInfo) _info() (err error) {
 		return err
 	}
 
-	log.Println("configuration", spew.Sdump(config))
 	local := cluster.NewLocal(
 		commandutils.NewClientPeer(),
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
@@ -163,23 +170,13 @@ func (t *agentInfo) _info() (err error) {
 	client = agent.NewDeployConn(conn)
 
 	cx := cluster.New(local, c)
-	err = agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
-		var (
-			info agent.StatusResponse
-		)
+	if quorum, err = agent.NewQuorumClient(conn).Info(t.global.ctx, &agent.InfoRequest{}); err != nil {
+		return err
+	}
 
-		if info, err = c.Info(); err != nil {
-			return errors.WithStack(err)
-		}
-
-		log.Printf("Server: %s:%s - %s\n", info.Peer.Name, info.Peer.Ip, info.Peer.Status)
-		log.Println("Previous Deployment: Time                          - DeploymentID               - Stage")
-		for _, d := range info.Deployments {
-			log.Printf("Previous Deployment: %s - %s - %s", time.Unix(d.Archive.Ts, 0).UTC(), bw.RandomID(d.Archive.DeploymentID), d.Stage)
-		}
-
-		return nil
-	}))(cx, d)
+	if err = uxterm.PrintQuorum(quorum); err != nil {
+		return err
+	}
 
 	logx.MaybeLog(err)
 
@@ -191,4 +188,56 @@ func (t *agentInfo) _info() (err error) {
 	agentutil.WatchClusterEvents(t.global.ctx, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
 
 	return nil
+}
+
+func (t *agentInfo) _nodes() (err error) {
+	var (
+		conn   *grpc.ClientConn
+		c      clustering.C
+		d      dialers.Defaults
+		config agent.ConfigClient
+		ss     notary.Signer
+	)
+	defer t.global.shutdown()
+
+	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+		return err
+	}
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
+
+	local := cluster.NewLocal(
+		commandutils.NewClientPeer(),
+		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
+	)
+
+	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
+		return err
+	}
+
+	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+
+	if conn, err = qd.DialContext(t.global.ctx); err != nil {
+		return err
+	}
+
+	go func() {
+		<-t.global.ctx.Done()
+		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+	}()
+
+	cx := cluster.New(local, c)
+	return agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
+		var (
+			info agent.StatusResponse
+		)
+
+		if info, err = c.Info(); err != nil {
+			return errors.WithStack(err)
+		}
+
+		return uxterm.PrintNode(&info)
+	}))(cx, d)
 }

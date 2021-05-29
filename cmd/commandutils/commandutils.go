@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
@@ -35,38 +36,6 @@ func NewClientPeer(options ...agent.PeerOption) (p *agent.Peer) {
 		},
 		append(options, agent.PeerOptionStatus(agent.Peer_Client))...,
 	)
-}
-
-// ReadConfiguration reads the configuration for the given environment.
-func ReadConfiguration(environment string) (config agent.ConfigClient, err error) {
-	// migrate environment to directory structure.
-	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
-	if i, err := os.Stat(path); err == nil && !i.IsDir() {
-		log.Println("detected old configuration migrating environment")
-		dst := filepath.Join(path, bw.DefaultClientConfig)
-		tmp := path + ".bak"
-		err = errorsx.Compact(
-			os.Rename(path, tmp),
-			os.MkdirAll(path, 0700),
-			os.Rename(tmp, dst),
-		)
-
-		if err != nil {
-			return config, errorsx.UserFriendly(errors.Wrapf(err, "failed environment migration: %s - %s -> %s", environment, path, dst))
-		}
-	}
-
-	path = filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment, bw.DefaultClientConfig)
-	if _, err = os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return config, errorsx.UserFriendly(errors.Wrapf(err, "unknown environment: %s - %s", environment, path))
-		}
-
-		return config, err
-	}
-
-	log.Println("loading configuration", path)
-	return agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path)
 }
 
 // PersistAgentName to disk to prevent name changes from impacting the cluster.
@@ -159,6 +128,51 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	// load or create credentials.
 	if err = cc.FromConfig(config.CredentialsDir, config.CredentialsMode, path, cc.NewRefreshClient(config.CredentialsDir)); err != nil {
 		return config, err
+	}
+
+	if envx.Boolean(false, bw.EnvLogsConfiguration) {
+		log.Println("configuration", spew.Sdump(config))
+	}
+
+	return config, err
+}
+
+// ReadConfiguration reads the configuration for the given environment.
+func ReadConfiguration(environment string) (config agent.ConfigClient, err error) {
+	// migrate environment to directory structure.
+	path := filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment)
+	if i, err := os.Stat(path); err == nil && !i.IsDir() {
+		log.Println("detected old configuration migrating environment")
+		dst := filepath.Join(path, bw.DefaultClientConfig)
+		tmp := path + ".bak"
+		err = errorsx.Compact(
+			os.Rename(path, tmp),
+			os.MkdirAll(path, 0700),
+			os.Rename(tmp, dst),
+		)
+
+		if err != nil {
+			return config, errorsx.UserFriendly(errors.Wrapf(err, "failed environment migration: %s - %s -> %s", environment, path, dst))
+		}
+	}
+
+	path = filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment, bw.DefaultClientConfig)
+	if _, err = os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return config, errorsx.UserFriendly(errors.Wrapf(err, "unknown environment: %s - %s", environment, path))
+		}
+
+		return config, err
+	}
+
+	log.Println("loading configuration", path)
+
+	if config, err = agent.DefaultConfigClient(agent.CCOptionTLSConfig(environment)).LoadConfig(path); err != nil {
+		return config, err
+	}
+
+	if envx.Boolean(false, bw.EnvLogsConfiguration) {
+		log.Println("configuration", spew.Sdump(config))
 	}
 
 	return config, err
