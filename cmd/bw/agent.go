@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
@@ -44,7 +45,6 @@ type agentCmd struct {
 	config         agent.Config
 	configFile     string
 	raftFile       string
-	raftVerbose    bool
 }
 
 func (t *agentCmd) configure(parent *kingpin.CmdClause) {
@@ -69,7 +69,8 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 
-	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Default())
+	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Hidden())
+	(&directive{agentCmd: t}).configure(parent.Command("deploy", "run the deploy agent").Default())
 
 	t.displayCmd(parent.Command("quorum-state", "display the quorum state, only can be run on the server"))
 	t.quorumCmd((parent.Command("quorum", "display quorum information, only can be run on the server")))
@@ -317,15 +318,10 @@ func (t *agentCmd) generatecredentials(config agent.Config, n notary.Composite) 
 		return ss, err
 	}
 
-	if fp, _, cause := ss.AutoSignerInfo(); cause == nil {
-		log.Println("SIGNER FINGERPRINT", fp)
-	}
-
 	return ss, err
 }
 
 func (t *agentCmd) displayCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("verbose", "prints raft internal logs").Default("false").BoolVar(&t.raftVerbose)
 	parent.Arg("path", "path to the raft log database").StringVar(&t.raftFile)
 	return parent.Action(t.display)
 }
@@ -372,7 +368,7 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 		switch current.Type {
 		case raft.LogBarrier:
 			lstats.barriers++
-			if t.raftVerbose {
+			if envx.Boolean(false, bw.EnvLogsVerbose) {
 				fmt.Println("barrier invoked", current.Index, current.Term)
 			}
 			continue
@@ -389,7 +385,7 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 			continue
 		case raft.LogConfiguration:
 			lstats.configurations++
-			if t.raftVerbose {
+			if envx.Boolean(false, bw.EnvLogsVerbose) {
 				fmt.Println("log configuration", current.Index, current.Term)
 			}
 		default:

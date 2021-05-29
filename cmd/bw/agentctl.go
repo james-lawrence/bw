@@ -1,13 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"regexp"
 
 	"github.com/alecthomas/kingpin"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
@@ -17,8 +15,10 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/uxterm"
 	"google.golang.org/grpc"
 )
 
@@ -98,11 +98,16 @@ func (t *actlCmd) shutdown(filter deployment.Filter) (err error) {
 
 func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 	var (
+		ss     notary.Signer
 		conn   *grpc.ClientConn
 		d      dialers.Defaults
 		c      clustering.C
 		quorum *agent.InfoResponse
 	)
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return err
+	}
 
 	local := cluster.NewLocal(
 		&agent.Peer{
@@ -116,12 +121,7 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	fmt.Println("quorum:")
-	for idx, p := range agent.QuorumPeers(c) {
-		log.Println(idx, p.Name, spew.Sdump(p))
-	}
-
-	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
+	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults(grpc.WithPerRPCCredentials(ss))...); err != nil {
 		return err
 	}
 
@@ -129,25 +129,9 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	peer := func(p *agent.Peer) string {
-		if p == nil {
-			return "None"
-		}
-
-		return fmt.Sprintf("peer %s: %s", p.Name, spew.Sdump(p))
+	if err = uxterm.PrintQuorum(quorum); err != nil {
+		return err
 	}
-
-	deployment := func(c *agent.DeployCommand) string {
-		if c == nil || c.Archive == nil {
-			return "None"
-		}
-
-		return fmt.Sprintf("deployment %s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Archive.Initiator, c.Command.String())
-	}
-
-	fmt.Printf("leader: %s\n", peer(quorum.Leader))
-	fmt.Printf("latest: %s\n", deployment(quorum.Deployed))
-	fmt.Printf("ongoing: %s\n", deployment(quorum.Deploying))
 
 	return nil
 }
@@ -161,13 +145,13 @@ func (t actlCmd) connect(local *cluster.Local) (d dialers.Defaults, c clustering
 		return d, c, err
 	}
 
-	log.Println("configuration:", spew.Sdump(config))
-
 	if d, c, err = daemons.Connect(config); err != nil {
 		return d, c, err
 	}
 
-	log.Println("connected to cluster")
-	debugx.Printf("configuration:\n%#v\n", config)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("connected to cluster")
+	}
+
 	return d, c, nil
 }

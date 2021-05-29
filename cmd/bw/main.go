@@ -23,12 +23,13 @@ import (
 )
 
 type global struct {
-	systemIP net.IP
-	cluster  *clusterCmd
-	ctx      context.Context
-	shutdown context.CancelFunc
-	cleanup  *sync.WaitGroup
-	debug    bool
+	systemIP  net.IP
+	cluster   *clusterCmd
+	ctx       context.Context
+	shutdown  context.CancelFunc
+	cleanup   *sync.WaitGroup
+	verbosity int
+	debug     bool
 }
 
 func init() {
@@ -85,7 +86,26 @@ func main() {
 		fmt.Println(cmd.Version)
 		return nil
 	})
-	app.Flag("debug-log", "enables debug logs").BoolVar(&global.debug)
+
+	app.Flag("verbose", "increase verbosity of logging").Short('v').Action(func(*kingpin.ParseContext) error {
+		switch global.verbosity {
+		case 4:
+			global.debug = true
+		case 3:
+			os.Setenv(bw.EnvLogsGRPC, "1")
+			os.Setenv(bw.EnvLogsGossip, "1")
+			os.Setenv(bw.EnvLogsRaft, "1")
+			fallthrough
+		case 2:
+			os.Setenv(bw.EnvLogsVerbose, "1")
+			fallthrough
+		case 1:
+			os.Setenv(bw.EnvLogsConfiguration, "1")
+		}
+
+		return nil
+	}).CounterVar(&global.verbosity)
+
 	me.configure(app.Command("me", "commands revolving around the users profile"))
 	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
 	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
@@ -108,6 +128,7 @@ func main() {
 			nErr NotificationError
 			sErr ShortError
 		)
+
 		if errors.As(err, &nErr) {
 			log.Println(err)
 		} else if errors.As(err, &sErr) {

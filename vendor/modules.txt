@@ -77,6 +77,8 @@ github.com/armon/go-metrics
 ## explicit
 # github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 ## explicit
+# github.com/atomicgo/cursor v0.0.1
+github.com/atomicgo/cursor
 # github.com/aws/aws-sdk-go v1.37.27
 ## explicit
 github.com/aws/aws-sdk-go/aws
@@ -227,6 +229,8 @@ github.com/google/btree
 ## explicit
 # github.com/googleapis/gax-go/v2 v2.0.5
 github.com/googleapis/gax-go/v2
+# github.com/gookit/color v1.4.2
+github.com/gookit/color
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
@@ -366,7 +370,8 @@ github.com/maruel/panicparse/stack
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mattn/go-runewidth v0.0.9
+# github.com/mattn/go-runewidth v0.0.13
+## explicit
 github.com/mattn/go-runewidth
 # github.com/mattn/go-sqlite3 v2.0.3+incompatible
 github.com/mattn/go-sqlite3
@@ -452,6 +457,14 @@ github.com/philhofer/fwd
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
+# github.com/pmezard/go-difflib v1.0.0
+github.com/pmezard/go-difflib/difflib
+# github.com/pterm/pterm v0.12.18
+## explicit
+github.com/pterm/pterm
+github.com/pterm/pterm/internal
+# github.com/rivo/uniseg v0.2.0
+github.com/rivo/uniseg
 # github.com/ryanuber/go-glob v1.0.0
 ## explicit
 github.com/ryanuber/go-glob
@@ -461,6 +474,8 @@ github.com/ryszard/goskiplist/skiplist
 github.com/sean-/seed
 # github.com/spaolacci/murmur3 v1.1.0
 github.com/spaolacci/murmur3
+# github.com/stretchr/testify v1.7.0
+github.com/stretchr/testify/assert
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
@@ -475,6 +490,8 @@ github.com/willf/bitset
 # github.com/willf/bloom v2.0.3+incompatible
 ## explicit
 github.com/willf/bloom
+# github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
+github.com/xo/terminfo
 # go.opencensus.io v0.22.5
 go.opencensus.io
 go.opencensus.io/internal
@@ -535,12 +552,16 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20210403161142-5e06dd20ab57
+# golang.org/x/sys v0.0.0-20210525143221-35b2ab0089ea
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# golang.org/x/term v0.0.0-20210503060354-a79de5458b56
+## explicit
+golang.org/x/term
 # golang.org/x/text v0.3.5
 ## explicit
 golang.org/x/text/encoding
@@ -704,5 +725,7 @@ gopkg.in/tomb.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+gopkg.in/yaml.v3
 # gotest.tools v2.2.0+incompatible
 ## explicit

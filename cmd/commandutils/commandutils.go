@@ -18,6 +18,7 @@ import (
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -105,6 +106,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment, bw.DefaultClientConfig),
 		filepath.Join(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), environment),
 	)
+
 	if _, err = os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
 			return config, errorsx.UserFriendly(errors.Errorf("unknown environment: %s - %s", environment, path))
@@ -113,7 +115,10 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		return config, err
 	}
 
-	log.Println("loading configuration", path, bw.DefaultCacheDirectory())
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("loading configuration", path, bw.DefaultCacheDirectory())
+	}
+
 	if config, err = agent.DefaultConfigClient(append(options, agent.CCOptionTLSConfig(environment))...).LoadConfig(path); err != nil {
 		return config, errors.Wrap(err, "configuration load failed")
 	}
@@ -134,7 +139,6 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	)
 
 	if err = discovery.CheckCredentials(config.Address, certpath, d); err != nil && !grpcx.IsUnimplemented(err) {
-		log.Println("check credentials", err)
 		if !grpcx.IsNotFound(err) {
 			return config, err
 		}
@@ -162,8 +166,10 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 
 // ClusterJoin connects to a cluster.
 func ClusterJoin(ctx context.Context, conf agent.Config, c clustering.Joiner, defaultPeers ...clustering.Source) (err error) {
-	log.Println("connecting to cluster")
-	defer log.Println("connection to cluster complete")
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("connecting to cluster")
+		defer log.Println("connection to cluster complete")
+	}
 
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.Bootstrap.Attempts))

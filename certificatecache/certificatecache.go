@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -135,7 +136,9 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 
 	go func() {
 		for {
-			log.Println("next refresh", due)
+			if envx.Boolean(false, bw.EnvLogsVerbose) {
+				log.Println("next refresh", due)
+			}
 			time.Sleep(due)
 
 			if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
@@ -208,8 +211,10 @@ func expiredCert(path string) (expiration time.Time, err error) {
 		return expiration, err
 	}
 
-	log.Println("cert expires at", cert.NotAfter)
-	log.Println("cert not valid before", cert.NotBefore)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("cert expires at", cert.NotAfter)
+		log.Println("cert not valid before", cert.NotBefore)
+	}
 
 	return cert.NotAfter, nil
 }

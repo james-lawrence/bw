@@ -168,7 +168,9 @@ func ExpandAndDecodeFile(path string, dst interface{}) (err error) {
 		return errors.WithStack(err)
 	}
 
-	log.Println("loaded configuration", path)
+	if envx.Boolean(false, EnvLogsConfiguration, EnvLogsVerbose) {
+		log.Println("loaded configuration", path)
+	}
 
 	return ExpandAndDecode(raw, dst)
 }
@@ -186,7 +188,7 @@ func ExpandEnvironAndDecode(raw []byte, dst interface{}, mapping func(string) st
 	}
 
 	if envx.Boolean(false, EnvLogsConfiguration, EnvLogsVerbose) {
-		log.Println(os.Expand(string(raw), m))
+		log.Println("configuration:\n", os.Expand(string(raw), m))
 	}
 
 	return yaml.Unmarshal([]byte(os.Expand(string(raw), m)), dst)

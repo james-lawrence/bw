@@ -22,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
@@ -103,7 +104,10 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		pub        = location + ".pub"
 	)
 
-	log.Println("authorization key location", location)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("authorization key location", location)
+	}
+
 	if encoded, err = ioutil.ReadFile(location); err == nil {
 		return NewSigner(encoded)
 	}
