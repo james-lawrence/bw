@@ -92,15 +92,11 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 		return creds, errors.WithStack(err)
 	}
 
-	// m := certificatecache.NewDirectory(c.ServerName, c.CredentialsDir, c.CA, pool)
-
 	creds = &tls.Config{
 		ServerName:         c.ServerName,
 		RootCAs:            pool,
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"bw.mux"},
-		// GetCertificate:       m.GetCertificate,
-		// GetClientCertificate: m.GetClientCertificate,
 	}
 
 	return creds, nil
