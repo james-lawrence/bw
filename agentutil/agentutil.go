@@ -166,7 +166,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan 
 }
 
 // WatchClusterEvents pushes events into the provided channel for the given dialer.
-func WatchClusterEvents(ctx context.Context, d dialers.DefaultsDialer, local *agent.Peer, events chan *agent.Message) {
+func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *agent.Peer, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
 		err  error

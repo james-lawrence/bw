@@ -12,6 +12,7 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -64,21 +65,27 @@ type FailureDisplayNoop struct{}
 func (t FailureDisplayNoop) Display(cState, *agent.Message) {}
 
 // NewFailureDisplayPrint ...
-func NewFailureDisplayPrint(c agent.DeployClient) FailureDisplayPrint {
+func NewFailureDisplayPrint(d dialers.Defaults) FailureDisplayPrint {
 	return FailureDisplayPrint{
 		n: new(int64),
-		c: c,
+		d: d,
 	}
 }
 
 // FailureDisplayPrint prints the logs for each unique error encountered
 type FailureDisplayPrint struct {
 	n *int64
-	c agent.DeployClient
+	d dialers.Defaults
 }
 
 // Display prints the logs for each message
 func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
+	var (
+		err    error
+		client agent.DeployConn
+		conn   *grpc.ClientConn
+	)
+
 	if m.Peer == nil {
 		log.Println("unexpected nil peer skipping", spew.Sdump(m))
 		return
@@ -88,15 +95,24 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 		os.Stderr.WriteString("\n\n")
 	}
 
-	s.Logger.Println(s.au.Brown(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
+	d := dialers.NewDirect(agent.RPCAddress(m.Peer), t.d.Defaults()...)
 	b, done := context.WithTimeout(context.Background(), 20*time.Second)
+	defer done()
+
+	if conn, err = d.DialContext(b); err != nil {
+		log.Println("unable to dial failed peer", err, "\n", spew.Sdump(m))
+		return
+	}
+	defer conn.Close()
+
+	client = agent.NewDeployConn(conn)
+	s.Logger.Println(s.au.Brown(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
 	logx.MaybeLog(
 		errorsx.Compact(
-			agentutil.PrintLogs(b, t.c, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
-			t.c.Close(),
+			agentutil.PrintLogs(b, client, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
+			client.Close(),
 		),
 	)
-	done()
 	s.Logger.Println(s.au.Brown(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
 
 	atomic.AddInt64(t.n, 1)

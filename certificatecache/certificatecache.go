@@ -212,6 +212,7 @@ func expiredCert(path string) (expiration time.Time, err error) {
 	}
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("cert:", path)
 		log.Println("cert expires at", cert.NotAfter)
 		log.Println("cert not valid before", cert.NotBefore)
 	}

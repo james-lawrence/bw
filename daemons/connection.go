@@ -57,7 +57,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.Defaults, c clustering.C, err error) {
+func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.Direct, c clustering.C, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -73,7 +73,8 @@ func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.D
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config agent.ConfigClient,
-) (d dialers.Defaults, c clustering.LocalRendezvous, err error) {
+	options ...grpc.DialOption,
+) (d dialers.Direct, c clustering.LocalRendezvous, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -83,7 +84,7 @@ func ConnectClientUntilSuccess(
 	}
 
 	for i := 0; ; i++ {
-		if d, c, err = connect(config, creds); err == nil {
+		if d, c, err = connect(config, creds, options...); err == nil {
 			return d, c, err
 		}
 
@@ -115,8 +116,9 @@ func DefaultDialer(address string, tlsconfig *tls.Config, options ...grpc.DialOp
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Defaults, c clustering.Static, err error) {
+func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
 	var (
+		dd        dialers.Defaults
 		nodes     []*memberlist.Node
 		tlsconfig *tls.Config
 	)
@@ -125,11 +127,11 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		return d, c, err
 	}
 
-	if d, err = DefaultDialer(config.Address, tlsconfig, options...); err != nil {
+	if dd, err = DefaultDialer(config.Address, tlsconfig, options...); err != nil {
 		return d, c, err
 	}
 
-	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), d.Defaults()...); err != nil {
+	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), dd.Defaults()...); err != nil {
 		return d, c, err
 	}
 
@@ -137,7 +139,5 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		return d, c, errors.New("no agents found")
 	}
 
-	c = clustering.NewStatic(nodes...)
-
-	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), d.Defaults()...), c, err
+	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), dd.Defaults()...), clustering.NewStatic(nodes...), err
 }

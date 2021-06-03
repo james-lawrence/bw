@@ -33,7 +33,7 @@ func (t Local) Bind(ctx context.Context, socket string, options ...grpc.ServerOp
 // Archive - implements the bootstrap service.
 func (t Local) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *agent.ArchiveResponse, err error) {
 	var (
-		latest agent.Deploy
+		latest *agent.Deploy
 	)
 
 	d := dialers.NewDirect(agent.RPCAddress(t.p), t.d.Defaults()...)
@@ -47,6 +47,6 @@ func (t Local) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *ag
 	}
 
 	return &agent.ArchiveResponse{
-		Deploy: &latest,
+		Deploy: latest,
 	}, nil
 }

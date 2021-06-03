@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// this value is entirely arbitrary, because of the consistent hashing algorithms
+// this value is entirely arbitrary, because of how the consistent hashing algorithms
 // work we just need a constant shared value.
 const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
 

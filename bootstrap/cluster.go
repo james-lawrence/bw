@@ -35,7 +35,7 @@ func (t Cluster) Bind(ctx context.Context, socket string, options ...grpc.Server
 // Archive - implements the bootstrap service.
 func (t Cluster) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *agent.ArchiveResponse, err error) {
 	var (
-		latest agent.Deploy
+		latest *agent.Deploy
 	)
 
 	if latest, err = agentutil.DetermineLatestDeployment(t.c, t.d.Defaults()); err != nil {
@@ -48,6 +48,6 @@ func (t Cluster) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *
 	}
 
 	return &agent.ArchiveResponse{
-		Deploy: &latest,
+		Deploy: latest,
 	}, nil
 }

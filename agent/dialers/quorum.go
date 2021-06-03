@@ -4,7 +4,9 @@ import (
 	"context"
 	"log"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -31,6 +33,10 @@ func (t Quorum) DialContext(ctx context.Context, options ...grpc.DialOption) (c 
 	opts := append(t.defaults, options...)
 
 	for _, p := range agent.QuorumPeers(t.c) {
+		if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+			log.Println("quorum dialer", agent.RPCAddress(p))
+		}
+
 		if c, err = grpc.DialContext(ctx, agent.RPCAddress(p), opts...); err == nil {
 			return c, err
 		}

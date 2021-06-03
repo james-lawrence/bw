@@ -66,7 +66,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
 }
 
-func (t *deployCmd) initializeUX(c agent.DeployClient, events chan *agent.Message) {
+func (t *deployCmd) initializeUX(c dialers.Defaults, events chan *agent.Message) {
 	t.global.cleanup.Add(1)
 	go func() {
 		ux.Deploy(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(c)))
@@ -169,11 +169,11 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	)
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
@@ -186,7 +186,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	client = agent.NewDeployConn(conn)
 
-	t.initializeUX(client, events)
+	t.initializeUX(d, events)
 	events <- agentutil.LogEvent(local, "connected to cluster")
 
 	go agentutil.WatchClusterEvents(t.global.ctx, qd, local, events)
@@ -311,7 +311,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 
 	client = agent.NewDeployConn(conn)
 
-	t.initializeUX(client, events)
+	t.initializeUX(qd, events)
 
 	events <- agentutil.LogEvent(local, "connected to cluster")
 	go func() {
@@ -455,7 +455,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		config  agent.ConfigClient
 		c       clustering.LocalRendezvous
 		located agent.Deploy
-		archive agent.Archive
+		archive *agent.Archive
 		peers   []*agent.Peer
 		ss      notary.Signer
 	)
@@ -507,7 +507,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 
 	client = agent.NewDeployConn(conn)
 
-	t.initializeUX(client, events)
+	t.initializeUX(qd, events)
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-t.global.ctx.Done()
@@ -532,7 +532,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
-	archive = *located.Archive
+	archive = located.Archive
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
 
@@ -560,7 +560,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(t.global.ctx, dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(t.global.ctx, dopts, *archive, peers...); cause != nil {
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 	}
 

@@ -126,7 +126,7 @@ func (t *deployment) cancel(ctx context.Context, req *agent.CancelRequest, d dia
 
 func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
 	var (
-		deploy agent.Deploy
+		deploy *agent.Deploy
 	)
 
 	last := t.getLastSuccessfulDeploy()

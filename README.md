@@ -22,15 +22,16 @@ bw me init
 bw deploy local linux-dev
 
 systemctl --user restart bearded-wookie-pebble.service
-systemctl --user restart bearded-wookie@agent1.service
-systemctl --user restart bearded-wookie@agent2.service
-systemctl --user restart bearded-wookie@agent3.service
-systemctl --user restart bearded-wookie@agent4.service
+systemctl --user restart bearded-wookie@agent{1,2,3,4,5,6,7,8,9,10}.service
+# systemctl --user restart bearded-wookie@agent3.service
+# systemctl --user restart bearded-wookie@agent5.service
+# systemctl --user restart bearded-wookie@agent2.service
+# systemctl --user restart bearded-wookie@agent4.service
 
 pushd .test && bw deploy && popd
 
 # reset local environment
-systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent{1,2,3,4} && systemctl --user restart bearded-wookie@agent{1,2,3,4}.service && systemctl --user restart bearded-wookie-deploy-notifications@agent1.service && journalctl -f --user-unit bearded-wookie@agent4.service
+systemctl --user daemon-reload; rm -rf ~/.config/bearded-wookie/agent* && systemctl --user restart bearded-wookie@agent{1,2,3,4,5,6,7,8,9,10}.service && systemctl --user restart bearded-wookie-deploy-notifications@agent1.service && journalctl -f --user-unit bearded-wookie@agent4.service
 
 go install ./cmd/... && systemctl --user restart bearded-wookie@agent{1,2,3,4}.service && journalctl -f --since -1h --user-unit bearded-wookie@agent1 --user-unit bearded-wookie@agent2.service --user-unit bearded-wookie@agent3.service --user-unit bearded-wookie@agent4.service
 ```

@@ -68,7 +68,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		c      clustering.C
 		d      dialers.Defaults
 		config agent.ConfigClient
-		latest agent.Deploy
+		latest *agent.Deploy
 		ss     notary.Signer
 	)
 	defer t.global.shutdown()
@@ -131,9 +131,8 @@ func (t *agentInfo) _watch() (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.C
-		d      dialers.Defaults
+		d      dialers.Direct
 		config agent.ConfigClient
-		client agent.DeployClient
 		quorum *agent.InfoResponse
 		ss     notary.Signer
 	)
@@ -156,7 +155,7 @@ func (t *agentInfo) _watch() (err error) {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
@@ -167,9 +166,6 @@ func (t *agentInfo) _watch() (err error) {
 		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
-	client = agent.NewDeployConn(conn)
-
-	cx := cluster.New(local, c)
 	if quorum, err = agent.NewQuorumClient(conn).Info(t.global.ctx, &agent.InfoRequest{}); err != nil {
 		return err
 	}
@@ -183,9 +179,9 @@ func (t *agentInfo) _watch() (err error) {
 	events := make(chan *agent.Message, 100)
 
 	t.global.cleanup.Add(1)
-	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(client)))
+	go ux.Logging(t.global.ctx, t.global.cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(qd)))
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(t.global.ctx, dialers.NewQuorum(cx, d.Defaults()...), local.Peer, events)
+	agentutil.WatchClusterEvents(t.global.ctx, qd, local.Peer, events)
 
 	return nil
 }

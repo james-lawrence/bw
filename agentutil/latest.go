@@ -15,9 +15,9 @@ import (
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.
 // If no error occurs, latest.Archive is guaranteed to be populated.
-func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest agent.Deploy, err error) {
+func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest *agent.Deploy, err error) {
 	type result struct {
-		deploy agent.Deploy
+		deploy *agent.Deploy
 		count  int
 	}
 
@@ -28,7 +28,7 @@ func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest agent.Depl
 	counts := make(map[string]result)
 	getlatest := func(c agent.Client) (err error) {
 		var (
-			d agent.Deploy
+			d *agent.Deploy
 		)
 
 		if d, err = AgentLatestDeployment(c); err != nil {
@@ -40,7 +40,7 @@ func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest agent.Depl
 			}
 		}
 
-		key := string(d.Archive.DeploymentID)
+		key := bw.RandomID(d.Archive.DeploymentID).String()
 		if r, ok := counts[key]; ok {
 			counts[key] = result{deploy: d, count: r.count + 1}
 		} else {
@@ -68,7 +68,7 @@ func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest agent.Depl
 	}
 
 	// should never happen, but if it does, guard against it.
-	if latest.Archive == nil {
+	if latest == nil || latest.Archive == nil {
 		failure = failure.Compact(errors.Wrap(ErrNoDeployments, "archive missing in deploy"))
 	}
 
@@ -132,7 +132,7 @@ func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z agent.Deploy, err
 }
 
 // LocalLatestDeployment determines the latest successful local deployment.
-func LocalLatestDeployment(d dialers.ContextDialer) (a agent.Deploy, err error) {
+func LocalLatestDeployment(d dialers.ContextDialer) (a *agent.Deploy, err error) {
 	var (
 		c *grpc.ClientConn
 	)
@@ -147,7 +147,7 @@ func LocalLatestDeployment(d dialers.ContextDialer) (a agent.Deploy, err error) 
 }
 
 // AgentLatestDeployment determines the latest deployment of a given agent.
-func AgentLatestDeployment(c agent.Client) (a agent.Deploy, err error) {
+func AgentLatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 	var (
 		info agent.StatusResponse
 	)
@@ -162,7 +162,7 @@ func AgentLatestDeployment(c agent.Client) (a agent.Deploy, err error) {
 
 	for _, d := range info.Deployments {
 		if d.Stage == agent.Deploy_Completed {
-			return *d, nil
+			return d, nil
 		}
 	}
 
