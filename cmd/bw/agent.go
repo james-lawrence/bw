@@ -201,14 +201,21 @@ func (t *agentCmd) bind() (err error) {
 	// 	if err != nil {
 	// 		panic(errors.Wrap(err, "default protocol registration failed"))
 	// 	}
-	// 	s := &http.Server{
-	// 		Handler: http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-	// 			log.Println("HTTP REQUEST DETECTED")
-	// 			http.NotFound(resp, req)
-	// 		}),
-	// 	}
-	// 	s.Serve(l)
+
+	// 	mux := http.NewServeMux()
+	// 	// mux.HandleFunc("/proxy", proxy.HTTP{Dialer: tlsx.NewDialer(tlscreds)}.Proxy)
+	// 	mux.HandleFunc("/", http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
+	// 		log.Println("HTTP REQUEST DETECTED")
+	// 		http.NotFound(resp, req)
+	// 	}))
+	// 	(&http.Server{
+	// 		Handler: mux,
+	// 	}).Serve(l)
 	// }(dctx.Muxer.Default("http", l.Addr()))
+
+	if dctx, err = daemons.Proxy(dctx, tlsx.NewDialer(tlscreds)); err != nil {
+		return errors.Wrap(err, "failed to initialize proxy connection service")
+	}
 
 	if dctx, err = daemons.Inmem(dctx); err != nil {
 		return errors.Wrap(err, "failed to initialize in memory services")

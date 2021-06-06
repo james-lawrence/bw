@@ -65,6 +65,7 @@ const (
 
 // The various protocols defined for bearded wookie
 const (
+	ProtocolProxy     = "bw.proxy"
 	ProtocolDiscovery = "bw.discovery"
 	ProtocolSWIM      = "bw.swim"
 	ProtocolRAFT      = "bw.raft"

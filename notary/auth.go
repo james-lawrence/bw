@@ -172,17 +172,15 @@ func (t Signer) AutoSignerInfo() (fp string, pub []byte, err error) {
 	return t.fingerprint, ssh.MarshalAuthorizedKey(t.signer.PublicKey()), nil
 }
 
-// GetRequestMetadata inserts authentication metadata into request.
-func (t Signer) GetRequestMetadata(ctx context.Context, uri ...string) (m map[string]string, err error) {
+func (t Signer) Token() (encoded string, err error) {
 	var (
-		encoded string
-		sig     *Signature
+		sig *Signature
 	)
 
 	tok := GenerateToken(t.fingerprint)
 
 	if sig, err = genTokenSignature(t.signer, &tok); err != nil {
-		return m, err
+		return "", err
 	}
 
 	a := Authorization{
@@ -190,7 +188,16 @@ func (t Signer) GetRequestMetadata(ctx context.Context, uri ...string) (m map[st
 		Signature: sig,
 	}
 
-	if encoded, err = EncodeAuthorization(&a); err != nil {
+	return EncodeAuthorization(&a)
+}
+
+// GetRequestMetadata inserts authentication metadata into request.
+func (t Signer) GetRequestMetadata(ctx context.Context, uri ...string) (m map[string]string, err error) {
+	var (
+		encoded string
+	)
+
+	if encoded, err = t.Token(); err != nil {
 		return m, err
 	}
 

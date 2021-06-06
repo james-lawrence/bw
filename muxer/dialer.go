@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"log"
 	"net"
+	"net/url"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -15,6 +16,17 @@ type dialer interface {
 }
 
 var i = new(int64)
+
+// ParseURI parse an address in the form:
+// protocol://host:port
+func ParseURI(s string) (p string, host string, err error) {
+	uri, err := url.Parse(s)
+	if err != nil {
+		return p, host, err
+	}
+
+	return uri.Scheme, uri.Host, nil
+}
 
 // Newdialer net.Dialer for the given protocol.
 func NewDialer(protocol string, d dialer) Dialer {
@@ -39,8 +51,8 @@ func (t Dialer) Dial(network string, address string) (conn net.Conn, err error) 
 }
 
 func (t Dialer) DialContext(ctx context.Context, network string, address string) (conn net.Conn, err error) {
-	// log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
-	// defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
+	log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
+	defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
 
 	if conn, err = t.d.DialContext(ctx, network, address); err != nil {
 		return conn, errors.Wrapf(err, "muxer.DialContext failed: %s %s://%s", t.protocol, network, address)

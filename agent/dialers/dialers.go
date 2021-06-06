@@ -4,7 +4,6 @@ import (
 	"context"
 	"math/rand"
 	"net"
-	"net/url"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -76,20 +75,11 @@ func shuffleQuorum(q []*agent.Peer) []*agent.Peer {
 // WithMuxer dialer to connect using a connection muxer.
 func WithMuxer(d *tlsx.Dialer, n net.Addr) grpc.DialOption {
 	return grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
-		proto, host, err := parseURI(address)
+		proto, host, err := muxer.ParseURI(address)
 		if err != nil {
 			return nil, err
 		}
 
 		return muxer.NewDialer(proto, d).DialContext(ctx, n.Network(), host)
 	})
-}
-
-func parseURI(s string) (p string, host string, err error) {
-	uri, err := url.Parse(s)
-	if err != nil {
-		return p, host, err
-	}
-
-	return uri.Scheme, uri.Host, nil
 }

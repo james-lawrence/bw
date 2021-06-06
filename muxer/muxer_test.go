@@ -13,6 +13,15 @@ import (
 	. "github.com/james-lawrence/bw/muxer"
 )
 
+var _ = Describe("ParseURI", func() {
+	It("should extract the procol name and address", func() {
+		proto, host, err := ParseURI("bw.agent://QmNMbFdN9s7R1PBr9VqZqVrsZzunwh61hD1vTR96AmohGX")
+		Expect(err).To(Succeed())
+		Expect(string(proto)).To(Equal("bw.agent"))
+		Expect(host).To(Equal("QmNMbFdN9s7R1PBr9VqZqVrsZzunwh61hD1vTR96AmohGX"))
+	})
+})
+
 var _ = Describe("Dial and accept", func() {
 	It("should be able to multiplex", func() {
 		c1 := int64(0)

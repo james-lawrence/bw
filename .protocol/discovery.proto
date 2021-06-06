@@ -44,3 +44,20 @@ message CheckResponse {}
 service Authority {
   rpc Check(CheckRequest) returns (CheckResponse) {}
 }
+
+message ProxyRequest {
+  bytes token = 1;
+  string connect = 2;
+}
+
+message ProxyResponse {
+  enum error {
+    Unused = 0;
+    None = 1;
+    ServerError = 2;
+    ClientError = 3;
+  }
+
+  int32 version = 1;
+  error code = 2;
+}

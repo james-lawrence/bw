@@ -1,0 +1,153 @@
+package discovery
+
+import (
+	"context"
+	"io"
+	"log"
+	"net"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/muxer"
+	"github.com/james-lawrence/bw/proxy"
+	"github.com/pkg/errors"
+	"google.golang.org/protobuf/proto"
+)
+
+func Proxy(l net.Listener, d dialer) error {
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			log.Println("proxy failed", err)
+			return err
+		}
+
+		if err = (upgrader{}).Inbound(context.Background(), conn, d); err != nil {
+			conn.Close()
+			log.Println("failed to accept proxy connection", err)
+			continue
+		}
+	}
+}
+
+type upgrader struct{}
+
+func (t upgrader) writemsg(w io.Writer, m proto.Message) (err error) {
+	var (
+		encoded []byte
+	)
+
+	if encoded, err = proto.Marshal(m); err != nil {
+		return err
+	}
+
+	if _, err = w.Write(proxy.WireformatEncode(encoded)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (t upgrader) readmsg(r io.Reader, m proto.Message) (err error) {
+	var (
+		encoded []byte
+	)
+
+	if encoded, err = proxy.WireformatDecode(r); err != nil {
+		return err
+	}
+
+	return proto.Unmarshal(encoded, m)
+}
+
+func (t upgrader) Inbound(ctx context.Context, c1 net.Conn, d dialer) (err error) {
+	var (
+		c2    net.Conn
+		proto string
+		host  string
+		req   ProxyRequest
+	)
+
+	if err = t.readmsg(c1, &req); err != nil {
+		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
+			Version: 1,
+			Code:    ProxyResponse_ClientError,
+		}))
+	}
+
+	log.Println("request received", spew.Sdump(req))
+	if proto, host, err = muxer.ParseURI(req.Connect); err != nil {
+		log.Println("inbound proxy connection: unable parse url", err)
+		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
+			Version: 1,
+			Code:    ProxyResponse_ClientError,
+		}))
+	}
+
+	// TODO validate req.Token
+
+	if c2, err = muxer.NewDialer(proto, d).DialContext(ctx, c1.LocalAddr().Network(), host); err != nil {
+		log.Println("inbound proxy connection: unable to dial proxy", err)
+		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
+			Version: 1,
+			Code:    ProxyResponse_ClientError,
+		}))
+	}
+
+	go proxy.Proxy(ctx, c1, c2, nil)
+
+	return nil
+}
+
+func (t upgrader) Outbound(c net.Conn, to string, auth []byte) (err error) {
+	var (
+		resp ProxyResponse
+	)
+
+	req := ProxyRequest{
+		Token:   auth,
+		Connect: to,
+	}
+
+	if err = t.writemsg(c, &req); err != nil {
+		return err
+	}
+
+	if err = t.readmsg(c, &resp); err != nil {
+		return err
+	}
+
+	if resp.Code != ProxyResponse_None {
+		return errorsx.Compact(errors.Errorf("proxy request failed: %s", resp.Code), c.Close())
+	}
+
+	return nil
+}
+
+type dialer interface {
+	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
+}
+
+type ProxyDialer struct {
+	Proxy  string
+	Dialer dialer
+}
+
+func (t ProxyDialer) DialContext(ctx context.Context, network, address string) (conn net.Conn, err error) {
+	log.Println("PROXY DIAL", network, t.Proxy, "->", address)
+	if conn, err = t.Dialer.DialContext(ctx, network, t.Proxy); err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		if err != nil && conn != nil {
+			conn.Close()
+		}
+	}()
+
+	if err = (upgrader{}).Outbound(conn, address, []byte("Hello world")); err != nil {
+		return nil, errors.Wrap(err, "handshake failed")
+	}
+
+	return conn, nil
+}
