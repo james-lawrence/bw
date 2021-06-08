@@ -8,7 +8,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"google.golang.org/grpc"
 )
@@ -73,7 +72,7 @@ func shuffleQuorum(q []*agent.Peer) []*agent.Peer {
 }
 
 // WithMuxer dialer to connect using a connection muxer.
-func WithMuxer(d *tlsx.Dialer, n net.Addr) grpc.DialOption {
+func WithMuxer(d dialer, n net.Addr) grpc.DialOption {
 	return grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
 		proto, host, err := muxer.ParseURI(address)
 		if err != nil {

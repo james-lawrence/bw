@@ -36,18 +36,6 @@ func ConnectOptionBootstrap(options ...clustering.BootstrapOption) ConnectOption
 	}
 }
 
-func newConnect(options ...ConnectOption) connection {
-	var (
-		conn connection
-	)
-
-	for _, opt := range options {
-		opt(&conn)
-	}
-
-	return conn
-}
-
 type connection struct {
 	clustering struct {
 		Options   []clustering.Option
@@ -100,17 +88,20 @@ func ConnectClientUntilSuccess(
 	}
 }
 
-func DefaultDialer(address string, tlsconfig *tls.Config, options ...grpc.DialOption) (d dialers.Defaults, err error) {
+func DefaultDialer(address string, d dialer, options ...grpc.DialOption) (_d dialers.Defaults, err error) {
 	var (
 		addr *net.TCPAddr
 	)
 
 	if addr, err = net.ResolveTCPAddr("tcp", address); err != nil {
-		return d, err
+		return _d, err
 	}
 
 	return dialers.NewDefaults(options...).Defaults(
-		dialers.WithMuxer(tlsx.NewDialer(tlsconfig), addr),
+		dialers.WithMuxer(
+			d,
+			addr,
+		),
 		grpc.WithInsecure(),
 	), nil
 }
@@ -127,7 +118,15 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		return d, c, err
 	}
 
-	if dd, err = DefaultDialer(config.Address, tlsconfig, options...); err != nil {
+	if dd, err = DefaultDialer(
+		config.Address,
+		tlsx.NewDialer(tlsconfig),
+		// discovery.ProxyDialer{
+		// 	Proxy:  config.Address,
+		// 	Dialer: tlsx.NewDialer(tlsconfig),
+		// },
+		options...,
+	); err != nil {
 		return d, c, err
 	}
 

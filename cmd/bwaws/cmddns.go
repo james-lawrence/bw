@@ -68,7 +68,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsconfig, grpc.WithPerRPCCredentials(ss))
+	d, err := daemons.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}

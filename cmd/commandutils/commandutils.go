@@ -24,6 +24,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 // NewClientPeer create a client peer.
@@ -96,7 +97,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		return config, err
 	}
 
-	if d, err = daemons.DefaultDialer(config.Address, tlsconfig); err != nil {
+	if d, err = daemons.DefaultDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
 		return config, err
 	}
 

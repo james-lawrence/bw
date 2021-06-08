@@ -39,7 +39,7 @@ type cluster interface {
 }
 
 type dialer interface {
-	Dial(p agent.Peer) (zeroc agent.Client, err error)
+	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
 }
 
 // Context common information passed to all daemons.
