@@ -66,6 +66,7 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 		"context":            contextfix(ctx),
 		"bw/interp/shell":    exportShell(t.ShellContext),
 		"bw/interp/env":      exportEnviron(t.Environ...),
+		"bw/interp/envx":     exportEnvx(),
 		"bw/interp/aws/elb":  elb(),
 		"bw/interp/aws/elb2": elb2(),
 	})
