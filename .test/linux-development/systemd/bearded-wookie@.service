@@ -21,6 +21,9 @@ Environment=BEARDED_WOOKIE_LOGS_GRPC=1
 Environment=BEARDED_WOOKIE_LOGS_RAFT=1
 SyslogIdentifier=%p-%i
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
+ExecStartPre=mkdir -p ${CACHE_DIRECTORY}/tls/authorities
+ExecStartPre=echo curl --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
+ExecStartPre=curl --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
 ExecStart=%h/go/bin/bw agent --agent-name="%i" --agent-config="%C/%p/%i/agent.config" ${BEARDED_WOOKIE_CLI_OPTIONS}
 
 [Install]

@@ -218,17 +218,9 @@ func (t *agentCmd) bind() (err error) {
 		return errors.Wrap(err, "failed to initialize peering service")
 	}
 
-	// this unsafe dialer is used for the retrieving the response to an ACME challenge.
-	// this is safe to do because:
-	// 1. we'll only dial peers in our cluster. which have a pre shared key
-	//    that validated them. (otherwise they couldn't be a member)
-	// 2. the server we contact also ensures the client is a member of the cluster by validating the request signature.
-	// 3. any individual agent only initiates challenges with servers that do have a valid TLS certificate.
-	unsafedialer := dialers.NewDefaults(dialer.Defaults(dialers.WithMuxer(tlsx.NewDialer(tlscreds, tlsx.OptionInsecureSkipVerify), l.Addr()))...)
-
 	alpn := certificatecache.NewALPN(
 		tlscreds,
-		acme.NewALPNCertCache(acme.NewResolver(t.config.Peer(), dctx.Cluster, acmesvc, unsafedialer)),
+		acme.NewALPNCertCache(acme.NewResolver(t.config.Peer(), dctx.Cluster, acmesvc, dialer)),
 	)
 
 	for idx, b := range bound {
