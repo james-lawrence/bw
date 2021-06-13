@@ -212,64 +212,29 @@ func (t Signer) RequireTransportSecurity() bool {
 	return false
 }
 
-// NewAuth authorization
-func NewAuth(s storage) Auth {
-	return newAuth(s)
+func NewAuthChecker(s storage, check func(*Permission) error) AuthChecker {
+	return AuthChecker{storage: s, check: check}
 }
 
-func newAuth(s storage) Auth {
-	return Auth{
-		storage: s,
-		roots:   map[string]*Grant{},
-	}
-}
-
-// Auth returns authorization.
-type Auth struct {
+type AuthChecker struct {
 	storage storage
-	roots   map[string]*Grant
+	check   func(*Permission) error
 }
 
-func (t Auth) lookup(fingerprint string) (g *Grant, ok bool) {
-	var (
-		err error
-	)
-
-	if g, ok = t.roots[fingerprint]; ok {
-		return g, ok
-	}
-
-	if g, err = t.storage.Lookup(fingerprint); err == nil {
-		return g, true
-	}
-
-	return g, false
+func (t AuthChecker) Authorization(encoded []byte) (err error) {
+	return t.check(decode(t.storage, string(encoded)))
 }
 
-// Authorize the given request context.
-func (t Auth) Authorize(ctx context.Context) *Permission {
+func decode(s storage, encodedt string) *Permission {
 	var (
 		err     error
-		ok      bool
-		md      metadata.MD
+		encoded []byte
 		a       *Authorization
 		g       *Grant
-		encoded []byte
-		vals    []string
 		pkey    ssh.PublicKey
 	)
 
-	if md, ok = metadata.FromIncomingContext(ctx); !ok {
-		log.Println("token metadata")
-		return none()
-	}
-
-	if vals = md.Get(mdkey); len(vals) != 1 {
-		log.Println("recieved invalid token", len(vals))
-		return none()
-	}
-
-	if a, err = DecodeAuthorization(vals[0]); err != nil {
+	if a, err = DecodeAuthorization(encodedt); err != nil {
 		log.Println(errors.Wrap(err, "failed to decode authorization"))
 		return none()
 	}
@@ -284,8 +249,8 @@ func (t Auth) Authorize(ctx context.Context) *Permission {
 		return none()
 	}
 
-	if g, ok = t.lookup(a.Token.Fingerprint); !ok {
-		log.Println("no authorization found", a.Token.Fingerprint)
+	if g, err = s.Lookup(a.Token.Fingerprint); err != nil {
+		log.Println(errors.Wrapf(err, "unknown authorization: %s", a.Token.Fingerprint))
 		return none()
 	}
 
@@ -305,6 +270,43 @@ func (t Auth) Authorize(ctx context.Context) *Permission {
 	}
 
 	return g.Permission
+}
+
+// NewAuth authorization
+func NewAuth(s storage) Auth {
+	return newAuth(s)
+}
+
+func newAuth(s storage) Auth {
+	return Auth{
+		storage: s,
+	}
+}
+
+// Auth returns authorization.
+type Auth struct {
+	storage storage
+}
+
+// Authorize the given request context.
+func (t Auth) Authorize(ctx context.Context) *Permission {
+	var (
+		ok   bool
+		md   metadata.MD
+		vals []string
+	)
+
+	if md, ok = metadata.FromIncomingContext(ctx); !ok {
+		log.Println("token metadata")
+		return none()
+	}
+
+	if vals = md.Get(mdkey); len(vals) != 1 {
+		log.Println("recieved invalid token", len(vals))
+		return none()
+	}
+
+	return decode(t.storage, vals[0])
 }
 
 // GenerateToken generates a request token for the given fingerprint.

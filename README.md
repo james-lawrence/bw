@@ -22,6 +22,7 @@ bw me init
 bw deploy local linux-dev
 
 systemctl --user restart bearded-wookie-pebble.service
+rm -rf ~/.cache/bearded-wookie/agent*/tls
 systemctl --user restart bearded-wookie@agent{1,2,3,4,5,6,7,8,9,10}.service
 # systemctl --user restart bearded-wookie@agent3.service
 # systemctl --user restart bearded-wookie@agent5.service

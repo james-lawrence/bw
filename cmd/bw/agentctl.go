@@ -139,13 +139,18 @@ func (t *actlCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 func (t actlCmd) connect(local *cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
 	var (
 		config agent.ConfigClient
+		ss     notary.Signer
 	)
 
 	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
 		return d, c, err
 	}
 
-	if d, c, err = daemons.Connect(config); err != nil {
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return d, c, err
+	}
+
+	if d, c, err = daemons.Connect(config, ss); err != nil {
 		return d, c, err
 	}
 

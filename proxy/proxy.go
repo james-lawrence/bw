@@ -73,6 +73,7 @@ func WireformatDecode(src io.Reader) (buf []byte, err error) {
 	}
 
 	length := binary.LittleEndian.Uint64(buf)
+
 	buf = make([]byte, length)
 
 	if _, err = io.ReadFull(src, buf); err != nil {

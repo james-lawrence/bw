@@ -169,7 +169,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	)
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -294,11 +294,11 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	local := commandutils.NewClientPeer()
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
@@ -490,11 +490,11 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	)
 
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err

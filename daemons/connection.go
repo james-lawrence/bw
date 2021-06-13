@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/notary"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
@@ -45,7 +46,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.Direct, c clustering.C, err error) {
+func Connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.C, err error) {
 	var (
 		creds credentials.TransportCredentials
 	)
@@ -54,13 +55,14 @@ func Connect(config agent.ConfigClient, options ...grpc.DialOption) (d dialers.D
 		return d, c, err
 	}
 
-	return connect(config, creds, options...)
+	return connect(config, ss, creds, options...)
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
 func ConnectClientUntilSuccess(
 	ctx context.Context,
 	config agent.ConfigClient,
+	ss notary.Signer,
 	options ...grpc.DialOption,
 ) (d dialers.Direct, c clustering.LocalRendezvous, err error) {
 	var (
@@ -72,7 +74,7 @@ func ConnectClientUntilSuccess(
 	}
 
 	for i := 0; ; i++ {
-		if d, c, err = connect(config, creds, options...); err == nil {
+		if d, c, err = connect(config, ss, creds, options...); err == nil {
 			return d, c, err
 		}
 
@@ -107,7 +109,7 @@ func DefaultDialer(address string, d dialer, options ...grpc.DialOption) (_d dia
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
+func connect(config agent.ConfigClient, ss notary.Signer, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
 	var (
 		dd        dialers.Defaults
 		nodes     []*memberlist.Node
@@ -123,7 +125,11 @@ func connect(config agent.ConfigClient, creds credentials.TransportCredentials, 
 		tlsx.NewDialer(tlsconfig),
 		// discovery.ProxyDialer{
 		// 	Proxy:  config.Address,
-		// 	Dialer: tlsx.NewDialer(tlsconfig),
+		// 	Signer: ss,
+		// 	Dialer: muxer.NewDialer(
+		// 		bw.ProtocolProxy,
+		// 		tlsx.NewDialer(tlsconfig),
+		// 	),
 		// },
 		options...,
 	); err != nil {

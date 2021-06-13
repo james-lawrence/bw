@@ -6,15 +6,17 @@ import (
 	"log"
 	"net"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/proxy"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
 
-func Proxy(l net.Listener, d dialer) error {
+type auth interface {
+	Authorization([]byte) error
+}
+
+func Proxy(l net.Listener, d dialer, a auth) error {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -22,7 +24,7 @@ func Proxy(l net.Listener, d dialer) error {
 			return err
 		}
 
-		if err = (upgrader{}).Inbound(context.Background(), conn, d); err != nil {
+		if err = (upgrader{}).Inbound(context.Background(), a, conn, d); err != nil {
 			conn.Close()
 			log.Println("failed to accept proxy connection", err)
 			continue
@@ -60,12 +62,10 @@ func (t upgrader) readmsg(r io.Reader, m proto.Message) (err error) {
 	return proto.Unmarshal(encoded, m)
 }
 
-func (t upgrader) Inbound(ctx context.Context, c1 net.Conn, d dialer) (err error) {
+func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (err error) {
 	var (
-		c2    net.Conn
-		proto string
-		host  string
-		req   ProxyRequest
+		c2  net.Conn
+		req ProxyRequest
 	)
 
 	if err = t.readmsg(c1, &req); err != nil {
@@ -75,23 +75,26 @@ func (t upgrader) Inbound(ctx context.Context, c1 net.Conn, d dialer) (err error
 		}))
 	}
 
-	log.Println("request received", spew.Sdump(req))
-	if proto, host, err = muxer.ParseURI(req.Connect); err != nil {
-		log.Println("inbound proxy connection: unable parse url", err)
+	if err = a.Authorization(req.Token); err != nil {
 		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
 			Version: 1,
 			Code:    ProxyResponse_ClientError,
 		}))
 	}
 
-	// TODO validate req.Token
-
-	if c2, err = muxer.NewDialer(proto, d).DialContext(ctx, c1.LocalAddr().Network(), host); err != nil {
-		log.Println("inbound proxy connection: unable to dial proxy", err)
+	if c2, err = d.DialContext(ctx, c1.LocalAddr().Network(), req.Connect); err != nil {
 		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
 			Version: 1,
 			Code:    ProxyResponse_ClientError,
 		}))
+	}
+
+	err = t.writemsg(c1, &ProxyResponse{
+		Version: 1,
+		Code:    ProxyResponse_None,
+	})
+	if err != nil {
+		return err
 	}
 
 	go proxy.Proxy(ctx, c1, c2, nil)
@@ -128,13 +131,25 @@ type dialer interface {
 	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
 }
 
+type signer interface {
+	Token() (encoded string, err error)
+}
+
 type ProxyDialer struct {
 	Proxy  string
+	Signer signer
 	Dialer dialer
 }
 
 func (t ProxyDialer) DialContext(ctx context.Context, network, address string) (conn net.Conn, err error) {
-	log.Println("PROXY DIAL", network, t.Proxy, "->", address)
+	type handshaker interface {
+		Handshake() error
+	}
+
+	var (
+		token string
+	)
+
 	if conn, err = t.Dialer.DialContext(ctx, network, t.Proxy); err != nil {
 		return nil, err
 	}
@@ -145,7 +160,17 @@ func (t ProxyDialer) DialContext(ctx context.Context, network, address string) (
 		}
 	}()
 
-	if err = (upgrader{}).Outbound(conn, address, []byte("Hello world")); err != nil {
+	if c, ok := conn.(handshaker); ok {
+		if err = c.Handshake(); err != nil {
+			return nil, err
+		}
+	}
+
+	if token, err = t.Signer.Token(); err != nil {
+		return nil, err
+	}
+
+	if err = (upgrader{}).Outbound(conn, address, []byte(token)); err != nil {
 		return nil, errors.Wrap(err, "handshake failed")
 	}
 

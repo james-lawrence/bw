@@ -51,19 +51,24 @@ func (t Dialer) Dial(network string, address string) (conn net.Conn, err error) 
 }
 
 func (t Dialer) DialContext(ctx context.Context, network string, address string) (conn net.Conn, err error) {
-	log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
-	defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
+	type handshaker interface {
+		Handshake() error
+	}
+	// log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
+	// defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
 
 	if conn, err = t.d.DialContext(ctx, network, address); err != nil {
 		return conn, errors.Wrapf(err, "muxer.DialContext failed: %s %s://%s", t.protocol, network, address)
 	}
 
-	if tlsconn, ok := conn.(*tls.Conn); ok {
-		if err := tlsconn.Handshake(); err != nil {
+	if c, ok := conn.(handshaker); ok {
+		if err := c.Handshake(); err != nil {
 			conn.Close()
-			return nil, errors.Wrap(err, "tls handshake failed")
+			return nil, errors.Wrap(err, "handshake failed")
 		}
+	}
 
+	if tlsconn, ok := conn.(*tls.Conn); ok {
 		s := tlsconn.ConnectionState()
 		if s.NegotiatedProtocol != "bw.mux" {
 			return conn, nil

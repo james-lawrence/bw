@@ -86,7 +86,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -151,7 +151,7 @@ func (t *agentInfo) _watch() (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -209,11 +209,11 @@ func (t *agentInfo) _nodes() (err error) {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
-	if d, c, err = daemons.Connect(config, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults(grpc.WithPerRPCCredentials(ss))...)
+	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
 		return err
