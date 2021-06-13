@@ -1,3 +1,83 @@
+commit 60d4255f985d056a10e60d8b15b2c60ae7c592f4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 09:29:17 2021 -0400
+
+    debug logging
+
+commit bbd84ae7b5f10ca5c998159f8c438815051e90e4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 09:18:29 2021 -0400
+
+    remove unsafe dialer for certificate generation.
+    
+    use key stretching to generate a deterministic private key from the
+    primary token this allows bootstrapping securely.
+
+commit f71e8d1d4c3c14a05abbff47dd3a456a3c22d8f9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 08:54:53 2021 -0400
+
+    generate deterministic bootstrap keys
+
+commit 2fb34459975cbd74db666d3c12a319a242a57d99
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 08:54:07 2021 -0400
+
+    cleanup dead code
+
+commit 5932778286fcb6f95fc9433231924b4a366faf4d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 08:53:37 2021 -0400
+
+    fix filesystem bootstrap failures
+
+commit e6b7429cb66a881ffe6d7803a7bc2ca4e4c662f6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 08:28:22 2021 -0400
+
+    minor changes to how watch is implemented.
+    
+    1. add a 1 second timeout to dispatch for any given watcher.
+    2. hard stop the watcher service instead of graceful, suspicion is that
+    the server isn't being shutdown because it is streaming, but the client
+    isn't receiving messages because we've exited the loop.
+
+commit 684546d795ade08562975b007a325e1844292e4e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 10 11:41:42 2021 -0400
+
+    expose useful environment variable parsing functions to interpreter
+
+commit 7f2c0ce0b562e1f5d33acb0274db7d1c5e63c007
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 3 19:11:59 2021 -0400
+
+    cleanup
+
+commit 1560f5b73f606a80f2b96050d0f234efd4988cb1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 3 19:04:13 2021 -0400
+
+    client cleanup
+
+commit 0aba9a5cbbc8ec14022e9523c9f2e72917bc1195
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 29 12:45:43 2021 -0400
+
+    more cli cleanups
+
+commit 4e1c4f0051fb3d1e9875b3d15e6c87d225da631f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat May 29 12:07:11 2021 -0400
+
+    terminal ux improvements
+
+commit 58920941a8b73493842a9cfa37f5111145ac8393
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri May 28 13:39:21 2021 -0400
+
+    release 0.1.1622223501-7277ae96
+
 commit 7277ae962eb9e161fa9fb42830849205bcebd5e0
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri May 28 13:38:21 2021 -0400
