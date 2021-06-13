@@ -203,7 +203,7 @@ func (t Filesystem) upload() (err error) {
 		return err
 	}
 
-	if conn, err = t.d.DialContext(context.Background()); err != nil {
+	if conn, err = t.d.DialContext(context.Background(), grpc.WithBlock()); err != nil {
 		return err
 	}
 	defer conn.Close()
