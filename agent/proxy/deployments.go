@@ -145,7 +145,7 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 	defer cc.Close()
 
 	if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
-		log.Println("Watch quorum client failed", err)
+		log.Println("watch quorum client failed", err)
 		return err
 	}
 

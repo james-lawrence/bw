@@ -67,7 +67,7 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionIdle: 10 * time.Minute,
+			MaxConnectionIdle: 1 * time.Minute,
 			Time:              10 * time.Second,
 			Timeout:           30 * time.Second,
 		}),
@@ -95,9 +95,9 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 // Dispatch messages to the observers.
 func (t Memory) Dispatch(ctx context.Context, messages ...*agent.Message) error {
 	t.m.RLock()
-	cpy := make([]Conn, 0, len(t.observers))
-	for _, obs := range t.observers {
-		cpy = append(cpy, obs)
+	cpy := make(map[string]Conn, len(t.observers))
+	for id, obs := range t.observers {
+		cpy[id] = obs
 	}
 	t.m.RUnlock()
 
@@ -110,13 +110,19 @@ func (t Memory) Dispatch(ctx context.Context, messages ...*agent.Message) error 
 		defer log.Println("observer dispatch completed", len(cpy))
 	}
 
-	for _, conn := range cpy {
-		if err := conn.Dispatch(ctx, messages...); err != nil {
-			log.Println(errors.Wrap(err, "failed to deliver messages"))
+	for id, conn := range cpy {
+		if err := t.dispatch(ctx, conn, messages...); err != nil {
+			log.Println(errors.Wrapf(err, "failed to deliver messages: %s", id))
 		}
 	}
 
 	return nil
+}
+
+func (t Memory) dispatch(ctx context.Context, conn Conn, messages ...*agent.Message) error {
+	ctx, done := context.WithTimeout(ctx, time.Second)
+	defer done()
+	return conn.Dispatch(ctx, messages...)
 }
 
 func (t Memory) connect(id string) (err error) {

@@ -238,7 +238,7 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 			return err
 		}
 
-		if checksum, err = dst.Upload(bytes.NewBuffer(chunk.Data)); err != nil {
+		if _, err = dst.Upload(bytes.NewBuffer(chunk.Data)); err != nil {
 			log.Println("error uploading chunk", err)
 			return err
 		}
@@ -262,7 +262,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	}
 
 	defer l.Close()
-	defer s.GracefulStop()
+	defer s.Stop()
 
 	for {
 		select {
