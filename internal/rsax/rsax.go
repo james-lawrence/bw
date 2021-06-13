@@ -40,6 +40,23 @@ func CachedAuto(path string) (pkey []byte, err error) {
 	return pkey, nil
 }
 
+// CachedAutoDeterministic loads/generates an RSA key at the provided filepath.
+func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) {
+	if systemx.FileExists(path) {
+		return ioutil.ReadFile(path)
+	}
+
+	if pkey, err = AutoDeterministic(seed); err != nil {
+		return nil, err
+	}
+
+	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+		return nil, err
+	}
+
+	return pkey, nil
+}
+
 // CachedGenerate loads/generates an SSH key at the provided filepath.
 func CachedGenerate(path string, bits int) (pkey []byte, err error) {
 	if systemx.FileExists(path) {
@@ -65,7 +82,6 @@ func AutoDeterministic(key []byte) (pkey []byte, err error) {
 // Deterministic rsa private key based on the seed. uses a SHA512 hash as
 // a csprng.
 func Deterministic(seed []byte, bits int) (pkey []byte, err error) {
-	// TODO key stretch.
 	return generate(NewSHA512CSPRNG(seed), bits, deterministicGenerateKey)
 }
 

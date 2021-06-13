@@ -67,7 +67,7 @@ func NewRefreshAgent(dir string, a challenger) *ACME {
 
 // AutomaticTLSAgent generate a self signed certificate if necessary, this allows the agents
 // to communicate with temporary credentials while acme is bootstrapping.
-func AutomaticTLSAgent(domain, dir string) (err error) {
+func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 	_, err = RefreshExpired(filepath.Join(dir, DefaultTLSCertServer), time.Now(), selfsigned{
 		domain:         domain,
 		credentialsDir: dir,

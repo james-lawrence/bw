@@ -20,6 +20,7 @@ func minimumExpiration() time.Duration {
 // generates a self signed certificate iff the current certificate is missing or
 // expired. this is used to allow the cluster to bootstrap correctly.
 type selfsigned struct {
+	seed           []byte
 	domain         string
 	credentialsDir string
 }
@@ -36,7 +37,7 @@ func (t selfsigned) Refresh() (err error) {
 		CommonName: t.domain,
 	})
 
-	if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.credentialsDir, DefaultTLSKeyServer))); err != nil {
+	if priv, err = rsax.MaybeDecode(rsax.CachedAutoDeterministic(t.seed, filepath.Join(t.credentialsDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
 

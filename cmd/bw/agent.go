@@ -78,6 +78,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 func (t *agentCmd) bind() (err error) {
 	var (
+		ring      *memberlist.Keyring
 		l         net.Listener
 		bound     []net.Listener
 		localpriv []byte
@@ -100,8 +101,12 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
+	if ring, err = t.config.Keyring(); err != nil {
+		return err
+	}
+
 	// temporary certificate to allow bootstrapping a real certificate.
-	if err = certificatecache.AutomaticTLSAgent(t.config.ServerName, t.config.CredentialsDir); err != nil {
+	if err = certificatecache.AutomaticTLSAgent(ring.GetPrimaryKey(), t.config.ServerName, t.config.CredentialsDir); err != nil {
 		return err
 	}
 
