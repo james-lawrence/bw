@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
@@ -217,6 +218,9 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		return t.ds.current, err
 	}
 
+	if dctx.Log == nil || dctx.Archive.Peer == nil {
+		log.Println("debug", dctx.Log == nil, spew.Sdump(dctx.Archive))
+	}
 	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 	go func() {
 		defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
