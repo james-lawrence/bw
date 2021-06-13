@@ -203,7 +203,6 @@ func (t *agentCmd) bind() (err error) {
 	// 	}
 
 	// 	mux := http.NewServeMux()
-	// 	// mux.HandleFunc("/proxy", proxy.HTTP{Dialer: tlsx.NewDialer(tlscreds)}.Proxy)
 	// 	mux.HandleFunc("/", http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 	// 		log.Println("HTTP REQUEST DETECTED")
 	// 		http.NotFound(resp, req)
