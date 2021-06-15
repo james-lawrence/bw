@@ -3,7 +3,7 @@ package torrent
 import (
 	"expvar"
 
-	pp "github.com/james-lawrence/torrent/peer_protocol"
+	pp "github.com/james-lawrence/torrent/btprotocol"
 )
 
 const (
@@ -18,8 +18,11 @@ const (
 	pexExtendedID
 )
 
+// PeerExtensionBits define what extensions are available.
+type PeerExtensionBits = pp.ExtensionBits
+
 func defaultPeerExtensionBytes() PeerExtensionBits {
-	return pp.NewPeerExtensionBytes(pp.ExtensionBitDHT, pp.ExtensionBitExtended, pp.ExtensionBitFast)
+	return pp.NewExtensionBits(pp.ExtensionBitDHT, pp.ExtensionBitExtended, pp.ExtensionBitFast)
 }
 
 // I could move a lot of these counters to their own file, but I suspect they

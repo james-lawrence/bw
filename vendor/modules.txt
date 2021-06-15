@@ -29,8 +29,6 @@ github.com/alecthomas/template
 github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 github.com/alecthomas/units
-# github.com/anacrolix/go-libutp v1.0.2
-github.com/anacrolix/go-libutp
 # github.com/anacrolix/log v0.6.0
 github.com/anacrolix/log
 # github.com/anacrolix/missinggo v1.2.1
@@ -38,7 +36,6 @@ github.com/anacrolix/missinggo
 github.com/anacrolix/missinggo/bitmap
 github.com/anacrolix/missinggo/expect
 github.com/anacrolix/missinggo/httptoo
-github.com/anacrolix/missinggo/inproc
 github.com/anacrolix/missinggo/iter
 github.com/anacrolix/missinggo/mime
 github.com/anacrolix/missinggo/orderedmap
@@ -54,9 +51,6 @@ github.com/anacrolix/missinggo/perf
 github.com/anacrolix/missinggo/v2
 github.com/anacrolix/missinggo/v2/conntrack
 github.com/anacrolix/missinggo/v2/iter
-# github.com/anacrolix/mmsg v1.0.0
-github.com/anacrolix/mmsg
-github.com/anacrolix/mmsg/socket
 # github.com/anacrolix/multiless v0.0.0-20191223025854-070b7994e841
 github.com/anacrolix/multiless
 # github.com/anacrolix/stm v0.2.0
@@ -68,8 +62,6 @@ github.com/anacrolix/stm/stmutil
 github.com/anacrolix/sync
 # github.com/anacrolix/upnp v0.1.1
 github.com/anacrolix/upnp
-# github.com/anacrolix/utp v0.0.0-20180219060659-9e0e1d1d0572
-github.com/anacrolix/utp
 # github.com/armon/go-metrics v0.3.5
 ## explicit
 github.com/armon/go-metrics
@@ -159,14 +151,10 @@ github.com/davecgh/go-spew/spew
 ## explicit
 # github.com/duosecurity/duo_api_golang v0.0.0-20190308151101-6c680f768e74
 ## explicit
-# github.com/dustin/go-humanize v1.0.0
-github.com/dustin/go-humanize
 # github.com/edsrzf/mmap-go v1.0.0
 github.com/edsrzf/mmap-go
 # github.com/elazarl/go-bindata-assetfs v0.0.0-20160803192304-e1a2a7ec64b0
 ## explicit
-# github.com/etcd-io/bbolt v1.3.3
-github.com/etcd-io/bbolt
 # github.com/fatih/color v1.10.0
 ## explicit
 github.com/fatih/color
@@ -209,7 +197,7 @@ github.com/go-acme/lego/v4/registration
 ## explicit
 # github.com/godbus/dbus/v5 v5.0.3
 github.com/godbus/dbus/v5
-# github.com/gofrs/uuid v3.2.0+incompatible
+# github.com/gofrs/uuid v3.3.0+incompatible
 ## explicit
 github.com/gofrs/uuid
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
@@ -315,21 +303,23 @@ github.com/huandu/xstrings
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 ## explicit
 github.com/icrowley/fake
-# github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
+# github.com/james-lawrence/torrent v0.0.0-20210107191714-05926121e37c
 ## explicit
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode
+github.com/james-lawrence/torrent/btprotocol
+github.com/james-lawrence/torrent/connections
 github.com/james-lawrence/torrent/dht/v2
 github.com/james-lawrence/torrent/dht/v2/krpc
+github.com/james-lawrence/torrent/internal/errorsx
+github.com/james-lawrence/torrent/internal/netx
 github.com/james-lawrence/torrent/internal/x/bitmapx
 github.com/james-lawrence/torrent/internal/x/bytesx
 github.com/james-lawrence/torrent/internal/x/stringsx
 github.com/james-lawrence/torrent/iplist
-github.com/james-lawrence/torrent/logonce
 github.com/james-lawrence/torrent/metainfo
 github.com/james-lawrence/torrent/mmap_span
 github.com/james-lawrence/torrent/mse
-github.com/james-lawrence/torrent/peer_protocol
 github.com/james-lawrence/torrent/storage
 github.com/james-lawrence/torrent/tracker
 # github.com/jefferai/jsonx v1.0.1
@@ -373,8 +363,6 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.13
 ## explicit
 github.com/mattn/go-runewidth
-# github.com/mattn/go-sqlite3 v2.0.3+incompatible
-github.com/mattn/go-sqlite3
 # github.com/miekg/dns v1.1.40
 ## explicit
 github.com/miekg/dns
@@ -492,6 +480,8 @@ github.com/willf/bitset
 github.com/willf/bloom
 # github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
 github.com/xo/terminfo
+# go.etcd.io/bbolt v1.3.3
+go.etcd.io/bbolt
 # go.opencensus.io v0.22.5
 go.opencensus.io
 go.opencensus.io/internal
@@ -539,11 +529,9 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
-golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-golang.org/x/net/proxy
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20201208152858-08078c50e5b5
 ## explicit

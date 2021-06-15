@@ -31,10 +31,9 @@ require (
 	github.com/gizak/termui v2.1.1+incompatible
 	github.com/go-acme/lego/v4 v4.3.1
 	github.com/go-ldap/ldap v3.0.2+incompatible // indirect
-	github.com/go-sql-driver/mysql v1.4.1 // indirect
 	github.com/go-test/deep v1.0.2 // indirect
 	github.com/gocql/gocql v0.0.0-20190910075112-d63913db787c // indirect
-	github.com/gofrs/uuid v3.2.0+incompatible
+	github.com/gofrs/uuid v3.3.0+incompatible
 	github.com/golang/protobuf v1.5.1 // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/gorilla/mux v1.8.0
@@ -58,7 +57,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.0.0-20190318174639-195e0e9d07f1 // indirect
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
-	github.com/james-lawrence/torrent v0.0.0-20200215153835-b3de5eeb7b75
+	github.com/james-lawrence/torrent v0.0.0-20210107191714-05926121e37c
 	github.com/jefferai/jsonx v1.0.1 // indirect
 	github.com/joho/godotenv v1.2.0
 	github.com/keybase/go-crypto v0.0.0-20190828182435-a05457805304 // indirect

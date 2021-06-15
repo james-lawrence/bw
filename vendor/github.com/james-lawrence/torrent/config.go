@@ -7,12 +7,14 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/james-lawrence/torrent/connections"
+
 	"github.com/anacrolix/missinggo/v2/conntrack"
 	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/james-lawrence/torrent/dht/v2/krpc"
+	"github.com/james-lawrence/torrent/metainfo"
 	"golang.org/x/time/rate"
 
-	"github.com/james-lawrence/torrent/iplist"
 	"github.com/james-lawrence/torrent/mse"
 	"github.com/james-lawrence/torrent/storage"
 )
@@ -57,10 +59,7 @@ type ClientConfig struct {
 
 	// User-provided Client peer ID. If not present, one is generated automatically.
 	PeerID string
-	// For the bittorrent protocol.
-	DisableUTP bool
-	// For the bittorrent protocol.
-	DisableTCP bool `long:"disable-tcp"`
+
 	// Called to instantiate storage for each added torrent. Builtin backends
 	// are in the storage package. If not set, the "file" implementation is
 	// used.
@@ -77,9 +76,6 @@ type ClientConfig struct {
 	// 			 http://proxy.domain.com:3128
 	ProxyURL string
 
-	IPBlocklist      iplist.Ranger
-	DisableIPv6      bool `long:"disable-ipv6"`
-	DisableIPv4      bool
 	DisableIPv4Peers bool
 	Logger           logger // standard logging for errors, defaults to stderr
 	Warn             logger // warn logging
@@ -130,8 +126,11 @@ type ClientConfig struct {
 
 	ConnTracker *conntrack.Instance
 
+	connections.Handshaker
+
 	// OnQuery hook func
-	DHTOnQuery func(query *krpc.Msg, source net.Addr) (propagate bool)
+	DHTOnQuery      func(query *krpc.Msg, source net.Addr) (propagate bool)
+	DHTAnnouncePeer func(ih metainfo.Hash, ip net.IP, port int, portOk bool)
 }
 
 func (cfg *ClientConfig) errors() llog {
@@ -150,36 +149,33 @@ func (cfg *ClientConfig) debug() llog {
 	return llog{logger: cfg.Debug}
 }
 
-func (cfg *ClientConfig) listenOnNetwork(n network) bool {
-	if n.Ipv4 && cfg.DisableIPv4 {
-		return false
-	}
+// ClientConfigOption options for the client configuration
+type ClientConfigOption func(*ClientConfig)
 
-	if n.Ipv6 && cfg.DisableIPv6 {
-		return false
+// ClientConfigInfoLogger set the info logger
+func ClientConfigInfoLogger(l *log.Logger) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.Logger = l
 	}
+}
 
-	if n.TCP && cfg.DisableTCP {
-		return false
+// ClientConfigSeed enable/disable seeding
+func ClientConfigSeed(b bool) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.Seed = b
 	}
-
-	if n.UDP && cfg.DisableUTP && cfg.NoDHT {
-		return false
-	}
-
-	return true
 }
 
 // NewDefaultClientConfig default client configuration.
-func NewDefaultClientConfig() *ClientConfig {
+func NewDefaultClientConfig(options ...ClientConfigOption) *ClientConfig {
 	cc := &ClientConfig{
 		HTTPUserAgent:                  DefaultHTTPUserAgent,
 		ExtendedHandshakeClientVersion: "go.torrent dev 20181121",
 		Bep20:                          "-GT0002-",
-		UpnpID:                         "anacrolix/torrent",
+		UpnpID:                         "james-lawrence/torrent",
 		NominalDialTimeout:             20 * time.Second,
 		MinDialTimeout:                 3 * time.Second,
-		EstablishedConnsPerTorrent:     50,
+		EstablishedConnsPerTorrent:     200,
 		HalfOpenConnsPerTorrent:        25,
 		TorrentPeersHighWater:          500,
 		TorrentPeersLowWater:           50,
@@ -193,11 +189,19 @@ func NewDefaultClientConfig() *ClientConfig {
 			Preferred:        true,
 			RequirePreferred: false,
 		},
-		CryptoSelector: mse.DefaultCryptoSelector,
-		CryptoProvides: mse.AllSupportedCrypto,
-		Logger:         log.New(log.Writer(), "[torrent] ", log.Flags()),
-		Warn:           discard{},
-		Debug:          discard{},
+		CryptoSelector:  mse.DefaultCryptoSelector,
+		CryptoProvides:  mse.AllSupportedCrypto,
+		Logger:          log.New(log.Writer(), "[torrent] ", log.Flags()),
+		Warn:            discard{},
+		Debug:           discard{},
+		DHTAnnouncePeer: func(ih metainfo.Hash, ip net.IP, port int, portOk bool) {},
+		Handshaker: connections.NewHandshaker(
+			connections.AutoFirewall(),
+		),
+	}
+
+	for _, opt := range options {
+		opt(cc)
 	}
 
 	return cc

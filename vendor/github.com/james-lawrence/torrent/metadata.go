@@ -1,8 +1,9 @@
 package torrent
 
 import (
+	"time"
+
 	"github.com/anacrolix/missinggo"
-	"github.com/anacrolix/missinggo/slices"
 	"github.com/james-lawrence/torrent/bencode"
 	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/james-lawrence/torrent/storage"
@@ -22,7 +23,7 @@ func OptionTrackers(trackers [][]string) Option {
 // OptionNodes supplimental nodes to add to the dht of the client.
 func OptionNodes(nodes ...string) Option {
 	return func(t *Metadata) {
-		t.Nodes = nodes
+		t.DHTNodes = nodes
 	}
 }
 
@@ -54,23 +55,32 @@ func OptionStorage(s storage.ClientImpl) Option {
 	}
 }
 
+// OptionWebseeds set the webseed hosts for the torrent.
+func OptionWebseeds(seeds []string) Option {
+	return func(t *Metadata) {
+		t.Webseeds = seeds
+	}
+}
+
 // Metadata specifies the metadata of a torrent for adding to a client.
 // There are helpers for magnet URIs and torrent metainfo files.
 type Metadata struct {
 	// The tiered tracker URIs.
 	Trackers  [][]string
-	Nodes     []string
 	InfoHash  metainfo.Hash
 	InfoBytes []byte
 	// The name to use if the Name field from the Info isn't available.
 	DisplayName string
+	Webseeds    []string
+	DHTNodes    []string
 	// The chunk size to use for outbound requests. Defaults to 16KiB if not
 	// set.
 	ChunkSize int
 	Storage   storage.ClientImpl
 }
 
-func (t Metadata) merge(options ...Option) Metadata {
+// Merge Metadata options into the current metadata.
+func (t Metadata) Merge(options ...Option) Metadata {
 	for _, opt := range options {
 		opt(&t)
 	}
@@ -82,7 +92,7 @@ func (t Metadata) merge(options ...Option) Metadata {
 func New(info metainfo.Hash, options ...Option) (t Metadata, err error) {
 	t = Metadata{
 		InfoHash: info,
-	}.merge(options...)
+	}.Merge(options...)
 
 	return t, nil
 }
@@ -119,7 +129,7 @@ func NewFromFile(path string, options ...Option) (t Metadata, err error) {
 		return t, errors.WithStack(err)
 	}
 
-	return t.merge(options...), nil
+	return t.Merge(options...), nil
 }
 
 // NewFromMagnet creates a torrent from a magnet uri.
@@ -136,6 +146,7 @@ func NewFromMagnet(uri string) (t Metadata, err error) {
 		m.InfoHash,
 		OptionDisplayName(m.DisplayName),
 		OptionTrackers([][]string{m.Trackers}),
+		OptionWebseeds(m.Params["ws"]),
 	)
 }
 
@@ -158,26 +169,19 @@ func NewFromInfo(i metainfo.Info, options ...Option) (t Metadata, err error) {
 // NewFromMetaInfo create a torrent from metainfo
 func NewFromMetaInfo(mi *metainfo.MetaInfo, options ...Option) (t Metadata, err error) {
 	var (
-		nodes []string
-		info  metainfo.Info
+		info metainfo.Info
 	)
 
 	if info, err = mi.UnmarshalInfo(); err != nil {
 		return t, err
 	}
 
-	trackers := mi.AnnounceList
-	if trackers == nil {
-		trackers = [][]string{{mi.Announce}}
-	}
-
-	slices.MakeInto(&nodes, mi.Nodes)
-
 	options = append([]Option{
 		OptionInfo(mi.InfoBytes),
 		OptionDisplayName(info.Name),
-		OptionTrackers(trackers),
-		OptionNodes(nodes...),
+		OptionTrackers(mi.UpvertedAnnounceList()),
+		OptionWebseeds(mi.UrlList),
+		OptionNodes(mi.NodeList()...),
 	},
 		options...,
 	)
@@ -186,4 +190,13 @@ func NewFromMetaInfo(mi *metainfo.MetaInfo, options ...Option) (t Metadata, err 
 		mi.HashInfoBytes(),
 		options...,
 	)
+}
+
+// Metainfo generate metainfo from the metadata.
+func (t Metadata) Metainfo() metainfo.MetaInfo {
+	return metainfo.MetaInfo{
+		AnnounceList: make([][]string, 0),
+		InfoBytes:    t.InfoBytes,
+		CreationDate: time.Now().Unix(),
+	}
 }

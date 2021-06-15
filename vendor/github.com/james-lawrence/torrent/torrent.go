@@ -2,9 +2,11 @@ package torrent
 
 import (
 	"container/heap"
+	"context"
 	"crypto/sha1"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net"
 	"net/url"
@@ -26,8 +28,8 @@ import (
 	"github.com/james-lawrence/torrent/dht/v2"
 
 	"github.com/james-lawrence/torrent/bencode"
+	pp "github.com/james-lawrence/torrent/btprotocol"
 	"github.com/james-lawrence/torrent/metainfo"
-	pp "github.com/james-lawrence/torrent/peer_protocol"
 	"github.com/james-lawrence/torrent/storage"
 	"github.com/james-lawrence/torrent/tracker"
 )
@@ -114,6 +116,7 @@ func newTorrent(cl *Client, src Metadata) *torrent {
 		duplicateRequestTimeout: time.Second,
 
 		chunks: newChunks(src.ChunkSize, &metainfo.Info{}),
+		pex:    newPex(),
 	}
 	t.metadataChanged = sync.Cond{L: tlocker{torrent: t}}
 	t.event = &sync.Cond{L: tlocker{torrent: t}}
@@ -215,6 +218,9 @@ type torrent struct {
 	// digest management determines if pieces are valid.
 	digests digests
 
+	// peer exchange for the current torrent
+	pex *pex
+
 	// A pool of piece priorities []int for assignment to new connections.
 	// These "inclinations" are used to give connections preference for
 	// different pieces.
@@ -227,11 +233,11 @@ type torrent struct {
 // Metadata provides enough information to lookup the torrent again.
 func (t *torrent) Metadata() Metadata {
 	return Metadata{
-		DisplayName: t.displayName,
+		DisplayName: t.name(),
 		InfoHash:    t.infoHash,
 		ChunkSize:   int(t.chunkSize),
 		InfoBytes:   t.metadataBytes,
-		// Trackers: TODO
+		Trackers:    t.metainfo.AnnounceList,
 	}
 }
 
@@ -250,16 +256,16 @@ func (t *torrent) locker() sync.Locker {
 
 func (t *torrent) _lock(depth int) {
 	// updated := atomic.AddUint64(&t.lcount, 1)
-	// l2.Output(depth, fmt.Sprintf("t(%p) lock initiated - %d", t, updated))
+	// log.Output(depth, fmt.Sprintf("t(%p) lock initiated - %d", t, updated))
 	t._mu.Lock()
-	// l2.Output(depth, fmt.Sprintf("t(%p) lock completed - %d", t, updated))
+	// log.Output(depth, fmt.Sprintf("t(%p) lock completed - %d", t, updated))
 }
 
 func (t *torrent) _unlock(depth int) {
 	// updated := atomic.AddUint64(&t.ucount, 1)
-	// l2.Output(depth, fmt.Sprintf("t(%p) unlock initiated - %d", t, updated))
+	// log.Output(depth, fmt.Sprintf("t(%p) unlock initiated - %d", t, updated))
 	t._mu.Unlock()
-	// l2.Output(depth, fmt.Sprintf("t(%p) unlock completed - %d", t, updated))
+	// log.Output(depth, fmt.Sprintf("t(%p) unlock completed - %d", t, updated))
 }
 
 func (t *torrent) _rlock(depth int) {
@@ -321,7 +327,7 @@ func (t *torrent) KnownSwarm() (ks []Peer) {
 	// Add active peers to the list
 	for conn := range t.conns {
 		ks = append(ks, Peer{
-			Id:     conn.PeerID,
+			ID:     conn.PeerID,
 			IP:     conn.remoteAddr.IP,
 			Port:   int(conn.remoteAddr.Port),
 			Source: conn.Discovery,
@@ -404,11 +410,7 @@ func (t *torrent) addPeer(p Peer) {
 	peersAddedBySource.Add(string(p.Source), 1)
 
 	if t.closed.IsSet() {
-		return
-	}
-
-	if t.cln.badPeerIPPort(p.IP, p.Port) {
-		metrics.Add("peers not added because of bad addr", 1)
+		log.Println("torrent.addPeer closed")
 		return
 	}
 
@@ -628,9 +630,6 @@ func (t *torrent) setMetadataSize(bytes int) (err error) {
 func (t *torrent) name() string {
 	t.nameMu.RLock()
 	defer t.nameMu.RUnlock()
-	if t.haveInfo() {
-		return t.info.Name
-	}
 	return t.displayName
 }
 
@@ -1217,7 +1216,7 @@ func (t *torrent) openNewConns() {
 			return
 		}
 
-		t.initiateConn(p)
+		t.initiateConn(context.Background(), p)
 	}
 }
 
@@ -1375,6 +1374,7 @@ func (t *torrent) dropConnection(c *connection) {
 
 // Returns true if connection is removed from torrent.Conns.
 func (t *torrent) deleteConnection(c *connection) (ret bool) {
+	t.pex.dropped(c)
 	c.Close()
 	t.lock()
 	// l2.Printf("closed c(%p) - pending(%d)\n", c, len(c.requests))
@@ -1402,7 +1402,7 @@ func (t *torrent) assertNoPendingRequests() {
 }
 
 func (t *torrent) wantPeers() bool {
-	if t.closed.IsSet() || t.wantPeersEvent.IsSet() {
+	if t.closed.IsSet() {
 		return false
 	}
 
@@ -1458,14 +1458,6 @@ func (t *torrent) startScrapingTracker(_url string) {
 		t.startScrapingTracker(u.String())
 		u.Scheme = "udp6"
 		t.startScrapingTracker(u.String())
-		return
-	}
-
-	if u.Scheme == "udp4" && (t.config.DisableIPv4Peers || t.config.DisableIPv4) {
-		return
-	}
-
-	if u.Scheme == "udp6" && t.config.DisableIPv6 {
 		return
 	}
 
@@ -1566,6 +1558,7 @@ func (t *torrent) dhtAnnouncer(s *dht.Server) {
 		t.lock()
 		t.numDHTAnnounces++
 		t.unlock()
+
 		if err := t.announceToDht(true, s); err != nil {
 			t.config.errors().Println(t, errors.Wrap(err, "error announcing to DHT"))
 			time.Sleep(time.Second)
@@ -1692,6 +1685,7 @@ func (t *torrent) addConnection(c *connection) (err error) {
 	}
 
 	t.conns[c] = struct{}{}
+	t.pex.added(c)
 
 	t.unlock()
 	defer t.lock()
@@ -1829,12 +1823,8 @@ func (t *torrent) VerifyData() {
 
 // Start the process of connecting to the given peer for the given torrent if
 // appropriate.
-func (t *torrent) initiateConn(peer Peer) {
-	if peer.Id == t.cln.peerID {
-		return
-	}
-
-	if t.cln.badPeerIPPort(peer.IP, peer.Port) && !peer.Trusted {
+func (t *torrent) initiateConn(ctx context.Context, peer Peer) {
+	if peer.ID == t.cln.peerID {
 		return
 	}
 
@@ -1844,7 +1834,8 @@ func (t *torrent) initiateConn(peer Peer) {
 	}
 
 	t.halfOpen[addr.String()] = peer
-	go t.cln.outgoingConnection(t, addr, peer.Source, peer.Trusted)
+
+	go t.cln.outgoingConnection(ctx, t, addr, peer.Source, peer.Trusted)
 }
 
 func (t *torrent) noLongerHalfOpen(addr string) {
@@ -2073,12 +2064,6 @@ func (t *torrent) String() string {
 	}
 
 	return t.infoHash.HexString()
-}
-
-func (t *torrent) AddTrackers(announceList [][]string) {
-	t.lock()
-	defer t.unlock()
-	t.addTrackers(announceList)
 }
 
 func (t *torrent) Piece(i pieceIndex) *Piece {
