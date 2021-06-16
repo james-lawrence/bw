@@ -16,13 +16,6 @@ import (
 // TorrentOption ...
 type TorrentOption func(*TorrentConfig)
 
-// TorrentOptionBindAddr set address to bind to.
-func TorrentOptionBindAddr(a net.Addr) TorrentOption {
-	return func(c *TorrentConfig) {
-		c.b = torrent.NewAutobindSpecified(a.String())
-	}
-}
-
 // TorrentOptionBind set listener binder for the torrent.
 func TorrentOptionBind(b torrent.Binder) TorrentOption {
 	return func(c *TorrentConfig) {
@@ -66,7 +59,6 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
 
-	c.ClientConfig.DisableIPv6 = true
 	c.ClientConfig.Logger = log.New(ioutil.Discard, "", 0)
 	c.ClientConfig.Seed = true
 	c.ClientConfig.NoDefaultPortForwarding = true
