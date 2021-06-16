@@ -14,12 +14,12 @@ import (
 )
 
 // Torrent daemon - used for transferring deploy archives between agents
-func Torrent(ctx Context) (tc storage.TorrentConfig, err error) {
+func Torrent(dctx Context) (tc storage.TorrentConfig, err error) {
 	var (
 		bind net.Listener
 	)
 
-	if bind, err = ctx.Muxer.Bind(bw.ProtocolTorrent, ctx.Listener.Addr()); err != nil {
+	if bind, err = dctx.Muxer.Bind(bw.ProtocolTorrent, dctx.Listener.Addr()); err != nil {
 		return tc, errors.Wrap(err, "failed to bind bw.torrent service")
 	}
 
@@ -29,7 +29,7 @@ func Torrent(ctx Context) (tc storage.TorrentConfig, err error) {
 				Listener: bind,
 				Dialer: muxer.NewDialer(
 					bw.ProtocolTorrent,
-					tlsx.NewDialer(tlsx.MustClone(ctx.RPCCredentials, tlsx.OptionInsecureSkipVerify, tlsx.OptionNoClientCert)),
+					tlsx.NewDialer(tlsx.MustClone(dctx.RPCCredentials, tlsx.OptionNoClientCert)),
 				),
 			},
 		),
@@ -37,9 +37,9 @@ func Torrent(ctx Context) (tc storage.TorrentConfig, err error) {
 
 	opts := []storage.TorrentOption{
 		storage.TorrentOptionBind(b),
-		storage.TorrentOptionDHTPeers(ctx.Cluster),
-		storage.TorrentOptionDataDir(filepath.Join(ctx.Config.Root, bw.DirTorrents)),
+		storage.TorrentOptionDHTPeers(dctx.Cluster),
+		storage.TorrentOptionDataDir(filepath.Join(dctx.Config.Root, bw.DirTorrents)),
 	}
 
-	return storage.NewTorrent(ctx.Cluster, opts...)
+	return storage.NewTorrent(dctx.Cluster, opts...)
 }

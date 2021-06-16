@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"log"
 
+	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/james-lawrence/bw/internal/md5x"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/pkg/errors"
-	"github.com/willf/bloom"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

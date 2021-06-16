@@ -122,6 +122,11 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/benbjohnson/immutable v0.2.0
 github.com/benbjohnson/immutable
+# github.com/bits-and-blooms/bitset v1.2.0
+github.com/bits-and-blooms/bitset
+# github.com/bits-and-blooms/bloom/v3 v3.0.1
+## explicit
+github.com/bits-and-blooms/bloom/v3
 # github.com/boltdb/bolt v1.3.1
 github.com/boltdb/bolt
 # github.com/bradfitz/iter v0.0.0-20191230175014-e8f45d346db8
@@ -189,7 +194,7 @@ github.com/go-acme/lego/v4/providers/dns/route53
 github.com/go-acme/lego/v4/registration
 # github.com/go-ldap/ldap v3.0.2+incompatible
 ## explicit
-# github.com/go-sql-driver/mysql v1.4.1
+# github.com/go-sql-driver/mysql v1.6.0
 ## explicit
 # github.com/go-test/deep v1.0.2
 ## explicit
@@ -303,7 +308,7 @@ github.com/huandu/xstrings
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 ## explicit
 github.com/icrowley/fake
-# github.com/james-lawrence/torrent v0.0.0-20210107191714-05926121e37c
+# github.com/james-lawrence/torrent v0.0.0-20210615160203-cbf2ccdbe4bb
 ## explicit
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode
@@ -476,11 +481,10 @@ github.com/traefik/yaegi/stdlib
 # github.com/willf/bitset v1.1.10
 github.com/willf/bitset
 # github.com/willf/bloom v2.0.3+incompatible
-## explicit
 github.com/willf/bloom
 # github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
 github.com/xo/terminfo
-# go.etcd.io/bbolt v1.3.3
+# go.etcd.io/bbolt v1.3.6
 go.etcd.io/bbolt
 # go.opencensus.io v0.22.5
 go.opencensus.io

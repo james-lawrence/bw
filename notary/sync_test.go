@@ -3,10 +3,10 @@ package notary_test
 import (
 	"context"
 
+	"github.com/bits-and-blooms/bloom/v3"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"github.com/willf/bloom"
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw/internal/x/testingx"

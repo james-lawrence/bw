@@ -3,8 +3,8 @@ package notary
 import (
 	"context"
 
+	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/willf/bloom"
 )
 
 // NewComposite storage.

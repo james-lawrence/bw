@@ -6,9 +6,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
-	"github.com/willf/bloom"
 	"google.golang.org/grpc"
 
 	"github.com/james-lawrence/bw"
