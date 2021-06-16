@@ -72,8 +72,7 @@ func OptionInitializers(inits ...Initializer) Option {
 // New new quorum instance based on the options.
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
 	deployment := newDeployment(d, c)
-	obs := NewObserver(make(chan *agent.Message, 100))
-	go obs.Observe(context.Background(), cd)
+	obs := NewObserver(cd)
 	wal := NewWAL(
 		NewTranscoder(
 			deployment,

@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 
+	"github.com/james-lawrence/bw/agent/observers"
 	. "github.com/james-lawrence/bw/agent/quorum"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -251,7 +252,14 @@ var _ = Describe("StateMachine", func() {
 		}
 
 		obs := make(chan *agent.Message, len(messages))
-		ob := NewObserver(obs)
+		obsmem, err := observers.NewMemory()
+		Expect(err).To(Succeed())
+		l, s, err := obsmem.Connect(obs)
+		Expect(err).To(Succeed())
+		defer l.Close()
+		defer s.Stop()
+
+		ob := NewObserver(obsmem)
 		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
 		Expect(err).ToNot(HaveOccurred())
 		leader := awaitLeader(protocols...)
@@ -265,7 +273,6 @@ var _ = Describe("StateMachine", func() {
 
 		for _, m := range messages {
 			expected := <-obs
-			// Eventually(obs).Should(Receive(&expected))
 			Expect(proto.Equal(expected, m)).To(BeTrue())
 		}
 	})

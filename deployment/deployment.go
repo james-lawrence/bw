@@ -233,8 +233,8 @@ type DeployState struct {
 	state          *uint32
 }
 
-func newDeployState() DeployState {
-	return DeployState{
+func newDeployState() *DeployState {
+	return &DeployState{
 		state:          new(uint32),
 		currentContext: newCancelDeployContext(),
 	}

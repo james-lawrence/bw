@@ -3,43 +3,40 @@ package quorum
 import (
 	"context"
 	"io"
+	"log"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/pkg/errors"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 // NewObserver creates an observer of the state machine.
-func NewObserver(c chan *agent.Message) Observer {
+func NewObserver(d agent.ConnectableDispatcher) Observer {
 	return Observer{
-		c: c,
+		d: d,
 	}
 }
 
 // Observer used to observe messages processed by the state machine.
 type Observer struct {
-	c chan *agent.Message
+	d agent.ConnectableDispatcher
 }
 
-// Observe consume the results of the observer by forwarding them to the ConnectableDispatcher
-func (t Observer) Observe(ctx context.Context, d agent.ConnectableDispatcher) {
-	for m := range t.c {
-		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		logx.MaybeLog(errors.Wrap(d.Dispatch(ctx, m), "failed to deliver dispatched event to watchers"))
-		cancel()
-	}
-}
-
-// Decode consume the messages passing them to the buffer.
+// Decode consume the messages passing them to observers
 func (t Observer) Decode(ctx TranscoderContext, m *agent.Message) error {
-	if m.Hidden || ctx.State == StateRecovering {
+	if m.Hidden {
 		return nil
 	}
 
-	t.c <- m
+	if ctx.State == StateRecovering {
+		log.Println("unable to observe WAL messages, recovering")
+		return nil
+	}
 
-	return nil
+	dctx, done := context.WithTimeout(context.Background(), 3*time.Second)
+	err := t.d.Dispatch(dctx, m)
+	done()
+	return errorsx.Compact(err)
 }
 
 // Encode satisfy the transcoder interface. does nothing.

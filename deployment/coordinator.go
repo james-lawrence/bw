@@ -113,7 +113,7 @@ type Coordinator struct {
 	dlreg             storage.DownloadFactory
 	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
 	completedObserver chan *DeployResult
-	ds                DeployState
+	ds                *DeployState
 	m                 *sync.Mutex
 }
 
