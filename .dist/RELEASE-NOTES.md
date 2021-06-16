@@ -1,3 +1,55 @@
+commit 067e2c7f27422a2533c21115c6f5f3ebf840dff6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 17:51:02 2021 -0400
+
+    fix build problems
+
+commit a6bbec8335e55f7a03b12670e97d90725b938d7e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 15 12:03:42 2021 -0400
+
+    fix bolt import
+
+commit d5272c12e06d12fa4aa89d54e6e9d83113c3b3b8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 19:52:04 2021 -0400
+
+    logging cleanups
+
+commit 63ba10ddb902ceade4ec13ccff61d0dd20136d5c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 19:32:34 2021 -0400
+
+    implement node proxy protocol for the socket.
+    
+    this lets use any node in the cluster as a jump host to any other node.
+    
+    requires deployment permissions.
+
+commit 105b091c87585e6ed8a1730ee754a4c59375f398
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jun 8 11:49:44 2021 -0400
+
+    wip
+
+commit 5a8102171c44ba5b082d6235534c5360742d3d32
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 6 16:42:23 2021 -0400
+
+    implement a tunneling protocol
+    
+    allows tunneling through a specific node through the
+    discovery address.
+    
+    this allows for accessing nodes when their IPs are inside a private network
+    accessible only through a proxy server.
+
+commit 0250a4bd90fa7518a590c6b0142bd573a2f9823c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 13 09:35:23 2021 -0400
+
+    release 0.1.1623590957-60d4255f
+
 commit 60d4255f985d056a10e60d8b15b2c60ae7c592f4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Jun 13 09:29:17 2021 -0400
