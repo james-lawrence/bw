@@ -2,8 +2,9 @@ package torrentx
 
 import (
 	"context"
-	"log"
 	"net"
+
+	"github.com/pkg/errors"
 )
 
 type dialer interface {
@@ -18,6 +19,9 @@ type Socket struct {
 
 // Dial the given address
 func (t Socket) Dial(ctx context.Context, addr string) (net.Conn, error) {
-	log.Println("torrentx.Socket Dial", addr)
+	if addr == t.Listener.Addr().String() {
+		return nil, errors.Errorf("attempted to dial self: %s -> %s", addr, t.Listener.Addr().String())
+	}
+
 	return t.Dialer.DialContext(ctx, t.Listener.Addr().Network(), addr)
 }

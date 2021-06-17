@@ -1,14 +1,16 @@
 package storage
 
 import (
-	"context"
 	"crypto/sha256"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
 
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/torrent"
+	"github.com/james-lawrence/torrent/connections"
 	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/pkg/errors"
 )
@@ -43,11 +45,6 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	}
 }
 
-type socket interface {
-	net.Listener
-	Dial(ctx context.Context, addr string) (net.Conn, error)
-}
-
 // NewTorrent ...
 func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err error) {
 	var (
@@ -60,8 +57,19 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 	}
 
 	c.ClientConfig.Logger = log.New(ioutil.Discard, "", 0)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		c.ClientConfig.Logger = log.New(os.Stderr, "TORRENT ", 0)
+		c.ClientConfig.Debug = log.New(os.Stderr, "TORRENT DEBUG ", 0)
+	}
+
 	c.ClientConfig.Seed = true
 	c.ClientConfig.NoDefaultPortForwarding = true
+	c.ClientConfig.Handshaker = connections.NewHandshaker(
+		connections.NewFirewall(
+			connections.BanInvalidPort{},
+			// connections.NewBloomBanIP(10*time.Minute),
+		),
+	)
 
 	for _, opt := range options {
 		opt(&c)

@@ -15,7 +15,6 @@ type torrentD struct {
 	c      cluster
 	client *torrent.Client
 	dir    string
-	util   TorrentUtil
 }
 
 func peerToNode(p *agent.Peer) torrent.Peer {

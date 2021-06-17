@@ -48,7 +48,5 @@ func (t torrentU) Info() (hash.Hash, string, error) {
 		return nil, "", err
 	}
 
-	// mi.DisplayName = uid
-
 	return t.sha, util.magnet(mi).String(), nil
 }
