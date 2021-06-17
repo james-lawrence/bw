@@ -13,7 +13,6 @@ github.com/0xAX/notificator
 # github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5
 ## explicit
 # github.com/RoaringBitmap/roaring v0.7.4
-## explicit
 github.com/RoaringBitmap/roaring
 github.com/RoaringBitmap/roaring/internal
 # github.com/SAP/go-hdb v0.14.1
@@ -313,7 +312,7 @@ github.com/huandu/xstrings
 # github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
 ## explicit
 github.com/icrowley/fake
-# github.com/james-lawrence/torrent v0.0.0-20210616230958-f8c1066d7b6b
+# github.com/james-lawrence/torrent v0.0.0-20210617015357-a8a9bfc8c9ee
 ## explicit
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode

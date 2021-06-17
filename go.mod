@@ -7,7 +7,6 @@ require (
 	github.com/Microsoft/go-winio v0.4.3 // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
-	github.com/RoaringBitmap/roaring v0.7.4 // indirect
 	github.com/SAP/go-hdb v0.14.1 // indirect
 	github.com/SermoDigital/jose v0.9.1 // indirect
 	github.com/akutz/memconn v0.1.0
@@ -66,7 +65,7 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/huandu/xstrings v1.3.2 // indirect
 	github.com/icrowley/fake v0.0.0-20170723151011-e64cc2cf9204
-	github.com/james-lawrence/torrent v0.0.0-20210616230958-f8c1066d7b6b
+	github.com/james-lawrence/torrent v0.0.0-20210617015357-a8a9bfc8c9ee
 	github.com/jefferai/jsonx v1.0.1 // indirect
 	github.com/joho/godotenv v1.2.0
 	github.com/keybase/go-crypto v0.0.0-20190828182435-a05457805304 // indirect
@@ -114,14 +113,6 @@ require (
 	gopkg.in/ory-am/dockertest.v3 v3.3.5 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 	gotest.tools v2.2.0+incompatible // indirect
-)
-
-exclude (
-	github.com/willf/bitset v1.1.10
-	github.com/willf/bitset v1.1.11
-	github.com/willf/bitset v1.1.8
-	github.com/willf/bitset v1.1.9
-	github.com/willf/bitset v1.2.0
 )
 
 go 1.14
