@@ -1,3 +1,33 @@
+commit 9f3f170f92c7185c9690b45b6526a88318ea7451
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 22:04:51 2021 -0400
+
+    dependency fixes
+
+commit 2f305f8291a34e0def741a0efd9286fe83bcc45a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 21:59:50 2021 -0400
+
+    dependecy update
+
+commit 3fe0ac826f264ab984f62344b409d3da690c17e6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 21:35:57 2021 -0400
+
+    disable banning ips
+
+commit b5133be52e613f8b8494312ee68568a67c21553c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 19:04:10 2021 -0400
+
+    update dependencies
+
+commit 993106bd9af1c8cf4a783cc4f3bc4e357c5e45c3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 18:00:40 2021 -0400
+
+    release 0.1.1623880262-067e2c7f
+
 commit 067e2c7f27422a2533c21115c6f5f3ebf840dff6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jun 16 17:51:02 2021 -0400
