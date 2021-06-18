@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"regexp"
 	"runtime"
 	"sort"
 	"strconv"
@@ -57,18 +58,13 @@ type intLogger struct {
 	name       string
 	timeFormat string
 
-	// This is an interface so that it's shared by any derived loggers, since
+	// This is a pointer so that it's shared by any derived loggers, since
 	// those derived loggers share the bufio.Writer as well.
-	mutex  Locker
+	mutex  *sync.Mutex
 	writer *writer
 	level  *int32
 
 	implied []interface{}
-
-	exclude func(level Level, msg string, args ...interface{}) bool
-
-	// create subloggers with their own level setting
-	independentLevels bool
 }
 
 // New returns a configured logger.
@@ -103,22 +99,18 @@ func newLogger(opts *LoggerOptions) *intLogger {
 	}
 
 	l := &intLogger{
-		json:              opts.JSONFormat,
-		caller:            opts.IncludeLocation,
-		name:              opts.Name,
-		timeFormat:        TimeFormat,
-		mutex:             mutex,
-		writer:            newWriter(output, opts.Color),
-		level:             new(int32),
-		exclude:           opts.Exclude,
-		independentLevels: opts.IndependentLevels,
+		json:       opts.JSONFormat,
+		caller:     opts.IncludeLocation,
+		name:       opts.Name,
+		timeFormat: TimeFormat,
+		mutex:      mutex,
+		writer:     newWriter(output, opts.Color),
+		level:      new(int32),
 	}
 
 	l.setColorization(opts)
 
-	if opts.DisableTime {
-		l.timeFormat = ""
-	} else if opts.TimeFormat != "" {
+	if opts.TimeFormat != "" {
 		l.timeFormat = opts.TimeFormat
 	}
 
@@ -138,10 +130,6 @@ func (l *intLogger) log(name string, level Level, msg string, args ...interface{
 
 	l.mutex.Lock()
 	defer l.mutex.Unlock()
-
-	if l.exclude != nil && l.exclude(level, msg, args...) {
-		return
-	}
 
 	if l.json {
 		l.logJSON(t, name, level, msg, args...)
@@ -181,12 +169,12 @@ func trimCallerPath(path string) string {
 	return path[idx+1:]
 }
 
+var logImplFile = regexp.MustCompile(`github.com/hashicorp/go-hclog/.+logger.go$`)
+
 // Non-JSON logging format function
 func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, args ...interface{}) {
-	if len(l.timeFormat) > 0 {
-		l.writer.WriteString(t.Format(l.timeFormat))
-		l.writer.WriteByte(' ')
-	}
+	l.writer.WriteString(t.Format(l.timeFormat))
+	l.writer.WriteByte(' ')
 
 	s, ok := _levelToBracket[level]
 	if ok {
@@ -200,7 +188,8 @@ func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, 
 		// Check if the caller is inside our package and inside
 		// a logger implementation file
 		if _, file, _, ok := runtime.Caller(3); ok {
-			if strings.HasSuffix(file, "intlogger.go") || strings.HasSuffix(file, "interceptlogger.go") {
+			match := logImplFile.MatchString(file)
+			if match {
 				offset = 4
 			}
 		}
@@ -271,12 +260,6 @@ func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, 
 				val = strconv.FormatUint(uint64(st), 10)
 			case uint8:
 				val = strconv.FormatUint(uint64(st), 10)
-			case Hex:
-				val = "0x" + strconv.FormatUint(uint64(st), 16)
-			case Octal:
-				val = "0" + strconv.FormatUint(uint64(st), 8)
-			case Binary:
-				val = "0b" + strconv.FormatUint(uint64(st), 2)
 			case CapturedStacktrace:
 				stacktrace = st
 				continue FOR
@@ -315,7 +298,6 @@ func (l *intLogger) logPlain(t time.Time, name string, level Level, msg string, 
 
 	if stacktrace != "" {
 		l.writer.WriteString(string(stacktrace))
-		l.writer.WriteString("\n")
 	}
 }
 
@@ -518,7 +500,7 @@ func (l *intLogger) With(args ...interface{}) Logger {
 		args = args[:len(args)-1]
 	}
 
-	sl := l.copy()
+	sl := *l
 
 	result := make(map[string]interface{}, len(l.implied)+len(args))
 	keys := make([]string, 0, len(l.implied)+len(args))
@@ -552,13 +534,13 @@ func (l *intLogger) With(args ...interface{}) Logger {
 		sl.implied = append(sl.implied, MissingKey, extra)
 	}
 
-	return sl
+	return &sl
 }
 
 // Create a new sub-Logger that a name decending from the current name.
 // This is used to create a subsystem specific Logger.
 func (l *intLogger) Named(name string) Logger {
-	sl := l.copy()
+	sl := *l
 
 	if sl.name != "" {
 		sl.name = sl.name + "." + name
@@ -566,18 +548,18 @@ func (l *intLogger) Named(name string) Logger {
 		sl.name = name
 	}
 
-	return sl
+	return &sl
 }
 
 // Create a new sub-Logger with an explicit name. This ignores the current
 // name. This is used to create a standalone logger that doesn't fall
 // within the normal hierarchy.
 func (l *intLogger) ResetNamed(name string) Logger {
-	sl := l.copy()
+	sl := *l
 
 	sl.name = name
 
-	return sl
+	return &sl
 }
 
 func (l *intLogger) ResetOutput(opts *LoggerOptions) error {
@@ -663,17 +645,4 @@ func (i *intLogger) ImpliedArgs() []interface{} {
 // Name returns the loggers name
 func (i *intLogger) Name() string {
 	return i.name
-}
-
-// copy returns a shallow copy of the intLogger, replacing the level pointer
-// when necessary
-func (l *intLogger) copy() *intLogger {
-	sl := *l
-
-	if l.independentLevels {
-		sl.level = new(int32)
-		*sl.level = *l.level
-	}
-
-	return &sl
 }

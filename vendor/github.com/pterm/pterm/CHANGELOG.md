@@ -2,6 +2,140 @@
 ## [Unreleased]
 
 ### Chore
+- rename putils `TableData` generation files
+
+### Code Refactoring
+- **boxprinter:** prefix title positions with `Title`
+- **putils:** add `rowSeparator` to `TableFromSeparatedValues`
+
+### Documentation Changes
+- **boxprinter:** add title & title center position to `BoxPrinter`
+- **boxprinter:** add title & title position to `BoxPrinter`
+- **boxprinter:** add title & title positions to `BoxPrinter`
+- **boxprinter:** add title & title positions to `BoxPrinter`
+- **putils:** update putils docs
+
+### Features
+- **boxprinter:** replace line breaks in title with space
+- **boxprinter:** add title center position to `BoxPrinter`
+- **boxprinter:** add title & title position to `BoxPrinter`
+- **boxprinter:** add title & title position to `BoxPrinter`
+- **putils:** add `TableDataFromSeparatedValues`
+- **putils:** add `TableDataFromTSV`
+- **putils:** add `TableDataFromCSV`
+- **putils:** add function to convert TSV to `TableData`
+- **putils:** add function to convert CSV to `TableData`
+
+### Test
+- add test for putils `TableData` generation
+- **boxprinter:** add tests for title center position to `BoxPrinter`
+- **boxprinter:** add tests for title & title position
+
+
+<a name="v0.12.23"></a>
+## [v0.12.23] - 2021-06-07
+### Bug Fixes
+- **headerprinter:** don't panic if content width > terminal width
+
+### Chore
+- **github:** update issue template
+
+### Code Refactoring
+- **prefix:** `pterm.Error` default no line number shown
+
+### Documentation Changes
+- **readme:** add cli-template link
+
+### Features
+- Add util functions to create tables from slices of structs ([#217](https://github.com/pterm/pterm/issues/217))
+
+### Test
+- **prefix:** `pterm.Error` default no line number shown
+
+
+<a name="v0.12.22"></a>
+## [v0.12.22] - 2021-05-30
+### Documentation Changes
+
+### Features
+- make spinner update faster
+
+### Performance Improvements
+- improve performance of `SpinnerPrinter`
+
+
+<a name="v0.12.21"></a>
+## [v0.12.21] - 2021-05-30
+### Chore
+- **github:** remove issue template config.yml
+
+### Code Refactoring
+- **putils:** change internal variable name
+
+### Documentation Changes
+- **putils:** add contributing notice to readme
+
+### Features
+- print lines above active spinners
+- **putils:** add `DownloadFileWithProgressbar`
+
+### Style
+- **lint:** fix linting error
+
+### Test
+- clear active spinners after tests complete
+
+
+<a name="v0.12.20"></a>
+## [v0.12.20] - 2021-05-29
+### Ci
+- create putils README from template
+- automatically write putils docs to pterm.sh
+
+### Documentation Changes
+- **pterm-sh:** move putils section up in sidebar
+- **pterm-sh:** add putils docs to sidebar
+- **putils:** add pkg.go.dev docs link
+- **putils:** add better docs to putils
+- **readme:** update pkg.go.dev link to point to the docs section directly
+- **readme:** disable link styling in badges
+
+### Features
+- force color output by default
+
+
+<a name="v0.12.19"></a>
+## [v0.12.19] - 2021-05-29
+### Bug Fixes
+- **header:** fix multiline header
+
+### Chore
+- **deps:** bump github.com/mattn/go-runewidth from 0.0.12 to 0.0.13
+- **github:** add slack channel link to issues
+
+### Ci
+- automatically copy readme to pterm.sh
+
+### Code Refactoring
+- make `PrintOnError` return `*TextPrinter`
+- **area:** better height calculation
+
+### Documentation Changes
+- **pterm-sh:** update readme
+- **readme:** add `AreaPrinter` to feature list
+- **readme:** remove unstable notice
+
+### Features
+- add `PrintOnError` for all printers and interface
+- **putils:** add `putils` package ([#206](https://github.com/pterm/pterm/issues/206))
+
+### Test
+- add tests for all printers for `PrintOnError`
+
+
+<a name="v0.12.18"></a>
+## [v0.12.18] - 2021-05-22
+### Chore
 - go mod tidy
 - **deps:** add atomicgo/cursor as dependency
 
@@ -1246,7 +1380,13 @@ removed `Header` and put it's content directly into `HeaderPrinter`
 - initial commit
 
 
-[Unreleased]: https://github.com/pterm/pterm/compare/v0.12.17...HEAD
+[Unreleased]: https://github.com/pterm/pterm/compare/v0.12.23...HEAD
+[v0.12.23]: https://github.com/pterm/pterm/compare/v0.12.22...v0.12.23
+[v0.12.22]: https://github.com/pterm/pterm/compare/v0.12.21...v0.12.22
+[v0.12.21]: https://github.com/pterm/pterm/compare/v0.12.20...v0.12.21
+[v0.12.20]: https://github.com/pterm/pterm/compare/v0.12.19...v0.12.20
+[v0.12.19]: https://github.com/pterm/pterm/compare/v0.12.18...v0.12.19
+[v0.12.18]: https://github.com/pterm/pterm/compare/v0.12.17...v0.12.18
 [v0.12.17]: https://github.com/pterm/pterm/compare/v0.12.16...v0.12.17
 [v0.12.16]: https://github.com/pterm/pterm/compare/v0.12.15...v0.12.16
 [v0.12.15]: https://github.com/pterm/pterm/compare/v0.12.14...v0.12.15

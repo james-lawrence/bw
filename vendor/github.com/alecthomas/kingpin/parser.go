@@ -281,7 +281,7 @@ func ExpandArgsFromFile(filename string) (out []string, err error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "#") || strings.TrimSpace(line) == "" {
+		if strings.HasPrefix(line, "#") {
 			continue
 		}
 		out = append(out, line)

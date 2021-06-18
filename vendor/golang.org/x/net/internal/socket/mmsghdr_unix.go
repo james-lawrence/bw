@@ -83,10 +83,8 @@ func (p *mmsghdrsPacker) pack(ms []Message, parseFn func([]byte, string) (net.Ad
 			saRest = saRest[sizeofSockaddrInet6:]
 		} else if marshalFn != nil {
 			n := marshalFn(ms[i].Addr, saRest)
-			if n > 0 {
-				sa = saRest[:n]
-				saRest = saRest[n:]
-			}
+			sa = saRest[:n]
+			saRest = saRest[n:]
 		}
 		hs[i].Hdr.pack(vs, ms[i].Buffers, ms[i].OOB, sa)
 	}

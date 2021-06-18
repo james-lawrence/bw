@@ -38,7 +38,12 @@ func (p CenterPrinter) Sprint(a ...interface{}) string {
 
 	if p.CenterEachLineSeparately {
 		for _, line := range lines {
-			ret += strings.Repeat(" ", (GetTerminalWidth()-runewidth.StringWidth(RemoveColorFromString(line)))/2) + line + "\n"
+			margin := (GetTerminalWidth() - runewidth.StringWidth(RemoveColorFromString(line))) / 2
+			if margin < 1 {
+				ret += line + "\n"
+			} else {
+				ret += strings.Repeat(" ", margin) + line + "\n"
+			}
 		}
 		return ret
 	}
@@ -53,6 +58,14 @@ func (p CenterPrinter) Sprint(a ...interface{}) string {
 	}
 
 	indent := GetTerminalWidth() - maxLineWidth
+
+	if indent/2 < 1 {
+		for _, line := range lines {
+			ret += line + "\n"
+		}
+
+		return ret
+	}
 
 	for _, line := range lines {
 		ret += strings.Repeat(" ", indent/2) + line + "\n"
@@ -109,6 +122,22 @@ func (p CenterPrinter) Printf(format string, a ...interface{}) *TextPrinter {
 // It returns the number of bytes written and any write error encountered.
 func (p CenterPrinter) Printfln(format string, a ...interface{}) *TextPrinter {
 	Print(p.Sprintfln(format, a...))
+	tp := TextPrinter(p)
+	return &tp
+}
+
+// PrintOnError prints every error which is not nil.
+// If every error is nil, nothing will be printed.
+// This can be used for simple error checking.
+func (p CenterPrinter) PrintOnError(a ...interface{}) *TextPrinter {
+	for _, arg := range a {
+		if err, ok := arg.(error); ok {
+			if err != nil {
+				p.Println(err)
+			}
+		}
+	}
+
 	tp := TextPrinter(p)
 	return &tp
 }

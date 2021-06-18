@@ -1,5 +1,7 @@
 package consts
 
+import "time"
+
 const (
 	//N.B. This needs to be excluded from replication despite the name; it's
 	//merely saying that this is cluster information for the replicated
@@ -20,6 +22,8 @@ const (
 )
 
 type ReplicationState uint32
+
+var ReplicationStaleReadTimeout = 2 * time.Second
 
 const (
 	_ ReplicationState = iota
