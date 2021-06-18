@@ -3,7 +3,6 @@ package storage
 import (
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
 
@@ -13,7 +12,6 @@ import (
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/torrent"
 	"github.com/james-lawrence/torrent/dht/v2"
-	"github.com/james-lawrence/torrent/dht/v2/krpc"
 	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/pkg/errors"
 )
@@ -76,6 +74,10 @@ func (t TorrentUtil) loadDir(dir string, c *torrent.Client) error {
 			piecesDB = ".torrent.bolt.db"
 		)
 
+		if err != nil {
+			return err
+		}
+
 		// nothing to do on the root directory.
 		if path == dir {
 			return nil
@@ -99,25 +101,25 @@ func (t TorrentUtil) loadDir(dir string, c *torrent.Client) error {
 	})
 }
 
-func (TorrentUtil) debugDHT() dht.ServerConfig {
-	return dht.ServerConfig{
-		OnQuery: func(query *krpc.Msg, source net.Addr) bool {
-			log.Println("query", source.String(), spew.Sdump(query))
-			return true
-		},
-		OnAnnouncePeer: func(infoHash metainfo.Hash, ip net.IP, port int, portOK bool) {
-			log.Printf("announce peer %s:%d %t %s\n", ip.String(), port, portOK, infoHash.String())
-		},
-	}
-}
+// func (TorrentUtil) debugDHT() dht.ServerConfig {
+// 	return dht.ServerConfig{
+// 		OnQuery: func(query *krpc.Msg, source net.Addr) bool {
+// 			log.Println("query", source.String(), spew.Sdump(query))
+// 			return true
+// 		},
+// 		OnAnnouncePeer: func(infoHash metainfo.Hash, ip net.IP, port int, portOK bool) {
+// 			log.Printf("announce peer %s:%d %t %s\n", ip.String(), port, portOK, infoHash.String())
+// 		},
+// 	}
+// }
 
-func (TorrentUtil) filePath(dir, name string) string {
-	return filepath.Join(dir, name)
-}
+// func (TorrentUtil) filePath(dir, name string) string {
+// 	return filepath.Join(dir, name)
+// }
 
-func (t TorrentUtil) createTorrent(dir, name string) (*os.File, error) {
-	return t.createFile(t.filePath(dir, name))
-}
+// func (t TorrentUtil) createTorrent(dir, name string) (*os.File, error) {
+// 	return t.createFile(t.filePath(dir, name))
+// }
 
 func (TorrentUtil) createFile(dir string) (*os.File, error) {
 	var (

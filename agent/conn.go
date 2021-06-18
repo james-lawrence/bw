@@ -154,11 +154,11 @@ func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archiv
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(ctx context.Context, dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
+func (t Conn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
-		Archive: &a,
-		Options: &dopts,
+		Archive: a,
+		Options: dopts,
 		Peers:   peers,
 	}
 

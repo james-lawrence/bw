@@ -28,7 +28,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 func RunLocalDirectives(config agent.ConfigClient) (err error) {
 	var (
 		sctx    shell.Context
-		dctx    deployment.DeployContext
+		dctx    *deployment.DeployContext
 		archive agent.Archive
 		environ []string
 		cdir    string
@@ -70,7 +70,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		deployment.DeployContextOptionDisableReset,
 	}
 
-	if dctx, err = deployment.NewDeployContext(cdir, local, dopts, archive, opts...); err != nil {
+	if dctx, err = deployment.NewDeployContext(cdir, local, &dopts, &archive, opts...); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

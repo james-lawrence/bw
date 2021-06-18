@@ -100,12 +100,12 @@ func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info 
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t DeployConn) RemoteDeploy(ctx context.Context, dopts DeployOptions, a Archive, peers ...*Peer) (err error) {
+func (t DeployConn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
 	l := rate.NewLimiter(rate.Every(time.Second), 1)
 	rpc := NewDeploymentsClient(t.conn)
 	req := DeployCommandRequest{
-		Archive: &a,
-		Options: &dopts,
+		Archive: a,
+		Options: dopts,
 		Peers:   peers,
 	}
 

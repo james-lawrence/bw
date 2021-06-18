@@ -117,7 +117,7 @@ type Coordinator struct {
 	m                 *sync.Mutex
 }
 
-func (t *Coordinator) background(dctx DeployContext) {
+func (t *Coordinator) background(dctx *DeployContext) {
 	defer close(dctx.completed)
 
 	done := <-dctx.completed
@@ -188,10 +188,10 @@ func (t *Coordinator) Reset() error {
 }
 
 // Deploy deploy a given archive.
-func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d agent.Deploy, err error) {
+func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) (d agent.Deploy, err error) {
 	var (
 		ok   bool
-		dctx DeployContext
+		dctx *DeployContext
 	)
 
 	// set the timestamp of the archive to as this marks the time the archive was actually deployed.
@@ -237,7 +237,7 @@ func (t *Coordinator) Deploy(opts agent.DeployOptions, archive agent.Archive) (d
 		return t.ds.current, dctx.Done(err)
 	}
 
-	d = agent.Deploy{Archive: &archive, Options: &opts, Stage: agent.Deploy_Deploying}
+	d = agent.Deploy{Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
@@ -283,7 +283,7 @@ func (t *Coordinator) Cancel() {
 	}
 }
 
-func (t *Coordinator) update(dctx DeployContext, d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
+func (t *Coordinator) update(dctx *DeployContext, d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -309,14 +309,14 @@ func (t *Coordinator) correctLatestDeploy(deploys ...agent.Deploy) error {
 		return nil
 	}
 
-	_, root, _ := deployDirs(t.deploysRoot, *d.Archive)
+	_, root, _ := deployDirs(t.deploysRoot, d.Archive)
 	d.Stage = agent.Deploy_Failed
 	d.Error = fmt.Sprintf("dead deploy detected")
 
 	return writeDeployMetadata(root, d)
 }
 
-func downloadArchive(dlreg storage.DownloadFactory, dctx DeployContext) (err error) {
+func downloadArchive(dlreg storage.DownloadFactory, dctx *DeployContext) (err error) {
 	var (
 		dst *os.File
 	)

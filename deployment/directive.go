@@ -52,7 +52,7 @@ type Directive struct {
 }
 
 // Deploy ...
-func (t Directive) Deploy(dctx DeployContext) {
+func (t Directive) Deploy(dctx *DeployContext) {
 	for _, opt := range t.options {
 		opt(&t)
 	}
@@ -60,7 +60,7 @@ func (t Directive) Deploy(dctx DeployContext) {
 	go t.deploy(dctx)
 }
 
-func (t Directive) deploy(dctx DeployContext) {
+func (t Directive) deploy(dctx *DeployContext) {
 	var (
 		err     error
 		dinterp directives.InterpLoader

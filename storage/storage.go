@@ -13,8 +13,6 @@ import (
 const (
 	s3Protocol      = "s3"
 	torrentProtocol = "magnet"
-
-	protocolSuffix = "://"
 )
 
 type cluster interface {
@@ -32,12 +30,4 @@ type errReader struct {
 
 func (t errReader) Read(_ []byte) (int, error) {
 	return 0, t.err
-}
-
-func maybeIO(rc io.ReadCloser, err error) io.ReadCloser {
-	if err != nil {
-		return newErrReader(err)
-	}
-
-	return rc
 }

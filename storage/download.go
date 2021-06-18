@@ -7,14 +7,12 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // DownloadFactory ...
@@ -24,7 +22,7 @@ type DownloadFactory interface {
 
 // Downloader ...
 type Downloader interface {
-	Download(context.Context, agent.Archive) io.ReadCloser
+	Download(context.Context, *agent.Archive) io.ReadCloser
 }
 
 func newDownload(rc io.ReadCloser) rcDownload {
@@ -35,7 +33,7 @@ type rcDownload struct {
 	io.ReadCloser
 }
 
-func (t rcDownload) Download(context.Context, agent.Archive) io.ReadCloser {
+func (t rcDownload) Download(context.Context, *agent.Archive) io.ReadCloser {
 	return t.ReadCloser
 }
 
@@ -43,10 +41,6 @@ func (t rcDownload) Download(context.Context, agent.Archive) io.ReadCloser {
 type DownloadProtocol interface {
 	Protocol() string
 	New() Downloader
-}
-
-type downloadConfig interface {
-	Downloader() (DownloadProtocol, error)
 }
 
 // Option for a download registry.
@@ -62,26 +56,6 @@ func OptionProtocols(protocols ...DownloadProtocol) Option {
 	return func(r *Registry) {
 		r.protocols = pp
 	}
-}
-
-func loadDownloadFromFile(path string, p downloadConfig) (_ DownloadProtocol, err error) {
-	var (
-		b []byte
-	)
-
-	if b, err = ioutil.ReadFile(path); err != nil && !os.IsNotExist(err) {
-		return nil, errors.WithStack(err)
-	}
-
-	return newDownloadProtocolFromConfig(b, p)
-}
-
-func newDownloadProtocolFromConfig(serialized []byte, v downloadConfig) (_ DownloadProtocol, err error) {
-	if err = errors.WithStack(yaml.Unmarshal(serialized, v)); err != nil {
-		return nil, err
-	}
-
-	return v.Downloader()
 }
 
 // New create a new downloader registry.

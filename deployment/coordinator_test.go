@@ -31,12 +31,12 @@ var _ = Describe("Coordinator", func() {
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
-		a := agent.Archive{
+		a := &agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		dopts := agent.DeployOptions{
+		dopts := &agent.DeployOptions{
 			Concurrency:       1,
 			IgnoreFailures:    true,
 			SilenceDeployLogs: true,
@@ -66,12 +66,12 @@ var _ = Describe("Coordinator", func() {
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
-		a := agent.Archive{
+		a := &agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		dopts := agent.DeployOptions{
+		dopts := &agent.DeployOptions{
 			Concurrency:       1,
 			IgnoreFailures:    false,
 			SilenceDeployLogs: true,
@@ -85,7 +85,7 @@ var _ = Describe("Coordinator", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(1))
 
-		a2 := agent.Archive{
+		a2 := &agent.Archive{
 			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -111,12 +111,12 @@ var _ = Describe("Coordinator", func() {
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
-		a := agent.Archive{
+		a := &agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		dopts := agent.DeployOptions{
+		dopts := &agent.DeployOptions{
 			Concurrency:       1,
 			IgnoreFailures:    false,
 			SilenceDeployLogs: true,
@@ -128,7 +128,7 @@ var _ = Describe("Coordinator", func() {
 
 		c.Cancel()
 
-		a2 := agent.Archive{
+		a2 := &agent.Archive{
 			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -152,12 +152,12 @@ var _ = Describe("Coordinator", func() {
 		deploys, err := c.Deployments()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
-		a := agent.Archive{
+		a := &agent.Archive{
 			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		dopts := agent.DeployOptions{
+		dopts := &agent.DeployOptions{
 			Concurrency:       1,
 			IgnoreFailures:    false,
 			SilenceDeployLogs: true,

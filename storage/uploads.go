@@ -4,16 +4,9 @@ import (
 	"crypto/sha256"
 	"hash"
 	"io"
-	"io/ioutil"
-
-	yaml "gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 )
-
-type uploadConfig interface {
-	Uploader() (UploadProtocol, error)
-}
 
 // UploadProtocol builds io.WriteCloser given the expected size of the upload.
 type UploadProtocol interface {
@@ -29,26 +22,6 @@ type Uploader interface {
 	// Info returns the result of the upload. this includes the overall checksum of the
 	// file, the string uri of its location or an error.
 	Info() (hash.Hash, string, error)
-}
-
-func uploadFromFile(path string, p uploadConfig) (_ UploadProtocol, err error) {
-	var (
-		b []byte
-	)
-
-	if b, err = ioutil.ReadFile(path); err != nil {
-		return nil, errors.WithStack(err)
-	}
-
-	if err = errors.WithStack(yaml.Unmarshal(b, p)); err != nil {
-		return nil, err
-	}
-
-	return p.Uploader()
-}
-
-func newProtocolFromConfig(serialized []byte, v UploadProtocol) (_ UploadProtocol, err error) {
-	return v, errors.WithStack(yaml.Unmarshal(serialized, v))
 }
 
 // NewNoopUpload utility helper for returning a uploader that does nothing but

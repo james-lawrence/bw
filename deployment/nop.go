@@ -11,6 +11,6 @@ type nop struct {
 	result error
 }
 
-func (t nop) Deploy(dctx DeployContext) {
+func (t nop) Deploy(dctx *DeployContext) {
 	dctx.Done(t.result)
 }

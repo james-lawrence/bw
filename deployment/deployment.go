@@ -18,12 +18,8 @@ import (
 	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
-const (
-	dispatchTimeout = 10 * time.Second
-)
-
 type deployer interface {
-	Deploy(dctx DeployContext)
+	Deploy(dctx *DeployContext)
 }
 
 // DeployContextOption options for a DeployContext
@@ -56,16 +52,16 @@ func DeployContextOptionDisableReset(dctx *DeployContext) {
 }
 
 // AwaitDeployResult waits for the deployment result of the context
-func AwaitDeployResult(dctx DeployContext) *DeployResult {
+func AwaitDeployResult(dctx *DeployContext) *DeployResult {
 	defer close(dctx.completed)
 	return <-dctx.completed
 }
 
 // NewDeployContext create a deployment context from the provided settings.
-func NewDeployContext(root string, p *agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewDeployContext(root string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	id := bw.RandomID(a.DeploymentID)
 
-	dctx := DeployContext{
+	dctx := &DeployContext{
 		Local:         p,
 		ID:            id,
 		Root:          root,
@@ -82,7 +78,7 @@ func NewDeployContext(root string, p *agent.Peer, dopts agent.DeployOptions, a a
 	}
 
 	for _, opt := range options {
-		opt(&dctx)
+		opt(dctx)
 	}
 
 	// resets the directory to prepare for the deploy.
@@ -99,7 +95,7 @@ func NewDeployContext(root string, p *agent.Peer, dopts agent.DeployOptions, a a
 	return dctx, nil
 }
 
-func deployDirs(root string, a agent.Archive) (bw.RandomID, string, string) {
+func deployDirs(root string, a *agent.Archive) (bw.RandomID, string, string) {
 	id := bw.RandomID(a.DeploymentID)
 	droot := filepath.Join(root, id.String())
 	archiveDir := filepath.Join(droot, bw.DirArchive)
@@ -108,7 +104,7 @@ func deployDirs(root string, a agent.Archive) (bw.RandomID, string, string) {
 
 // NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
-func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts agent.DeployOptions, a agent.Archive, options ...DeployContextOption) (_did DeployContext, err error) {
+func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	var (
 		logger dlog
 	)
@@ -144,8 +140,8 @@ type DeployContext struct {
 	MetadataFile  string
 	LogFile       string
 	Log           logger
-	Archive       agent.Archive
-	DeployOptions agent.DeployOptions
+	Archive       *agent.Archive
+	DeployOptions *agent.DeployOptions
 	dispatcher    dispatcher
 	deadline      context.Context
 	cancel        context.CancelFunc
@@ -217,10 +213,10 @@ type logger interface {
 	Write([]byte) (int, error)
 }
 
-func newCancelDeployContext() DeployContext {
-	return DeployContext{
+func newCancelDeployContext() *DeployContext {
+	return &DeployContext{
 		dispatcher:    agentutil.DiscardDispatcher{},
-		DeployOptions: agent.DeployOptions{Timeout: int64(bw.DefaultDeployTimeout)},
+		DeployOptions: &agent.DeployOptions{Timeout: int64(bw.DefaultDeployTimeout)},
 		completed:     make(chan *DeployResult),
 		cancel:        func() {},
 	}
@@ -229,7 +225,7 @@ func newCancelDeployContext() DeployContext {
 // DeployState represents the state of a deploy.
 type DeployState struct {
 	current        agent.Deploy
-	currentContext DeployContext
+	currentContext *DeployContext
 	state          *uint32
 }
 
@@ -250,7 +246,7 @@ func (t DeployResult) deployComplete() agent.Deploy {
 	tmpa := t.Archive
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
-	d := agent.Deploy{Stage: agent.Deploy_Completed, Archive: &tmpa, Options: &tmpo}
+	d := agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
 	t.Dispatch(agentutil.DeployEvent(t.Local, &d))
 	return d
 }
@@ -261,7 +257,7 @@ func (t DeployResult) deployFailed(err error) agent.Deploy {
 
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
-	d := agent.Deploy{Stage: agent.Deploy_Failed, Archive: &tmpa, Options: &tmpo}
+	d := agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
 	t.Dispatch(
 		agentutil.LogError(t.Local, err),
 		agentutil.DeployEvent(t.Local, &d),

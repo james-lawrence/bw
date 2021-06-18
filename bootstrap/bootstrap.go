@@ -166,12 +166,12 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		return nil
 	}
 
-	opts := *latest.Options
+	opts := latest.Options
 	deadline, cancel := context.WithTimeout(ctx, time.Duration(opts.Timeout))
 	defer cancel()
 
 	log.Println("bootstrapping", bw.RandomID(latest.Archive.DeploymentID), "with options", spew.Sdump(opts))
-	if _, err = coord.Deploy(opts, *latest.Archive); err != nil {
+	if _, err = coord.Deploy(opts, latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -200,7 +200,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 
-	if !agentutil.SameArchive(latest.Archive, &deploy.Archive) {
+	if !agentutil.SameArchive(latest.Archive, deploy.Archive) {
 		return errors.WithStack(agentutil.ErrDifferentDeployment)
 	}
 

@@ -262,7 +262,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(t.global.ctx, dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(t.global.ctx, &dopts, &archive, peers...); cause != nil {
 		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed xxx", cause))
 	}
 
@@ -340,7 +340,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	var (
 		dst     *os.File
 		sctx    shell.Context
-		dctx    deployment.DeployContext
+		dctx    *deployment.DeployContext
 		root    string
 		archive agent.Archive
 		config  agent.ConfigClient
@@ -414,7 +414,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Timeout: int64(config.DeployTimeout),
 	}
 
-	if dctx, err = deployment.NewRemoteDeployContext(root, local, dopts, archive, deployment.DeployContextOptionDisableReset); err != nil {
+	if dctx, err = deployment.NewRemoteDeployContext(root, local, &dopts, &archive, deployment.DeployContextOptionDisableReset); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 
@@ -560,7 +560,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	}
 
 	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(t.global.ctx, dopts, *archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(t.global.ctx, &dopts, archive, peers...); cause != nil {
 		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 	}
 

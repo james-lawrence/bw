@@ -8,6 +8,6 @@ type noopDeployer struct {
 	err error
 }
 
-func (t noopDeployer) Deploy(dctx deployment.DeployContext) {
+func (t noopDeployer) Deploy(dctx *deployment.DeployContext) {
 	dctx.Done(t.err)
 }

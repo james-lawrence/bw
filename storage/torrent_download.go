@@ -33,7 +33,7 @@ func peersToNode(peers ...*agent.Peer) (r []torrent.Peer) {
 	return r
 }
 
-func (t torrentD) Download(ctx context.Context, archive agent.Archive) (r io.ReadCloser) {
+func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.ReadCloser) {
 	var (
 		err      error
 		metadata torrent.Metadata

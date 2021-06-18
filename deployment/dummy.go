@@ -19,7 +19,7 @@ type dummy struct {
 	sleepy int
 }
 
-func (t dummy) Deploy(dctx DeployContext) {
+func (t dummy) Deploy(dctx *DeployContext) {
 	go func() {
 		log.Printf("deploy recieved: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 		defer log.Printf("deploy complete: deployID(%s) leader(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
@@ -27,9 +27,9 @@ func (t dummy) Deploy(dctx DeployContext) {
 		completedDuration := time.Duration(rand.Intn(t.sleepy)) * time.Second
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second
 		select {
-		case _ = <-time.After(completedDuration):
+		case <-time.After(completedDuration):
 			dctx.Done(nil)
-		case _ = <-time.After(failedDuration):
+		case <-time.After(failedDuration):
 			log.Println("failed deployment due to timeout", failedDuration)
 			dctx.Done(timeout{Duration: failedDuration})
 		}
