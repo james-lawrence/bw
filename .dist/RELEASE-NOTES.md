@@ -1,3 +1,29 @@
+commit 092cce0a7dbfbeebaba1c883e8108d57770d1e5f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 17 20:23:46 2021 -0400
+
+    reduce sleep between checks significantly.
+    
+    speeds up deploys.
+
+commit defccd327c9e8d395165dc71887d0b8da984b8ef
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 17 20:11:27 2021 -0400
+
+    linting cleanup
+
+commit fa6a410ebdcd010df62f9c119aa7a337669e707a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 18:41:25 2021 -0400
+
+    refactor event watch code
+
+commit 5897deb3a01bd1ffd0865115c4496d3031f12ec6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jun 16 22:07:44 2021 -0400
+
+    release 0.1.1623895491-9f3f170f
+
 commit 9f3f170f92c7185c9690b45b6526a88318ea7451
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jun 16 22:04:51 2021 -0400
