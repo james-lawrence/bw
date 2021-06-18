@@ -246,7 +246,7 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c clu
 
 	b := backoff.New(
 		backoff.Exponential(time.Second),
-		backoff.Maximum(timex.DurationMin(time.Minute, timeout/4)),
+		backoff.Maximum(timex.DurationMin(10*time.Second, timeout/4)),
 		backoff.Jitter(0.25),
 	)
 	deadline := time.Now().Add(timeout)
@@ -289,7 +289,7 @@ func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c clu
 				log.Println("sleeping before next attempt", d, deadline)
 				time.Sleep(d)
 			} else {
-				time.Sleep(deadline.Sub(time.Now()))
+				time.Sleep(time.Until(deadline))
 			}
 		}
 
