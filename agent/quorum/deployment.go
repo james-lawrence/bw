@@ -2,7 +2,6 @@ package quorum
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"sync"
@@ -61,7 +60,7 @@ func (t *deployment) Decode(_ TranscoderContext, m *agent.Message) error {
 	switch dc.Command {
 	case agent.DeployCommand_Begin:
 		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
-			return errors.New(fmt.Sprint("deploy already in progress"))
+			return errors.New("deploy already in progress")
 		}
 
 		t.m.Lock()
@@ -111,7 +110,7 @@ func (t *deployment) getRunningDeploy() *agent.DeployCommand {
 }
 
 // Deploy trigger a deploy.
-func (t *deployment) deploy(d dialers.Defaults, dopts agent.DeployOptions, a agent.Archive, peers ...*agent.Peer) (err error) {
+func (t *deployment) deploy(d dialers.Defaults, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
 	return t.d.Deploy(d, dopts, a, peers...)
 }
 
@@ -180,7 +179,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 			return errors.Wrap(err, "restart command failure")
 		}
 
-		if err = t.deploy(d, *dc.Options, *dc.Archive); err != nil {
+		if err = t.deploy(d, dc.Options, dc.Archive); err != nil {
 			return errors.Wrap(err, "deploy failure")
 		}
 	}

@@ -35,7 +35,7 @@ type Proxy struct {
 // The deploy itself is run asychronously as they take awhile, letting callers
 // continue on. But it will error out if there are issues initiating the deploy.
 // such as another deploy is currently running.
-func (t Proxy) Deploy(dialer dialers.Defaults, dopts agent.DeployOptions, archive agent.Archive, peers ...*agent.Peer) (err error) {
+func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archive *agent.Archive, peers ...*agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
@@ -44,8 +44,8 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts agent.DeployOptions, archiv
 
 	cmd := &agent.DeployCommand{
 		Command: agent.DeployCommand_Begin,
-		Options: &dopts,
-		Archive: &archive,
+		Options: dopts,
+		Archive: archive,
 	}
 
 	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
@@ -59,7 +59,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts agent.DeployOptions, archiv
 
 	options := []deployment.Option{
 		deployment.DeployOptionChecker(deployment.OperationFunc(check(dialer))),
-		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(&dopts, &archive, dialer))),
+		deployment.DeployOptionDeployer(deployment.OperationFunc(deploy(dopts, archive, dialer))),
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
@@ -68,9 +68,9 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts agent.DeployOptions, archiv
 
 	// At this point the deploy could take awhile, so we shunt it into the background.
 	go func() {
-		dcmd := agent.DeployCommand{Command: agent.DeployCommand_Failed, Archive: &archive, Options: &dopts}
+		dcmd := agent.DeployCommand{Command: agent.DeployCommand_Failed, Archive: archive, Options: dopts}
 		if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
-			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &archive, Options: &dopts}
+			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: dopts}
 		}
 
 		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), &dcmd)))

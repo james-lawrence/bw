@@ -263,7 +263,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(t.global.ctx, &dopts, &archive, peers...); cause != nil {
-		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed xxx", cause))
+		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 
 	return err
