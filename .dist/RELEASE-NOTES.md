@@ -1,3 +1,27 @@
+commit 9480f9cec213b5b8600ed8ce3714fd5c5795be2a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 19 07:50:58 2021 -0400
+
+    code cleanup
+
+commit 359f2151b9a82f2a35931e0987fac6d9b6adcde3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 18 10:29:54 2021 -0400
+
+    cleanup dependencies
+
+commit 7f1fe58484d0690c44e1ec4d41bd68919abbb886
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 18 10:13:06 2021 -0400
+
+    update hashcirp dependency
+
+commit cdafa9e8a525f0a6b5f07d2b29084d20646d348b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 17 20:26:46 2021 -0400
+
+    release 0.1.1623975826-092cce0a
+
 commit 092cce0a7dbfbeebaba1c883e8108d57770d1e5f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jun 17 20:23:46 2021 -0400
