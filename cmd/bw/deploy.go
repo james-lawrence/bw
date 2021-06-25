@@ -236,6 +236,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return nil
 	}, codes.Unavailable)
 
+	if err != nil {
+		return err
+	}
+
 	events <- agentutil.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(c.Members())))

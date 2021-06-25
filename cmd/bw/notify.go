@@ -37,6 +37,7 @@ func (t *agentNotify) configure(parent *kingpin.CmdClause) {
 
 func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	var (
+		ns        notary.Composite
 		ss        notary.Signer
 		tlsconfig *tls.Config
 	)
@@ -52,7 +53,11 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAgentSigner(t.config.Root); err != nil {
+	if ns, err = notary.NewFromFile(filepath.Join(t.config.Root, bw.DirAuthorizations), t.configPath); err != nil {
+		return err
+	}
+
+	if ss, err = generatecredentials(t.config, ns); err != nil {
 		return err
 	}
 
