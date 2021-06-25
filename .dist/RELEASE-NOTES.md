@@ -1,3 +1,15 @@
+commit f3ca8ab567a7008905eab31beaea4d3a017e3846
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 25 18:23:06 2021 -0400
+
+    fix deploy notifications
+
+commit adb6285861d54ec626f3884f459c703e45209ff0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 19 08:34:09 2021 -0400
+
+    release 0.1.1624104693-ad6bb6c7
+
 commit ad6bb6c765a76425b4c8c888d638915aad24501f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jun 19 08:11:33 2021 -0400
