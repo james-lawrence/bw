@@ -110,10 +110,11 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 		encoded []byte
 	)
 
-	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
-
 	log.Output(1, fmt.Sprintln("WAL restoring"))
 	defer log.Output(1, fmt.Sprintln("WAL restored"))
+
+	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
+	defer atomic.SwapInt64(&t.innerstate.ctx.State, StateHealthy)
 
 	// reset the internal state of the write ahead log.
 	t.innerstate = innerstate{
@@ -123,20 +124,21 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 
 	// read and discard version message, for future use.
 	if err = Decode(o, &version); err != nil && err != io.EOF {
+		log.Println("decode version failure", err)
 		return errors.WithStack(err)
 	}
 
 	for err != io.EOF {
 		if encoded, err = decodeRaw(o); err != nil && err != io.EOF {
+			log.Println("decode event failure 1", err)
 			return errors.WithStack(err)
 		}
 
 		if err = t.decode(t.ctx, encoded); err != nil {
+			log.Println("decode event failure 2", err)
 			return errors.WithStack(err)
 		}
 	}
-
-	t.innerstate.ctx.State = StateHealthy
 
 	return nil
 }
