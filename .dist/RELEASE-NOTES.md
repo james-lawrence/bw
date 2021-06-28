@@ -1,3 +1,15 @@
+commit dd9ddb0b3a6b1db323a804902a226a9121934a72
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 28 09:58:12 2021 -0400
+
+    always revert WAL to healthy, regardless of errors during restore
+
+commit 9caa76821b80a43700203bf49a96138f8b4afdf7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 25 18:43:21 2021 -0400
+
+    release 0.1.1624659786-f3ca8ab5
+
 commit f3ca8ab567a7008905eab31beaea4d3a017e3846
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 25 18:23:06 2021 -0400
