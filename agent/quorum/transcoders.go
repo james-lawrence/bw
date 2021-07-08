@@ -3,7 +3,9 @@ package quorum
 import (
 	"encoding/binary"
 	"io"
+	"log"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
 	"google.golang.org/protobuf/proto"
 )
@@ -79,6 +81,16 @@ func (t Discard) Encode(io.Writer) error {
 	return t.Cause
 }
 
+func EncodeEvery(dst io.Writer, msg ...proto.Message) (err error) {
+	for _, m := range msg {
+		log.Println("encoding", spew.Sdump(msg))
+		if err = encodeProtoTo(dst, m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Encode fundamental encoding method. creates a byte array representing the proto.Message.
 func Encode(m proto.Message) (encoded []byte, err error) {
 	if encoded, err = proto.Marshal(m); err != nil {
@@ -120,7 +132,6 @@ func encodeRaw(encoded []byte) []byte {
 	)
 
 	binary.LittleEndian.PutUint64(buf, uint64(len(encoded)))
-
 	return append(buf, encoded...)
 }
 

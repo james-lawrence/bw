@@ -10,14 +10,10 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
-
-// interface for retrieving a raft.FSM
-type waler interface {
-	WAL() raft.FSM
-}
 
 // CommandToMessage ...
 func commandToMessage(cmd []byte) (m agent.Message, err error) {
@@ -106,9 +102,11 @@ func (t *WAL) Snapshot() (raft.FSMSnapshot, error) {
 // state.
 func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	var (
-		version agent.Message
+		version agent.WALPreamble
 		encoded []byte
 	)
+
+	defer o.Close()
 
 	log.Output(1, fmt.Sprintln("WAL restoring"))
 	defer log.Output(1, fmt.Sprintln("WAL restored"))
@@ -123,24 +121,19 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	}
 
 	// read and discard version message, for future use.
-	if err = Decode(o, &version); err != nil && err != io.EOF {
+	if err = Decode(o, &version); err != nil {
 		log.Println("decode version failure", err)
 		return errors.WithStack(err)
 	}
 
-	for err != io.EOF {
-		if encoded, err = decodeRaw(o); err != nil && err != io.EOF {
-			log.Println("decode event failure 1", err)
-			return errors.WithStack(err)
-		}
-
+	for encoded, err = decodeRaw(o); err == nil; encoded, err = decodeRaw(o) {
 		if err = t.decode(t.ctx, encoded); err != nil {
-			log.Println("decode event failure 2", err)
+			log.Println("decode event failure", err)
 			return errors.WithStack(err)
 		}
 	}
 
-	return nil
+	return iox.IgnoreEOF(err)
 }
 
 func (t *WAL) advance(n int) {

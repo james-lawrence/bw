@@ -42,7 +42,7 @@ func (t *deployment) Encode(dst io.Writer) error {
 	return nil
 }
 
-func (t *deployment) Decode(_ TranscoderContext, m *agent.Message) error {
+func (t *deployment) Decode(ctx TranscoderContext, m *agent.Message) error {
 	var (
 		dc *agent.DeployCommand
 	)
@@ -59,7 +59,7 @@ func (t *deployment) Decode(_ TranscoderContext, m *agent.Message) error {
 
 	switch dc.Command {
 	case agent.DeployCommand_Begin:
-		if !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
+		if ctx.State != StateRecovering && !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
 			return errors.New("deploy already in progress")
 		}
 

@@ -140,11 +140,35 @@ func deployToArchive(d *agent.Deploy) (a *agent.Archive) {
 	return &agent.Archive{}
 }
 
+// DeployCommandBegin creates a begin deploy command.
+func DeployCommandBegin(by string, a *agent.Archive, opts *agent.DeployOptions) *agent.DeployCommand {
+	return &agent.DeployCommand{
+		Command:   agent.DeployCommand_Begin,
+		Initiator: by,
+		Archive:   a,
+		Options:   opts,
+	}
+}
+
 // DeployCommandCancel create a cancellation command.
 func DeployCommandCancel(by string) *agent.DeployCommand {
 	return &agent.DeployCommand{
 		Command:   agent.DeployCommand_Cancel,
 		Initiator: by,
+	}
+}
+
+// DeployCommandDone ...
+func DeployCommandDone() *agent.DeployCommand {
+	return &agent.DeployCommand{
+		Command: agent.DeployCommand_Done,
+	}
+}
+
+// DeployCommandFailed ...
+func DeployCommandFailed() *agent.DeployCommand {
+	return &agent.DeployCommand{
+		Command: agent.DeployCommand_Failed,
 	}
 }
 
