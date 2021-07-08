@@ -2,8 +2,11 @@ package backoff
 
 import (
 	"math"
+	"math/bits"
 	"math/rand"
 	"time"
+
+	"github.com/james-lawrence/bw/internal/x/timex"
 )
 
 // Strategy strategy to compute how long to wait before retrying message.
@@ -32,7 +35,15 @@ func Jitter(multiplier float64) Option {
 	return func(s Strategy) Strategy {
 		return StrategyFunc(func(attempt int) time.Duration {
 			x := s.Backoff(attempt)
-			return x + time.Duration(rand.Intn(int(math.Floor(float64(x)*multiplier))))
+			if x == math.MaxInt64 {
+				return x
+			}
+
+			d := math.Floor(float64(x) * multiplier)
+			return timex.DurationMax(
+				x,
+				x+time.Duration(rand.Intn(int(d))),
+			)
 		})
 	}
 }
@@ -64,13 +75,22 @@ type exponential struct {
 	scale time.Duration
 }
 
-func (t *exponential) Backoff(attempt int) time.Duration {
+func (t *exponential) Backoff(attempt int) (exp time.Duration) {
 	// if the exponential wraps around fall back to using maximum.
-	if exp := time.Duration(1 << uint(attempt)); exp > 0 {
-		return exp * t.scale
+	exp = time.Duration(1 << uint64(attempt))
+	if exp <= 0 {
+		return time.Duration(math.MaxInt64)
 	}
 
-	return time.Duration(math.MaxInt64)
+	hi, lo := bits.Mul64(uint64(exp), uint64(t.scale))
+
+	// check if we overflowed into hi bits, or if the low bits
+	// are negative.
+	if hi != 0 || (lo)&(1<<63) == (1<<63) {
+		return time.Duration(math.MaxInt64)
+	}
+
+	return time.Duration(lo)
 }
 
 // Exponential implements expoential backoff.
