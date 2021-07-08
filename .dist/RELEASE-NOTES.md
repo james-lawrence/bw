@@ -1,3 +1,21 @@
+commit eec9202b49dc566a4b58a7d7b7c9d2944e827840
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 8 09:51:16 2021 -0400
+
+    fix deployment logic during WAL restoration
+
+commit 5a1cbee6a894cf5283483d1ac227ab868753d5f7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 8 07:53:53 2021 -0400
+
+    fix overflow bug in exponential backoff.
+
+commit 3cc5c536a6567d5f5d073d688284164d0b4af665
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 28 14:56:01 2021 -0400
+
+    release 0.1.1624888692-dd9ddb0b
+
 commit dd9ddb0b3a6b1db323a804902a226a9121934a72
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jun 28 09:58:12 2021 -0400
