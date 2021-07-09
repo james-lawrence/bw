@@ -96,8 +96,8 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 	creds = &tls.Config{
 		ServerName:         c.ServerName,
 		RootCAs:            pool,
-		InsecureSkipVerify: true,
 		NextProtos:         []string{"bw.mux"},
+		InsecureSkipVerify: c.Credentials.Insecure,
 	}
 
 	return creds, nil

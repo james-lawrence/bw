@@ -23,6 +23,13 @@ func CCOptionTLSConfig(name string) ConfigClientOption {
 	return ConfigClientTLS(name)
 }
 
+// CCOptionInsecure insecure tls configuration
+func CCOptionInsecure(b bool) ConfigClientOption {
+	return func(c *ConfigClient) {
+		c.Credentials.Insecure = b
+	}
+}
+
 // CCOptionAddress set address for the configuration.
 func CCOptionAddress(s string) ConfigClientOption {
 	return func(c *ConfigClient) {
@@ -101,6 +108,7 @@ type ConfigClient struct {
 	Credentials     struct {
 		Mode      string `yaml:"source"`
 		Directory string `yaml:"directory"`
+		Insecure  bool   `yaml:"-"`
 	} `yaml:"credentials"`
 	CA          string
 	ServerName  string

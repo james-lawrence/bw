@@ -47,12 +47,14 @@ type deployCmd struct {
 	debug          bool
 	ignoreFailures bool
 	silenceLogs    bool
+	insecure       bool
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	deployOptions := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 		cmd.Flag("silenceLogs", "prevents the logs from being written for a deploy").Default("false").BoolVar(&t.silenceLogs)
+		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
 		return cmd
 	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -135,7 +137,7 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 		return err
 	}
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
