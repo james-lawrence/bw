@@ -50,6 +50,8 @@ const (
 )
 
 const (
+	// ModeDisabled disable certificate refresh.
+	ModeDisabled = "disabled"
 	// ModeVault refresh certificates using vault's PKI
 	ModeVault = "vault"
 )
@@ -80,6 +82,8 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
 	switch mode {
+	case ModeDisabled:
+		return RefreshAutomatic(dir, Noop{})
 	case ModeVault:
 		v := Vault{
 			DefaultTokenFile: VaultDefaultTokenPath(),
@@ -118,6 +122,7 @@ type Noop struct{}
 
 // Refresh implement refresher interface.
 func (t Noop) Refresh() error {
+	log.Println("certificate refresh disabled")
 	return nil
 }
 

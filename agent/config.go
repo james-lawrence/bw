@@ -95,12 +95,16 @@ type ConfigClient struct {
 	Concurrency     float64
 	DeployDataDir   string        `yaml:"deployDataDir"`
 	DeployTimeout   time.Duration `yaml:"deployTimeout"`
-	DeployPrompt    string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
-	CredentialsMode string        `yaml:"credentialsSource"`
-	CredentialsDir  string        `yaml:"credentialsDir"`
-	CA              string
-	ServerName      string
-	Environment     string
+	DeployPrompt    string        `yaml:"deployPrompt"`      // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
+	CredentialsMode string        `yaml:"credentialsSource"` // deprecated
+	CredentialsDir  string        `yaml:"credentialsDir"`    // deprecated
+	Credentials     struct {
+		Mode      string `yaml:"source"`
+		Directory string `yaml:"directory"`
+	} `yaml:"credentials"`
+	CA          string
+	ServerName  string
+	Environment string
 }
 
 // LoadConfig create a new configuration from the specified path using the current
@@ -285,12 +289,16 @@ type Config struct {
 	P2PBind           *net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
-	CA                string   `yaml:"ca"`
-	CredentialsMode   string   `yaml:"credentialsSource"`
-	CredentialsDir    string   `yaml:"credentialsDir"`
-	DNSBind           dnsBind  `yaml:"dnsBind"`
-	DNSBootstrap      []string `yaml:"dnsBootstrap"`
-	AWSBootstrap      struct {
+	CA                string `yaml:"ca"`
+	CredentialsMode   string `yaml:"credentialsSource"` // deprecated
+	CredentialsDir    string `yaml:"credentialsDir"`    // deprecated
+	Credentials       struct {
+		Mode      string `yaml:"source"`
+		Directory string `yaml:"directory"`
+	} `yaml:"credentials"`
+	DNSBind      dnsBind  `yaml:"dnsBind"`
+	DNSBootstrap []string `yaml:"dnsBootstrap"`
+	AWSBootstrap struct {
 		AutoscalingGroups []string `yaml:"autoscalingGroups"` // additional autoscaling groups to check for instances.
 	} `yaml:"awsBootstrap"`
 }
@@ -305,6 +313,10 @@ func (t Config) Sanitize() Config {
 func (t Config) EnsureDefaults() Config {
 	if t.CredentialsDir == "" {
 		t.CredentialsDir = filepath.Join(t.Root, bw.DefaultDirAgentCredentials)
+	}
+
+	if t.Credentials.Directory == "" {
+		t.Credentials.Directory = filepath.Join(t.Root, bw.DefaultDirAgentCredentials)
 	}
 
 	if t.CA == "" {

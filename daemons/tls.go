@@ -8,6 +8,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"google.golang.org/grpc/credentials"
 
@@ -21,8 +22,8 @@ func AgentCertificateCache(ctx Context) (err error) {
 	fallback := certificatecache.NewRefreshAgent(config.CredentialsDir, client)
 
 	return certificatecache.FromConfig(
-		config.CredentialsDir,
-		config.CredentialsMode,
+		stringsx.DefaultIfBlank(config.CredentialsDir, config.Credentials.Directory),
+		stringsx.DefaultIfBlank(config.CredentialsMode, config.Credentials.Mode),
 		ctx.ConfigurationFile,
 		fallback,
 	)

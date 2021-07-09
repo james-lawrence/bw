@@ -23,6 +23,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
@@ -127,7 +128,12 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	}
 
 	// load or create credentials.
-	if err = cc.FromConfig(config.CredentialsDir, config.CredentialsMode, path, cc.NewRefreshClient(config.CredentialsDir)); err != nil {
+	if err = cc.FromConfig(
+		stringsx.DefaultIfBlank(config.CredentialsDir, config.Credentials.Directory),
+		stringsx.DefaultIfBlank(config.CredentialsMode, config.Credentials.Mode),
+		path,
+		cc.NewRefreshClient(config.CredentialsDir),
+	); err != nil {
 		return config, err
 	}
 
