@@ -81,7 +81,6 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
-	log.Println("mode", mode)
 	switch mode {
 	case ModeDisabled:
 		return RefreshAutomatic(dir, Noop{})
