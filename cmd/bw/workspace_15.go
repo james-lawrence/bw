@@ -9,8 +9,6 @@ import (
 
 	"github.com/alecthomas/kingpin"
 	"github.com/pkg/errors"
-
-	"github.com/james-lawrence/bw"
 )
 
 func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {

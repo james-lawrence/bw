@@ -20,7 +20,7 @@ runcmd:
  - systemctl disable --now snapd.service snapd.socket
  - unzip -d /var/lib/bearded-wookie-example/filesystem-overlay /var/lib/bearded-wookie-example/filesystem-overlay.zip
  - rsync --recursive --progress --checksum /var/lib/bearded-wookie-example/filesystem-overlay/ /
- - systemctl enable --now swapfile.service swapfile.swap
+ - echo systemctl enable --now swapfile.service swapfile.swap
  - systemctl enable --now bearded-wookie.service bearded-wookie-notifications.service
  - systemctl restart nginx.service
 
