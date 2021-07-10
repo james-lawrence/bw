@@ -1,0 +1,6 @@
+[Unit]
+Description=mount swapfile
+ConditionPathExists=/swapfile
+
+[Swap]
+What=/swapfile

@@ -5,6 +5,7 @@ keepN: 5
 minimumNodes: 3
 # servername is the name used for TLS credentials.
 servername: "${bearded_wookie_server}"
+ca: /etc/bearded-wookie/default/tlsca.cert
 # cluster tokens are keys to ensure the gossip protocol only talks with other servers
 # who are part of the same cluster.
 clusterTokens:
@@ -13,8 +14,8 @@ clusterTokens:
 # only an email is required, bearded wookie only supports DNS and ALPN strategies.
 acme:
   challenges:
-    dns: true
-    alpn: false
+    dns: false
+    alpn: true
   email: "${acme_email}"
   caurl: https://acme-staging-v02.api.letsencrypt.org/directory
 

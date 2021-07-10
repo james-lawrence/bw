@@ -2,6 +2,7 @@ package peering
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -67,7 +68,7 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 
 	for _, inst := range resp.ManagedInstances {
 		if ip := t.ip(c, project, zone, inst); len(ip) > 0 {
-			results = append(results, ip)
+			results = append(results, fmt.Sprintf("%s:%d", ip, t.Port))
 
 			// 2 * maximum in case some are in a building state and to handle ip == current instance
 			if len(results) > maximum {

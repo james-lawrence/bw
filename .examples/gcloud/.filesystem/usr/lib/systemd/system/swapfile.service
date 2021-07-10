@@ -1,0 +1,12 @@
+[Unit]
+Description=initialize swapfile
+ConditionPathExists=!/swapfile
+
+[Service]
+Type=oneshot
+ExecStart=/bin/dd if=/dev/zero of=/swapfile bs=1M count=4192 status=progress
+ExecStartPost=/bin/chmod 0600 /swapfile
+ExecStartPost=/sbin/mkswap /swapfile
+
+[Install]
+WantedBy=default.target

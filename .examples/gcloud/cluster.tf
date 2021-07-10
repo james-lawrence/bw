@@ -127,3 +127,7 @@ resource "google_compute_instance_group_manager" "default" {
 output "pool" {
   value = google_compute_target_pool.default.self_link
 }
+
+output "archive" {
+  value = data.archive_file.filesystem.output_path
+}
