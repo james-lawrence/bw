@@ -6,21 +6,12 @@ resource "google_compute_address" "default" {
   name = "${var.cluster}-endpoint"
 }
 
-resource "google_compute_forwarding_rule" "default" {
-  name                  = "${var.cluster}-bearded-wookie-discovery"
-  load_balancing_scheme = "EXTERNAL"
-  ip_protocol           = "TCP"
-  ip_address            = google_compute_address.default.address
-  port_range            = "2001"
-  target                = google_compute_target_pool.default.self_link
-}
-
 resource "google_compute_forwarding_rule" "agent" {
   name                  = "${var.cluster}-bearded-wookie-agent"
   load_balancing_scheme = "EXTERNAL"
   ip_protocol           = "TCP"
   ip_address            = google_compute_address.default.address
-  port_range            = "2002"
+  port_range            = "443"
   target                = google_compute_target_pool.default.self_link
 }
 

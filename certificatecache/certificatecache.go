@@ -122,7 +122,6 @@ type Noop struct{}
 
 // Refresh implement refresher interface.
 func (t Noop) Refresh() error {
-	log.Println("certificate refresh disabled")
 	return nil
 }
 

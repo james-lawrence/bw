@@ -9,27 +9,26 @@ apt:
       source: "ppa:jljatone/bw"
 
 packages:
+  - zip
   - bearded-wookie
+  - nginx-full
 
 runcmd:
  - systemctl disable --now snapd.service snapd.socket
+ - unzip -d /var/lib/bearded-wookie-example/filesystem-overlay /var/lib/bearded-wookie-example/filesystem-overlay.zip
+ - rsync --recursive --progress --checksum /var/lib/bearded-wookie-example/filesystem-overlay/ /
  - systemctl enable --now bearded-wookie.service bearded-wookie-notifications.service
+ - systemctl restart nginx.service
 
 write_files:
   - encoding: b64
-    content: ${base64encode(data.template_file.bearded-wookie-config.rendered)}
+    content: ${filebase64("${path.module}/.dist/filesystem.archive.zip")}
     owner: root:root
-    path: /etc/bearded-wookie/default/agent.config
-    permissions: '0644'
-  - encoding: b64
-    content: ${base64encode(file("bearded-wookie-agent.env"))}
-    owner: root:root
-    path: /etc/bearded-wookie/default/agent.env
-    permissions: '0600'
-  - encoding: b64
-    content: ${base64encode(file(pathexpand("~/.config/bearded-wookie/private.key.pub")))}
-    owner: root:root
-    path: /etc/bearded-wookie/default/authorized.keys
+    path: /var/lib/bearded-wookie-example/filesystem-overlay.zip
     permissions: '0600'
 EOF
+
+  depends_on = [
+    data.archive_file.filesystem,
+  ]
 }

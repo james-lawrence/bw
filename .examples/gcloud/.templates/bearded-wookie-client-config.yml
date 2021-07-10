@@ -1,0 +1,2 @@
+address: "${bearded_wookie_server}:443"
+servername: "${bearded_wookie_server}"

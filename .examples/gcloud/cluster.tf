@@ -13,6 +13,7 @@ resource "google_project_iam_custom_role" "default" {
   title       = "${var.cluster} role"
   description = "provides the permissions necessary to run bearded-wookie"
   permissions = [
+    # BEGIN permissions for ACME DNS challenge
     "dns.changes.create",
     "dns.changes.get",
     "dns.changes.list",
@@ -22,6 +23,7 @@ resource "google_project_iam_custom_role" "default" {
     "dns.resourceRecordSets.delete",
     "dns.resourceRecordSets.list",
     "dns.resourceRecordSets.update",
+    # END permissions for ACME DNS challenge
     "compute.instanceGroupManagers.get",
     "compute.instances.get",
   ]

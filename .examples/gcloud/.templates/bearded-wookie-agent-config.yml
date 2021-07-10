@@ -19,8 +19,8 @@ acme:
 # notary service controls access to the agent. it uses ssh authorized_key files.
 notary:
   # where to load default authority from. defaults to the agent's user's ssh authorized_keys file.
-  # by overriding this you can load keys from other files, or none.
+  # by overriding this you can load keys from other files.
   authority: [
     "/root/.ssh/authorized_keys",
-    "/etc/bearded-wookie/default/authorized.keys",
+    "/etc/bearded-wookie/default/bw.auth.keys",
   ]

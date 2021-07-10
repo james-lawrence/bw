@@ -18,7 +18,7 @@ variable "zone" {
 
 variable "image" {
   description = "base image to use"
-  default     = "ubuntu-1910-eoan-v20191217"
+  default     = "ubuntu-2004-focal-v20210702"
 }
 
 variable "cluster" {

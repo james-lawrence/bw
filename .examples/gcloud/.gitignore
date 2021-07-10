@@ -1,5 +1,6 @@
 .bwconfig
 .terraform
+.dist
 terraform.tfvars
 terraform.tfstate
 terraform.tfstate.backup

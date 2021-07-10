@@ -1,0 +1,13 @@
+[Unit]
+Description=bearded-wookie agent
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+Environment=SHELL=/bin/bash
+ExecStart=/usr/bin/bw agent --cluster-dns-enable --cluster-gcloud-enable
+
+[Install]
+WantedBy=multi-user.target
