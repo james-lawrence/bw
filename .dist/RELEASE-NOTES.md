@@ -1,3 +1,81 @@
+commit 7f130cd1cc280ad7e8e7d134d5e7fdf99e06d2fe
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 15:34:08 2021 -0400
+
+    add feature flag for proxy dialing
+
+commit e1e072f918e73ae261b021dde95fd9f5df60fd8f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 15:25:50 2021 -0400
+
+    fixes for proxy connections
+
+commit 95dc09545da1ac6a45d86273eccc1fb1c441fab3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 14:14:28 2021 -0400
+
+    add lego tlscert
+
+commit 323084725329ae872ddeccc87a45ce3590b71a02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 13:01:35 2021 -0400
+
+    update go.mod
+
+commit 81ef8e2daa8ff38c9e2da63ab469607cabeebe7c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 13:01:28 2021 -0400
+
+    cloud update
+
+commit a82e1848a321c1a7ef7f166ffe0344033992e8e1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 12:41:34 2021 -0400
+
+    debug join
+
+commit 9976814bdb097fcd571b7aa8ebde5935404e4070
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 09:45:43 2021 -0400
+
+    update gcloud example to unlock tls acme protocol
+
+commit 524f55d649010f9a7ce0f0ab0545079df4b18350
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 9 13:53:36 2021 -0400
+
+    tls cleanup
+
+commit 801783a5857da86a398f8c6f084291efc97699ab
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 9 14:02:05 2021 -0400
+
+    revert logging
+
+commit 3a438cb91dcc6c727d55dd317d2e8a753ffee1cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 9 13:59:21 2021 -0400
+
+    debug mode
+
+commit c1a82d1ec438589c6fdf4c0a62ad06ad5b2c663a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 9 13:46:01 2021 -0400
+
+    allow disabling the certificate refresh system.
+
+commit 4844532d05d4df7ae39f45ed4da5101b75b9f4ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 9 11:23:23 2021 -0400
+
+    update workspace generation using go:embed
+
+commit 6b3ecdd72a5e3e3c11a6ec43c9eff202c3033df2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 8 09:58:09 2021 -0400
+
+    release 0.1.1625752276-eec9202b
+
 commit eec9202b49dc566a4b58a7d7b7c9d2944e827840
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jul 8 09:51:16 2021 -0400
