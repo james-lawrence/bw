@@ -7,7 +7,7 @@ Type=simple
 Restart=always
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 Environment=SHELL=/bin/bash
-ExecStart=/usr/bin/bw agent --cluster-dns-enable --cluster-gcloud-enable
+ExecStart=/usr/bin/bw agent --cluster-dns-enable --cluster-gcloud-enable --agent-p2p-alternates=127.0.0.1:2000
 
 [Install]
 WantedBy=multi-user.target

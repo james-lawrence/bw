@@ -4,17 +4,12 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
-	"log"
 	"net"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
-type dialer interface {
-	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
-}
-
-func Proxy(ctx context.Context, c1, c2 net.Conn, buf io.Reader) error {
+func Proxy(ctx context.Context, client, dst net.Conn, buf io.Reader) error {
 	var (
 		errors chan error
 	)
@@ -22,14 +17,14 @@ func Proxy(ctx context.Context, c1, c2 net.Conn, buf io.Reader) error {
 	ctx, done := context.WithCancel(ctx)
 	go func() {
 		select {
-		case errors <- proxyConn(ctx, done, c1, c2, buf):
+		case errors <- proxyConn(ctx, done, client, dst, buf):
 		case <-ctx.Done():
 			errors <- ctx.Err()
 		}
 	}()
 	go func() {
 		select {
-		case errors <- proxyConn(ctx, done, c2, c1, nil):
+		case errors <- proxyConn(ctx, done, dst, client, nil):
 		case <-ctx.Done():
 			errors <- ctx.Err()
 		}
@@ -40,7 +35,6 @@ func Proxy(ctx context.Context, c1, c2 net.Conn, buf io.Reader) error {
 
 func proxyConn(ctx context.Context, done context.CancelFunc, from, to net.Conn, buf io.Reader) (err error) {
 	defer done()
-	defer log.Println("proxy conn completed")
 
 	if buf != nil {
 		if _, err = io.Copy(to, buf); err != nil {
