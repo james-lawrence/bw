@@ -19,4 +19,5 @@ const (
 	EnvAgentClusterBootstrap             = "BEARDED_WOOKIE_AGENT_BOOTSTRAP"                 // environment variable to specify the tcp address to connect to allowing for bootstrapping.
 	EnvAgentClusterPassiveCheckin        = "BEARDED_WOOKIE_AGENT_CLUSTER_PASSIVE_CHECKIN"   // environment variable to adjust the passive checking rate for the leader node.
 	EnvAgentClusterEnableGoogleCloudPool = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL" // enable gcloud pool peer detection
+	EnvProxyDialerEnabled                = "BEARDED_WOOKIE_ALPHA_ENABLE_PROXY_DIALER"       // enable the proxy dialer feature for clients, opt in for now.
 )
