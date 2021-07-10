@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
@@ -157,7 +158,7 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 		}
 
 		peers, _ = b.collect(ctx, b.Peering...)
-		log.Printf("located %d peers\n", len(peers))
+		log.Printf("located %d peers: %s\n", len(peers), spew.Sdump(peers))
 
 		if joined, err = c.Join(peers...); err != nil {
 			log.Println(errors.Wrap(err, "failed to join peers"))

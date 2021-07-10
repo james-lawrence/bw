@@ -2,7 +2,7 @@
 keepN: 5
 # minimumNodes controls how many nodes are required for bootstrapping to consider continuing.
 # defaults to 3.
-minimumNodes: 0
+minimumNodes: 3
 # servername is the name used for TLS credentials.
 servername: "${bearded_wookie_server}"
 # cluster tokens are keys to ensure the gossip protocol only talks with other servers
@@ -16,6 +16,8 @@ acme:
     dns: true
     alpn: false
   email: "${acme_email}"
+  caurl: https://acme-staging-v02.api.letsencrypt.org/directory
+
 # notary service controls access to the agent. it uses ssh authorized_key files.
 notary:
   # where to load default authority from. defaults to the agent's user's ssh authorized_keys file.

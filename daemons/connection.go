@@ -6,12 +6,14 @@ import (
 	"net"
 	"time"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
 
 	"github.com/hashicorp/memberlist"
@@ -122,15 +124,15 @@ func connect(config agent.ConfigClient, ss notary.Signer, creds credentials.Tran
 
 	if dd, err = DefaultDialer(
 		config.Address,
-		tlsx.NewDialer(tlsconfig),
-		// discovery.ProxyDialer{
-		// 	Proxy:  config.Address,
-		// 	Signer: ss,
-		// 	Dialer: muxer.NewDialer(
-		// 		bw.ProtocolProxy,
-		// 		tlsx.NewDialer(tlsconfig),
-		// 	),
-		// },
+		// tlsx.NewDialer(tlsconfig),
+		discovery.ProxyDialer{
+			Proxy:  config.Address,
+			Signer: ss,
+			Dialer: muxer.NewDialer(
+				bw.ProtocolProxy,
+				tlsx.NewDialer(tlsconfig),
+			),
+		},
 		options...,
 	); err != nil {
 		return d, c, err
