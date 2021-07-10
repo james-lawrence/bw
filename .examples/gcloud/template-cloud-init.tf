@@ -7,11 +7,14 @@ apt:
   sources:
     beardedwookie:
       source: "ppa:jljatone/bw"
+    golang:
+      source: "ppa:longsleep/golang-backports"
 
 packages:
   - zip
   - bearded-wookie
   - nginx-full
+  - golang-1.16
 
 runcmd:
  - systemctl disable --now snapd.service snapd.socket
