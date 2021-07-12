@@ -54,10 +54,10 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	deployOptions := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 		cmd.Flag("silenceLogs", "prevents the logs from being written for a deploy").Default("false").BoolVar(&t.silenceLogs)
-		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
 		return cmd
 	}
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
@@ -287,7 +287,7 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 
 	defer t.global.shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
@@ -467,7 +467,7 @@ func (t *deployCmd) _redeploy(filter deployment.Filter, allowEmpty bool) error {
 	)
 
 	log.Println("pid", os.Getpid())
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
