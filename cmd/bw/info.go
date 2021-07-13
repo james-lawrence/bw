@@ -30,12 +30,14 @@ import (
 
 type agentInfo struct {
 	global       *global
+	insecure     bool
 	environment  string
 	checkAddress string
 }
 
 func (t *agentInfo) configure(parent *kingpin.CmdClause) {
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
 		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
@@ -73,7 +75,7 @@ func (t *agentInfo) logs(ctx *kingpin.ParseContext) (err error) {
 	)
 	defer t.global.shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
@@ -138,7 +140,7 @@ func (t *agentInfo) _watch() (err error) {
 	)
 	defer t.global.shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
@@ -196,7 +198,7 @@ func (t *agentInfo) _nodes() (err error) {
 	)
 	defer t.global.shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
 		return err
 	}
 
