@@ -68,7 +68,7 @@ func run(ctx context.Context, events chan *agent.Message, s consumer) {
 				// we're done
 				return
 			}
-		case _ = <-ctx.Done():
+		case <-ctx.Done():
 			return
 		}
 	}
@@ -135,8 +135,12 @@ func (t cState) printDeployCommand(m *agent.Message) {
 			t.au.Green(fmt.Sprintf("%s - INFO - deployment completed", messagePrefix(m))),
 		)
 	case agent.DeployCommand_Failed:
+		did := ""
+		if d.Archive != nil {
+			did = bw.RandomID(d.Archive.DeploymentID).String()
+		}
 		t.Logger.Println(
-			t.au.Red(fmt.Sprintf("%s - INFO - deployment failed", messagePrefix(m))),
+			t.au.Red(fmt.Sprintf("%s - INFO - deployment failed - %s", messagePrefix(m), did)),
 		)
 	case agent.DeployCommand_Cancel:
 		t.Logger.Println(
@@ -144,7 +148,7 @@ func (t cState) printDeployCommand(m *agent.Message) {
 		)
 	case agent.DeployCommand_Restart:
 		t.Logger.Println(
-			t.au.Brown(fmt.Sprintf("%s - INFO - deployment restarted by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
+			t.au.Yellow(fmt.Sprintf("%s - INFO - deployment restarted by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
 		)
 	default:
 		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
@@ -175,7 +179,7 @@ func (t deploying) Consume(m *agent.Message) consumer {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
 		case agent.DeployCommand_Restart:
-			return restart{cState: t.cState}
+			return restart(t)
 		case
 			agent.DeployCommand_Done,
 			agent.DeployCommand_Cancel:
