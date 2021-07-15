@@ -22,6 +22,49 @@ var _ = Describe("ParseURI", func() {
 	})
 })
 
+var _ = Describe("Rebind", func() {
+	It("should be able to rebind a protocol successfully", func() {
+		c1 := int64(0)
+		c2 := int64(0)
+		counter := func(l net.Listener, c *int64) {
+			for {
+				_, err := l.Accept()
+				if err != nil {
+					return
+				}
+				atomic.AddInt64(c, 1)
+			}
+		}
+
+		m := New()
+		l, err := net.Listen("tcp", ":0")
+		go func() {
+			Listen(context.Background(), m, l)
+		}()
+		Expect(err).To(Succeed())
+		defer l.Close()
+
+		l1, err := m.Rebind("proto", l.Addr())
+		Expect(err).To(Succeed())
+		defer l1.Close()
+		go counter(l1, &c1)
+		l2, err := m.Rebind("proto", l.Addr())
+		Expect(err).To(Succeed())
+		defer l2.Close()
+		go counter(l2, &c2)
+
+		d1 := NewDialer("proto", &net.Dialer{})
+
+		for i := 0; i < 10; i++ {
+			conn, err := d1.DialContext(context.Background(), "tcp", l.Addr().String())
+			Expect(err).To(Succeed())
+			Expect(conn.Close()).To(Succeed())
+			Expect(atomic.LoadInt64(&c1)).To(Equal(int64(0)))
+			Expect(atomic.LoadInt64(&c2)).To(Equal(int64(i + 1)))
+		}
+	})
+})
+
 var _ = Describe("Dial and accept", func() {
 	It("should be able to multiplex", func() {
 		c1 := int64(0)

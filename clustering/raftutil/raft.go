@@ -71,7 +71,7 @@ func ProtocolOptionMuxerTransport(addr net.Addr, m *muxer.M, d dialer) ProtocolO
 			d = muxer.NewDialer(bw.ProtocolRAFT, d)
 		)
 
-		if l, err = m.Bind(bw.ProtocolRAFT, addr); err != nil {
+		if l, err = m.Rebind(bw.ProtocolRAFT, addr); err != nil {
 			return nil, errors.WithStack(err)
 		}
 

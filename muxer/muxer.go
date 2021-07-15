@@ -5,6 +5,7 @@ import (
 	"crypto/md5"
 	"crypto/tls"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -16,6 +17,16 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )
+
+// ErrAlreadyBound returns the registered listener.
+type ErrAlreadyBound struct {
+	ID       Protocol
+	Protocol string
+}
+
+func (t ErrAlreadyBound) Error() string {
+	return fmt.Sprintf("protocol already registered: %s - %s", hex.EncodeToString(t.ID[:]), t.Protocol)
+}
 
 type option func(*M) error
 
@@ -34,13 +45,16 @@ type M struct {
 	acceptTimeout time.Duration
 }
 
-func (t *M) bind(protocol string, addr net.Addr) (net.Listener, error) {
-	digested := md5.Sum([]byte(protocol))
+func (t *M) bind(p string, addr net.Addr) (net.Listener, error) {
+	digested := md5.Sum([]byte(p))
 	if l, ok := t.protocols[digested]; ok {
-		return l, errors.Errorf("protocol already registered: %s", protocol)
+		return l, ErrAlreadyBound{
+			ID:       digested,
+			Protocol: p,
+		}
 	}
 
-	l := newListener(t, addr, protocol, digested)
+	l := newListener(t, addr, p, digested)
 	t.protocols[digested] = l
 
 	// log.Println("BOUND", protocol, "->", hex.EncodeToString(digested[:]))
@@ -55,6 +69,25 @@ func (t *M) Bind(protocol string, addr net.Addr) (net.Listener, error) {
 	return t.bind(protocol, addr)
 }
 
+func (t *M) Rebind(protocol string, addr net.Addr) (l net.Listener, err error) {
+	if l, err = t.Bind(protocol, addr); err == nil {
+		return l, err
+	} else if errors.As(err, &ErrAlreadyBound{}) {
+		// we need to close here to because if the previous listener
+		// was closed in some other manner it could unbind this newly
+		// registered listener.
+		err = l.Close()
+
+		if err != nil {
+			return l, err
+		}
+
+		return t.Bind(protocol, addr)
+	}
+
+	return l, err
+}
+
 func (t *M) Default(protocol string, addr net.Addr) (net.Listener, error) {
 	t.m.Lock()
 	defer t.m.Unlock()
@@ -66,6 +99,8 @@ func (t *M) Default(protocol string, addr net.Addr) (net.Listener, error) {
 func (t *M) release(p Protocol) {
 	t.m.Lock()
 	defer t.m.Unlock()
+	log.Println("release initiated")
+	defer log.Println("release completed")
 
 	delete(t.protocols, p)
 }
