@@ -95,7 +95,7 @@ func (t *Directory) background() {
 		select {
 		case <-debounce.C:
 			logx.MaybeLog(t.refresh())
-		case _ = <-t.watcher.Events:
+		case <-t.watcher.Events:
 			debounce.Reset(time.Second)
 		case err := <-t.watcher.Errors:
 			if limit.Allow() {
@@ -121,7 +121,7 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 	return cert, nil
 }
 
-func (t Directory) load(path string) (err error) {
+func LoadCert(pool *x509.CertPool, path string) (err error) {
 	var ca []byte
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
@@ -132,7 +132,7 @@ func (t Directory) load(path string) (err error) {
 		return errors.Wrapf(err, "failed to read certificate: %s", path)
 	}
 
-	if ok := t.pool.AppendCertsFromPEM(ca); !ok {
+	if ok := pool.AppendCertsFromPEM(ca); !ok {
 		return nil
 	}
 
@@ -163,13 +163,13 @@ func (t *Directory) refresh() (err error) {
 
 	bootstrapcert := bw.LocateFirstInDir(t.dir, DefaultTLSBootstrapCert)
 	if systemx.FileExists(bootstrapcert) {
-		if err = t.load(bootstrapcert); err != nil {
+		if err = LoadCert(t.pool, bootstrapcert); err != nil {
 			return err
 		}
 	}
 
 	if systemx.FileExists(t.caFile) {
-		if err = t.load(t.caFile); err != nil {
+		if err = LoadCert(t.pool, t.caFile); err != nil {
 			return err
 		}
 	}
@@ -189,7 +189,7 @@ func (t *Directory) refresh() (err error) {
 			return filepath.SkipDir
 		}
 
-		if err = t.load(path); err != nil {
+		if err = LoadCert(t.pool, path); err != nil {
 			log.Println(err)
 			return nil
 		}

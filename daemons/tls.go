@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"google.golang.org/grpc/credentials"
 
@@ -91,6 +92,12 @@ func TLSGenClient(c agent.ConfigClient) (creds *tls.Config, err error) {
 
 	if pool, err = x509.SystemCertPool(); err != nil {
 		return creds, errors.WithStack(err)
+	}
+
+	if systemx.FileExists(c.CA) {
+		if err = certificatecache.LoadCert(pool, c.CA); err != nil {
+			return creds, errors.WithStack(err)
+		}
 	}
 
 	creds = &tls.Config{

@@ -2,12 +2,14 @@ package agent
 
 import (
 	"crypto/sha256"
+	"log"
 	"math"
 	"net"
 	"path/filepath"
 	"strconv"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 
 	"github.com/james-lawrence/bw"
@@ -124,6 +126,7 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 
 	t.root = filepath.Dir(path)
 
+	log.Println("WAAT", spew.Sdump(t))
 	return t, nil
 }
 

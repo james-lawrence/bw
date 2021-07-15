@@ -2,7 +2,7 @@ address: "localhost:2000"
 discovery: "localhost:2000"
 concurrency: 2
 servername: "bearded-wookie.lan"
-ca: "${HOME}/.cache/bearded-wookie/agent1/tls/tlsca.cert"
+ca: "${HOME}/.config/bearded-wookie-pebble/certs/pebble.pem"
 deployTimeout: 30s
 # deployPrompt: "you're about to deploy to production are you sure?"
 
