@@ -20,9 +20,9 @@ type passive struct {
 
 func (t passive) Update(c rendezvous) state {
 	var (
-		err     error
-		r       *raft.Raft
-		network raft.Transport
+		err       error
+		r         *raft.Raft
+		transport raft.Transport
 	)
 
 	unstable := delayedTransition{
@@ -42,7 +42,7 @@ func (t passive) Update(c rendezvous) state {
 
 	log.Println(t.protocol.LocalNode.Name, "promoting self into raft protocol")
 
-	if network, r, err = t.protocol.connect(c); err != nil {
+	if transport, r, err = t.protocol.connect(c); err != nil {
 		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state"))
 		return unstable
 	}
@@ -51,7 +51,7 @@ func (t passive) Update(c rendezvous) state {
 	sm := stateMeta{
 		r:           r,
 		q:           backlogQueueWorker{Queue: make(chan *agent.ClusterWatchEvents, 100)},
-		transport:   network,
+		transport:   transport,
 		protocol:    t.protocol,
 		sgroup:      t.sgroup,
 		lastContact: time.Now(),
@@ -68,6 +68,7 @@ func (t passive) Update(c rendezvous) state {
 	}
 
 	if err = sm.connect(); err != nil {
+		sm.cleanShutdown()
 		return unstable
 	}
 
