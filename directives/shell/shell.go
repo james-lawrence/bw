@@ -53,7 +53,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 }
 
 func (t Exec) lenient(ctx Context, err error) error {
-	if t.Lenient || ctx.lenient && err != nil {
+	if (t.Lenient || ctx.lenient) && err != nil {
 		fmt.Fprintln(ctx.output, "command failed, ignoring", t.Command, err)
 		return nil
 	}

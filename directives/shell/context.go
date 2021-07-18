@@ -57,7 +57,7 @@ type Option func(*Context)
 // OptionLogger set the logger for the context.
 func OptionLogger(l logger) Option {
 	return func(ctx *Context) {
-		ctx.output = logging{logger: l}
+		ctx.output = newLogging(l)
 	}
 }
 
