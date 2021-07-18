@@ -1,3 +1,51 @@
+commit a08ddbce4e74ad365e2a264c1d1505665df47d5b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jul 18 12:58:58 2021 -0400
+
+    adjust shell lgoging output
+
+commit 8fc1c38e35ff75f8d503df3d0c898ddc2007ad61
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 15 08:38:25 2021 -0400
+
+    test environment fixes
+
+commit a667add372c3a41a1a3a1b936af9e6e71cde66f0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 15 08:16:23 2021 -0400
+
+    possible missed path on cleanup of raft transport
+
+commit b89ea74b927586511a289bed3530fc586cd8cf51
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 15 08:12:31 2021 -0400
+
+    hack fix for the already bound protocol error
+
+commit 301de2976598f305dafaf36c8d7d06036a687683
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 14 09:56:35 2021 -0400
+
+    add deployment id to failure message
+
+commit c3eb30e826208a73b27cfe03aa5051e91337dff7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 13 10:31:27 2021 -0400
+
+    add insecre flag to info
+
+commit 9339a3c1449e26340ee4c7511f8bb655fc1a2a89
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 12 12:04:02 2021 -0400
+
+    update insecure flag for cancel and redeploy
+
+commit 3d91f3faba3c1cb7a5362df2cce9f1ec31fe4735
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 10 15:55:11 2021 -0400
+
+    release 0.1.1625946372-0ed2c291
+
 commit 0ed2c291c42c2baa9c3062b42c6592b08f2bb094
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jul 10 15:36:22 2021 -0400
