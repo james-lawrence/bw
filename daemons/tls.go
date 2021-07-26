@@ -3,8 +3,10 @@ package daemons
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"log"
 	"os"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
@@ -22,6 +24,7 @@ func AgentCertificateCache(ctx Context) (err error) {
 	client := acme.NewChallenger(ctx.Cluster.Local(), ctx.Cluster, ctx.ACMECache, ctx.Dialer)
 	fallback := certificatecache.NewRefreshAgent(config.CredentialsDir, client)
 
+	log.Println("AGENT CERTIFICATE CACHE", spew.Sdump(config))
 	return certificatecache.FromConfig(
 		stringsx.DefaultIfBlank(config.CredentialsDir, config.Credentials.Directory),
 		stringsx.DefaultIfBlank(config.CredentialsMode, config.Credentials.Mode),
