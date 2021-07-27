@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -82,7 +81,6 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
-	log.Println("FROM CONFIG", mode, ModeVault)
 	switch mode {
 	case ModeDisabled:
 		return RefreshAutomatic(dir, Noop{})
@@ -96,7 +94,6 @@ func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
 			return err
 		}
 
-		log.Println("VAULT", spew.Sdump(v))
 		if strings.TrimSpace(v.CommonName) == "" {
 			return errors.New("server name cannot be blank for vault, please set servername in the configuration")
 		}
