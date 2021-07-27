@@ -279,7 +279,8 @@ func ConfigOptionName(name string) ConfigOption {
 }
 
 type bootstrap struct {
-	Attempts         int
+	Attempts         int    `yaml:"attempts"`
+	ReadOnly         bool   `yaml:"readonly"`
 	ArchiveDirectory string `yaml:"archiveDirectory"`
 }
 

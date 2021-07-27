@@ -59,7 +59,9 @@ func (t Filesystem) Bind(ctx context.Context, socket string, options ...grpc.Ser
 		return nil
 	}
 
-	go t.monitor()
+	if !t.a.Bootstrap.ReadOnly {
+		go t.monitor()
+	}
 
 	if err = t.upload(); err != nil {
 		return err
