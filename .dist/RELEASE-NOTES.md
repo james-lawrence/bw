@@ -1,3 +1,57 @@
+commit a89fc0aab7a8b9aa7fd482c4db242d430cf01e29
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 27 06:29:38 2021 -0400
+
+    Revert "hack fix for macosx os wtf"
+    
+    This reverts commit 3d29ec0a19c86dbd8dcefaa82bb304624f5c1956.
+
+commit 3dae9dccc27e518c251bcca60b1edde10c0c856c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 27 06:29:24 2021 -0400
+
+    Revert "debug vault cert"
+    
+    This reverts commit d061b642850273b48cc2306b2ebdb2e3a156df61.
+
+commit 98a6bf8237da201b678171823ab40584a624e152
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 27 06:29:00 2021 -0400
+
+    Revert "wip"
+    
+    This reverts commit 793bdd43ac115ad524ba0c322ef9a9f4685eb273.
+
+commit d82a7c7f4f1b4ed433ad37e4c66de330ca9d9d00
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 27 06:28:15 2021 -0400
+
+    add read only flag to bootstrap
+
+commit 793bdd43ac115ad524ba0c322ef9a9f4685eb273
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 26 10:04:22 2021 -0400
+
+    wip
+
+commit d061b642850273b48cc2306b2ebdb2e3a156df61
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 26 09:36:21 2021 -0400
+
+    debug vault cert
+
+commit 3d29ec0a19c86dbd8dcefaa82bb304624f5c1956
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 19 19:51:03 2021 -0400
+
+    hack fix for macosx os wtf
+
+commit d698b34d4a412783c7969b4720bab4deeebb26bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jul 18 13:05:25 2021 -0400
+
+    release 0.1.1626627538-a08ddbce
+
 commit a08ddbce4e74ad365e2a264c1d1505665df47d5b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Jul 18 12:58:58 2021 -0400
