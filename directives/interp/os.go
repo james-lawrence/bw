@@ -11,10 +11,6 @@ import (
 // osfix overrides the Exit function to convert it into a standard panic.
 func osfix(workingdir string) (exported map[string]reflect.Value) {
 	exported = stdlib.Symbols["os"]
-	if exported == nil {
-		exported = map[string]reflect.Value{}
-	}
-
 	exported["Getwd"] = reflect.ValueOf(func() (string, error) {
 		return workingdir, nil
 	})
