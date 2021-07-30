@@ -78,7 +78,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 
 	// let's encrypt has pretty heavy rate limits in production.
 	if err = t.rate.Wait(ctx); err != nil {
-		log.Println("unable to clear registration", err)
+		log.Println("acme rate limit", err)
 		return resp, status.Error(codes.Internal, "registration reset failure")
 	}
 
