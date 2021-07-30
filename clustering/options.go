@@ -157,6 +157,7 @@ func NewOptionsFromConfig(c *memberlist.Config, options ...Option) Options {
 // NewOptions build default cluster options.
 func NewOptions(options ...Option) Options {
 	c := memberlist.DefaultWANConfig()
+	c.TCPTimeout = 5 * time.Second
 	c.SuspicionMult = 8
 	c.GossipInterval = 2 * time.Second
 	c.GossipToTheDeadTime = 240 * time.Second
