@@ -184,7 +184,19 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 
 		log.Println("joined", joined, "peers")
 
-		if b.JoinStrategy(joined) {
+		// this is a hack due memberlist hanging during certain situations.
+		ctxj, done := context.WithTimeout(context.Background(), 3*time.Minute)
+		go func() {
+			<-ctxj.Done()
+			if err := ctxj.Err(); err != nil && err != context.Canceled {
+				panic(err)
+			}
+		}()
+
+		success := b.JoinStrategy(joined)
+		done()
+
+		if success {
 			return nil
 		}
 
