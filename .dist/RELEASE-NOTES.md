@@ -1,3 +1,47 @@
+commit 75f02d4457d9615544cd1b271b2212961191bddb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 07:48:09 2021 -0400
+
+    deterministic acme key
+
+commit 3940b240c7ceb29299461f6756e5da2cc9c3f1d6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 06:05:14 2021 -0400
+
+    Revert "debug alpn"
+    
+    This reverts commit fddef6c9fb3aee444a9ba3f702423f1a48fe81ee.
+
+commit fddef6c9fb3aee444a9ba3f702423f1a48fe81ee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 05:11:20 2021 -0400
+
+    debug alpn
+
+commit 69a3af4a8265c35153b447729cabbce219a4f8ee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 05:11:06 2021 -0400
+
+    remove dead code
+
+commit c5ca5f325661f01ac8a604981abdae3f8fad00de
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 05:04:55 2021 -0400
+
+    speedup timeouts for tcp connections
+
+commit e5641345701faa582a62881cf2d0759c8e05e607
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 05:04:44 2021 -0400
+
+    dedup peering ips
+
+commit 7d4c21e34a5f7cd17adf3df3ad50feffe7c63de3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jul 27 06:32:44 2021 -0400
+
+    release 0.1.1627381778-a89fc0aa
+
 commit a89fc0aab7a8b9aa7fd482c4db242d430cf01e29
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Jul 27 06:29:38 2021 -0400
