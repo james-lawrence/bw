@@ -3,7 +3,6 @@ package daemons
 import (
 	"context"
 	"crypto/tls"
-	"net"
 	"time"
 
 	"github.com/james-lawrence/bw"
@@ -93,24 +92,6 @@ func ConnectClientUntilSuccess(
 	}
 }
 
-func DefaultDialer(address string, d dialer, options ...grpc.DialOption) (_d dialers.Defaults, err error) {
-	var (
-		addr *net.TCPAddr
-	)
-
-	if addr, err = net.ResolveTCPAddr("tcp", address); err != nil {
-		return _d, err
-	}
-
-	return dialers.NewDefaults(options...).Defaults(
-		dialers.WithMuxer(
-			d,
-			addr,
-		),
-		grpc.WithInsecure(),
-	), nil
-}
-
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
 func connect(config agent.ConfigClient, ss notary.Signer, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
 	var (
@@ -136,7 +117,7 @@ func connect(config agent.ConfigClient, ss notary.Signer, creds credentials.Tran
 		}
 	}
 
-	if dd, err = DefaultDialer(
+	if dd, err = dialers.DefaultDialer(
 		config.Address,
 		di,
 		options...,

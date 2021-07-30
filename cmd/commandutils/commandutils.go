@@ -98,7 +98,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		return config, err
 	}
 
-	if d, err = daemons.DefaultDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
+	if d, err = dialers.DefaultDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
 		return config, err
 	}
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"os"
@@ -13,11 +14,16 @@ import (
 	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -59,14 +65,19 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 		BoolVar(&t.gcloudEnabled)
 }
 
-func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, c clustering.Joiner, snap peering.File) error {
+func (t *clusterCmd) Join(ctx context.Context, conf agent.Config, c clustering.Joiner, snap peering.File) (err error) {
 	var (
+		p2ppeers    clustering.Source
 		clipeers    clustering.Source = peering.NewStaticTCP(t.bootstrap...)
 		awspeers    clustering.Source = peering.NewStaticTCP()
 		gcloudpeers clustering.Source = peering.NewStaticTCP()
 		dnspeers    clustering.Source = peering.NewStaticTCP()
-		p2ppeers    clustering.Source = peering.NewDNS(t.config.P2PBind.Port)
 	)
+
+	if p2ppeers, err = p2ppeering(conf); err != nil {
+		log.Println("WARNING: P2P discovery disabled", err)
+		p2ppeers = peering.NewStaticTCP()
+	}
 
 	if t.dnsEnabled {
 		log.Println("dns peering enabled")
@@ -145,4 +156,52 @@ func raftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {
 		Path: p,
 	}
 	return raftboltdb.New(sopts)
+}
+
+type p2p struct {
+	address string
+	d       dialers.Defaults
+}
+
+func (t p2p) Peers(ctx context.Context) (results []string, err error) {
+	var (
+		nodes []*memberlist.Node
+	)
+
+	if nodes, err = discovery.Snapshot(t.address, t.d.Defaults()...); err != nil {
+		return nil, err
+	}
+
+	for _, n := range nodes {
+		results = append(results, n.Address())
+	}
+
+	return results, nil
+}
+
+func p2ppeering(c agent.Config) (s clustering.Source, err error) {
+	var (
+		tlsconfig *tls.Config
+		ss        notary.Signer
+		d         dialers.Defaults
+		address   = agent.DiscoveryP2PAddress(net.JoinHostPort(c.ServerName, "443"))
+	)
+
+	if ss, err = notary.NewAgentSigner(c.Root); err != nil {
+		return nil, err
+	}
+
+	if tlsconfig, err = daemons.TLSGenServer(c, tlsx.OptionNoClientCert); err != nil {
+		return nil, err
+	}
+
+	d, err = dialers.DefaultDialer(net.JoinHostPort(c.ServerName, "443"), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	if err != nil {
+		return nil, err
+	}
+
+	return p2p{
+		address: address,
+		d:       d,
+	}, nil
 }
