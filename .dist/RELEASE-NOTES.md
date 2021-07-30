@@ -1,3 +1,15 @@
+commit a43b656396796e1615d4141d164891921556d5a9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 12:33:06 2021 -0400
+
+    p2p bootstrap
+
+commit 9ebcfe841c04d2689591d7955083db38a8257e09
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 11:35:29 2021 -0400
+
+    release 0.1.1627659151-0d2aeeca
+
 commit 0d2aeecaefcd2e056d94aed144f73b65cf8aa33e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jul 30 11:32:31 2021 -0400
