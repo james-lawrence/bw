@@ -1,3 +1,15 @@
+commit 4fa2014198ae4467e2bb4c2549ec87cca809af12
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 08:17:40 2021 -0400
+
+    adjust logging message to be more insightful
+
+commit 30090caa30c0d38fa369714538e2ad0ff825e5ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 07:58:27 2021 -0400
+
+    release 0.1.1627645689-75f02d44
+
 commit 75f02d4457d9615544cd1b271b2212961191bddb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jul 30 07:48:09 2021 -0400
