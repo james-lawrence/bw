@@ -117,6 +117,19 @@ func (t bootstrap) collect(ctx context.Context, sources ...Source) (peers []stri
 		peers = append(peers, localpeers...)
 	}
 
+	dedup := make(map[string]bool, len(peers))
+	for _, p := range peers {
+		if _, ok := dedup[p]; ok {
+			continue
+		}
+		dedup[p] = true
+	}
+
+	peers = peers[:0]
+	for k := range dedup {
+		peers = append(peers, k)
+	}
+
 	return peers, err
 }
 
