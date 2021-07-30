@@ -9,13 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type printingFilter struct{}
-
-func (t printingFilter) NotifyAlive(peer *memberlist.Node) error {
-	log.Println("Alive:", peer.Name, peer.Addr.String(), int(peer.Port))
-	return nil
-}
-
 // PrintingEventDelegate prints out events to the standard logger.
 type PrintingEventDelegate struct{}
 
