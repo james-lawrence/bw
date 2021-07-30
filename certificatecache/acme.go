@@ -53,7 +53,8 @@ type ACMEConfig struct {
 	Locality           []string      `yaml:"locality"`
 	Organization       []string      `yaml:"organization"`
 	OrganizationalUnit []string      `yaml:"organizationalUnit"`
-	DNSNames           []string      `yaml:"dns"` // alternative dns names
+	DNSNames           []string      `yaml:"dns"`    // alternative dns names
+	Secret             string        `yaml:"secret"` // secret for generating account key.
 }
 
 type challenger interface {

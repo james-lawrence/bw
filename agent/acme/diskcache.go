@@ -301,7 +301,7 @@ func (t DiskCache) digestCertificate(csr *x509.CertificateRequest) (digest strin
 }
 
 func clearRegistration(c agent.Config) (err error) {
-	return os.Remove(filepath.Join(c.Root, "acme.registration.json"))
+	return os.Remove(filepath.Join(c.Root, regfilename))
 }
 
 func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Resource, err error) {
@@ -310,7 +310,7 @@ func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Res
 		reg     *registration.Resource
 	)
 
-	regp := filepath.Join(c.Root, "acme.registration.json")
+	regp := filepath.Join(c.Root, regfilename)
 
 	if reg, err = client.Registration.Register(registration.RegisterOptions{TermsOfServiceAgreed: true}); err != nil {
 		return zreg, err
@@ -334,7 +334,7 @@ func readRegistration(c agent.Config) (reg *registration.Resource) {
 	)
 
 	reg = new(registration.Resource)
-	regp := filepath.Join(c.Root, "acme.registration.json")
+	regp := filepath.Join(c.Root, regfilename)
 
 	if !systemx.FileExists(regp) {
 		return nil

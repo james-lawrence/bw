@@ -30,12 +30,21 @@ func (t account) GetRegistration() (reg *registration.Resource) {
 
 func (t account) GetPrivateKey() (priv crypto.PrivateKey) {
 	var (
-		err error
+		err    error
+		secret = []byte(t.ACMEConfig.Secret)
 	)
 
-	if priv, err = rsax.MaybeDecode(rsax.CachedGenerate(filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey), 4096)); err != nil {
-		log.Println("failed to load private key", err)
-		return nil
+	if len(secret) > 0 {
+		if priv, err = rsax.MaybeDecode(rsax.CachedAutoDeterministic(secret, filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey))); err != nil {
+			log.Println("failed to load private key", err)
+			return nil
+		}
+	} else {
+		log.Println("WARNING: acme config is missing a secret, add `secret: \"examplesecret\"` to the configuration")
+		if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.Config.Root, certificatecache.DefaultACMEKey))); err != nil {
+			log.Println("failed to load private key", err)
+			return nil
+		}
 	}
 
 	return priv
