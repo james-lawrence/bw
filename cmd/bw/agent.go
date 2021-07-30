@@ -183,7 +183,7 @@ func (t *agentCmd) bind() (err error) {
 		Shutdown:          t.global.shutdown,
 		Cleanup:           t.global.cleanup,
 		Debug:             t.global.debug,
-		DebugLog:          commandutils.DebugLog(t.global.debug),
+		DebugLog:          commandutils.DebugLog(envx.Boolean(t.global.debug, bw.EnvLogsGossip)),
 		NotaryStorage:     ns,
 		NotaryAuth:        notary.NewAuth(ns),
 		RPCCredentials:    tlscreds,
