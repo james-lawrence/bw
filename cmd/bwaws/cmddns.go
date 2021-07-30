@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/dns"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
@@ -29,6 +30,7 @@ type cmdDNS struct {
 	bootstrap      []*net.TCPAddr
 	hostedZoneID   string
 	region         string
+	hostname       string
 }
 
 func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
@@ -37,6 +39,9 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-config", "file containing the agent configuration").Default(t.configLocation).StringVar(&t.configLocation)
 	parent.Flag("zone", "hosted zone to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_HOSTED_ZONE").StringVar(&t.hostedZoneID)
 	parent.Flag("region", "region to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_REGION").StringVar(&t.region)
+	parent.Flag("hostname", "record hostname to use, defaults to the servername in the agent config").Envar(
+		"BEARDED_WOOKIE_AWS_DNS_HOSTNAME",
+	).StringVar(&t.hostname)
 	parent.Action(t.exec)
 }
 
@@ -90,7 +95,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 			t.region,
 			dns.Route53OptionCommon(
 				dns.OptionTTL(t.config.DNSBind.TTL),
-				dns.OptionFQDN(t.config.ServerName),
+				dns.OptionFQDN(stringsx.DefaultIfBlank(t.hostname, t.config.ServerName)),
 				dns.OptionMaximumNodes(t.config.MinimumNodes),
 			),
 		),
