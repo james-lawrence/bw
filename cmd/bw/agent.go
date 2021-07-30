@@ -228,6 +228,7 @@ func (t *agentCmd) bind() (err error) {
 		tlscreds,
 		acme.NewALPNCertCache(acme.NewResolver(t.config.Peer(), dctx.Cluster, acmesvc, dialer)),
 	)
+	log.Println("NextProtos", alpn.NextProtos)
 
 	for idx, b := range bound {
 		bound[idx] = tls.NewListener(
