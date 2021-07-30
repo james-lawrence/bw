@@ -1,3 +1,51 @@
+commit ddd70237cb79e0bb0cef3ee130e30f56b8e4ad2c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 11:08:07 2021 -0400
+
+    hack around hashicorp memberlist hanging
+
+commit 6ca389091a91f06e976260ef63362335b84a4b7b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 10:16:14 2021 -0400
+
+    update go mod
+
+commit c2a1c8788295dd0ce4adbaf3558bcfef27c7e8a7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 10:15:30 2021 -0400
+
+    cleanup
+
+commit dd3e22c9d3237c00cc1edb4f4465c5b8921613b2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 09:44:25 2021 -0400
+
+    memberlist transport timeout
+
+commit c293b96c22371fc4dafc4070641d0f8f81a6ac10
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 09:41:44 2021 -0400
+
+    muxer debug
+
+commit 401670f9c36806b9e8ee0e72342dd142e0b660f8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 09:37:10 2021 -0400
+
+    enable memberlist logs when gossip environment is set
+
+commit e9cf0de967d11c90a8f07db9513a94a02aec57f3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 09:33:59 2021 -0400
+
+    debug memberlist
+
+commit 118c2791e7750b53a621b064cb053aeba6600cf2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 08:19:31 2021 -0400
+
+    release 0.1.1627647460-4fa20141
+
 commit 4fa2014198ae4467e2bb4c2549ec87cca809af12
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jul 30 08:17:40 2021 -0400
