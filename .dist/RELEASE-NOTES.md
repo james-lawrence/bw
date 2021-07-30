@@ -1,3 +1,27 @@
+commit 077895adf78ffd8fe0dcc3822883a5996b288b2e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 15:10:36 2021 -0400
+
+    allow adjusting what dns name to modify records
+
+commit 05a51ddb797d5ae840544bf2492fba3518b90246
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 14:09:43 2021 -0400
+
+    environment variable for dns peer detection
+
+commit 225584ed4e19a4f5d117cb860a2587c597735713
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 13:42:34 2021 -0400
+
+    debugging
+
+commit 63f2003ada5edc1283a21c6f2f5556d787cc4091
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 12:59:46 2021 -0400
+
+    release 0.1.1627664207-aeebe5d7
+
 commit aeebe5d70cb02de964a660a6c79d5e44aa5baf75
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jul 30 12:56:47 2021 -0400
