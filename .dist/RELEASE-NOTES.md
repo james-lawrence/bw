@@ -1,3 +1,15 @@
+commit 0d2aeecaefcd2e056d94aed144f73b65cf8aa33e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 11:32:31 2021 -0400
+
+    revert gomod
+
+commit 20d7097f8ae52fe266d17728e16747986123dad2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jul 30 11:15:36 2021 -0400
+
+    release 0.1.1627657687-ddd70237
+
 commit ddd70237cb79e0bb0cef3ee130e30f56b8e4ad2c
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jul 30 11:08:07 2021 -0400
