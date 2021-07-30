@@ -2,7 +2,6 @@ package certificatecache
 
 import (
 	"crypto/tls"
-	"log"
 
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 )
@@ -14,7 +13,6 @@ type cache interface {
 
 // NewALPN clones the provided TLS config and updates the GetCertificate method
 func NewALPN(c *tls.Config, cc cache) *tls.Config {
-	log.Println("ALPN tls.Config")
 	updated := c.Clone()
 	updated.NextProtos = append(updated.NextProtos, tlsalpn01.ACMETLS1Protocol)
 	updated.GetCertificate = ALPN{cache: cc, fallback: c.GetCertificate}.GetCertificate
@@ -29,7 +27,6 @@ type ALPN struct {
 
 // GetCertificate for use by tls.Config.
 func (t ALPN) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	log.Println("GetCertificate", hello.SupportedProtos)
 	for _, proto := range hello.SupportedProtos {
 		if proto == tlsalpn01.ACMETLS1Protocol {
 			return t.cache.GetCertificate(hello)
