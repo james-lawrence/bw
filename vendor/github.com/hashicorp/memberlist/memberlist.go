@@ -250,7 +250,6 @@ func (m *Memberlist) Join(existing []string) (int, error) {
 	numSuccess := 0
 	var errs error
 	for _, exist := range existing {
-		m.logger.Printf("[DEBUG] memberlist: attempting %s\n", exist)
 		addrs, err := m.resolveAddr(exist)
 		if err != nil {
 			err = fmt.Errorf("Failed to resolve %s: %v", exist, err)

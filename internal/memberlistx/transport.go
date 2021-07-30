@@ -202,7 +202,6 @@ func (t *SWIMTransport) PacketCh() <-chan *memberlist.Packet {
 
 // DialTimeout see memberlist.Transport.
 func (t *SWIMTransport) DialTimeout(addr string, timeout time.Duration) (net.Conn, error) {
-	log.Println("SWIMTransport DialTimeout", timeout)
 	ctx, done := context.WithTimeout(context.Background(), timeout)
 	defer done()
 
