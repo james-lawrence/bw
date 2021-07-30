@@ -152,9 +152,12 @@ const (
 )
 
 // Used in ZONEMD https://tools.ietf.org/html/rfc8976
+
 const (
+	// ZoneMD Accepted Schemes
 	ZoneMDSchemeSimple = 1
 
+	// ZoneMD Hash Algorithms
 	ZoneMDHashAlgSHA384 = 1
 	ZoneMDHashAlgSHA512 = 2
 )
@@ -1413,13 +1416,13 @@ func (rr *APL) String() string {
 }
 
 // str returns presentation form of the APL prefix.
-func (a *APLPrefix) str() string {
+func (p *APLPrefix) str() string {
 	var sb strings.Builder
-	if a.Negation {
+	if p.Negation {
 		sb.WriteByte('!')
 	}
 
-	switch len(a.Network.IP) {
+	switch len(p.Network.IP) {
 	case net.IPv4len:
 		sb.WriteByte('1')
 	case net.IPv6len:
@@ -1428,20 +1431,20 @@ func (a *APLPrefix) str() string {
 
 	sb.WriteByte(':')
 
-	switch len(a.Network.IP) {
+	switch len(p.Network.IP) {
 	case net.IPv4len:
-		sb.WriteString(a.Network.IP.String())
+		sb.WriteString(p.Network.IP.String())
 	case net.IPv6len:
 		// add prefix for IPv4-mapped IPv6
-		if v4 := a.Network.IP.To4(); v4 != nil {
+		if v4 := p.Network.IP.To4(); v4 != nil {
 			sb.WriteString("::ffff:")
 		}
-		sb.WriteString(a.Network.IP.String())
+		sb.WriteString(p.Network.IP.String())
 	}
 
 	sb.WriteByte('/')
 
-	prefix, _ := a.Network.Mask.Size()
+	prefix, _ := p.Network.Mask.Size()
 	sb.WriteString(strconv.Itoa(prefix))
 
 	return sb.String()
@@ -1455,17 +1458,17 @@ func (a *APLPrefix) equals(b *APLPrefix) bool {
 }
 
 // copy returns a copy of the APL prefix.
-func (a *APLPrefix) copy() APLPrefix {
+func (p *APLPrefix) copy() APLPrefix {
 	return APLPrefix{
-		Negation: a.Negation,
-		Network:  copyNet(a.Network),
+		Negation: p.Negation,
+		Network:  copyNet(p.Network),
 	}
 }
 
 // len returns size of the prefix in wire format.
-func (a *APLPrefix) len() int {
+func (p *APLPrefix) len() int {
 	// 4-byte header and the network address prefix (see Section 4 of RFC 3123)
-	prefix, _ := a.Network.Mask.Size()
+	prefix, _ := p.Network.Mask.Size()
 	return 4 + (prefix+7)/8
 }
 

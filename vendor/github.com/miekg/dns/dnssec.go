@@ -8,9 +8,9 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	_ "crypto/sha1"   // need its init function
-	_ "crypto/sha256" // need its init function
-	_ "crypto/sha512" // need its init function
+	_ "crypto/sha1"
+	_ "crypto/sha256"
+	_ "crypto/sha512"
 	"encoding/asn1"
 	"encoding/binary"
 	"encoding/hex"

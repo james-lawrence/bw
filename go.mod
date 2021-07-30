@@ -8,7 +8,6 @@ require (
 	github.com/akutz/memconn v0.1.0
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/anacrolix/stm v0.2.0
-	github.com/armon/go-metrics v0.3.9 // indirect
 	github.com/aws/aws-sdk-go v1.38.64
 	github.com/bits-and-blooms/bloom/v3 v3.0.1
 	github.com/coreos/go-systemd/v22 v22.3.2
@@ -17,18 +16,12 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-acme/lego/v4 v4.4.0
 	github.com/gofrs/uuid v4.0.0+incompatible
-	github.com/google/btree v1.0.1 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
-	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
-	github.com/hashicorp/go-msgpack v1.1.5 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.2
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/memberlist v0.2.4
 	github.com/hashicorp/raft v1.3.1
 	github.com/hashicorp/raft-boltdb v0.0.0-20210422161416-485fa74b0b01
@@ -39,7 +32,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.8.0
-	github.com/miekg/dns v1.1.43
+	github.com/miekg/dns v1.1.42
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
 	github.com/onsi/ginkgo v1.16.4
@@ -49,9 +42,7 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	github.com/traefik/yaegi v0.9.8
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
-	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985 // indirect
 	golang.org/x/oauth2 v0.0.0-20210615190721-d04028783cf1
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	golang.org/x/time v0.0.0-20210611083556-38a9dc6acbc6
 	golang.org/x/tools v0.1.3
 	google.golang.org/api v0.48.0
