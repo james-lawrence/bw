@@ -57,8 +57,9 @@ func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) 
 	).Envar(
 		bw.EnvAgentRAFTBind,
 	).TCPVar(&t.config.RaftBind)
-
-	parent.Flag("cluster-dns-enable", "enable dns bootstrap").Default("false").BoolVar(&t.dnsEnabled)
+	parent.Flag("cluster-dns-enable", "enable dns bootstrap").Default("false").Envar(
+		bw.EnvAgentClusterEnableDNS,
+	).BoolVar(&t.dnsEnabled)
 	parent.Flag("cluster-aws-enable", "enable/disable aws autoscale group bootstrap").Default("false").BoolVar(&t.awsEnabled)
 	parent.Flag("cluster-gcloud-enable", "enable/disable gcloud target pools bootstrap").Default("false").
 		Envar(bw.EnvAgentClusterEnableGoogleCloudPool).
