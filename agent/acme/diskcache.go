@@ -108,11 +108,13 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 		return resp, status.Error(codes.FailedPrecondition, "invalid certificate request")
 	}
 
+	log.Println("checking cache")
 	// Lets encrypt has rate limits on certificates generated per domain per month.
 	// lets cache the generated certificates if possible.
 	if resp, err = t.cachedCertificate(template); err == nil {
 		return resp, nil
 	}
+	log.Println("cache miss")
 
 	// cache the private key used to generate the certificate for CSR.
 	if priv, err = rsax.CachedAuto(filepath.Join(t.c.Root, t.cachedir, t.digestCertificate(template)+".pem")); err != nil {
@@ -283,7 +285,7 @@ func (t DiskCache) clearCertCache(dir string) {
 		}
 
 		// clear cache after 8 hours
-		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(20*time.Hour).Before(time.Now()) {
+		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(40*time.Hour).Before(time.Now()) {
 			logx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
 		} else if err != nil {
 			log.Println("failed to clear cached certificates", err)
