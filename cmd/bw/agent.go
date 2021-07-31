@@ -197,7 +197,6 @@ func (t *agentCmd) bind() (err error) {
 		ACMECache:     acmesvc,
 	}
 
-	log.Println("DEBUG", dctx.DebugLog)
 	// go func(l net.Listener, err error) {
 	// 	if err != nil {
 	// 		panic(errors.Wrap(err, "default protocol registration failed"))

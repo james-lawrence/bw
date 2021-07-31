@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"strconv"
 	"time"
@@ -171,12 +172,37 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 		}
 
 		peers, _ = b.collect(ctx, b.Peering...)
+
 		log.Printf("located %d peers: %s\n", len(peers), spew.Sdump(peers))
 
-		if joined, err = c.Join(peers...); err != nil {
-			log.Println(errors.Wrap(err, "failed to join peers"))
-			continue
+		// begin hack
+		// this is a hack due memberlist hanging during certain situations.
+		if len(peers) > 6 {
+			rand.Shuffle(len(peers), func(i int, j int) {
+				peers[i], peers[j] = peers[j], peers[i]
+			})
+			peers = peers[:6]
+			log.Printf("reduced to %d peers: %s\n", len(peers), spew.Sdump(peers))
 		}
+
+		completed := make(chan int)
+		ctxj, done := context.WithTimeout(ctx, 5*time.Minute)
+		go func() {
+			defer done()
+			if p, err := c.Join(peers...); err != nil {
+				log.Println(errors.Wrap(err, "failed to join peers"))
+			} else {
+				completed <- p
+			}
+		}()
+
+		select {
+		case <-ctxj.Done():
+			log.Println("failed to detect peers", ctxj.Err())
+			continue
+		case joined = <-completed:
+		}
+		// end hack
 
 		// if members > 1, then another node discovered us while we were
 		// attempting to join the cluster.
@@ -184,19 +210,7 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 
 		log.Println("joined", joined, "peers")
 
-		// this is a hack due memberlist hanging during certain situations.
-		ctxj, done := context.WithTimeout(context.Background(), 3*time.Minute)
-		go func() {
-			<-ctxj.Done()
-			if err := ctxj.Err(); err != nil && err != context.Canceled {
-				panic(err)
-			}
-		}()
-
-		success := b.JoinStrategy(joined)
-		done()
-
-		if success {
+		if b.JoinStrategy(joined) {
 			return nil
 		}
 
