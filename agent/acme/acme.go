@@ -6,7 +6,6 @@ package acme
 
 import (
 	context "context"
-	"log"
 
 	"github.com/hashicorp/memberlist"
 	codes "google.golang.org/grpc/codes"
@@ -73,7 +72,6 @@ func (t Server) Challenge(ctx context.Context, req *ChallengeRequest) (resp *Cha
 
 // Resolution return the resolution
 func (t Server) Resolution(ctx context.Context, req *ResolutionRequest) (resp *ResolutionResponse, err error) {
-	log.Println("retrieving response to challenge")
 	if !t.auth.Authorize(ctx).Autocert {
 		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}

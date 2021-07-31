@@ -76,10 +76,22 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 	}
 	defer atomic.CompareAndSwapInt64(t.m, 1, 0)
 
+	// fast track if we have have a cached version
+	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
+		log.Println("invalid certificate", err)
+		return resp, status.Error(codes.FailedPrecondition, "invalid certificate request")
+	}
+
+	// Lets encrypt has rate limits on certificates generated per domain per month.
+	// lets cache the generated certificates if possible.
+	if resp, err = t.cachedCertificate(template); err == nil {
+		return resp, nil
+	}
+
 	// let's encrypt has pretty heavy rate limits in production.
 	if err = t.rate.Wait(ctx); err != nil {
 		log.Println("acme rate limit", err)
-		return resp, status.Error(codes.Internal, "registration reset failure")
+		return resp, status.Error(codes.ResourceExhausted, "rate limited")
 	}
 
 	// LEGO is retarded in its API. and we need to delete the registration so it
@@ -102,19 +114,6 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 		log.Println("acme registration failure", err)
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
-
-	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
-		log.Println("invalid certificate", err)
-		return resp, status.Error(codes.FailedPrecondition, "invalid certificate request")
-	}
-
-	log.Println("checking cache")
-	// Lets encrypt has rate limits on certificates generated per domain per month.
-	// lets cache the generated certificates if possible.
-	if resp, err = t.cachedCertificate(template); err == nil {
-		return resp, nil
-	}
-	log.Println("cache miss")
 
 	// cache the private key used to generate the certificate for CSR.
 	if priv, err = rsax.CachedAuto(filepath.Join(t.c.Root, t.cachedir, t.digestCertificate(template)+".pem")); err != nil {
@@ -240,9 +239,10 @@ func (t DiskCache) cachedCertificate(csr *x509.CertificateRequest) (cresp *Chall
 	var (
 		encoded []byte
 	)
+
 	cresp = &ChallengeResponse{}
 	digest := t.digestCertificate(csr)
-	dir := filepath.Join(t.c.Root, "cached.certs")
+	dir := filepath.Join(t.c.Root, t.cachedir)
 	defer t.clearCertCache(dir)
 	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))
 
@@ -259,7 +259,7 @@ func (t DiskCache) cachedCertificate(csr *x509.CertificateRequest) (cresp *Chall
 
 func (t DiskCache) cacheCertificate(csr *x509.CertificateRequest, c *ChallengeResponse) (_ *ChallengeResponse, err error) {
 	digest := t.digestCertificate(csr)
-	dir := filepath.Join(t.c.Root, "cached.certs")
+	dir := filepath.Join(t.c.Root, t.cachedir)
 	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))
 
 	if err = os.MkdirAll(dir, 0700); err != nil {
@@ -284,8 +284,8 @@ func (t DiskCache) clearCertCache(dir string) {
 			return nil
 		}
 
-		// clear cache after 8 hours
-		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(40*time.Hour).Before(time.Now()) {
+		// clear cache after 20 hours
+		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(20*time.Hour).Before(time.Now()) {
 			logx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
 		} else if err != nil {
 			log.Println("failed to clear cached certificates", err)

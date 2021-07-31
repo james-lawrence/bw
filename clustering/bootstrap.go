@@ -188,7 +188,6 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 		ctxj, done := context.WithTimeout(context.Background(), 3*time.Minute)
 		go func() {
 			<-ctxj.Done()
-			log.Println("bootstrap hack", err)
 			if err := ctxj.Err(); err != nil && err != context.Canceled {
 				panic(err)
 			}

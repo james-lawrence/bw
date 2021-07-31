@@ -2,6 +2,7 @@ package acme
 
 import (
 	"context"
+	"crypto/x509"
 	"log"
 	"time"
 
@@ -71,7 +72,7 @@ func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, autho
 
 	// here we select a node based on the a disciminator. that node is responsible
 	// for managing the acme account key, registration, etc.
-	if p, err = agent.NodeToPeer(t.Get([]byte(discriminator))); err != nil {
+	if p, err = agent.NodeToPeer(t.rendezvous.Get([]byte(discriminator))); err != nil {
 		return key, cert, authority, err
 	}
 
@@ -82,6 +83,7 @@ func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, autho
 		return resp.Private, resp.Certificate, resp.Authority, nil
 	}
 
+	log.Println("obtaining from", agent.AutocertAddress(p))
 	if conn, err = dialers.NewDirect(agent.AutocertAddress(p)).DialContext(ctx, t.dialer.Defaults()...); err != nil {
 		return key, cert, authority, err
 	}
@@ -91,7 +93,33 @@ func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, autho
 		return key, cert, authority, err
 	}
 
+	// attempt to cache the certificate locally.
+	// we do this because as the cluster mutates over time
+	// with new servers the server responsible for dealing with resolutions
+	// can change and we want to limit the number of requests for certificates.
+	// by caching here we ensure that if this server becomes responsible for issuing
+	// certs we'll have the certificate ready to go.
+	if err = t.localcache(req, resp); err != nil {
+		log.Println("failed to cache certificate locally", err)
+	}
+
 	return resp.Private, resp.Certificate, resp.Authority, nil
+}
+
+func (t Challenger) localcache(req *ChallengeRequest, resp *ChallengeResponse) (err error) {
+	var (
+		template *x509.CertificateRequest
+	)
+
+	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
+		return errors.Wrap(err, "failed to parse CSR for caching")
+	}
+
+	if _, err = t.cache.cacheCertificate(template, resp); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewResolver create a new Client
