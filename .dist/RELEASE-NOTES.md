@@ -1,3 +1,15 @@
+commit 218e2738a34838a50b7f034a5816fb76b9b5fdae
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 31 11:12:45 2021 -0400
+
+    fixes relating to bootstrapping
+
+commit 441a551730fbf5e76671ed6d929fc70a9e65096e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 31 08:22:51 2021 -0400
+
+    release 0.1.1627733959-34f08ec0
+
 commit 34f08ec0b4e73d588e8100edd01a301b228032f2
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jul 31 07:01:50 2021 -0400
