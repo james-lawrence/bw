@@ -16,23 +16,23 @@ import (
 
 const deployMetadataName = "deploy.metadata"
 
-func less(a, b agent.Deploy) bool {
-	if a.Archive == nil {
+func less(a, b *agent.Deploy) bool {
+	if a == nil || a.Archive == nil {
 		return true
 	}
 
-	if b.Archive == nil {
+	if b == nil || b.Archive == nil {
 		return false
 	}
 
 	return a.Archive.Dts > b.Archive.Dts
 }
 
-func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
-	deployments := make([]agent.Deploy, 0, 10)
+func readAllDeployMetadata(root string) ([]*agent.Deploy, error) {
+	deployments := make([]*agent.Deploy, 0, 10)
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		var (
-			d agent.Deploy
+			d *agent.Deploy
 		)
 
 		if err != nil || path == root || !info.IsDir() {
@@ -56,16 +56,17 @@ func readAllDeployMetadata(root string) ([]agent.Deploy, error) {
 	return deployments, err
 }
 
-func readDeployMetadata(path string) (a agent.Deploy, err error) {
+func readDeployMetadata(path string) (a *agent.Deploy, err error) {
 	var (
 		raw []byte
 	)
+	a = &agent.Deploy{}
 
 	if raw, err = ioutil.ReadFile(path); err != nil {
 		return a, errors.WithStack(err)
 	}
 
-	if err = proto.Unmarshal(raw, &a); err != nil {
+	if err = proto.Unmarshal(raw, a); err != nil {
 		return a, errors.WithStack(err)
 	}
 
@@ -73,12 +74,12 @@ func readDeployMetadata(path string) (a agent.Deploy, err error) {
 }
 
 // writeDeployMetadata writes out the archive.metadata to disk.
-func writeDeployMetadata(dir string, d agent.Deploy) error {
+func writeDeployMetadata(dir string, d *agent.Deploy) error {
 	return writeDeployMetadataFile(filepath.Join(dir, deployMetadataName), d)
 }
 
 // writeDeployMetadata writes out the archive.metadata to disk.
-func writeDeployMetadataFile(path string, d agent.Deploy) error {
+func writeDeployMetadataFile(path string, d *agent.Deploy) error {
 	var (
 		err error
 		dst *os.File
@@ -91,7 +92,7 @@ func writeDeployMetadataFile(path string, d agent.Deploy) error {
 	defer func() { logx.MaybeLog(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
 	defer func() { logx.MaybeLog(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
 
-	if raw, err = proto.Marshal(&d); err != nil {
+	if raw, err = proto.Marshal(d); err != nil {
 		return errors.WithStack(err)
 	}
 

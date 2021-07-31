@@ -25,25 +25,25 @@ type connector interface {
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
 	// Deploy trigger a deploy
-	Deploy(*DeployOptions, *Archive) (Deploy, error)
+	Deploy(context.Context, *DeployOptions, *Archive) (*Deploy, error)
 	// Cancel current deploy
 	Cancel()
 	Reset() error
-	Deployments() ([]Deploy, error)
+	Deployments() ([]*Deploy, error)
 	Logs([]byte) io.ReadCloser
 }
 
 type noopDeployer struct{}
 
-func (t noopDeployer) Deploy(*DeployOptions, *Archive) (d Deploy, err error) {
-	return d, err
+func (t noopDeployer) Deploy(context.Context, *DeployOptions, *Archive) (d *Deploy, err error) {
+	return &Deploy{}, err
 }
 
 func (t noopDeployer) Reset() error { return nil }
 func (t noopDeployer) Cancel()      {}
 
-func (t noopDeployer) Deployments() ([]Deploy, error) {
-	return []Deploy{}, nil
+func (t noopDeployer) Deployments() ([]*Deploy, error) {
+	return []*Deploy{}, nil
 }
 
 func (t noopDeployer) Logs(deploymentID []byte) io.ReadCloser {
@@ -134,18 +134,18 @@ func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownRe
 func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployResponse, error) {
 	var (
 		err error
-		d   Deploy
+		d   *Deploy
 	)
 
 	if err := t.auth.Deploy(ctx); err != nil {
 		return nil, err
 	}
 
-	if d, err = t.Deployer.Deploy(dreq.Options, dreq.Archive); err != nil {
+	if d, err = t.Deployer.Deploy(context.Background(), dreq.Options, dreq.Archive); err != nil {
 		return nil, err
 	}
 
-	return &DeployResponse{Deploy: &d}, nil
+	return &DeployResponse{Deploy: d}, nil
 }
 
 // Cancel ...
@@ -161,7 +161,7 @@ func (t Server) Cancel(ctx context.Context, req *CancelRequest) (_ *CancelRespon
 // Info ...
 func (t Server) Info(ctx context.Context, _ *StatusRequest) (_ *StatusResponse, err error) {
 	var (
-		d []Deploy
+		d []*Deploy
 	)
 
 	if err := t.auth.Deploy(ctx); err != nil {
@@ -171,13 +171,13 @@ func (t Server) Info(ctx context.Context, _ *StatusRequest) (_ *StatusResponse, 
 	tmp := t.connector.Local()
 
 	if d, err = t.Deployer.Deployments(); err != nil {
-		d = []Deploy{}
+		d = []*Deploy{}
 		log.Println("failed to read deployments, defaulting to no deployments", err)
 	}
 
 	return &StatusResponse{
 		Peer:        tmp,
-		Deployments: deployPointers(d...),
+		Deployments: d,
 	}, nil
 }
 

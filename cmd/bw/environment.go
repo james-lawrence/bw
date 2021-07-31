@@ -37,10 +37,6 @@ func (t *environmentCreate) configure(parent *kingpin.CmdClause) {
 }
 
 func (t *environmentCreate) generate(ctx *kingpin.ParseContext) (err error) {
-	type context struct {
-		Address string
-	}
-
 	var (
 		encoded []byte
 		cc      agent.ConfigClient

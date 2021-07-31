@@ -1,7 +1,7 @@
 package deployment
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"io/ioutil"
 	"log"
@@ -143,7 +143,7 @@ func (t *Coordinator) background(dctx *DeployContext) {
 }
 
 // Deployments about the state of the agent.
-func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
+func (t *Coordinator) Deployments() (deployments []*agent.Deploy, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -162,7 +162,7 @@ func (t *Coordinator) Deployments() (deployments []agent.Deploy, err error) {
 func (t *Coordinator) Reset() error {
 	var (
 		err         error
-		deployments []agent.Deploy
+		deployments []*agent.Deploy
 	)
 
 	t.m.Lock()
@@ -188,7 +188,7 @@ func (t *Coordinator) Reset() error {
 }
 
 // Deploy deploy a given archive.
-func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) (d agent.Deploy, err error) {
+func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, archive *agent.Archive) (d *agent.Deploy, err error) {
 	var (
 		ok   bool
 		dctx *DeployContext
@@ -213,7 +213,7 @@ func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) 
 		DeployContextOptionDispatcher(t.dispatcher),
 	}
 
-	if dctx, err = NewRemoteDeployContext(t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
+	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
 		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, err))
 		return t.ds.current, err
 	}
@@ -221,6 +221,7 @@ func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) 
 	if dctx.Log == nil || dctx.Archive.Peer == nil {
 		log.Println("debug", dctx.Log == nil, spew.Sdump(dctx.Archive))
 	}
+
 	dctx.Log.Printf("deploy recieved: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
 	go func() {
 		defer dctx.Log.Printf("deploy complete: deployID(%s) primary(%s) location(%s)\n", dctx.ID, dctx.Archive.Peer.Name, dctx.Archive.Location)
@@ -237,7 +238,7 @@ func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) 
 		return t.ds.current, dctx.Done(err)
 	}
 
-	d = agent.Deploy{Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
+	d = &agent.Deploy{Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
@@ -245,7 +246,7 @@ func (t *Coordinator) Deploy(opts *agent.DeployOptions, archive *agent.Archive) 
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
-	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, &d))
+	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
 		return d, dctx.Done(err)
@@ -283,7 +284,7 @@ func (t *Coordinator) Cancel() {
 	}
 }
 
-func (t *Coordinator) update(dctx *DeployContext, d agent.Deploy, c agentutil.Cleaner) agent.Deploy {
+func (t *Coordinator) update(dctx *DeployContext, d *agent.Deploy, c agentutil.Cleaner) *agent.Deploy {
 	t.m.Lock()
 	defer t.m.Unlock()
 
@@ -294,7 +295,7 @@ func (t *Coordinator) update(dctx *DeployContext, d agent.Deploy, c agentutil.Cl
 	return d
 }
 
-func (t *Coordinator) correctLatestDeploy(deploys ...agent.Deploy) error {
+func (t *Coordinator) correctLatestDeploy(deploys ...*agent.Deploy) error {
 	if len(deploys) == 0 {
 		return nil
 	}
@@ -311,7 +312,7 @@ func (t *Coordinator) correctLatestDeploy(deploys ...agent.Deploy) error {
 
 	_, root, _ := deployDirs(t.deploysRoot, d.Archive)
 	d.Stage = agent.Deploy_Failed
-	d.Error = fmt.Sprintf("dead deploy detected")
+	d.Error = "dead deploy detected"
 
 	return writeDeployMetadata(root, d)
 }

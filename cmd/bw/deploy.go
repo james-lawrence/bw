@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -383,7 +384,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 	if t.debug {
 		log.Printf("building directory '%s' will remain after exit\n", root)
 		defer func() {
-			err = errorsx.Compact(err, errorsx.Notification(errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Brown("WARN"), root)))
+			err = errorsx.Compact(err, errorsx.Notification(errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Yellow("WARN"), root)))
 		}()
 	} else {
 		defer os.RemoveAll(root)
@@ -420,7 +421,7 @@ func (t *deployCmd) local(ctx *kingpin.ParseContext) (err error) {
 		Timeout: int64(config.DeployTimeout),
 	}
 
-	if dctx, err = deployment.NewRemoteDeployContext(root, local, &dopts, &archive, deployment.DeployContextOptionDisableReset); err != nil {
+	if dctx, err = deployment.NewRemoteDeployContext(context.Background(), root, local, &dopts, &archive, deployment.DeployContextOptionDisableReset); err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

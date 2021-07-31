@@ -58,7 +58,7 @@ func AwaitDeployResult(dctx *DeployContext) *DeployResult {
 }
 
 // NewDeployContext create a deployment context from the provided settings.
-func NewDeployContext(root string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
+func NewDeployContext(ctx context.Context, root string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	id := bw.RandomID(a.DeploymentID)
 
 	dctx := &DeployContext{
@@ -90,7 +90,7 @@ func NewDeployContext(root string, p *agent.Peer, dopts *agent.DeployOptions, a 
 		return dctx, errors.WithMessage(err, "failed to create archive directory")
 	}
 
-	dctx.deadline, dctx.cancel = context.WithTimeout(context.Background(), dctx.timeout())
+	dctx.deadline, dctx.cancel = context.WithTimeout(ctx, dctx.timeout())
 
 	return dctx, nil
 }
@@ -104,7 +104,7 @@ func deployDirs(root string, a *agent.Archive) (bw.RandomID, string, string) {
 
 // NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
-func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
+func NewRemoteDeployContext(ctx context.Context, workdir string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	var (
 		logger dlog
 	)
@@ -122,7 +122,7 @@ func NewRemoteDeployContext(workdir string, p *agent.Peer, dopts *agent.DeployOp
 		}
 	}
 
-	return NewDeployContext(root, p, dopts, a, append([]DeployContextOption{
+	return NewDeployContext(ctx, root, p, dopts, a, append([]DeployContextOption{
 		DeployContextOptionLog(logger),
 		DeployContextOptionArchiveRoot(archiveDir),
 	}, options...)...)
@@ -224,7 +224,7 @@ func newCancelDeployContext() *DeployContext {
 
 // DeployState represents the state of a deploy.
 type DeployState struct {
-	current        agent.Deploy
+	current        *agent.Deploy
 	currentContext *DeployContext
 	state          *uint32
 }
@@ -242,30 +242,30 @@ type DeployResult struct {
 	Error error
 }
 
-func (t DeployResult) deployComplete() agent.Deploy {
+func (t DeployResult) deployComplete() *agent.Deploy {
 	tmpa := t.Archive
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
-	d := agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
-	t.Dispatch(agentutil.DeployEvent(t.Local, &d))
+	d := &agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
+	t.Dispatch(agentutil.DeployEvent(t.Local, d))
 	return d
 }
 
-func (t DeployResult) deployFailed(err error) agent.Deploy {
+func (t DeployResult) deployFailed(err error) *agent.Deploy {
 	tmpa := t.Archive
 	tmpo := t.DeployOptions
 
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
-	d := agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
+	d := &agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
 	t.Dispatch(
 		agentutil.LogError(t.Local, err),
-		agentutil.DeployEvent(t.Local, &d),
+		agentutil.DeployEvent(t.Local, d),
 	)
 	return d
 }
 
-func (t DeployResult) complete() agent.Deploy {
+func (t DeployResult) complete() *agent.Deploy {
 	if t.Error != nil {
 		return t.deployFailed(t.Error)
 	}
