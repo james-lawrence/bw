@@ -167,7 +167,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	}
 
 	opts := latest.Options
-	deadline, cancel := context.WithTimeout(ctx, time.Duration(opts.Timeout))
+	deadline, cancel := context.WithTimeout(ctx, time.Duration(opts.Timeout)+5*time.Second)
 	defer cancel()
 
 	log.Println("bootstrapping", bw.RandomID(latest.Archive.DeploymentID), "with options", spew.Sdump(opts))
