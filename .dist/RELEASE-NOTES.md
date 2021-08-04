@@ -1,3 +1,30 @@
+commit b1ee213a1165b06ffd4c7fc0e3e26f92b4f1a249
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Aug 4 09:32:59 2021 -0400
+
+    add timeout to tls dialing
+
+commit f04af1a61a2b947b99ca8c2d05a409e31208c6d9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Aug 1 09:39:33 2021 -0400
+
+    add grace period to bootstrap timeout
+
+commit 90e195daf2ce0fd2fbb2ea24343c029fb12df5df
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 31 17:50:08 2021 -0400
+
+    bootstrap corruption issue. fixes #31
+    
+    by tying the deploy to the bootstrap timeout context, we'll ensure both
+    get cancelled by the same timeout as it'll cascade down.
+
+commit 92b2749950656d01db33360734e20d49dd89be87
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 31 11:27:22 2021 -0400
+
+    release 0.1.1627744655-218e2738
+
 commit 218e2738a34838a50b7f034a5816fb76b9b5fdae
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jul 31 11:12:45 2021 -0400
