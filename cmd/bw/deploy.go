@@ -44,6 +44,7 @@ type deployCmd struct {
 	deploymentID   string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
+	concurrency    int64
 	canary         bool
 	debug          bool
 	ignoreFailures bool
@@ -63,7 +64,7 @@ func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 		return cmd
 	}
 
-	t.deployCmd(deployOptions(common(parent.Command("default", "deploy to nodes within the cluster").Default())))
+	t.deployCmd(deployOptions(common(parent.Command("deploy", "deploy to nodes within the cluster").Default())))
 	t.redeployCmd(deployOptions(common(parent.Command("archive", "redeploy an archive to nodes within the cluster"))))
 	t.localCmd(common(parent.Command("local", "deploy to the local system")))
 	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
@@ -90,6 +91,7 @@ func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 	parent.Flag("canary", "deploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
+	parent.Flag("concurrency", "control how many nodes are deployed to simultaneously").Int64Var(&t.concurrency)
 	return parent.Action(t.deploy)
 }
 
@@ -245,7 +247,10 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", archive.Initiator, archive.Location))
 
-	max := int64(config.Partitioner().Partition(len(c.Members())))
+	max := t.concurrency
+	if t.concurrency == 0 {
+		max = int64(config.Partitioner().Partition(len(c.Members())))
+	}
 
 	// only consider the canary node.
 	if t.canary {
