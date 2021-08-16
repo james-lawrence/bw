@@ -4,6 +4,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/pem"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -43,6 +44,10 @@ func (t faker) Refresh() (err error) {
 
 	if _, cert, err = tlsx.SelfSigned(priv, template); err != nil {
 		return err
+	}
+
+	if cert = pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert}); err != nil {
+		return errors.WithStack(err)
 	}
 
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
