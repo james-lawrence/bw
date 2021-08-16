@@ -10,8 +10,11 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	nsvc "github.com/james-lawrence/bw/notary"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
@@ -37,6 +40,15 @@ func (t Notary) Refresh() (err error) {
 		ss   nsvc.Signer
 	)
 
+	// TODO: need to actually get notary service refresh working
+	// for proxy environments.
+	if envx.Boolean(false, bw.EnvProxyDialerEnabled) {
+		return faker{
+			domain:         t.CommonName,
+			CertificateDir: t.CertificateDir,
+		}.Refresh()
+	}
+
 	if ss, err = nsvc.NewAutoSigner(bw.DisplayName()); err != nil {
 		return err
 	}
@@ -58,16 +70,14 @@ func (t Notary) Refresh() (err error) {
 		}
 	}
 
-	c := tls.Config{
+	c := &tls.Config{
 		ServerName: t.CommonName,
 		RootCAs:    pool,
 	}
 
-	// FIXME
 	log.Println("dialing discovery service", t.CommonName, t.Address)
-	d := dialers.NewDirect(t.Address)
-
-	client := nsvc.NewClient(nsvc.NewDialer(d, nsvc.DialOptionTLS(&c), nsvc.DialOptionCredentials(ss)))
+	d := dialers.NewDirect(t.Address, grpc.WithTransportCredentials(credentials.NewTLS(c)), grpc.WithPerRPCCredentials(ss))
+	client := nsvc.NewClient(d)
 
 	if ca, key, cert, err = client.Refresh(); err != nil {
 		log.Println("refresh failed", err)

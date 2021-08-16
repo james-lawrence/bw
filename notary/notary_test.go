@@ -22,7 +22,7 @@ var _ = Describe("Notary", func() {
 			defer testingx.GRPCCleanup(conn, server)
 
 			c := NewClient(NewStaticDialer(conn))
-			_, err := c.Grant(Grant{})
+			_, err := c.Grant(&Grant{})
 			Expect(err).To(MatchError("rpc error: code = PermissionDenied desc = invalid credentials"))
 		})
 
@@ -32,7 +32,7 @@ var _ = Describe("Notary", func() {
 
 			// generate a new key to add.
 			_, npubkey := QuickKey()
-			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: UserFull()})
+			ngrant, err := c.Grant(&Grant{Authorization: npubkey, Permission: UserFull()})
 			Expect(err).To(Succeed())
 			Expect(ngrant.Authorization).To(Equal(npubkey))
 		})
@@ -57,12 +57,12 @@ var _ = Describe("Notary", func() {
 
 			// generate a new key to add.
 			_, npubkey := QuickKey()
-			ngrant, err := c.Grant(Grant{Authorization: npubkey, Permission: UserFull()})
+			ngrant, err := c.Grant(&Grant{Authorization: npubkey, Permission: UserFull()})
 			Expect(err).To(Succeed())
 			Expect(ngrant.Authorization).To(Equal(npubkey))
 			nrevoked, err := c.Revoke(ngrant.Fingerprint)
 			Expect(err).To(Succeed())
-			Expect(proto.Equal(&nrevoked, &ngrant)).To(BeTrue())
+			Expect(proto.Equal(nrevoked, ngrant)).To(BeTrue())
 		})
 	})
 })

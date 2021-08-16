@@ -110,6 +110,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		certificatecache.NewAuthorityCache(dctx.Config.CredentialsDir),
 		dctx.NotaryStorage,
 	).Bind(server)
+
 	notary.NewSyncService(
 		dctx.NotaryAuth,
 		dctx.NotaryStorage,

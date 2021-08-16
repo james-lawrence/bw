@@ -32,7 +32,7 @@ func (t selfsigned) Refresh() (err error) {
 		template x509.Certificate
 	)
 
-	log.Println("refreshing self signed certificate")
+	log.Println("refreshing self signed certificate", t.credentialsDir)
 	subject := tlsx.X509OptionSubject(pkix.Name{
 		CommonName: t.domain,
 	})

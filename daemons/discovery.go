@@ -13,7 +13,7 @@ import (
 )
 
 // Discovery initiates the discovery backend.
-func Discovery(ctx Context) (err error) {
+func Discovery(dctx Context) (err error) {
 	var (
 		bind   net.Listener
 		server *grpc.Server
@@ -22,22 +22,22 @@ func Discovery(ctx Context) (err error) {
 	server = grpc.NewServer(
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
-		grpc.KeepaliveParams(ctx.RPCKeepalive),
+		grpc.KeepaliveParams(dctx.RPCKeepalive),
 	)
 
 	// exposes details about the cluster.
-	discovery.New(ctx.Cluster).Bind(server)
+	discovery.New(dctx.Cluster).Bind(server)
 
 	// used to validate client certificates.
 	discovery.NewAuthority(
-		certificatecache.CAKeyPath(ctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
+		certificatecache.CAKeyPath(dctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
 	).Bind(server)
 
-	log.Printf("discovery: %T %s", ctx.Listener, ctx.Listener.Addr().String())
-	if bind, err = ctx.Muxer.Bind(bw.ProtocolDiscovery, ctx.Listener.Addr()); err != nil {
-		return errors.Wrapf(err, "failed to bind discovery to %s", ctx.Listener.Addr().String())
+	log.Printf("discovery: %T %s", dctx.Listener, dctx.Listener.Addr().String())
+	if bind, err = dctx.Muxer.Bind(bw.ProtocolDiscovery, dctx.Listener.Addr()); err != nil {
+		return errors.Wrapf(err, "failed to bind discovery to %s", dctx.Listener.Addr().String())
 	}
-	ctx.grpc("discovery", server, bind)
+	dctx.grpc("discovery", server, bind)
 
 	return nil
 }

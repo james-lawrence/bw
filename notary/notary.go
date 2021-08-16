@@ -96,7 +96,7 @@ func New(servername string, a authority, s storage, options ...option) Service {
 		authority:  a,
 		storage:    s,
 		auth:       newAuth(s),
-	}
+	}.merge(options...)
 }
 
 // Service of a notary service

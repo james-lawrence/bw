@@ -72,7 +72,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(n))
 
-	d, err := dialers.DefaultDialer(agent.P2PAdddress(t.config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	d, err := dialers.DefaultDialer(agent.P2PRawAddress(t.config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}
