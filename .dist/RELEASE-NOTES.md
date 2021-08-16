@@ -1,3 +1,27 @@
+commit 6a5cc368950f3fc6a4592fb7d2986ac742878c08
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 16 13:15:33 2021 -0400
+
+    fix fake certificate refresh
+
+commit b1cb06dee6ec1d40efc195260f3ab3dc5ae10d29
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 16 13:07:43 2021 -0400
+
+    work on fixing notary service for credential refresh
+
+commit 0406c1f458898899234fae8f4d4405e166ec853c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Aug 5 12:21:09 2021 -0400
+
+    add concurrency CLI option to standard deploys
+
+commit e3b0233fa86686b9d847e882301d906d298b0a5e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Aug 4 11:16:02 2021 -0400
+
+    release 0.1.1628089611-df846842
+
 commit df8468424b6e13990f0d6ca58eb4cc8ee612eacd
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Aug 4 11:06:51 2021 -0400
