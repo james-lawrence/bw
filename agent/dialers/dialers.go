@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/muxer"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 )
 
 type dialer interface {
@@ -45,15 +46,13 @@ type DefaultsDialer interface {
 
 // DefaultDialerOptions sets reasonable defaults for dialing the agent.
 func DefaultDialerOptions(options ...grpc.DialOption) (results Defaulted) {
+	boff := backoff.DefaultConfig
+	boff.MaxDelay = 5 * time.Second
+
 	defaults := []grpc.DialOption{
-		grpc.WithBackoffMaxDelay(5 * time.Second),
-		// grpc.WithConnectParams(grpc.ConnectParams{
-		// 	Backoff: backoff.Config{
-		// 		Jitter:     0.25,
-		// 		Multiplier: 1.1,
-		// 		MaxDelay:   5 * time.Second,
-		// 	},
-		// }),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: boff,
+		}),
 		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
 		// grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter),
 	}

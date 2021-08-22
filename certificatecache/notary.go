@@ -9,12 +9,11 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	nsvc "github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"
 )
@@ -28,6 +27,7 @@ type Notary struct {
 	CommonName     string `yaml:"servername"`
 	CertificateDir string
 	CA             string
+	Insecure       bool
 }
 
 // Refresh the current credentials
@@ -39,15 +39,6 @@ func (t Notary) Refresh() (err error) {
 		pool *x509.CertPool
 		ss   nsvc.Signer
 	)
-
-	// TODO: need to actually get notary service refresh working
-	// for proxy environments.
-	if envx.Boolean(false, bw.EnvProxyDialerEnabled) {
-		return faker{
-			domain:         t.CommonName,
-			CertificateDir: t.CertificateDir,
-		}.Refresh()
-	}
 
 	if ss, err = nsvc.NewAutoSigner(bw.DisplayName()); err != nil {
 		return err
@@ -71,24 +62,21 @@ func (t Notary) Refresh() (err error) {
 	}
 
 	c := &tls.Config{
-		ServerName: t.CommonName,
-		RootCAs:    pool,
+		ServerName:         t.CommonName,
+		RootCAs:            pool,
+		NextProtos:         []string{"bw.mux"},
+		InsecureSkipVerify: t.Insecure,
 	}
 
-	log.Println("dialing discovery service", t.CommonName, t.Address)
-	d := dialers.NewDirect(t.Address, grpc.WithTransportCredentials(credentials.NewTLS(c)), grpc.WithPerRPCCredentials(ss))
-	client := nsvc.NewClient(d)
+	d, err := dialers.DefaultDialer(t.Address, tlsx.NewDialer(c), grpc.WithPerRPCCredentials(ss))
+	if err != nil {
+		return err
+	}
+	dd := dialers.NewProxy(dialers.NewDirect(agent.AgentP2PAddress(t.Address), d.Defaults()...))
+	client := nsvc.NewClient(dd)
 
 	if ca, key, cert, err = client.Refresh(); err != nil {
-		log.Println("refresh failed", err)
-		// backwards compatibility code, for now only consider permission errors
-		// as hard failures, not all agents have the discovery service.
-		if grpcx.IsUnauthorized(err) {
-			return nsvc.ErrUnauthorizedKey{}
-		}
-
-		// backwards compatibility code.
-		return Noop{}.Refresh()
+		return err
 	}
 
 	log.Println("refresh completed")

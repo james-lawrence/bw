@@ -57,8 +57,8 @@ const (
 )
 
 // NewRefreshClient default tls credentials refresh strategy for agents.
-func NewRefreshClient(dir string) *Notary {
-	return &Notary{CertificateDir: dir}
+func NewRefreshClient(dir string, insecure bool) *Notary {
+	return &Notary{CertificateDir: dir, Insecure: insecure}
 }
 
 // NewRefreshAgent default tls credentials refresh strategy for agents.
@@ -71,6 +71,7 @@ func NewRefreshAgent(dir string, a challenger) *ACME {
 // to communicate with temporary credentials while acme is bootstrapping.
 func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 	_, err = RefreshExpired(filepath.Join(dir, DefaultTLSCertServer), time.Now(), selfsigned{
+		// TODO seed: seed,
 		domain:         domain,
 		credentialsDir: dir,
 	})

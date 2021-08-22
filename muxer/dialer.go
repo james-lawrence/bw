@@ -66,21 +66,24 @@ func (t Dialer) DialContext(ctx context.Context, network string, address string)
 	if c, ok := conn.(handshaker); ok {
 		if err := c.Handshake(); err != nil {
 			conn.Close()
-			return nil, errors.Wrap(err, "handshake failed")
+			return nil, errors.Wrap(err, "connection handshake failed")
 		}
 	}
 
 	if tlsconn, ok := conn.(*tls.Conn); ok {
 		s := tlsconn.ConnectionState()
+		if s.NegotiatedProtocol == "" {
+			log.Println("WARN: muxer.DialContext tls connection detected but no protocol was negotiated, expected to negotiate bw.mux")
+		}
+
 		if s.NegotiatedProtocol != "bw.mux" {
 			return conn, nil
 		}
 	}
 
 	if err = handshakeOutbound(t.digest[:], conn); err != nil {
-		log.Println("muxer.DialContext handshakeOutbound", t.protocol, network, address, err)
 		conn.Close()
-		return nil, err
+		return nil, errors.Wrapf(err, "muxer.DialContext outbound handshake failed: %s %s://%s", t.protocol, network, address)
 	}
 
 	return conn, nil

@@ -2,7 +2,6 @@ package notary
 
 import (
 	"context"
-	"log"
 
 	"google.golang.org/grpc"
 
@@ -79,9 +78,6 @@ func (t Client) Refresh() (ca, key, cert []byte, err error) {
 		resp *RefreshResponse
 		c    NotaryClient
 	)
-
-	log.Println("refresh initiated")
-	defer log.Println("refresh completed")
 
 	if c, err = t.cached(); err != nil {
 		return ca, key, cert, err

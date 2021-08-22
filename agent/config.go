@@ -97,15 +97,13 @@ func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ConfigClient ...
 type ConfigClient struct {
-	root            string `yaml:"-"` // filepath of the configuration on disk.
-	Address         string // cluster address
-	Concurrency     float64
-	DeployDataDir   string        `yaml:"deployDataDir"`
-	DeployTimeout   time.Duration `yaml:"deployTimeout"`
-	DeployPrompt    string        `yaml:"deployPrompt"`      // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
-	CredentialsMode string        `yaml:"credentialsSource"` // deprecated
-	CredentialsDir  string        `yaml:"credentialsDir"`    // deprecated
-	Credentials     struct {
+	root          string `yaml:"-"` // filepath of the configuration on disk.
+	Address       string // cluster address
+	Concurrency   float64
+	DeployDataDir string        `yaml:"deployDataDir"`
+	DeployTimeout time.Duration `yaml:"deployTimeout"`
+	DeployPrompt  string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
+	Credentials   struct {
 		Mode      string `yaml:"source"`
 		Directory string `yaml:"directory"`
 		Insecure  bool   `yaml:"-"`

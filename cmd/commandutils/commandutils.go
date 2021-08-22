@@ -102,7 +102,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	}
 
 	certpath := bw.LocateFirstInDir(
-		config.CredentialsDir,
+		config.Credentials.Directory,
 		cc.DefaultTLSCertCA,
 		cc.DefaultTLSCertServer,
 		cc.DefaultTLSCertClient,
@@ -113,14 +113,14 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 			return config, err
 		}
 
-		logx.MaybeLog(os.Remove(filepath.Join(config.CredentialsDir, cc.DefaultTLSCertCA)))
+		logx.MaybeLog(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
 		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
-			config.CredentialsDir,
+			config.Credentials.Directory,
 			cc.DefaultTLSCertServer,
 			cc.DefaultTLSCertClient,
 		)))
 		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
-			config.CredentialsDir,
+			config.Credentials.Directory,
 			cc.DefaultTLSKeyServer,
 			cc.DefaultTLSKeyClient,
 		)))
@@ -128,10 +128,13 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 
 	// load or create credentials.
 	if err = cc.FromConfig(
-		stringsx.DefaultIfBlank(config.CredentialsDir, config.Credentials.Directory),
-		stringsx.DefaultIfBlank(config.CredentialsMode, config.Credentials.Mode),
+		stringsx.DefaultIfBlank(config.Credentials.Directory, config.Credentials.Directory),
+		stringsx.DefaultIfBlank(config.Credentials.Mode, config.Credentials.Mode),
 		path,
-		cc.NewRefreshClient(config.CredentialsDir),
+		cc.NewRefreshClient(
+			config.Credentials.Directory,
+			config.Credentials.Insecure,
+		),
 	); err != nil {
 		return config, err
 	}
