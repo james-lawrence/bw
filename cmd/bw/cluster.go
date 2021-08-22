@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
@@ -21,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
@@ -185,7 +187,7 @@ func p2ppeering(c agent.Config) (s clustering.Source, err error) {
 		tlsconfig *tls.Config
 		ss        notary.Signer
 		d         dialers.Defaults
-		address   = net.JoinHostPort(c.ServerName, "443")
+		address   = net.JoinHostPort(c.ServerName, envx.String(strconv.Itoa(c.P2PBind.Port), bw.EnvAgentClusterP2PDiscoveryPort))
 	)
 
 	if ss, err = notary.NewAgentSigner(c.Root); err != nil {
