@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -19,7 +20,6 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 )
 
 // ConnectOption - options for connecting to the cluster.
@@ -49,15 +49,7 @@ type connection struct {
 
 // Connect returning just a single client to the caller.
 func Connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.C, err error) {
-	var (
-		creds credentials.TransportCredentials
-	)
-
-	if creds, err = GRPCGenClient(config); err != nil {
-		return d, c, err
-	}
-
-	return connect(config, ss, creds, options...)
+	return connect(config, ss, options...)
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
@@ -67,16 +59,8 @@ func ConnectClientUntilSuccess(
 	ss notary.Signer,
 	options ...grpc.DialOption,
 ) (d dialers.Direct, c clustering.LocalRendezvous, err error) {
-	var (
-		creds credentials.TransportCredentials
-	)
-
-	if creds, err = GRPCGenClient(config); err != nil {
-		return d, c, err
-	}
-
 	for i := 0; ; i++ {
-		if d, c, err = connect(config, ss, creds, options...); err == nil {
+		if d, c, err = connect(config, ss, options...); err == nil {
 			return d, c, err
 		}
 
@@ -93,14 +77,14 @@ func ConnectClientUntilSuccess(
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, ss notary.Signer, creds credentials.TransportCredentials, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
+func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
 	var (
 		dd        dialers.Defaults
 		nodes     []*memberlist.Node
 		tlsconfig *tls.Config
 	)
 
-	if tlsconfig, err = TLSGenClient(config); err != nil {
+	if tlsconfig, err = certificatecache.TLSGenClient(config); err != nil {
 		return d, c, err
 	}
 

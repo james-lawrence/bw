@@ -18,7 +18,6 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
@@ -94,7 +93,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		return config, errors.Wrap(err, "configuration load failed")
 	}
 
-	if tlsconfig, err = daemons.TLSGenClient(config); err != nil {
+	if tlsconfig, err = cc.TLSGenClient(config); err != nil {
 		return config, err
 	}
 

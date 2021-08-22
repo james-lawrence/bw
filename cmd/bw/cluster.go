@@ -16,11 +16,11 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
@@ -185,24 +185,24 @@ func p2ppeering(c agent.Config) (s clustering.Source, err error) {
 		tlsconfig *tls.Config
 		ss        notary.Signer
 		d         dialers.Defaults
-		address   = agent.DiscoveryP2PAddress(net.JoinHostPort(c.ServerName, "443"))
+		address   = net.JoinHostPort(c.ServerName, "443")
 	)
 
 	if ss, err = notary.NewAgentSigner(c.Root); err != nil {
 		return nil, err
 	}
 
-	if tlsconfig, err = daemons.TLSGenServer(c, tlsx.OptionNoClientCert); err != nil {
+	if tlsconfig, err = certificatecache.TLSGenServer(c, tlsx.OptionNoClientCert); err != nil {
 		return nil, err
 	}
 
-	d, err = dialers.DefaultDialer(net.JoinHostPort(c.ServerName, "443"), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	d, err = dialers.DefaultDialer(address, tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return nil, err
 	}
 
 	return p2p{
-		address: address,
+		address: agent.DiscoveryP2PAddress(address),
 		d:       d,
 	}, nil
 }

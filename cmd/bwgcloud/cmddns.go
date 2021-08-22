@@ -13,9 +13,9 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/discovery"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/dns"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -70,7 +70,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println("configuration:", spew.Sdump(t.config))
 
-	if tlsconfig, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
+	if tlsconfig, err = certificatecache.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
 		return err
 	}
 

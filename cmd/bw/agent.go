@@ -133,7 +133,7 @@ func (t *agentCmd) bind() (err error) {
 		return err
 	}
 
-	if tlscreds, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
+	if tlscreds, err = certificatecache.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
 		return err
 	}
 
@@ -377,7 +377,7 @@ func (t *agentCmd) quorum(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(t.config))
 
-	if creds, err = daemons.GRPCGenServer(t.config); err != nil {
+	if creds, err = certificatecache.GRPCGenServer(t.config); err != nil {
 		return err
 	}
 

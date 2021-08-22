@@ -11,8 +11,8 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/notifier"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
@@ -49,7 +49,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 
 	log.Println(spew.Sdump(t.config))
 
-	if tlsconfig, err = daemons.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
+	if tlsconfig, err = certificatecache.TLSGenServer(t.config, tlsx.OptionNoClientCert); err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 	if err != nil {
 		return err
 	}
-	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(t.config.Peer()), d.Defaults(grpc.WithPerRPCCredentials(ss))...))
+	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(t.config.Peer()), d.Defaults()...))
 
 	notifier.New(n...).Start(t.global.ctx, agent.NewPeer("local"), t.config.Peer(), dd)
 
