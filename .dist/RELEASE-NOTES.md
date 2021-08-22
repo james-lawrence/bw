@@ -1,3 +1,21 @@
+commit 3345202a66368ed2f61d105d29a49a2f6b3eaccd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Aug 22 06:55:22 2021 -0400
+
+    default p2p discovery port to the p2p port
+
+commit 45100a4978a25e58371d4f428adbee5b645d171a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Aug 22 06:10:22 2021 -0400
+
+    move tls config creation code into certificatecache.
+
+commit cfc59fc0b9298efc40cd4a862bb00fe326076b32
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 16 13:26:33 2021 -0400
+
+    release 0.1.1629134133-6a5cc368
+
 commit 6a5cc368950f3fc6a4592fb7d2986ac742878c08
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Aug 16 13:15:33 2021 -0400
