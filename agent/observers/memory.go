@@ -67,9 +67,8 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			MaxConnectionIdle: 1 * time.Minute,
-			Time:              10 * time.Second,
-			Timeout:           30 * time.Second,
+			Time:    10 * time.Second,
+			Timeout: 30 * time.Second,
 		}),
 	)
 
