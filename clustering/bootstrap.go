@@ -175,8 +175,11 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 
 		log.Printf("located %d peers: %s\n", len(peers), spew.Sdump(peers))
 
-		// begin hack
-		// this is a hack due memberlist hanging during certain situations.
+		if joined, err = c.Join(peers...); err != nil {
+			log.Println(errors.Wrap(err, "failed to join peers"))
+			continue
+		}
+
 		if len(peers) > 6 {
 			rand.Shuffle(len(peers), func(i int, j int) {
 				peers[i], peers[j] = peers[j], peers[i]
@@ -184,25 +187,6 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 			peers = peers[:6]
 			log.Printf("reduced to %d peers: %s\n", len(peers), spew.Sdump(peers))
 		}
-
-		completed := make(chan int)
-		ctxj, done := context.WithTimeout(ctx, 5*time.Minute)
-		go func() {
-			defer done()
-			if p, err := c.Join(peers...); err != nil {
-				log.Println(errors.Wrap(err, "failed to join peers"))
-			} else {
-				completed <- p
-			}
-		}()
-
-		select {
-		case <-ctxj.Done():
-			log.Println("failed to detect peers", ctxj.Err())
-			continue
-		case joined = <-completed:
-		}
-		// end hack
 
 		// if members > 1, then another node discovered us while we were
 		// attempting to join the cluster.
