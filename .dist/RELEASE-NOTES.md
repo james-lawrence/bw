@@ -1,3 +1,27 @@
+commit eab1905112b3540e7b0284d2f02c631ac3959cfc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 23 07:12:10 2021 -0400
+
+    remove timeout hack since underlying issue has been resolved
+
+commit 0deefc736ae50957d6e6d25f72232ddea8db041d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 23 07:11:54 2021 -0400
+
+    remove idle timeout from observers
+
+commit 38879a717dcb738516abc540e149eb23cbea53a2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Aug 22 07:35:15 2021 -0400
+
+    fix credentials fetching with muxer
+
+commit c7edb22cf63e04958de7ad10c96ffca31fdc3afc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Aug 22 06:56:49 2021 -0400
+
+    release 0.1.1629629722-3345202a
+
 commit 3345202a66368ed2f61d105d29a49a2f6b3eaccd
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Aug 22 06:55:22 2021 -0400
