@@ -27,6 +27,7 @@ func Inmem(dctx Context) (_ Context, err error) {
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(dctx.RPCKeepalive),
+		grpc.KeepaliveEnforcementPolicy(dctx.RPCKeepalivePolicy),
 	)
 
 	dctx.PeeringEvents.Bind(srv)

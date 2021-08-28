@@ -15,9 +15,10 @@ import (
 	"github.com/james-lawrence/bw/cmd"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/logrusorgru/aurora"
+	"google.golang.org/grpc/grpclog"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -30,14 +31,6 @@ type global struct {
 	cleanup   *sync.WaitGroup
 	verbosity int
 	debug     bool
-}
-
-func init() {
-	// export GRPC_GO_LOG_VERBOSITY_LEVEL=99; export GRPC_GO_LOG_SEVERITY_LEVEL=info
-	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
-		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99"))
-		logx.MaybeLog(os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info"))
-	}
 }
 
 func main() {
@@ -76,6 +69,7 @@ func main() {
 	)
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
+	enablegrpclogging()
 	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
@@ -87,7 +81,7 @@ func main() {
 		return nil
 	})
 
-	app.Flag("verbose", "increase verbosity of logging").Short('v').Action(func(*kingpin.ParseContext) error {
+	app.Flag("verbose", "increase verbosity of logging").Short('v').Default("0").Action(func(*kingpin.ParseContext) error {
 		switch global.verbosity {
 		case 4:
 			global.debug = true
@@ -95,6 +89,7 @@ func main() {
 			os.Setenv(bw.EnvLogsGRPC, "1")
 			os.Setenv(bw.EnvLogsGossip, "1")
 			os.Setenv(bw.EnvLogsRaft, "1")
+
 			fallthrough
 		case 2:
 			os.Setenv(bw.EnvLogsVerbose, "1")
@@ -102,6 +97,8 @@ func main() {
 		case 1:
 			os.Setenv(bw.EnvLogsConfiguration, "1")
 		}
+
+		enablegrpclogging()
 
 		return nil
 	}).CounterVar(&global.verbosity)
@@ -141,4 +138,12 @@ func main() {
 	}
 
 	global.cleanup.Wait()
+}
+
+func enablegrpclogging() {
+	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99")
+		os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
+		grpclog.SetLoggerV2(grpcx.NewLogger())
+	}
 }

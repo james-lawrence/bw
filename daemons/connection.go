@@ -11,7 +11,6 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
@@ -88,17 +87,13 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 		return d, c, err
 	}
 
-	var di dialer = tlsx.NewDialer(tlsconfig)
-
-	if envx.Boolean(false, bw.EnvProxyDialerEnabled) {
-		di = discovery.ProxyDialer{
-			Proxy:  config.Address,
-			Signer: ss,
-			Dialer: muxer.NewDialer(
-				bw.ProtocolProxy,
-				tlsx.NewDialer(tlsconfig),
-			),
-		}
+	var di dialer = discovery.ProxyDialer{
+		Proxy:  config.Address,
+		Signer: ss,
+		Dialer: muxer.NewDialer(
+			bw.ProtocolProxy,
+			tlsx.NewDialer(tlsconfig),
+		),
 	}
 
 	if dd, err = dialers.DefaultDialer(

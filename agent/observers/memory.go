@@ -70,6 +70,9 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 			Time:    10 * time.Second,
 			Timeout: 30 * time.Second,
 		}),
+		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
+			MinTime: 10 * time.Second,
+		}),
 	)
 
 	New(b).Bind(s)
@@ -127,12 +130,15 @@ func (t Memory) dispatch(ctx context.Context, conn Conn, messages ...*agent.Mess
 func (t Memory) connect(id string) (err error) {
 	var (
 		conn *grpc.ClientConn
+		kopt = grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time: 15 * time.Second,
+		})
 	)
 
 	ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
 	defer done()
 
-	if conn, err = grpc.DialContext(ctx, id, grpcx.DialInmem(), grpc.WithInsecure(), grpc.WithBlock()); err != nil {
+	if conn, err = grpc.DialContext(ctx, id, grpcx.DialInmem(), grpc.WithInsecure(), grpc.WithBlock(), kopt); err != nil {
 		return errors.Wrap(err, "failed to connect observer")
 	}
 

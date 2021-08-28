@@ -69,6 +69,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(dctx.RPCKeepalive),
+		grpc.KeepaliveEnforcementPolicy(dctx.RPCKeepalivePolicy),
 	)
 	authority := quorum.NewAuthority(dctx.Config)
 

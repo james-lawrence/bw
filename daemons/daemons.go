@@ -44,29 +44,30 @@ type dialer interface {
 
 // Context common information passed to all daemons.
 type Context struct {
-	Local             *_cluster.Local
-	Listener          net.Listener
-	Dialer            dialers.Defaults
-	Muxer             *muxer.M
-	ConfigurationFile string
-	Config            agent.Config
-	Context           context.Context
-	Shutdown          context.CancelFunc
-	Cleanup           *sync.WaitGroup
-	NotaryStorage     notary.Composite
-	NotaryAuth        notary.Auth
-	Raft              raftutil.Protocol
-	Cluster           cluster
-	Bootstrapper      clustering.Joiner
-	RPCCredentials    *tls.Config
-	RPCKeepalive      keepalive.ServerParameters
-	PeeringEvents     *_cluster.EventsQueue
-	Results           chan *deployment.DeployResult
-	Debug             bool
-	DebugLog          *log.Logger
-	ACMECache         acme.DiskCache
-	Inmem             *grpc.ClientConn
-	P2PPublicKey      []byte
+	Local              *_cluster.Local
+	Listener           net.Listener
+	Dialer             dialers.Defaults
+	Muxer              *muxer.M
+	ConfigurationFile  string
+	Config             agent.Config
+	Context            context.Context
+	Shutdown           context.CancelFunc
+	Cleanup            *sync.WaitGroup
+	NotaryStorage      notary.Composite
+	NotaryAuth         notary.Auth
+	Raft               raftutil.Protocol
+	Cluster            cluster
+	Bootstrapper       clustering.Joiner
+	RPCCredentials     *tls.Config
+	RPCKeepalivePolicy keepalive.EnforcementPolicy
+	RPCKeepalive       keepalive.ServerParameters
+	PeeringEvents      *_cluster.EventsQueue
+	Results            chan *deployment.DeployResult
+	Debug              bool
+	DebugLog           *log.Logger
+	ACMECache          acme.DiskCache
+	Inmem              *grpc.ClientConn
+	P2PPublicKey       []byte
 }
 
 // MuxerListen ...

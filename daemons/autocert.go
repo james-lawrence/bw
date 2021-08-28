@@ -12,7 +12,7 @@ import (
 )
 
 // Autocert - used to bootstrap certificates.
-func Autocert(ctx Context) (err error) {
+func Autocert(dctx Context) (err error) {
 	var (
 		bind net.Listener
 	)
@@ -20,16 +20,17 @@ func Autocert(ctx Context) (err error) {
 	server := grpc.NewServer(
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
-		grpc.KeepaliveParams(ctx.RPCKeepalive),
+		grpc.KeepaliveParams(dctx.RPCKeepalive),
+		grpc.KeepaliveEnforcementPolicy(dctx.RPCKeepalivePolicy),
 	)
-	acme.RegisterACMEServer(server, acme.NewService(ctx.ACMECache, ctx.NotaryAuth))
+	acme.RegisterACMEServer(server, acme.NewService(dctx.ACMECache, dctx.NotaryAuth))
 
-	log.Println("autocert bind", bw.ProtocolAutocert, ctx.Listener.Addr().String())
-	if bind, err = ctx.Muxer.Bind(bw.ProtocolAutocert, ctx.Listener.Addr()); err != nil {
+	log.Println("autocert bind", bw.ProtocolAutocert, dctx.Listener.Addr().String())
+	if bind, err = dctx.Muxer.Bind(bw.ProtocolAutocert, dctx.Listener.Addr()); err != nil {
 		return errors.Wrap(err, "failed to bind autocert service")
 	}
 
-	ctx.grpc("autocert", server, bind)
+	dctx.grpc("autocert", server, bind)
 
 	return nil
 }

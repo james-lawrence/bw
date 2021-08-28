@@ -23,6 +23,7 @@ func Discovery(dctx Context) (err error) {
 		// grpc.UnaryInterceptor(grpcx.DebugIntercepter),
 		// grpc.StreamInterceptor(grpcx.DebugStreamIntercepter),
 		grpc.KeepaliveParams(dctx.RPCKeepalive),
+		grpc.KeepaliveEnforcementPolicy(dctx.RPCKeepalivePolicy),
 	)
 
 	// exposes details about the cluster.

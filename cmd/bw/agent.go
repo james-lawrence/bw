@@ -187,10 +187,13 @@ func (t *agentCmd) bind() (err error) {
 		NotaryStorage:     ns,
 		NotaryAuth:        notary.NewAuth(ns),
 		RPCCredentials:    tlscreds,
+		RPCKeepalivePolicy: keepalive.EnforcementPolicy{
+			MinTime:             10 * time.Second,
+			PermitWithoutStream: true,
+		},
 		RPCKeepalive: keepalive.ServerParameters{
 			MaxConnectionIdle: 1 * time.Hour,
 			Time:              1 * time.Minute,
-			Timeout:           2 * time.Minute,
 		},
 		Results:       make(chan *deployment.DeployResult, 100),
 		PeeringEvents: clusterevents,
