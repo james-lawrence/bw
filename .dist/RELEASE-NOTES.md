@@ -1,3 +1,15 @@
+commit d9abba9059989ddae5d887c42b3c838bfe4de2c2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 28 10:15:44 2021 -0400
+
+    adjust grpc keepalive settings
+
+commit c3d48d61c75ceb5dc5ef2987a26f57022cdea3cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Aug 23 07:13:35 2021 -0400
+
+    release 0.1.1629717130-eab19051
+
 commit eab1905112b3540e7b0284d2f02c631ac3959cfc
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Aug 23 07:12:10 2021 -0400
