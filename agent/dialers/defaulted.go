@@ -2,8 +2,10 @@ package dialers
 
 import (
 	"net"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // NewDefaults create a defaults dialer.
@@ -32,5 +34,8 @@ func DefaultDialer(address string, d dialer, options ...grpc.DialOption) (_d Def
 			addr,
 		),
 		grpc.WithInsecure(),
+		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time: 15 * time.Second,
+		}),
 	), nil
 }
