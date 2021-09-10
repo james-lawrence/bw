@@ -200,21 +200,6 @@ func (t *agentCmd) bind() (err error) {
 		ACMECache:     acmesvc,
 	}
 
-	// go func(l net.Listener, err error) {
-	// 	if err != nil {
-	// 		panic(errors.Wrap(err, "default protocol registration failed"))
-	// 	}
-
-	// 	mux := http.NewServeMux()
-	// 	mux.HandleFunc("/", http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
-	// 		log.Println("HTTP REQUEST DETECTED")
-	// 		http.NotFound(resp, req)
-	// 	}))
-	// 	(&http.Server{
-	// 		Handler: mux,
-	// 	}).Serve(l)
-	// }(dctx.Muxer.Default("http", l.Addr()))
-
 	if dctx, err = daemons.Proxy(dctx, tlsx.NewDialer(tlscreds)); err != nil {
 		return errors.Wrap(err, "failed to initialize proxy connection service")
 	}
