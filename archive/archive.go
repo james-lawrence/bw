@@ -90,14 +90,22 @@ func Unpack(root string, r io.Reader) (err error) {
 			}
 		// if it's a file create it
 		case tar.TypeReg:
-			if dst, err = os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode)); err != nil {
-				return errors.Wrapf(err, "failed to open file: %s", target)
-			}
-			defer dst.Close()
+			writefile := func() error {
+				if dst, err = os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode)); err != nil {
+					return errors.Wrapf(err, "failed to open file: %s", target)
+				}
+				defer dst.Close()
 
-			// copy over contents
-			if _, err = io.Copy(dst, tr); err != nil {
-				return errors.Wrapf(err, "failed to copy contents: %s", target)
+				// copy over contents
+				if _, err = io.Copy(dst, tr); err != nil {
+					return errors.Wrapf(err, "failed to copy contents: %s", target)
+				}
+
+				return nil
+			}
+
+			if err := writefile(); err != nil {
+				return err
 			}
 		}
 	}
