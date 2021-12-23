@@ -10,6 +10,16 @@ bearded-wookie uses TLS to encrypt all data transferred between agents and clien
 - no required infrastructure. any additional infrastructure should be optional.
 - low operational complexity. a.k.a easy to use and operate.
 
+### quick start - debian package installation
+
+see examples for configuration.
+
+```
+sudo add-apt-repository ppa:jljatone/bw
+sudo apt-get update
+sudo apt-get install bearded-wookie
+```
+
 ### quick start - local development (assumes linux).
 ```bash
 # install bearded wookie
@@ -24,10 +34,6 @@ bw deploy local linux-dev
 systemctl --user restart bearded-wookie-pebble.service
 rm -rf ~/.cache/bearded-wookie/agent*/tls
 systemctl --user restart bearded-wookie@agent{1,2,3,4,5,6,7,8,9,10}.service
-# systemctl --user restart bearded-wookie@agent3.service
-# systemctl --user restart bearded-wookie@agent5.service
-# systemctl --user restart bearded-wookie@agent2.service
-# systemctl --user restart bearded-wookie@agent4.service
 
 pushd .test && bw deploy && popd
 
@@ -77,8 +83,8 @@ by using these 4 protocols bearded-wookie avoids needing a centralized server, w
 Benefits of bearded-wookie:
 - can work entirely inside of a VPN; no need to expose anything outside of the network. (requires using ACME DNS challenge, or a custom certificate authority)
 - durable. unless you literally lose all of the nodes and a majority of your entire cluster simultaneously the cluster will continue to operate.
-  - bw does have support for remote bootstrapping, it just not required for normal operation.
-- builtin support for custom bootstrapping services. this allows you to lose all a majority of your servers and continue to operating.
+  - bw does have support for remote bootstrapping, its just not required for normal operation.
+- builtin support for custom bootstrapping services. this allows you to lose a majority of your servers and continue to operating.
   - see bootstrap/filesystem.go for an example. the filesystem example allows you to mount NFS to store the last successful deployment.
 - Lower costs by not needing additional infrastructure just to support deployments.
 - when something does go wrong, bw is easy to repair. just destroy its cache (default /var/cache/bearded-wookie) and reboot the agents.
