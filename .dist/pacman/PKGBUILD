@@ -1,0 +1,43 @@
+pkgname=bw
+pkgver=v0.1.1642973960
+pkgrel=1
+pkgdesc='distributed configuration management agent'
+arch=('x86_64' 'aarch64')
+license=('Commons Clause' 'MIT')
+provides=('bw')
+conflicts=('bw')
+depends=()
+
+makedepends=(
+    'go'
+    'rsync'
+)
+
+source=("${pkgname}::git+ssh://git@github.com/james-lawrence/bw")
+sha1sums=('SKIP')
+
+pkgver() {
+    cd "${srcdir}/${pkgname}"
+    printf "v0.1.%s" "$(git show -s --format=%ct)"
+}
+
+prepare() {
+    rm -rf bin
+    cd "${srcdir}/${pkgname}"
+}
+
+build() {
+    echo "BUILD INITIATED ${pkgname} ${PWD} ${srcdir} ${pkgdir}"
+    cd ${srcdir}/${pkgname}/
+    export GOFLAGS="-buildmode=pie -trimpath -mod=vendor -modcacherw"
+    GOBIN="${srcdir}/bin" go install ./cmd/...
+}
+
+package() {
+    echo "PACKAGE INITIATED ${srcdir} ${pkgdir} ${PWD}"
+
+    rsync --recursive --checksum --perms ${srcdir}/${pkgname}/.dist/linux/ ${pkgdir}/
+    install -D -m 0755 ${srcdir}/bin/bw ${pkgdir}/usr/local/bin/bw
+    install -D -m 0755 ${srcdir}/bin/bwaws ${pkgdir}/usr/local/bin/bwaws
+    install -D -m 0755 ${srcdir}/bin/bwgcloud ${pkgdir}/usr/local/bin/bwgcloud
+}
