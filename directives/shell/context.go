@@ -75,6 +75,13 @@ func OptionDir(l string) Option {
 	}
 }
 
+// OptionTempDir set temp directory created for bw.
+func OptionTempDir(l string) Option {
+	return func(ctx *Context) {
+		ctx.tmpdir = l
+	}
+}
+
 // OptionAppendEnviron append to the environment for shell commands.
 func OptionAppendEnviron(l ...string) Option {
 	return func(ctx *Context) {
@@ -115,6 +122,7 @@ type Context struct {
 	Environ       []string
 	output        io.Writer
 	dir           string
+	tmpdir        string
 	timeout       time.Duration
 	lenient       bool
 }
@@ -130,6 +138,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%U", t.User.Uid, -1)
 	cmd = strings.Replace(cmd, "%h", t.User.HomeDir, -1)
 	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
+	cmd = strings.Replace(cmd, "%bwtmp", t.tmpdir, -1)
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
 
@@ -148,6 +157,7 @@ func (t Context) environmentSubst() []string {
 		fmt.Sprintf("BW_ENVIRONMENT_USERHOME=%s", t.User.HomeDir),
 		fmt.Sprintf("BW_ENVIRONMENT_ROOT=%s", t.dir),
 		fmt.Sprintf("BW_ENVIRONMENT_WORK_DIRECTORY=%s", t.WorkDirectory),
+		fmt.Sprintf("BW_ENVIRONMENT_TEMP_DIRECTORY=%s", t.tmpdir),
 	)
 }
 

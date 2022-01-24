@@ -1,12 +1,14 @@
 package deployment
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/directives"
 	"github.com/james-lawrence/bw/directives/shell"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -68,11 +70,21 @@ func (t Directive) deploy(dctx *DeployContext) {
 		dshell  directives.ShellLoader
 		loaded  []directives.Loaded
 		environ []string
+		tmpdir  string
 	)
 
 	if environ, err = shell.EnvironFromFile(filepath.Join(dctx.ArchiveRoot, bw.EnvFile)); err != nil {
 		dctx.Done(err)
 		return
+	}
+
+	if tmpdir, err = os.MkdirTemp(dctx.ArchiveRoot, ".bw-tmp-*"); err != nil {
+		dctx.Done(err)
+		return
+	}
+
+	done := func(cause error) {
+		dctx.Done(errorsx.Compact(err, os.RemoveAll(tmpdir)))
 	}
 
 	dc := directives.Context{
@@ -86,6 +98,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 			shell.OptionLogger(dctx.Log),
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
 			shell.OptionDir(dctx.ArchiveRoot),
+			shell.OptionTempDir(tmpdir),
 		),
 	}
 
@@ -113,7 +126,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 	root := filepath.Join(dctx.ArchiveRoot, t.directory)
 	if loaded, err = directives.Load(dctx.Log, root, loaders...); err != nil {
 		dctx.Dispatch()
-		dctx.Done(errors.Wrapf(err, "failed to load directives"))
+		done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}
 
@@ -123,11 +136,10 @@ func (t Directive) deploy(dctx *DeployContext) {
 		dctx.Log.Println("initiated directive:", name)
 		if err = l.Run(dctx.deadline); err != nil {
 			dctx.Log.Println("failed directive:", name, err)
-			dctx.Done(err)
+			done(err)
 			return
 		}
 		dctx.Log.Println("completed directive:", name)
 	}
-
-	dctx.Done(err)
+	done(err)
 }
