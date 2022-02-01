@@ -95,6 +95,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 	dshell = directives.ShellLoader{
 		Context: shell.NewContext(
 			t.sctx,
+			shell.OptionDeployID(dctx.ID.String()),
 			shell.OptionLogger(dctx.Log),
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
 			shell.OptionDir(dctx.ArchiveRoot),

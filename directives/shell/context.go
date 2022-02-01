@@ -38,6 +38,7 @@ func DefaultContext() (ctx Context, err error) {
 	}
 
 	return Context{
+		deploymentID:  "",
 		WorkDirectory: dir,
 		Shell:         os.Getenv("SHELL"),
 		User:          *u,
@@ -101,6 +102,13 @@ func OptionTimeout(d time.Duration) Option {
 	}
 }
 
+// OptionDeployID the id of the current deployment
+func OptionDeployID(id string) Option {
+	return func(ctx *Context) {
+		ctx.deploymentID = id
+	}
+}
+
 // NewContext creates a new context using the provided context as a base and then applies options.
 func NewContext(tmp Context, options ...Option) Context {
 	for _, opt := range options {
@@ -121,6 +129,7 @@ type Context struct {
 	WorkDirectory string
 	Environ       []string
 	output        io.Writer
+	deploymentID  string
 	dir           string
 	tmpdir        string
 	timeout       time.Duration
@@ -140,6 +149,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
 	cmd = strings.Replace(cmd, "%bwtmp", t.tmpdir, -1)
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
+	cmd = strings.Replace(cmd, "%bw.deploy.id%", t.deploymentID, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
 
 	return cmd
@@ -148,6 +158,7 @@ func (t Context) variableSubst(cmd string) string {
 func (t Context) environmentSubst() []string {
 	return append(
 		t.Environ,
+		fmt.Sprintf("BW_ENVIRONMENT_DEPLOY_ID=%s", t.deploymentID),
 		fmt.Sprintf("BW_ENVIRONMENT_HOST=%s", t.Hostname),
 		fmt.Sprintf("BW_ENVIRONMENT_MACHINE_ID=%s", t.MachineID),
 		fmt.Sprintf("BW_ENVIRONMENT_DOMAIN=%s", t.Domain),

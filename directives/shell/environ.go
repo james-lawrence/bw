@@ -62,10 +62,8 @@ func Subst(inputs []string) func(string) string {
 // Environ loads an environment from a string.
 func Environ(s string) (environ []string) {
 	var (
-		ir map[string]string
+		ir map[string]string = gotenv.Parse(strings.NewReader(string(s)))
 	)
-
-	ir = gotenv.Parse(strings.NewReader(string(s)))
 
 	environ = make([]string, 0, len(ir))
 	for k, v := range ir {
