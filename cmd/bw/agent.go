@@ -71,7 +71,7 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 
 	(&agentDeploymentRuntime{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Hidden())
 	(&agentDeploymentRuntime{agentCmd: t}).configure(parent.Command("deploy", "run the deploy agent").Default())
-	(&agentDeploymentCache{agentCmd: t}).configure(parent.Command("command", "run a server that purely acts as a command and control node, you deploy to the cluster and it'll store the archive but not actually execute it.").Default())
+	(&agentDeploymentCache{agentCmd: t}).configure(parent.Command("command", "run a server that purely acts as a command and control node, you deploy to the cluster and it'll store the archive but not actually execute it."))
 
 	t.displayCmd(parent.Command("quorum-state", "display the quorum state, only can be run on the server"))
 	t.quorumCmd((parent.Command("quorum", "display quorum information, only can be run on the server")))
