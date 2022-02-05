@@ -11,6 +11,9 @@ const (
 	// Node represents an active member of the cluster
 	Node
 
+	// Satellite nodes cannot be a member of quorum.
+	Satellite
+
 	// LastCapability just marks the maximum ability integer value.
 	// useful for looping over abilities: for i := 0; i < LastCapability; i++
 	LastCapability

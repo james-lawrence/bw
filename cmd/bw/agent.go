@@ -69,14 +69,15 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-config", "file containing the agent configuration").
 		Default(bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), "")).StringVar(&t.configFile)
 
-	(&directive{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Hidden())
-	(&directive{agentCmd: t}).configure(parent.Command("deploy", "run the deploy agent").Default())
+	(&agentDeploymentRuntime{agentCmd: t}).configure(parent.Command("directive", "directive based deployment").Hidden())
+	(&agentDeploymentRuntime{agentCmd: t}).configure(parent.Command("deploy", "run the deploy agent").Default())
+	(&agentDeploymentCache{agentCmd: t}).configure(parent.Command("command", "run a server that purely acts as a command and control node, you deploy to the cluster and it'll store the archive but not actually execute it.").Default())
 
 	t.displayCmd(parent.Command("quorum-state", "display the quorum state, only can be run on the server"))
 	t.quorumCmd((parent.Command("quorum", "display quorum information, only can be run on the server")))
 }
 
-func (t *agentCmd) bind() (err error) {
+func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 	var (
 		ring      *memberlist.Keyring
 		l         net.Listener
@@ -173,6 +174,7 @@ func (t *agentCmd) bind() (err error) {
 	)
 
 	dctx := daemons.Context{
+		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,
 		Dialer:            dialer,

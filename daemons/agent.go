@@ -22,7 +22,6 @@ import (
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 )
@@ -31,14 +30,9 @@ import (
 func Agent(dctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
 	var (
 		bind         net.Listener
-		sctx         shell.Context
 		observersmem observers.Memory
 		dlreg        = storage.New(storage.OptionProtocols(download))
 	)
-
-	if sctx, err = shell.DefaultContext(); err != nil {
-		return err
-	}
 
 	if observersmem, err = observers.NewMemory(); err != nil {
 		return err
@@ -51,13 +45,9 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	dialer := agent.NewDialer(dctx.Dialer.Defaults()...)
 	dispatcher := agentutil.NewDispatcher(qdialer)
 
-	deploy := deployment.NewDirective(
-		deployment.DirectiveOptionShellContext(sctx),
-	)
-
 	coordinator := deployment.New(
 		dctx.Config.Peer(),
-		deploy,
+		dctx.Deploys,
 		deployment.CoordinatorOptionDispatcher(dispatcher),
 		deployment.CoordinatorOptionRoot(dctx.Config.Root),
 		deployment.CoordinatorOptionKeepN(dctx.Config.KeepN),

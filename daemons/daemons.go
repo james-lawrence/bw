@@ -26,6 +26,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+type Deployer interface {
+	Deploy(dctx *deployment.DeployContext)
+}
+
 type cluster interface {
 	Local() *agent.Peer
 	Peers() []*agent.Peer
@@ -44,6 +48,7 @@ type dialer interface {
 
 // Context common information passed to all daemons.
 type Context struct {
+	Deploys            Deployer
 	Local              *_cluster.Local
 	Listener           net.Listener
 	Dialer             dialers.Defaults
