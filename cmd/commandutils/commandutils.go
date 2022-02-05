@@ -94,11 +94,11 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 	}
 
 	if tlsconfig, err = cc.TLSGenClient(config); err != nil {
-		return config, err
+		return config, errors.Wrap(err, "failed to generate client TLS")
 	}
 
 	if d, err = dialers.DefaultDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
-		return config, err
+		return config, errors.Wrap(err, "failed to create network dialer")
 	}
 
 	certpath := bw.LocateFirstInDir(

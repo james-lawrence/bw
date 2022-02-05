@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"net"
@@ -44,6 +45,7 @@ type deployCmd struct {
 	deploymentID   string
 	filteredIP     []net.IP
 	filteredRegex  []*regexp.Regexp
+	snapshotOutput *os.File
 	concurrency    int64
 	canary         bool
 	debug          bool
@@ -53,21 +55,37 @@ type deployCmd struct {
 }
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
+	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Arg("environment", "the environment configuration to use").HintAction(func() (environments []string) {
+			filepath.WalkDir(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), func(path string, d fs.DirEntry, err error) error {
+				if !d.IsDir() {
+					return nil
+				}
+
+				log.Println("Checking", path)
+				return nil
+			})
+			return environments
+		}).Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
+		return cmd
+	}
+
+	tls := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
+		return cmd
+	}
+
 	deployOptions := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		cmd.Flag("ignoreFailures", "ignore when an agent fails its deploy").Default("false").BoolVar(&t.ignoreFailures)
 		cmd.Flag("silenceLogs", "prevents the logs from being written for a deploy").Default("false").BoolVar(&t.silenceLogs)
 		return cmd
 	}
-	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-		cmd.Flag("insecure", "skips verifying tls host").Default("false").BoolVar(&t.insecure)
-		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
-		return cmd
-	}
 
-	t.deployCmd(deployOptions(common(parent.Command("deploy", "deploy to nodes within the cluster").Default())))
-	t.redeployCmd(deployOptions(common(parent.Command("archive", "redeploy an archive to nodes within the cluster"))))
+	t.snapshotCmd(common(parent.Command("snapshot", "generate a deployment archive without uploading it anywhere")))
+	t.deployCmd(deployOptions(tls(common(parent.Command("deploy", "deploy to nodes within the cluster").Default()))))
+	t.redeployCmd(deployOptions(tls(common(parent.Command("archive", "redeploy an archive to nodes within the cluster")))))
 	t.localCmd(common(parent.Command("local", "deploy to the local system")))
-	t.cancelCmd(common(parent.Command("cancel", "cancel any current deploy")))
+	t.cancelCmd(tls(common(parent.Command("cancel", "cancel any current deploy"))))
 }
 
 func (t *deployCmd) initializeUX(c dialers.Defaults, events chan *agent.Message) {
@@ -96,11 +114,16 @@ func (t *deployCmd) deployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func (t *deployCmd) redeployCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
-	parent.Flag("canary", "ddeploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
+	parent.Flag("canary", "deploy only to the canary server - this option is used to consistent select a single server for deployments without having to manually filter").BoolVar(&t.canary)
 	parent.Flag("name", "regex to match against").RegexpListVar(&t.filteredRegex)
 	parent.Flag("ip", "match against the provided IPs").IPListVar(&t.filteredIP)
 	parent.Arg("archive", "deployment ID to redeploy").StringVar(&t.deploymentID)
 	return parent.Action(t.redeploy)
+}
+
+func (t *deployCmd) snapshotCmd(parent *kingpin.CmdClause) *kingpin.CmdClause {
+	parent.Flag("output", "file to write to. by default archive is written to stdout").Short('o').OpenFileVar(&t.snapshotOutput, os.O_CREATE|os.O_RDWR|os.O_TRUNC, 0600)
+	return parent.Action(t.snapshot)
 }
 
 func (t *deployCmd) deploy(ctx *kingpin.ParseContext) error {
@@ -344,6 +367,56 @@ func (t *deployCmd) cancel(ctx *kingpin.ParseContext) (err error) {
 	}
 
 	events <- agentutil.LogEvent(local, "deploy cancelled")
+
+	return nil
+}
+
+func (t *deployCmd) snapshot(ctx *kingpin.ParseContext) (err error) {
+	var (
+		config agent.ConfigClient
+	)
+
+	if config, err = commandutils.ReadConfiguration(t.environment); err != nil {
+		log.Println("FAILED TO LOAD CONFIGURATION")
+		return err
+	}
+
+	log.Println("pid", os.Getpid())
+
+	if len(config.DeployPrompt) > 0 {
+		_, err := (&promptui.Prompt{
+			Label:     config.DeployPrompt,
+			IsConfirm: true,
+		}).Run()
+
+		// we're done.
+		if err != nil {
+			return nil
+		}
+	}
+
+	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+		return errors.Wrap(err, "failed to crreate bw.env")
+	}
+
+	if err = commandutils.RunLocalDirectives(config); err != nil {
+		return errors.Wrap(err, "failed to run local directives")
+	}
+
+	if _, err := os.Stat(filepath.Join(config.Dir(), bw.AuthKeysFile)); !os.IsNotExist(err) {
+		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.AuthKeysFile)); err != nil {
+			return err
+		}
+	}
+
+	if t.snapshotOutput == nil {
+		t.snapshotOutput = os.Stdout
+	}
+	defer t.snapshotOutput.Close()
+
+	if err = packer.Pack(t.snapshotOutput, config.DeployDataDir); err != nil {
+		return err
+	}
 
 	return nil
 }

@@ -21,5 +21,4 @@ const (
 	EnvAgentClusterEnableGoogleCloudPool = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL"  // enable gcloud pool peer detection
 	EnvAgentClusterEnableDNS             = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_DNS"          // enable dns peer detection
 	EnvAgentClusterP2PDiscoveryPort      = "BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT" // override the p2p discovery port
-	EnvProxyDialerEnabled                = "BEARDED_WOOKIE_ALPHA_ENABLE_PROXY_DIALER"        // enable the proxy dialer feature for clients, opt in for now.
 )
