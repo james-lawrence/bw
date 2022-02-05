@@ -19,6 +19,7 @@ type auth interface {
 func Proxy(l net.Listener, d dialer, a auth) error {
 	for {
 		conn, err := l.Accept()
+		log.Println("proxy connection accepted")
 		if err != nil {
 			log.Println("proxy failed", err)
 			return err
@@ -69,6 +70,7 @@ func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (e
 	)
 
 	if err = t.readmsg(c1, &req); err != nil {
+		log.Println("failed to read proxy request", err)
 		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
 			Version: 1,
 			Code:    ProxyResponse_ClientError,
@@ -76,6 +78,7 @@ func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (e
 	}
 
 	if err = a.Authorization(req.Token); err != nil {
+		log.Println("proxy request authorization failed", err)
 		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
 			Version: 1,
 			Code:    ProxyResponse_ClientError,
@@ -83,6 +86,7 @@ func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (e
 	}
 
 	if c2, err = d.DialContext(ctx, c1.LocalAddr().Network(), req.Connect); err != nil {
+		log.Println("proxy dialing failed", c1.LocalAddr().Network(), req.Connect, err)
 		return errorsx.Compact(err, t.writemsg(c1, &ProxyResponse{
 			Version: 1,
 			Code:    ProxyResponse_ClientError,
@@ -94,6 +98,7 @@ func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (e
 		Code:    ProxyResponse_None,
 	})
 	if err != nil {
+		log.Println("failed to respond to proxy request")
 		return err
 	}
 

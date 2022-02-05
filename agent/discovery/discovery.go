@@ -20,10 +20,6 @@ type cluster interface {
 	Peers() []*agent.Peer
 }
 
-type authorization interface {
-	Authorized(context.Context) error
-}
-
 func peerToNode(p *agent.Peer) Node {
 	return Node{
 		Ip:            p.Ip,

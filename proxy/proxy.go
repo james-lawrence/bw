@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
 
 	"github.com/james-lawrence/bw/internal/x/errorsx"
@@ -14,6 +15,7 @@ func Proxy(ctx context.Context, client, dst net.Conn, buf io.Reader) error {
 		errors chan error
 	)
 
+	log.Println("proxying connection")
 	ctx, done := context.WithCancel(ctx)
 	go func() {
 		select {

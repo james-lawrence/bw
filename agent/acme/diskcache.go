@@ -146,6 +146,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 	// END song and dance.
 
 	if t.ac.Challenges.ALPN {
+		log.Println("requesting alpn challenge")
 		if err = client.Challenge.SetTLSALPN01Provider(solver(t)); err != nil {
 			log.Println("lego provider failure", err)
 			return resp, status.Error(codes.Internal, "acme setup alpn failure")
@@ -153,6 +154,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 	}
 
 	if t.ac.Challenges.DNS {
+		log.Println("requesting dns challenge")
 		p, err := t.autoDNS()
 		if err != nil {
 			log.Println("failed to detect dns provider", err)
