@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/fs"
 	"io/ioutil"
 	"log"
 	"net"
@@ -56,17 +55,7 @@ type deployCmd struct {
 
 func (t *deployCmd) configure(parent *kingpin.CmdClause) {
 	common := func(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-		cmd.Arg("environment", "the environment configuration to use").HintAction(func() (environments []string) {
-			filepath.WalkDir(bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir), func(path string, d fs.DirEntry, err error) error {
-				if !d.IsDir() {
-					return nil
-				}
-
-				log.Println("Checking", path)
-				return nil
-			})
-			return environments
-		}).Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
+		cmd.Arg("environment", "the environment configuration to use").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
 		return cmd
 	}
 
