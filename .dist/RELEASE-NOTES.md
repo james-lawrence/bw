@@ -1,3 +1,113 @@
+commit 82a3b946e60774929e65b52d29760613b51992ed
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 20:03:14 2022 -0500
+
+    cleanup ubuntu deployment to match general linux deployments.
+    
+    add coordinator service.
+
+commit d8e402c3ce2c9250ff3379cec10d9cb824f43f9b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 19:49:58 2022 -0500
+
+    cleanup debugging
+
+commit 2ae12349768e2ea8e53781f741b3132ca578683e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 19:46:23 2022 -0500
+
+    use muxer for deployment
+
+commit 424eda201bb4b6701f1a123d013b4f2ac968fab0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 5 16:44:47 2022 -0500
+
+    debugging
+
+commit 75d38b7c8f61247f12fb27f471343bf6852b2fa5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 5 13:55:26 2022 -0500
+
+    remove default from command agent
+
+commit a6ed86e4d9904c6e12f7584d68c6f9f96730fe3b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 5 13:26:36 2022 -0500
+
+    implement the ability to act as a pure hosting node.
+    
+    lets you spin up hosts that don't actually deploy the archive.
+    but act as a host instead.
+
+commit 6d070ae994490bb4584e9c0c212e302653bd343a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 5 12:37:40 2022 -0500
+
+    implement a snapshot to stdout command.
+
+commit 36a7a9ccbb802c5bd4d30bc799b09fa5eae3e465
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 31 19:55:50 2022 -0500
+
+    add deployment id variable
+
+commit 7e461fa6cdaf4343ab15b83256c338ed1ca4aced
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 23 19:26:39 2022 -0500
+
+    implement a automatic temporary directory for deployments.
+
+commit 75b48db4f5e596a45d91c8cbdb7049ea8dfda7eb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 23 17:00:14 2022 -0500
+
+    add pacman PKGBUILD
+
+commit 4f16eb3648c302991160bfc26ccc770d2daccf3d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 23 16:39:20 2022 -0500
+
+    move systemd dist to linux
+
+commit 1b40bb1a4b0f4878381873efec838e5ee64e4d43
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jan 23 16:29:54 2022 -0500
+
+    fix up generic systemd service install locations
+
+commit bcfe002c7ea4f0215f48e242b8d6c19a241e02e8
+Author: James <james-lawrence@users.noreply.github.com>
+Date:   Thu Dec 23 07:41:38 2021 -0500
+
+    readme updates
+    
+    - added deb installation instructions.
+    - minor copy fixes.
+
+commit 403d296355751a92e1d6fd6de7de3a647cea5e87
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 6 16:31:09 2021 -0400
+
+    release file handles faster when unpacking.
+
+commit e01e38d65c7d26669ff25d3ef3836824a1ae8620
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 10 19:28:39 2021 -0400
+
+    cleanup
+
+commit a7fecc013c867fa0d6e7abbced150abf5d5b7894
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 28 10:17:31 2021 -0400
+
+    adjust client keepalive settings
+
+commit 5bb4c1000c0e6e762c0a41071204f01744565763
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 28 10:17:15 2021 -0400
+
+    release 0.1.1630160144-d9abba90
+
 commit d9abba9059989ddae5d887c42b3c838bfe4de2c2
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Aug 28 10:15:44 2021 -0400
