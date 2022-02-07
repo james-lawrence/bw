@@ -1,0 +1,17 @@
+[Unit]
+Description=bearded-wookie coordinator agent, used to upload, deploy to other servers.
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+# Load the environment variables specified by agent.env.
+# to see all available environment variables and their uses
+# see https://github.com/james-lawrence/bw/blob/master/environment.go.
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+# specify the shell used for running commands.
+Environment=SHELL=/bin/bash
+ExecStart=/usr/local/bin/bw agent coordinator
+
+[Install]
+WantedBy=default.target
