@@ -136,7 +136,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 			config.Credentials.Insecure,
 		),
 	); err != nil {
-		return config, err
+		return config, errors.Wrap(err, "unable to load credentials")
 	}
 
 	if envx.Boolean(false, bw.EnvLogsConfiguration) {

@@ -160,11 +160,11 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 	)
 
 	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
-		return err
+		return errors.Wrap(err, "unable to setup authorization")
 	}
 
 	if config, err = commandutils.LoadConfiguration(t.environment, agent.CCOptionInsecure(t.insecure)); err != nil {
-		return err
+		return errors.Wrap(err, "unable to load configuration")
 	}
 
 	log.Println("pid", os.Getpid())
@@ -198,13 +198,13 @@ func (t *deployCmd) _deploy(filter deployment.Filter, allowEmpty bool) error {
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
 	if d, c, err = daemons.ConnectClientUntilSuccess(t.global.ctx, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
-		return err
+		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	if conn, err = qd.DialContext(t.global.ctx); err != nil {
-		return err
+		return errors.Wrap(err, "unable to create a connection")
 	}
 
 	go func() {
