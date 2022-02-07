@@ -56,8 +56,8 @@ func (t Dialer) DialContext(ctx context.Context, network string, address string)
 	type handshaker interface {
 		Handshake() error
 	}
-	log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
-	defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
+	// log.Printf("muxer.DialContext initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
+	// defer log.Printf("muxer.DialContext completed: %T %s %s %s\n", t.d, t.protocol, network, address)
 
 	if conn, err = t.d.DialContext(ctx, network, address); err != nil {
 		return conn, errors.Wrapf(err, "muxer.DialContext failed: %s %s://%s", t.protocol, network, address)

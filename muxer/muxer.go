@@ -191,7 +191,7 @@ func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
 		return errors.Errorf("unknown protocol: %s", hex.EncodeToString(req[:]))
 	}
 
-	log.Println("muxer.Accept", protocol.protocol, conn.RemoteAddr().String(), "->", conn.LocalAddr().String())
+	// log.Println("muxer.Accept", protocol.protocol, conn.RemoteAddr().String(), "->", conn.LocalAddr().String())
 	select {
 	case protocol.inbound <- conn:
 		return nil
