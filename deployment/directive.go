@@ -78,7 +78,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 		return
 	}
 
-	if tmpdir, err = os.MkdirTemp(dctx.ArchiveRoot, ".bw-tmp-*"); err != nil {
+	if tmpdir, err = mkdirTemp(dctx.ArchiveRoot, ".bw-tmp-*"); err != nil {
 		dctx.Done(err)
 		return
 	}
