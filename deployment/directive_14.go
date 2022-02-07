@@ -9,5 +9,6 @@ import (
 )
 
 func mkdirTemp(dir string, pattern string) (string, error) {
-	return os.Mkdir(filepath.Join(dir, ".bw-tmp"), 0700)
+	p := filepath.Join(dir, ".bw-tmp")
+	return p, os.Mkdir(p, 0700)
 }

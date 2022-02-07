@@ -37,7 +37,7 @@ package() {
     echo "PACKAGE INITIATED ${srcdir} ${pkgdir} ${PWD}"
 
     rsync --recursive --checksum --perms ${srcdir}/${pkgname}/.dist/linux/ ${pkgdir}/
-    install -D -m 0755 ${srcdir}/bin/bw ${pkgdir}/usr/local/bin/bw
-    install -D -m 0755 ${srcdir}/bin/bwaws ${pkgdir}/usr/local/bin/bwaws
-    install -D -m 0755 ${srcdir}/bin/bwgcloud ${pkgdir}/usr/local/bin/bwgcloud
+    install -D -m 0755 ${srcdir}/bin/bw ${pkgdir}/usr/bin/bw
+    install -D -m 0755 ${srcdir}/bin/bwaws ${pkgdir}/usr/bin/bwaws
+    install -D -m 0755 ${srcdir}/bin/bwgcloud ${pkgdir}/usr/bin/bwgcloud
 }

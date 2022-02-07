@@ -138,7 +138,6 @@ type worker struct {
 	dispatcher     dispatcher
 	check          operation
 	deploy         operation
-	filter         Filter
 	completed      *int64
 	failed         *int64
 	ignoreFailures bool

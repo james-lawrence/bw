@@ -42,7 +42,7 @@ release: release-check
 	GOBIN=$(CURDIR)/.dist/build/bearded-wookie-linux-amd64-$(RELEASE)/usr/local/bin GOARCH=amd64 GOOS=linux go install -ldflags=$(LDFLAGS) $(PACKAGE)/bw
 	
 	git archive --format=tar -o $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar HEAD
-	tar -f $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar --delete '.dist' --delete '.test'
+	tar -f $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar --delete '.test'
 	gzip -f $(CURDIR)/.dist/build/bearded-wookie-source-$(RELEASE).tar
 
 	tar -C .dist --xform 's:^\./::' -czvf .dist/build/bearded-wookie-linux-amd64-$(RELEASE).tar.gz \
