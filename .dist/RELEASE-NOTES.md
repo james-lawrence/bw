@@ -1,3 +1,15 @@
+commit 04831b70473a0b18e7e5acd4b20ec2fb0b541007
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 22:01:48 2022 -0500
+
+    remove go1.16 features
+
+commit c0bf5b9313efa1a05d622aade5a497558055742a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 21:54:12 2022 -0500
+
+    release 0.1.1644200166-1bc13e46
+
 commit 1bc13e46f539d1f835fbce65fabf854fe59d0f2d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Feb 6 21:16:06 2022 -0500
