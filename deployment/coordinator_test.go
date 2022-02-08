@@ -1,6 +1,7 @@
 package deployment_test
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -43,7 +44,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(dopts, a)
+		_, err = c.Deploy(context.Background(), dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -78,7 +79,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(dopts, a)
+		_, err = c.Deploy(context.Background(), dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -90,10 +91,10 @@ var _ = Describe("Coordinator", func() {
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		_, err = c.Deploy(dopts, a2)
+		_, err = c.Deploy(context.Background(), dopts, a2)
 		Expect(err).To(MatchError(fmt.Sprintf("%s is already deploying: %s - Deploying", a.Initiator, bw.RandomID(a.DeploymentID).String())))
 
-		Eventually(func() []agent.Deploy {
+		Eventually(func() []*agent.Deploy {
 			deploys, err := c.Deployments()
 			Expect(err).ToNot(HaveOccurred())
 			return deploys
@@ -123,7 +124,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(dopts, a)
+		_, err = c.Deploy(context.Background(), dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		c.Cancel()
@@ -133,7 +134,7 @@ var _ = Describe("Coordinator", func() {
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		_, err = c.Deploy(dopts, a2)
+		_, err = c.Deploy(context.Background(), dopts, a2)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -164,7 +165,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(dopts, a)
+		_, err = c.Deploy(context.Background(), dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		c.Cancel()

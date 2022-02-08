@@ -49,14 +49,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:        int64(time.Minute),
 		}
 
-		g.Expect(writeDeployMetadata(deploydir, agent.Deploy{Archive: &a, Options: &dopts, Stage: agent.Deploy_Deploying})).To(g.Succeed())
-
-		// takes two requests for correction to take effect,
-		// first request corrects the invalid deploy, second reads from it.
-		deploys, err = c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(1))
-		g.Expect(deploys[0].Stage).To(g.Equal(agent.Deploy_Deploying))
+		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{Archive: &a, Options: &dopts, Stage: agent.Deploy_Deploying})).To(g.Succeed())
 
 		deploys, err = c.Deployments()
 		g.Expect(err).To(g.Succeed())
@@ -90,7 +83,7 @@ var _ = Describe("Coordinator", func() {
 		}
 		deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
 		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())
-		g.Expect(writeDeployMetadata(deploydir, agent.Deploy{Archive: &a, Options: &dopts, Stage: s})).To(g.Succeed())
+		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{Archive: &a, Options: &dopts, Stage: s})).To(g.Succeed())
 		deploys, err = c.Deployments()
 		g.Expect(err).To(g.Succeed())
 		g.Expect(deploys).To(g.HaveLen(1))

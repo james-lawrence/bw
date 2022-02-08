@@ -40,6 +40,7 @@ var _ = g.Describe("Context", func() {
 			"basic environment",
 			example1,
 			"FOO=BAR",
+			"BW_ENVIRONMENT_DEPLOY_ID=",
 			"BW_ENVIRONMENT_HOST=HOSTNAME",
 			"BW_ENVIRONMENT_MACHINE_ID=MACHINEID",
 			"BW_ENVIRONMENT_DOMAIN=DOMAIN",
@@ -49,6 +50,7 @@ var _ = g.Describe("Context", func() {
 			"BW_ENVIRONMENT_USERHOME=HOMEDIR",
 			"BW_ENVIRONMENT_ROOT=ROOT",
 			"BW_ENVIRONMENT_WORK_DIRECTORY=WORK DIRECTORY",
+			"BW_ENVIRONMENT_TEMP_DIRECTORY=",
 		),
 	)
 })
