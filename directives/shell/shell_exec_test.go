@@ -9,8 +9,8 @@ import (
 	"os/user"
 	"time"
 
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
 )
 
@@ -29,7 +29,7 @@ var _ = ginkgo.Describe("Shell", func() {
 			),
 			output: ioutil.Discard,
 		}
-		DescribeTable("Execute functions", func(ctx Context, err error, output string, c Exec) {
+		ginkgo.DescribeTable("Execute functions", func(ctx Context, err error, output string, c Exec) {
 			buf := bytes.NewBufferString("")
 			ctx.output = buf
 
@@ -41,10 +41,10 @@ var _ = ginkgo.Describe("Shell", func() {
 
 			Expect(buf.String()).To(Equal(output))
 		},
-			Entry("times out", ctx1, errors.New("signal: killed"), "", Exec{Command: "sleep 0.5", Timeout: 200 * time.Millisecond}),
-			Entry("complex command", ctx1, nil, "BAZ\n", Exec{Command: "echo ${FOO} | sed 's/BAR/BAZ/'", Timeout: 1 * time.Second}),
-			Entry("allow failures", ctx1, nil, "command failed, ignoring false %m exit status 1\n", Exec{Command: "false %m", Lenient: true, Timeout: 1 * time.Second}),
-			Entry("additional environment variables per command", ctx1, nil, "HELLO BAR", Exec{Command: "printf \"HELLO ${BAZZ}\"", Timeout: 1 * time.Second, Environ: "BAZZ=${FOO}"}),
+			ginkgo.Entry("times out", ctx1, errors.New("signal: killed"), "", Exec{Command: "sleep 0.5", Timeout: 200 * time.Millisecond}),
+			ginkgo.Entry("complex command", ctx1, nil, "BAZ\n", Exec{Command: "echo ${FOO} | sed 's/BAR/BAZ/'", Timeout: 1 * time.Second}),
+			ginkgo.Entry("allow failures", ctx1, nil, "command failed, ignoring false %m exit status 1\n", Exec{Command: "false %m", Lenient: true, Timeout: 1 * time.Second}),
+			ginkgo.Entry("additional environment variables per command", ctx1, nil, "HELLO BAR", Exec{Command: "printf \"HELLO ${BAZZ}\"", Timeout: 1 * time.Second, Environ: "BAZZ=${FOO}"}),
 		)
 	})
 })

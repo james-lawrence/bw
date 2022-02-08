@@ -9,9 +9,8 @@ import (
 	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agentutil"
 
-	// . "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/proto"
 )

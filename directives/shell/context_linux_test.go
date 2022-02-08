@@ -4,8 +4,7 @@ import (
 	"os/user"
 	"time"
 
-	g "github.com/onsi/ginkgo"
-	gt "github.com/onsi/ginkgo/extensions/table"
+	g "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
@@ -22,21 +21,21 @@ var example1 = Context{
 }
 
 var _ = g.Describe("Context", func() {
-	gt.DescribeTable("variable substitution",
+	g.DescribeTable("variable substitution",
 		func(ctx Context, input, expected string) {
 			result := ctx.variableSubst(input)
 			Expect(result).To(Equal(expected))
 		},
-		gt.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
-		gt.Entry("properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"),
+		g.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ROOT WORK DIRECTORY %"),
+		g.Entry("properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"),
 	)
 
-	gt.DescribeTable("environment variables",
+	g.DescribeTable("environment variables",
 		func(ctx Context, expected ...string) {
 			result := ctx.environmentSubst()
 			Expect(result).To(Equal(expected))
 		},
-		gt.Entry(
+		g.Entry(
 			"basic environment",
 			example1,
 			"FOO=BAR",

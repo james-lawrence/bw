@@ -10,8 +10,8 @@ import (
 	"github.com/james-lawrence/bw/internal/x/testingx"
 	"github.com/james-lawrence/bw/storage"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
+
 	g "github.com/onsi/gomega"
 )
 

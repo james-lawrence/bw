@@ -6,8 +6,8 @@ import (
 
 	. "github.com/james-lawrence/bw/directives/shell"
 
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	"github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
 )
 
@@ -23,11 +23,11 @@ var _ = ginkgo.Describe("Shell", func() {
     FOO=BAR
     BIZZ=${BAZZ}
 `
-	DescribeTable("ParseYAML",
+	ginkgo.DescribeTable("ParseYAML",
 		func(example string, expected ...Exec) {
 			Expect(ParseYAML(strings.NewReader(example))).To(Equal(expected))
 		},
-		Entry(
+		ginkgo.Entry(
 			"example", yaml1,
 			Exec{Command: "echo hello world"},
 			Exec{Command: "cat .filesystems/rsyslog/00_templates.conf | envsubst '${LOGGLY_TOKEN} ${DOMAIN_NAME} ${ENVIRONMENT_NAME}' >> .filesystems/rsyslog/00_templates.conf"},

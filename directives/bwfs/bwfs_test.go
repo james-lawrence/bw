@@ -9,7 +9,7 @@ import (
 	. "github.com/james-lawrence/bw/directives/bwfs"
 
 	. "github.com/james-lawrence/bw/internal/x/gomegax"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

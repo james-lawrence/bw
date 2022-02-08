@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/bits-and-blooms/bloom/v3"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
+
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
 
