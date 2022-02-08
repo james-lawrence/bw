@@ -1,7 +1,7 @@
 [Unit]
 Description=bearded-wookie deployment notifications
 After=network.target
-Requires=bearded-wookie.service
+Requires=bearded-wookie-agent.service
 
 [Service]
 Type=simple
@@ -11,3 +11,4 @@ ExecStart=/usr/bin/bw notify
 
 [Install]
 WantedBy=bearded-wookie.service
+WantedBy=bearded-wookie-agent.service

@@ -1,7 +1,7 @@
 [Unit]
 Description=bearded-wookie utility for automatically updating dns.
 After=network.target
-Requires=bearded-wookie.service
+Requires=bearded-wookie-agent.service
 
 [Service]
 Type=oneshot

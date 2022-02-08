@@ -1,6 +1,7 @@
 [Unit]
 Description=bearded-wookie coordinator agent, used to upload, deploy to other servers.
 After=network.target
+Conflicts=bearded-wookie.service
 
 [Service]
 Type=simple
@@ -14,4 +15,5 @@ Environment=SHELL=/bin/bash
 ExecStart=/usr/bin/bw agent coordinator
 
 [Install]
+Alias=bearded-wookie-agent.service
 WantedBy=default.target

@@ -1,7 +1,7 @@
 [Unit]
 Description=bearded-wookie utility for updating dns records for deploys/bootstraps.
 After=network.target
-Requires=bearded-wookie.service
+Requires=bearded-wookie-agent.service
 
 [Service]
 Type=oneshot
