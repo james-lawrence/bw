@@ -352,7 +352,7 @@ func (t Config) Peer() *Peer {
 	return &Peer{
 		Status:        Peer_Node,
 		Name:          t.Name,
-		Ip:            t.RPCBind.IP.String(),
+		Ip:            t.P2PBind.IP.String(),
 		AutocertPort:  uint32(t.AutocertBind.Port),
 		RPCPort:       uint32(t.RPCBind.Port),
 		RaftPort:      uint32(t.RaftBind.Port),
