@@ -161,10 +161,6 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 		// ),
 	)
 
-	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
-		log.Println("local peer config", spew.Sdump(local.Peer))
-	}
-
 	clusterevents := cluster.NewEventsQueue(local)
 
 	if l, err = net.ListenTCP("tcp", t.config.P2PBind); err != nil {

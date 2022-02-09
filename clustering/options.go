@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/pkg/errors"
 )
 
@@ -131,18 +133,20 @@ func NewOptionsFromConfig(c *memberlist.Config, options ...Option) Options {
 		option(&opt)
 	}
 
-	log.Println("Name:", opt.Config.Name)
-	log.Println("IndirectChecks:", opt.Config.IndirectChecks)
-	log.Println("RetransmitMult:", opt.Config.RetransmitMult)
-	log.Println("SuspicionMult:", opt.Config.SuspicionMult)
-	log.Println("GossipNodes:", opt.Config.GossipNodes)
-	log.Println("GossipInterval:", opt.Config.GossipInterval)
-	log.Println("disable tcp pings:", opt.Config.DisableTcpPings)
-	log.Println("Advertise:", opt.Config.AdvertiseAddr, opt.Config.AdvertisePort)
-	log.Println("Bind:", opt.Config.BindAddr, opt.Config.BindPort)
-	log.Println("TCPTimeout:", opt.Config.TCPTimeout)
-	log.Println("Compression:", opt.Config.EnableCompression)
-	log.Printf("Alive Delegate: %T\n", opt.Config.Alive)
+	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
+		log.Println("Name:", opt.Config.Name)
+		log.Println("IndirectChecks:", opt.Config.IndirectChecks)
+		log.Println("RetransmitMult:", opt.Config.RetransmitMult)
+		log.Println("SuspicionMult:", opt.Config.SuspicionMult)
+		log.Println("GossipNodes:", opt.Config.GossipNodes)
+		log.Println("GossipInterval:", opt.Config.GossipInterval)
+		log.Println("disable tcp pings:", opt.Config.DisableTcpPings)
+		log.Println("Advertise:", opt.Config.AdvertiseAddr, opt.Config.AdvertisePort)
+		log.Println("Bind:", opt.Config.BindAddr, opt.Config.BindPort)
+		log.Println("TCPTimeout:", opt.Config.TCPTimeout)
+		log.Println("Compression:", opt.Config.EnableCompression)
+		log.Printf("Alive Delegate: %T\n", opt.Config.Alive)
+	}
 
 	return opt
 }
