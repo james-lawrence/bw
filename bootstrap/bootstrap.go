@@ -20,7 +20,6 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc"
@@ -79,21 +78,15 @@ type UntilSuccess struct {
 	bs          backoff.Strategy
 }
 
+type deployer interface {
+	Deploy(dctx *deployment.DeployContext)
+}
+
 // Run bootstrapping process until it succeeds
-func (t UntilSuccess) Run(ctx context.Context, c agent.Config, dl storage.DownloadProtocol, results chan *deployment.DeployResult) (err error) {
-	var (
-		sctx shell.Context
-	)
-
-	if sctx, err = shell.DefaultContext(); err != nil {
-		return err
-	}
-
+func (t UntilSuccess) Run(ctx context.Context, c agent.Config, d deployer, dl storage.DownloadProtocol, results chan *deployment.DeployResult) (err error) {
 	coord := deployment.New(
 		c.Peer(),
-		deployment.NewDirective(
-			deployment.DirectiveOptionShellContext(sctx),
-		),
+		d,
 		deployment.CoordinatorOptionRoot(c.Root),
 		deployment.CoordinatorOptionKeepN(c.KeepN),
 		deployment.CoordinatorOptionStorage(
