@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/ipx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/envx"
@@ -40,6 +41,7 @@ import (
 
 type agentCmd struct {
 	*global
+	p2padvertised  net.IP
 	bootstrap      []*net.TCPAddr
 	alternateBinds []*net.TCPAddr
 	config         agent.Config
@@ -51,6 +53,11 @@ func (t *agentCmd) configure(parent *kingpin.CmdClause) {
 	t.global.cluster.configure(parent, &t.config)
 
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
+	parent.Flag("agent-p2p-advertised", "ip address to advertise to peers").PlaceHolder(
+		t.config.P2PBind.IP.String(),
+	).Envar(
+		bw.EnvAgentP2PAdvertised,
+	).IPVar(&t.p2padvertised)
 	parent.Flag("agent-p2p", "address for the p2p server to bind to").PlaceHolder(
 		t.config.P2PBind.String(),
 	).Envar(
@@ -143,8 +150,20 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 	}
 
 	local := cluster.NewLocal(
-		t.config.Peer(),
+		agent.NewPeerFromTemplate(
+			t.config.Peer(),
+			agent.PeerOptionIP(
+				ipx.DefaultIfBlank(
+					t.p2padvertised,
+					t.config.P2PBind.IP,
+				),
+			),
+		),
 	)
+
+	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
+		log.Println("local peer config", spew.Sdump(local.Peer))
+	}
 
 	clusterevents := cluster.NewEventsQueue(local)
 
