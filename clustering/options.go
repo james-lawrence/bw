@@ -189,6 +189,11 @@ func newCluster(config *memberlist.Config) (Memberlist, error) {
 		return c, errors.WithStack(err)
 	}
 
+	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
+		n := members.LocalNode()
+		log.Println("local node details", n.Address())
+	}
+
 	c = Memberlist{
 		config: config,
 		list:   members,
