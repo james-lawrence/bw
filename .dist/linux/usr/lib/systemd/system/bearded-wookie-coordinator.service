@@ -1,14 +1,15 @@
 [Unit]
 Description=bearded-wookie coordinator agent, used to upload, deploy to other servers.
+# available environment variables.
+Documentation=https://github.com/james-lawrence/bw/blob/master/environment.go
 After=network.target
 Conflicts=bearded-wookie.service
 
 [Service]
 Type=simple
 Restart=always
+CacheDirectory=%N
 # Load the environment variables specified by agent.env.
-# to see all available environment variables and their uses
-# see https://github.com/james-lawrence/bw/blob/master/environment.go.
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 # specify the shell used for running commands.
 Environment=SHELL=/bin/bash

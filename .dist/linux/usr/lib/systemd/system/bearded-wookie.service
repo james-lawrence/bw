@@ -1,11 +1,14 @@
 [Unit]
 Description=bearded-wookie agent
+# available environment variables.
+Documentation=https://github.com/james-lawrence/bw/blob/master/environment.go
 After=network.target
 Conflicts=bearded-wookie-coordinator.service
 
 [Service]
 Type=simple
 Restart=always
+CacheDirectory=%N
 # Load the environment variables specified by agent.env.
 # to see all available environment variables and their uses
 # see https://github.com/james-lawrence/bw/blob/master/environment.go.
