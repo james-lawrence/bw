@@ -17,7 +17,6 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/internal/ipx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/envx"
@@ -150,15 +149,16 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 	}
 
 	local := cluster.NewLocal(
-		agent.NewPeerFromTemplate(
-			t.config.Peer(),
-			agent.PeerOptionIP(
-				ipx.DefaultIfBlank(
-					t.p2padvertised,
-					t.config.P2PBind.IP,
-				),
-			),
-		),
+		t.config.Peer(),
+		// agent.NewPeerFromTemplate(
+		// 	t.config.Peer(),
+		// 	agent.PeerOptionIP(
+		// 		ipx.DefaultIfBlank(
+		// 			t.p2padvertised,
+		// 			t.config.P2PBind.IP,
+		// 		),
+		// 	),
+		// ),
 	)
 
 	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
@@ -193,6 +193,7 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 	)
 
 	dctx := daemons.Context{
+		AdvertisedIP:      t.p2padvertised.String(),
 		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,
