@@ -126,9 +126,24 @@ func ProtocolOptionEnableSingleNode(b bool) ProtocolOption {
 	return func(p *Protocol) {
 		if b {
 			p.minQuorum = 1
-		} else {
-			p.minQuorum = agent.QuorumDefault
 		}
+	}
+}
+
+// ProtocolOptionQuorumMinimum allow minimum quorum to be less than the default quorum.
+func ProtocolOptionQuorumMinimum(min int) ProtocolOption {
+	return func(p *Protocol) {
+		if min < agent.QuorumDefault {
+			log.Printf("WARNING: quorum is less than the minimum: %d / %d\n", min, agent.QuorumDefault)
+		}
+
+		if min > agent.QuorumMaximum {
+			log.Printf("WARNING: quorum assignment (%d) is larger than the maximum (%d), defaulting to maximum: %d\n", min, agent.QuorumDefault, agent.QuorumMaximum)
+			p.minQuorum = agent.QuorumMaximum
+			return
+		}
+
+		p.minQuorum = min
 	}
 }
 
