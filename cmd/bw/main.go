@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -10,15 +9,11 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd"
+	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/logrusorgru/aurora"
-	"google.golang.org/grpc/grpclog"
 
 	"github.com/alecthomas/kingpin"
 )
@@ -30,7 +25,6 @@ type global struct {
 	shutdown  context.CancelFunc
 	cleanup   *sync.WaitGroup
 	verbosity int
-	debug     bool
 }
 
 func main() {
@@ -39,7 +33,7 @@ func main() {
 		cleanup, cancel = context.WithCancel(context.Background())
 		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
 		global          = &global{
-			systemIP: systemx.HostIP(systemx.HostnameOrLocalhost()),
+			systemIP: systemip,
 			cluster:  &clusterCmd{},
 			ctx:      cleanup,
 			shutdown: cancel,
@@ -69,7 +63,6 @@ func main() {
 	)
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	enablegrpclogging()
 	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
 	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
@@ -82,24 +75,7 @@ func main() {
 	})
 
 	app.Flag("verbose", "increase verbosity of logging").Short('v').Default("0").Action(func(*kingpin.ParseContext) error {
-		switch global.verbosity {
-		case 4:
-			global.debug = true
-		case 3:
-			os.Setenv(bw.EnvLogsGRPC, "1")
-			os.Setenv(bw.EnvLogsGossip, "1")
-			os.Setenv(bw.EnvLogsRaft, "1")
-
-			fallthrough
-		case 2:
-			os.Setenv(bw.EnvLogsVerbose, "1")
-			fallthrough
-		case 1:
-			os.Setenv(bw.EnvLogsConfiguration, "1")
-		}
-
-		enablegrpclogging()
-
+		commandutils.LogEnv(global.verbosity)
 		return nil
 	}).CounterVar(&global.verbosity)
 
@@ -113,37 +89,9 @@ func main() {
 	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
 
 	if _, err = app.Parse(os.Args[1:]); err != nil {
-		type NotificationError interface {
-			Notification()
-		}
-
-		type ShortError interface {
-			UserFriendly()
-		}
-
-		var (
-			nErr NotificationError
-			sErr ShortError
-		)
-
-		if errors.As(err, &nErr) {
-			log.Println(err)
-		} else if errors.As(err, &sErr) {
-			log.Println(aurora.NewAurora(true).Red("ERROR"), err)
-		} else {
-			log.Printf("%T - [%+v]\n", err, err)
-		}
-
+		commandutils.LogCause(err)
 		cancel()
 	}
 
 	global.cleanup.Wait()
-}
-
-func enablegrpclogging() {
-	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
-		os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99")
-		os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
-		grpclog.SetLoggerV2(grpcx.NewLogger())
-	}
 }

@@ -69,7 +69,6 @@ type Context struct {
 	RPCKeepalive       keepalive.ServerParameters
 	PeeringEvents      *_cluster.EventsQueue
 	Results            chan *deployment.DeployResult
-	Debug              bool
 	DebugLog           *log.Logger
 	ACMECache          acme.DiskCache
 	Inmem              *grpc.ClientConn

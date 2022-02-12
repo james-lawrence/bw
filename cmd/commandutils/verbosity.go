@@ -1,40 +1,67 @@
 package commandutils
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/logrusorgru/aurora"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc/grpclog"
 )
 
-const (
-	// VerbosityQuiet default verbosity setting, minimal output.
-	VerbosityQuiet = "quiet"
-	// VerbosityStack print stack trace when an error occurs.
-	VerbosityStack = "stack"
-)
+// LogCause returns a string format based on the verbosity.
+func LogCause(err error) error {
+	type NotificationError interface {
+		Notification()
+	}
 
-// ConfigLog configures logs based on the verbosity
-func ConfigLog(v string) {
-	switch v {
-	case VerbosityStack:
-		Verbose = log.New(os.Stderr, "[Verbose] ", log.Flags()|log.Lshortfile)
+	type ShortError interface {
+		UserFriendly()
+	}
+
+	var (
+		nErr NotificationError
+		sErr ShortError
+	)
+
+	if err == nil {
+		return nil
+	}
+
+	if errors.As(err, &nErr) {
+		log.Println(err)
+	} else if errors.As(err, &sErr) {
+		log.Println(aurora.NewAurora(true).Red("ERROR"), err)
+	} else {
+		log.Printf("%T - [%+v]\n", err, err)
+	}
+
+	return err
+}
+
+func LogEnv(verbosity int) {
+	switch verbosity {
+	case 4:
+		os.Setenv(bw.EnvLogsVerbose, "1")
+	case 3:
+		os.Setenv(bw.EnvLogsGRPC, "1")
+		os.Setenv(bw.EnvLogsGossip, "1")
+		os.Setenv(bw.EnvLogsRaft, "1")
 		fallthrough
-	default:
-		log.SetFlags(log.Flags() | log.Lshortfile)
+	case 2:
+		os.Setenv(bw.EnvLogsVerbose, "1")
+		fallthrough
+	case 1:
+		os.Setenv(bw.EnvLogsConfiguration, "1")
+	}
+
+	// enable GRPC logging
+	if envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		os.Setenv("GRPC_GO_LOG_VERBOSITY_LEVEL", "99")
+		os.Setenv("GRPC_GO_LOG_SEVERITY_LEVEL", "info")
+		grpclog.SetLoggerV2(grpcx.NewLogger())
 	}
 }
-
-// Fatalln returns a string format based on the verbosity.
-func Fatalln(v string, err error) {
-	switch v {
-	case VerbosityStack:
-		Verbose.Fatalf("%+v\n", err)
-	default:
-		log.Fatalln(err)
-	}
-}
-
-var (
-	// Verbose logger
-	Verbose = log.New(ioutil.Discard, "[Verbose] ", log.Flags()|log.Lshortfile)
-)

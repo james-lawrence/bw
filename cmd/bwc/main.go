@@ -2,30 +2,64 @@
 package main
 
 import (
+	"context"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 
 	"github.com/alecthomas/kong"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/internal/x/debugx"
+	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 )
 
-type Global struct{}
+type Global struct {
+	Verbosity int                `help:"increase verbosity of logging" short:"v" type:"counter"`
+	Context   context.Context    `kong:"-"`
+	Shutdown  context.CancelFunc `kong:"-"`
+	Cleanup   *sync.WaitGroup    `kong:"-"`
+}
 
-var shellCli struct {
-	Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
-	InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
+func (t Global) BeforeApply() error {
+	commandutils.LogEnv(t.Verbosity)
+	return nil
 }
 
 func main() {
+	var shellCli struct {
+		Global
+		Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
+		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
+	}
+
+	var (
+		err error
+		ctx *kong.Context
+		// systemip = systemx.HostIP(systemx.HostnameOrLocalhost())
+	)
+
+	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
+	shellCli.Cleanup = &sync.WaitGroup{}
+
+	log.SetFlags(log.Flags() | log.Lshortfile)
+	go debugx.DumpOnSignal(shellCli.Context, syscall.SIGUSR2)
+	go systemx.Cleanup(shellCli.Context, shellCli.Shutdown, shellCli.Cleanup, os.Kill, os.Interrupt)(func() {
+		log.Println("waiting for systems to shutdown")
+	})
+
 	parser := kong.Must(
 		&shellCli,
 		kong.Name("bwc"),
 		kong.Description("user frontend to bearded-wookie"),
 		kong.UsageOnError(),
+		kong.Bind(&shellCli.Global),
 	)
 
 	// Run kongplete.Complete to handle completion requests
@@ -54,10 +88,9 @@ func main() {
 		kongplete.WithPredictor("file", complete.PredictFiles("*")),
 	)
 
-	ctx, err := parser.Parse(os.Args[1:])
-	if err != nil {
-		ctx.FatalIfErrorf(ctx.Error)
+	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
+		log.Fatalln(err)
 	}
 
-	ctx.FatalIfErrorf(ctx.Run(&Global{}))
+	ctx.FatalIfErrorf(commandutils.LogCause(ctx.Run()))
 }

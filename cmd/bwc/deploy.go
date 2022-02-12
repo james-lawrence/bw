@@ -1,8 +1,11 @@
 package main
 
 import (
+	"log"
 	"net"
 	"regexp"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 type deployCmd struct {
@@ -22,6 +25,7 @@ type cmdDeployEnvironment struct {
 }
 
 func (t cmdDeployEnvironment) Run(ctx *Global) error {
+	log.Println("HELLO WORLD", spew.Sdump(ctx))
 	return nil
 }
 
