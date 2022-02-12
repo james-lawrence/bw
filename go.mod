@@ -7,6 +7,7 @@ require (
 	github.com/0xAX/notificator v0.0.0-20191016112426-3962a5ea8da1
 	github.com/akutz/memconn v0.1.0
 	github.com/alecthomas/kingpin v2.2.6+incompatible
+	github.com/alecthomas/kong v0.2.22
 	github.com/anacrolix/stm v0.2.0
 	github.com/aws/aws-sdk-go v1.38.64
 	github.com/bits-and-blooms/bloom/v3 v3.0.1
@@ -39,9 +40,11 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.1
 	github.com/onsi/gomega v1.17.0
 	github.com/pkg/errors v0.9.1
+	github.com/posener/complete v1.2.3
 	github.com/pterm/pterm v0.12.24
 	github.com/subosito/gotenv v1.2.0
 	github.com/traefik/yaegi v0.9.8
+	github.com/willabides/kongplete v0.3.0
 	golang.org/x/crypto v0.0.0-20210616213533-5ff15b29337e
 	golang.org/x/oauth2 v0.0.0-20210615190721-d04028783cf1
 	golang.org/x/sys v0.0.0-20220207234003-57398862261d // indirect

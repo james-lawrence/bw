@@ -13,6 +13,9 @@ github.com/akutz/memconn
 # github.com/alecthomas/kingpin v2.2.6+incompatible
 ## explicit
 github.com/alecthomas/kingpin
+# github.com/alecthomas/kong v0.2.22
+## explicit
+github.com/alecthomas/kong
 # github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc
 github.com/alecthomas/template
 github.com/alecthomas/template/parse
@@ -314,7 +317,6 @@ github.com/naoina/toml/ast
 ## explicit
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
-github.com/onsi/ginkgo/v2/extensions/table
 github.com/onsi/ginkgo/v2/formatter
 github.com/onsi/ginkgo/v2/internal
 github.com/onsi/ginkgo/v2/internal/global
@@ -342,12 +344,19 @@ github.com/pierrec/lz4/internal/xxh32
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/posener/complete v1.2.3
+## explicit
+github.com/posener/complete
+github.com/posener/complete/cmd
+github.com/posener/complete/cmd/install
 # github.com/pterm/pterm v0.12.24
 ## explicit
 github.com/pterm/pterm
 github.com/pterm/pterm/internal
 # github.com/rivo/uniseg v0.2.0
 github.com/rivo/uniseg
+# github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab
+github.com/riywo/loginshell
 # github.com/ryanuber/go-glob v1.0.0
 github.com/ryanuber/go-glob
 # github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46
@@ -363,6 +372,10 @@ github.com/subosito/gotenv
 ## explicit
 github.com/traefik/yaegi/interp
 github.com/traefik/yaegi/stdlib
+# github.com/willabides/kongplete v0.3.0
+## explicit
+github.com/willabides/kongplete
+github.com/willabides/kongplete/internal/positionalpredictor
 # github.com/xo/terminfo v0.0.0-20210125001918-ca9a967f8778
 github.com/xo/terminfo
 # go.etcd.io/bbolt v1.3.6
