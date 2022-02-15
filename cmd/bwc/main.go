@@ -44,6 +44,7 @@ func main() {
 		Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
+		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
 		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
 	}
 
@@ -69,7 +70,8 @@ func main() {
 		kong.UsageOnError(),
 		kong.Bind(&shellCli.Global),
 		kong.Vars{
-			"vars.bw.default.env.name": bw.DefaultEnvironmentName,
+			"vars.bw.default.env.name":              bw.DefaultEnvironmentName,
+			"vars.bw.default.deployspace.directory": bw.DefaultDeployspaceDir,
 		},
 	)
 
