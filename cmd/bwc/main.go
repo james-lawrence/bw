@@ -3,16 +3,14 @@ package main
 
 import (
 	"context"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 
 	"github.com/alecthomas/kong"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/cmd/autocomplete"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
@@ -32,10 +30,20 @@ func (t Global) BeforeApply() error {
 	return nil
 }
 
+type BeardedWookieEnv struct {
+	Environment string `arg:"" name:"environment" predictor:"bw.environment" default:"${vars.bw.default.env.name}"`
+}
+
+type BeardedWookieEnvRequired struct {
+	Environment string `arg:"" name:"environment" predictor:"bw.environment"`
+}
+
 func main() {
 	var shellCli struct {
 		Global
 		Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
+		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
+		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
 		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
 	}
 
@@ -60,31 +68,14 @@ func main() {
 		kong.Description("user frontend to bearded-wookie"),
 		kong.UsageOnError(),
 		kong.Bind(&shellCli.Global),
+		kong.Vars{
+			"vars.bw.default.env.name": bw.DefaultEnvironmentName,
+		},
 	)
 
 	// Run kongplete.Complete to handle completion requests
 	kongplete.Complete(parser,
-		kongplete.WithPredictor("bw.environment", complete.PredictFunc(func(args complete.Args) (results []string) {
-			root := bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir)
-			filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-				if root == path {
-					return nil
-				}
-
-				if !d.IsDir() {
-					return nil
-				}
-
-				name := d.Name()
-
-				if strings.HasPrefix(name, args.Last) {
-					results = append(results, name)
-				}
-
-				return filepath.SkipDir
-			})
-			return results
-		})),
+		kongplete.WithPredictor("bw.environment", complete.PredictFunc(autocomplete.Deployspaces)),
 		kongplete.WithPredictor("file", complete.PredictFiles("*")),
 	)
 

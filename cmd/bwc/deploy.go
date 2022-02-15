@@ -10,10 +10,10 @@ import (
 )
 
 type deployCmd struct {
-	Cluster  cmdDeployEnvironment `cmd:"" name:"env"`
+	Cluster  cmdDeployEnvironment `cmd:"" name:"env" aliases:"deploy"`
 	Locally  cmdDeployLocal       `cmd:"" name:"locally"`
 	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot"`
-	Previous cmdDeployRedeploy    `cmd:"" name:"previous"`
+	Redeploy cmdDeployRedeploy    `cmd:"" name:"redeploy" aliases:"archive"`
 	Cancel   cmdDeployCancel      `cmd:"" name:"cancel"`
 }
 
@@ -27,12 +27,8 @@ type DeployCluster struct {
 	Concurrency int64            `name:"concurrency" help:"number of nodes allowed to deploy simultaneously"`
 }
 
-type DeployEnv struct {
-	Environment string `arg:"" name:"environment" predictor:"bw.environment"`
-}
-
 type cmdDeployEnvironment struct {
-	DeployEnv
+	BeardedWookieEnv
 	DeployCluster
 }
 
@@ -67,8 +63,8 @@ func (t cmdDeployEnvironment) Run(ctx *Global) error {
 }
 
 type cmdDeployRedeploy struct {
-	DeployEnv
 	DeployCluster
+	BeardedWookieEnvRequired
 	DeploymentID string `arg:"" name:"deployment-id"`
 }
 
@@ -103,7 +99,7 @@ func (t cmdDeployRedeploy) Run(ctx *Global) error {
 }
 
 type cmdDeployLocal struct {
-	DeployEnv
+	BeardedWookieEnv
 	Debug bool `help:"leaves artifacts on the filesystem for debugging"`
 }
 
@@ -117,7 +113,7 @@ func (t cmdDeployLocal) Run(ctx *Global) error {
 }
 
 type cmdDeploySnapshot struct {
-	DeployEnv
+	BeardedWookieEnv
 	snapshotOutput *os.File `name:"output" help:"file to write to. by default archive is written to stdout" short:"o"`
 }
 
@@ -135,7 +131,7 @@ func (t cmdDeploySnapshot) Run(ctx *Global) error {
 }
 
 type cmdDeployCancel struct {
-	DeployEnv
+	BeardedWookieEnv
 }
 
 func (t cmdDeployCancel) Run(ctx *Global) error {
