@@ -22,24 +22,18 @@ import (
 	"github.com/willabides/kongplete"
 )
 
-type BeardedWookieEnv struct {
-	Environment string `arg:"" name:"environment" predictor:"bw.environment" default:"${vars_bw_default_env_name}"`
-}
-
-type BeardedWookieEnvRequired struct {
-	Environment string `arg:"" name:"environment" predictor:"bw.environment"`
-}
-
 func main() {
 	var shellCli struct {
 		cmdopts.Global
 		Environment        cmdEnv                       `cmd:"" help:"nvironment related commands"`
-		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
 		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
 		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
 		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
+		Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
+		AgentControl       agentcmd.CmdControl          `cmd:"" name:"actl" help:"remote administration of the environment" aliases:"agent-control"`
+		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
 	}
 
 	var (
@@ -47,6 +41,7 @@ func main() {
 		ctx                 *kong.Context
 		systemip            = systemx.HostIP(systemx.HostnameOrLocalhost())
 		agentconfigdefaults = agent.NewConfig(agent.ConfigOptionDefaultBind(systemip))
+		peeringopts         = cmdopts.Peering{}
 	)
 
 	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
@@ -67,7 +62,7 @@ func main() {
 			"vars_bw_default_deployspace_directory":        bw.DefaultDeployspaceDir,
 			"vars_bw_default_deployspace_config_directory": bw.DefaultDeployspaceConfigDir,
 			"vars_bw_default_agent_configuration_location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
-			"vars_bw_default_agent_address":                systemip.String(),
+			"vars_bw_default_agent_address":                agentconfigdefaults.P2PBind.String(),
 			"env_bw_agent_bind_primary":                    bw.EnvAgentP2PBind,
 			"env_bw_agent_bind_advertised":                 bw.EnvAgentP2PAdvertised,
 			"env_bw_agent_bind_secondary":                  bw.EnvAgentP2PAlternatesBind,
@@ -75,6 +70,7 @@ func main() {
 		kong.UsageOnError(),
 		kong.Bind(&shellCli.Global),
 		kong.Bind(&agentconfigdefaults),
+		kong.Bind(&peeringopts),
 	)
 
 	// Run kongplete.Complete to handle completion requests

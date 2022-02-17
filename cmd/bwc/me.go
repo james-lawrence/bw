@@ -55,7 +55,7 @@ func (t cmdMePub) Run(ctx *cmdopts.Global) (err error) {
 }
 
 type cmdMeInit struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 }
 
 func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {

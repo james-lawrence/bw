@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/pkg/errors"
 )
 
@@ -34,13 +35,13 @@ func (t Config) AfterApply(config *agent.Config) (err error) {
 		alternates = append(alternates, a)
 	}
 
-	if addr, err = net.ResolveTCPAddr("tcp", t.Address); err != nil {
-		return err
-	}
-
 	advertised = net.ParseIP(t.P2PAdvertised)
 	if strings.TrimSpace(t.P2PAdvertised) != "" && advertised == nil {
 		return errors.Errorf("invalid advertised ip address: %s", t.P2PAdvertised)
+	}
+
+	if addr, err = net.ResolveTCPAddr("tcp", stringsx.DefaultIfBlank(t.Address, config.P2PBind.String())); err != nil {
+		return err
 	}
 
 	*config = config.Clone(

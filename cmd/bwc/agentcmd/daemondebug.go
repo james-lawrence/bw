@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/uxterm"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -134,30 +135,9 @@ func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig agent.Config) (e
 		return err
 	}
 
-	fmt.Println("quorum:")
-	for idx, p := range quorum.Quorum {
-		log.Println(idx, p.Name, spew.Sdump(p))
+	if err = uxterm.PrintQuorum(quorum); err != nil {
+		return err
 	}
-
-	peer := func(p *agent.Peer) string {
-		if p == nil {
-			return "None"
-		}
-
-		return fmt.Sprintf("peer %s - %s", p.Name, spew.Sdump(p))
-	}
-
-	deployment := func(c *agent.DeployCommand) string {
-		if c == nil || c.Archive == nil {
-			return "None"
-		}
-
-		return fmt.Sprintf("deployment %s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Archive.Initiator, c.Command.String())
-	}
-
-	fmt.Printf("leader: %s\n", peer(quorum.Leader))
-	fmt.Printf("latest: %s\n", deployment(quorum.Deployed))
-	fmt.Printf("ongoing: %s\n", deployment(quorum.Deploying))
 
 	return nil
 }

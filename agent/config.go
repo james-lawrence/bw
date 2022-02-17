@@ -266,6 +266,20 @@ func ConfigOptionDiscovery(p *net.TCPAddr) ConfigOption {
 	}
 }
 
+// ConfigOptionAdvertised set the ip address to advertise.
+func ConfigOptionAdvertised(ip net.IP) ConfigOption {
+	return func(c *Config) {
+		c.P2PAdvertised = ip
+	}
+}
+
+// ConfigOptionSecondaryBindings set additional ip/ports to bindings to use.
+func ConfigOptionSecondaryBindings(alternates ...*net.TCPAddr) ConfigOption {
+	return func(c *Config) {
+		c.AlternateBinds = alternates
+	}
+}
+
 // ConfigOptionName set the name of the agent.
 func ConfigOptionName(name string) ConfigOption {
 	return func(c *Config) {
@@ -294,6 +308,8 @@ type Config struct {
 	AutocertBind      *net.TCPAddr
 	TorrentBind       *net.TCPAddr
 	P2PBind           *net.TCPAddr
+	P2PAdvertised     net.IP
+	AlternateBinds    []*net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
 	CA                string `yaml:"ca"`

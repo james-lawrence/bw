@@ -56,6 +56,7 @@ func LogEnv(verbosity int) {
 		fallthrough
 	case 1:
 		os.Setenv(bw.EnvLogsConfiguration, "1")
+	default:
 	}
 
 	// enable GRPC logging

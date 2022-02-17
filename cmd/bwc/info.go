@@ -36,7 +36,7 @@ type cmdInfo struct {
 }
 
 type cmdInfoWatch struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	Insecure bool `help:"skip tls verification"`
 }
 
@@ -100,7 +100,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 }
 
 type cmdInfoNodes struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	Insecure bool `help:"skip tls verification"`
 }
 
@@ -157,7 +157,7 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 }
 
 type cmdInfoLogs struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	Insecure bool `help:"skip tls verification"`
 }
 

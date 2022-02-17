@@ -29,7 +29,7 @@ type DeployCluster struct {
 }
 
 type cmdDeployEnvironment struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	DeployCluster
 }
 
@@ -65,7 +65,7 @@ func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 
 type cmdDeployRedeploy struct {
 	DeployCluster
-	BeardedWookieEnvRequired
+	cmdopts.BeardedWookieEnvRequired
 	DeploymentID string `arg:"" name:"deployment-id"`
 }
 
@@ -100,7 +100,7 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeployLocal struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	Debug bool `help:"leaves artifacts on the filesystem for debugging"`
 }
 
@@ -114,7 +114,7 @@ func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeploySnapshot struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 	snapshotOutput *os.File `name:"output" help:"file to write to. by default archive is written to stdout" short:"o"`
 }
 
@@ -132,7 +132,7 @@ func (t cmdDeploySnapshot) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeployCancel struct {
-	BeardedWookieEnv
+	cmdopts.BeardedWookieEnv
 }
 
 func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
