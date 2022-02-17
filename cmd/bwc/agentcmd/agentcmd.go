@@ -45,7 +45,6 @@ func (t Config) AfterApply(config *agent.Config) (err error) {
 	}
 
 	*config = config.Clone(
-		agent.ConfigOptionRPC(addr),
 		agent.ConfigOptionP2P(addr),
 		agent.ConfigOptionAdvertised(advertised),
 		agent.ConfigOptionSecondaryBindings(alternates...),

@@ -35,7 +35,7 @@ type cmdDNS struct {
 
 func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 	parent.Flag("agent-name", "name of the node within the network").Default(t.config.Name).StringVar(&t.config.Name)
-	parent.Flag("bootstrap", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.SWIMBind.String()).TCPListVar(&t.bootstrap)
+	parent.Flag("bootstrap", "addresses of the cluster to bootstrap from").PlaceHolder(t.config.P2PBind.String()).TCPListVar(&t.bootstrap)
 	parent.Flag("agent-config", "file containing the agent configuration").Default(t.configLocation).StringVar(&t.configLocation)
 	parent.Flag("zone", "hosted zone to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_HOSTED_ZONE").StringVar(&t.hostedZoneID)
 	parent.Flag("region", "region to insert dns records").Envar("BEARDED_WOOKIE_AWS_DNS_REGION").StringVar(&t.region)

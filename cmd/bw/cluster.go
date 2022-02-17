@@ -38,26 +38,10 @@ type clusterCmd struct {
 func (t *clusterCmd) configure(parent *kingpin.CmdClause, config *agent.Config) {
 	t.config = config
 	parent.Flag("cluster", "addresses of the cluster to bootstrap from").PlaceHolder(
-		t.config.SWIMBind.String(),
+		t.config.P2PBind.String(),
 	).Envar(
 		bw.EnvAgentClusterBootstrap,
 	).TCPListVar(&t.bootstrap)
-	parent.Flag(
-		"cluster-bind",
-		"address for the swim protocol (cluster membership) to bind to",
-	).PlaceHolder(
-		t.config.SWIMBind.String(),
-	).Envar(
-		bw.EnvAgentSWIMBind,
-	).TCPVar(&t.config.SWIMBind)
-	parent.Flag(
-		"cluster-bind-raft",
-		"address for the raft protocol to bind to",
-	).PlaceHolder(
-		t.config.RaftBind.String(),
-	).Envar(
-		bw.EnvAgentRAFTBind,
-	).TCPVar(&t.config.RaftBind)
 	parent.Flag("cluster-dns-enable", "enable dns bootstrap").Default("false").Envar(
 		bw.EnvAgentClusterEnableDNS,
 	).BoolVar(&t.dnsEnabled)

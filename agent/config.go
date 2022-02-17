@@ -190,30 +190,6 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 			IP:   ip,
 			Port: bw.DefaultP2PPort,
 		}),
-		ConfigOptionAutocert(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
-		ConfigOptionRPC(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
-		ConfigOptionSWIM(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
-		ConfigOptionRaft(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
-		ConfigOptionTorrent(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
-		ConfigOptionDiscovery(&net.TCPAddr{
-			IP:   ip,
-			Port: bw.DefaultP2PPort,
-		}),
 	)
 }
 
@@ -221,48 +197,6 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 func ConfigOptionP2P(p *net.TCPAddr) ConfigOption {
 	return func(c *Config) {
 		c.P2PBind = p
-	}
-}
-
-// ConfigOptionAutocert sets the autocert address to bind.
-func ConfigOptionAutocert(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.AutocertBind = p
-	}
-}
-
-// ConfigOptionRPC sets the RPC address to bind.
-func ConfigOptionRPC(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.RPCBind = p
-	}
-}
-
-// ConfigOptionSWIM sets the SWIM address to bind.
-func ConfigOptionSWIM(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.SWIMBind = p
-	}
-}
-
-// ConfigOptionRaft sets the Raft address to bind.
-func ConfigOptionRaft(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.RaftBind = p
-	}
-}
-
-// ConfigOptionTorrent sets the address for the torrent service address to bind.
-func ConfigOptionTorrent(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.TorrentBind = p
-	}
-}
-
-// ConfigOptionDiscovery sets the address for the discovery service to bind.
-func ConfigOptionDiscovery(p *net.TCPAddr) ConfigOption {
-	return func(c *Config) {
-		c.DiscoveryBind = p
 	}
 }
 
@@ -301,12 +235,6 @@ type Config struct {
 	MinimumNodes      int           `yaml:"minimumNodes"`
 	Bootstrap         bootstrap     `yaml:"bootstrap"`
 	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
-	DiscoveryBind     *net.TCPAddr
-	RPCBind           *net.TCPAddr
-	RaftBind          *net.TCPAddr
-	SWIMBind          *net.TCPAddr
-	AutocertBind      *net.TCPAddr
-	TorrentBind       *net.TCPAddr
 	P2PBind           *net.TCPAddr
 	P2PAdvertised     net.IP
 	AlternateBinds    []*net.TCPAddr
@@ -366,16 +294,10 @@ func (t Config) Clone(options ...ConfigOption) Config {
 // Peer - builds the Peer information from the configuration.
 func (t Config) Peer() *Peer {
 	return &Peer{
-		Status:        Peer_Node,
-		Name:          t.Name,
-		Ip:            t.P2PBind.IP.String(),
-		AutocertPort:  uint32(t.AutocertBind.Port),
-		RPCPort:       uint32(t.RPCBind.Port),
-		RaftPort:      uint32(t.RaftBind.Port),
-		SWIMPort:      uint32(t.SWIMBind.Port),
-		TorrentPort:   uint32(t.TorrentBind.Port),
-		DiscoveryPort: uint32(t.DiscoveryBind.Port),
-		P2PPort:       uint32(t.P2PBind.Port),
+		Status:  Peer_Node,
+		Name:    t.Name,
+		Ip:      t.P2PBind.IP.String(),
+		P2PPort: uint32(t.P2PBind.Port),
 	}
 }
 
