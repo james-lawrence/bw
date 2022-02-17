@@ -1,4 +1,4 @@
-package main
+package commandutils
 
 import (
 	"github.com/hashicorp/memberlist"
@@ -20,7 +20,7 @@ func genkey(k []byte) (dpriv []byte, dpub []byte, err error) {
 	return dpriv, dpub, err
 }
 
-func generatecredentials(config agent.Config, n notary.Composite) (ss notary.Signer, err error) {
+func Generatecredentials(config agent.Config, n notary.Composite) (ss notary.Signer, err error) {
 	var (
 		ring  *memberlist.Keyring
 		dpriv []byte

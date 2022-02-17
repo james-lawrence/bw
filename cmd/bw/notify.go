@@ -57,7 +57,7 @@ func (t *agentNotify) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if ss, err = generatecredentials(t.config, ns); err != nil {
+	if ss, err = commandutils.Generatecredentials(t.config, ns); err != nil {
 		return err
 	}
 

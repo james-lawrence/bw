@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/james-lawrence/bw/cmd/deploy"
 	"github.com/james-lawrence/bw/deployment"
 )
@@ -32,7 +33,7 @@ type cmdDeployEnvironment struct {
 	DeployCluster
 }
 
-func (t cmdDeployEnvironment) Run(ctx *Global) error {
+func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 	filters := make([]deployment.Filter, 0, len(t.Names))
 	for _, n := range t.Names {
 		filters = append(filters, deployment.Named(n))
@@ -68,7 +69,7 @@ type cmdDeployRedeploy struct {
 	DeploymentID string `arg:"" name:"deployment-id"`
 }
 
-func (t cmdDeployRedeploy) Run(ctx *Global) error {
+func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 	filters := make([]deployment.Filter, 0, len(t.Names))
 	for _, n := range t.Names {
 		filters = append(filters, deployment.Named(n))
@@ -103,7 +104,7 @@ type cmdDeployLocal struct {
 	Debug bool `help:"leaves artifacts on the filesystem for debugging"`
 }
 
-func (t cmdDeployLocal) Run(ctx *Global) error {
+func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 	return deploy.Locally(&deploy.Context{
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
@@ -117,7 +118,7 @@ type cmdDeploySnapshot struct {
 	snapshotOutput *os.File `name:"output" help:"file to write to. by default archive is written to stdout" short:"o"`
 }
 
-func (t cmdDeploySnapshot) Run(ctx *Global) error {
+func (t cmdDeploySnapshot) Run(ctx *cmdopts.Global) error {
 	if t.snapshotOutput == nil {
 		t.snapshotOutput = os.Stdout
 	}
@@ -134,7 +135,7 @@ type cmdDeployCancel struct {
 	BeardedWookieEnv
 }
 
-func (t cmdDeployCancel) Run(ctx *Global) error {
+func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
 	return deploy.Cancel(&deploy.Context{
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,

@@ -5,30 +5,22 @@ import (
 	"context"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
 	"github.com/alecthomas/kong"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/autocomplete"
+	"github.com/james-lawrence/bw/cmd/bwc/agentcmd"
+	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 )
-
-type Global struct {
-	Verbosity int                `help:"increase verbosity of logging" short:"v" type:"counter"`
-	Context   context.Context    `kong:"-"`
-	Shutdown  context.CancelFunc `kong:"-"`
-	Cleanup   *sync.WaitGroup    `kong:"-"`
-}
-
-func (t Global) BeforeApply() error {
-	commandutils.LogEnv(t.Verbosity)
-	return nil
-}
 
 type BeardedWookieEnv struct {
 	Environment string `arg:"" name:"environment" predictor:"bw.environment" default:"${vars.bw.default.env.name}"`
@@ -40,7 +32,8 @@ type BeardedWookieEnvRequired struct {
 
 func main() {
 	var shellCli struct {
-		Global
+		cmdopts.Global
+		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
 		Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
@@ -49,9 +42,10 @@ func main() {
 	}
 
 	var (
-		err error
-		ctx *kong.Context
-		// systemip = systemx.HostIP(systemx.HostnameOrLocalhost())
+		err                 error
+		ctx                 *kong.Context
+		systemip            = systemx.HostIP(systemx.HostnameOrLocalhost())
+		agentconfigdefaults = agent.NewConfig(agent.ConfigOptionDefaultBind(systemip))
 	)
 
 	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
@@ -68,11 +62,14 @@ func main() {
 		kong.Name("bwc"),
 		kong.Description("user frontend to bearded-wookie"),
 		kong.UsageOnError(),
-		kong.Bind(&shellCli.Global),
 		kong.Vars{
-			"vars.bw.default.env.name":              bw.DefaultEnvironmentName,
-			"vars.bw.default.deployspace.directory": bw.DefaultDeployspaceDir,
+			"vars.bw.default.env.name":                     bw.DefaultEnvironmentName,
+			"vars.bw.default.deployspace.directory":        bw.DefaultDeployspaceDir,
+			"vars.bw.default.agent.configuration.location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
+			"vars.bw.placeholder.agent.address":            systemip.String(),
 		},
+		kong.Bind(&shellCli.Global),
+		kong.Bind(&agentconfigdefaults),
 	)
 
 	// Run kongplete.Complete to handle completion requests

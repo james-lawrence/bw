@@ -6,6 +6,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/notary"
 )
@@ -20,7 +21,7 @@ type cmdMe struct {
 
 type cmdMeShow struct{}
 
-func (t cmdMeShow) Run(ctx *Global) (err error) {
+func (t cmdMeShow) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		print string
 		pub   []byte
@@ -39,7 +40,7 @@ func (t cmdMeShow) Run(ctx *Global) (err error) {
 type cmdMePub struct {
 }
 
-func (t cmdMePub) Run(ctx *Global) (err error) {
+func (t cmdMePub) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		pub []byte
 	)
@@ -57,7 +58,7 @@ type cmdMeInit struct {
 	BeardedWookieEnv
 }
 
-func (t cmdMeInit) Run(ctx *Global) (err error) {
+func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		config      agent.ConfigClient
 		fingerprint string
@@ -85,6 +86,6 @@ func (t cmdMeInit) Run(ctx *Global) (err error) {
 
 type cmdMeClear struct{}
 
-func (t cmdMeClear) Run(ctx *Global) error {
+func (t cmdMeClear) Run(ctx *cmdopts.Global) error {
 	return notary.ClearAutoSignerKey()
 }

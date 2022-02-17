@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
@@ -39,7 +40,7 @@ type cmdInfoWatch struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoWatch) Run(ctx *Global) (err error) {
+func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.C
@@ -103,7 +104,7 @@ type cmdInfoNodes struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoNodes) Run(ctx *Global) (err error) {
+func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.C
@@ -160,7 +161,7 @@ type cmdInfoLogs struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoLogs) Run(ctx *Global) (err error) {
+func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		c      clustering.C
 		d      dialers.Defaults
@@ -200,7 +201,7 @@ type cmdInfoCheck struct {
 	Address string `help:"address to check"`
 }
 
-func (t cmdInfoCheck) Run(ctx *Global) (err error) {
+func (t cmdInfoCheck) Run(ctx *cmdopts.Global) (err error) {
 	proxy := grpcx.NewCachedClient()
 	cc, err := proxy.Dial(t.Address, grpc.WithTransportCredentials(grpcx.InsecureTLS()))
 	if err != nil {

@@ -136,7 +136,7 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 		return err
 	}
 
-	if ss, err = generatecredentials(t.config, ns); err != nil {
+	if ss, err = commandutils.Generatecredentials(t.config, ns); err != nil {
 		return err
 	}
 

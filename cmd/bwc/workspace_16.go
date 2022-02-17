@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
 	"github.com/pkg/errors"
 )
 
-func (t *cmdWorkspaceCreate) Run(ctx *Global) (err error) {
+func (t *cmdWorkspaceCreate) Run(ctx *cmdopts.Global) (err error) {
 	if err = errors.WithStack(os.MkdirAll(t.Directory, 0755)); err != nil {
 		return err
 	}
