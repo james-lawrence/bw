@@ -1,3 +1,4 @@
+//go:build !go1.16
 // +build !go1.16
 
 package main
@@ -11,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
+func (t *cmdWorkspaceCreate) Run(ctx *Global) (err error) {
 	// TODO: tarball url instead of inlining like so.
 	// - command: "echo %H %m %d %f %u %U %h %bwroot %bwcwd %%"
 	// - command: git fetch --all
@@ -32,36 +33,36 @@ func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
 		skeletonFinal         = `- command: "echo deploy complete"`
 	)
 
-	if err = errors.WithStack(os.MkdirAll(t.path, 0755)); err != nil {
+	if err = errors.WithStack(os.MkdirAll(t.Directory, 0755)); err != nil {
 		return err
 	}
 
-	if err = errors.WithStack(os.MkdirAll(filepath.Join(t.path, ".remote"), 0755)); err != nil {
+	if err = errors.WithStack(os.MkdirAll(filepath.Join(t.Directory, ".remote"), 0755)); err != nil {
 		return err
 	}
 
 	if t.includeExamples {
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "01_shell.bwcmd"), []byte(skeletonShellDirective), 0600); err != nil {
+		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "01_shell.bwcmd"), []byte(skeletonShellDirective), 0600); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = errors.WithStack(os.MkdirAll(filepath.Join(t.path, ".remote", "02_restart_module"), 0755)); err != nil {
+		if err = errors.WithStack(os.MkdirAll(filepath.Join(t.Directory, ".remote", "02_restart_module"), 0755)); err != nil {
 			return err
 		}
 
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "02_restart_module", "00_pre_restart.detach-awselb"), []byte(skeletonRestartDetach), 0600); err != nil {
+		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "02_restart_module", "00_pre_restart.detach-awselb"), []byte(skeletonRestartDetach), 0600); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "02_restart_module", "01_restart.bwcmd"), []byte(skeletonRestart), 0600); err != nil {
+		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "02_restart_module", "01_restart.bwcmd"), []byte(skeletonRestart), 0600); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "02_restart_module", "02_post_restart.attach-awselb"), []byte(skeletonRestartAttach), 0600); err != nil {
+		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "02_restart_module", "02_post_restart.attach-awselb"), []byte(skeletonRestartAttach), 0600); err != nil {
 			return errors.WithStack(err)
 		}
 
-		if err = ioutil.WriteFile(filepath.Join(t.path, ".remote", "03_final.bwcmd"), []byte(skeletonFinal), 0600); err != nil {
+		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "03_final.bwcmd"), []byte(skeletonFinal), 0600); err != nil {
 			return errors.WithStack(err)
 		}
 	}

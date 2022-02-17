@@ -1,97 +1,87 @@
+// Package bwc is the user client which focuses on human friendly behaviors not system administration, and not on backwards compatibility.
 package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net"
 	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 
+	"github.com/alecthomas/kong"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/cmd"
+	"github.com/james-lawrence/bw/cmd/autocomplete"
+	"github.com/james-lawrence/bw/cmd/bw/agentcmd"
+	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
-
-	"github.com/alecthomas/kingpin"
+	"github.com/posener/complete"
+	"github.com/willabides/kongplete"
 )
 
-type global struct {
-	systemIP  net.IP
-	cluster   *clusterCmd
-	ctx       context.Context
-	shutdown  context.CancelFunc
-	cleanup   *sync.WaitGroup
-	verbosity int
-}
-
 func main() {
-	var (
-		err             error
-		cleanup, cancel = context.WithCancel(context.Background())
-		systemip        = systemx.HostIP(systemx.HostnameOrLocalhost())
-		global          = &global{
-			systemIP: systemip,
-			cluster:  &clusterCmd{},
-			ctx:      cleanup,
-			shutdown: cancel,
-			cleanup:  &sync.WaitGroup{},
-		}
+	var shellCli struct {
+		cmdopts.Global
+		Environment        cmdEnv                       `cmd:"" help:"nvironment related commands"`
+		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
+		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
+		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
+		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
+		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
+		Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
+		AgentControl       agentcmd.CmdControl          `cmd:"" name:"actl" help:"remote administration of the environment" aliases:"agent-control"`
+		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
+	}
 
-		agentcmd = &agentCmd{
-			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
-			global: global,
-		}
-		client = &deployCmd{
-			global: global,
-		}
-		info = &agentInfo{
-			global: global,
-		}
-		notify = &agentNotify{
-			config: agent.NewConfig(agent.ConfigOptionDefaultBind(systemip)),
-			global: global,
-		}
-		agentctl = &actlCmd{
-			global: global,
-		}
-		me          = &me{global: global}
-		workspace   = &workspaceCmd{global: global}
-		environment = &environmentCmd{global: global}
+	var (
+		err                 error
+		ctx                 *kong.Context
+		systemip            = systemx.HostIP(systemx.HostnameOrLocalhost())
+		agentconfigdefaults = agent.NewConfig(agent.ConfigOptionDefaultBind(systemip))
+		peeringopts         = cmdopts.Peering{}
 	)
 
+	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
+	shellCli.Cleanup = &sync.WaitGroup{}
+
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	go debugx.DumpOnSignal(cleanup, syscall.SIGUSR2)
-	go systemx.Cleanup(global.ctx, global.shutdown, global.cleanup, os.Kill, os.Interrupt)(func() {
+	go debugx.DumpOnSignal(shellCli.Context, syscall.SIGUSR2)
+	go systemx.Cleanup(shellCli.Context, shellCli.Shutdown, shellCli.Cleanup, os.Kill, os.Interrupt)(func() {
 		log.Println("waiting for systems to shutdown")
 	})
 
-	app := kingpin.New("bearded-wookie", "deployment system").Version(cmd.Version)
-	app.Command("version", "display the release version").Action(func(*kingpin.ParseContext) error {
-		fmt.Println(cmd.Version)
-		return nil
-	})
+	parser := kong.Must(
+		&shellCli,
+		kong.Name("bwc"),
+		kong.Description("user frontend to bearded-wookie"),
+		kong.Vars{
+			"vars_bw_default_env_name":                     bw.DefaultEnvironmentName,
+			"vars_bw_default_deployspace_directory":        bw.DefaultDeployspaceDir,
+			"vars_bw_default_deployspace_config_directory": bw.DefaultDeployspaceConfigDir,
+			"vars_bw_default_agent_configuration_location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
+			"vars_bw_default_agent_address":                agentconfigdefaults.P2PBind.String(),
+			"env_bw_agent_bind_primary":                    bw.EnvAgentP2PBind,
+			"env_bw_agent_bind_advertised":                 bw.EnvAgentP2PAdvertised,
+			"env_bw_agent_bind_secondary":                  bw.EnvAgentP2PAlternatesBind,
+		},
+		kong.UsageOnError(),
+		kong.Bind(&shellCli.Global),
+		kong.Bind(&agentconfigdefaults),
+		kong.Bind(&peeringopts),
+	)
 
-	app.Flag("verbose", "increase verbosity of logging").Short('v').Default("0").Action(func(*kingpin.ParseContext) error {
-		commandutils.LogEnv(global.verbosity)
-		return nil
-	}).CounterVar(&global.verbosity)
+	// Run kongplete.Complete to handle completion requests
+	kongplete.Complete(parser,
+		kongplete.WithPredictor("bw.environment", complete.PredictFunc(autocomplete.Deployspaces)),
+		kongplete.WithPredictor("file", complete.PredictFiles("*")),
+	)
 
-	me.configure(app.Command("me", "commands revolving around the users profile"))
-	agentcmd.configure(app.Command("agent", "agent that manages deployments"))
-	notify.configure(app.Command("notify", "watch for and emit deployment notifications"))
-	client.configure(app.Command("deploy", "deploy to nodes within the cluster"))
-	workspace.configure(app.Command("workspace", "workspace related commands"))
-	environment.configure(app.Command("environment", "environment related commands"))
-	info.configure(app.Command("info", "retrieve info about nodes within the cluster").Hidden())
-	agentctl.configure(app.Command("agent-control", "shutdown agents on remote systems").Alias("actl").Hidden())
-
-	if _, err = app.Parse(os.Args[1:]); err != nil {
-		commandutils.LogCause(err)
-		cancel()
+	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
+		log.Fatalln(err)
 	}
 
-	global.cleanup.Wait()
+	ctx.FatalIfErrorf(commandutils.LogCause(ctx.Run()))
 }

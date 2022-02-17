@@ -11,7 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/notifier"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/cmd/bwc/cmdopts"
+	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/native"

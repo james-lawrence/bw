@@ -2,33 +2,26 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 
-	"github.com/alecthomas/kingpin"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/notary"
-	"github.com/pkg/errors"
 )
 
 // used to configure the user's environment.
-type me struct {
-	global      *global
-	environment string
+type cmdMe struct {
+	Show  cmdMeShow  `cmd:"" help:"show profile credentials"`
+	Pub   cmdMePub   `cmd:"" help:"print public key to stdout"`
+	Init  cmdMeInit  `cmd:"" help:"initialize the user's credentials for a workspace"`
+	Clear cmdMeClear `cmd:"" help:"remove the current credentials from disk"`
 }
 
-func (t *me) configure(parent *kingpin.CmdClause) {
-	parent.Command("show", "show current credentials").Default().Action(t.show)
-	parent.Command("pub", "print public key to stdout").Action(t.pubkey)
-	cmd := parent.Command("init", "initialize the users credentials for a workspace").Action(t.exec)
-	cmd.Arg("environment", "environment to insert the authorized key for deployment").Default(bw.DefaultEnvironmentName).StringVar(&t.environment)
-	parent.Command("clear", "remove the current credentials from disk").Action(t.reset)
-}
+type cmdMeShow struct{}
 
-func (t *me) show(ctx *kingpin.ParseContext) (err error) {
+func (t cmdMeShow) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		print string
 		pub   []byte
@@ -44,7 +37,10 @@ func (t *me) show(ctx *kingpin.ParseContext) (err error) {
 	return nil
 }
 
-func (t *me) pubkey(ctx *kingpin.ParseContext) (err error) {
+type cmdMePub struct {
+}
+
+func (t cmdMePub) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		pub []byte
 	)
@@ -58,7 +54,11 @@ func (t *me) pubkey(ctx *kingpin.ParseContext) (err error) {
 	return nil
 }
 
-func (t *me) exec(ctx *kingpin.ParseContext) (err error) {
+type cmdMeInit struct {
+	cmdopts.BeardedWookieEnv
+}
+
+func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		config      agent.ConfigClient
 		fingerprint string
@@ -69,11 +69,7 @@ func (t *me) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	if config, err = commandutils.ReadConfiguration(t.environment); err != nil {
-		if os.IsNotExist(errors.Cause(err)) {
-			debugx.Println("init failed to locate a valid environment", err)
-			return nil
-		}
+	if config, err = commandutils.ReadConfiguration(t.Environment); err != nil {
 		return err
 	}
 
@@ -88,6 +84,8 @@ func (t *me) exec(ctx *kingpin.ParseContext) (err error) {
 	)
 }
 
-func (t *me) reset(ctx *kingpin.ParseContext) (err error) {
+type cmdMeClear struct{}
+
+func (t cmdMeClear) Run(ctx *cmdopts.Global) error {
 	return notary.ClearAutoSignerKey()
 }

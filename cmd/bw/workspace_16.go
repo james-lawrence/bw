@@ -12,12 +12,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/alecthomas/kingpin"
+	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/pkg/errors"
 )
 
-func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
-	if err = errors.WithStack(os.MkdirAll(t.path, 0755)); err != nil {
+func (t *cmdWorkspaceCreate) Run(ctx *cmdopts.Global) (err error) {
+	if err = errors.WithStack(os.MkdirAll(t.Directory, 0755)); err != nil {
 		return err
 	}
 
@@ -26,7 +26,7 @@ func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
 		archive fs.FS = workspaceempty
 	)
 
-	if t.includeExamples {
+	if t.Example {
 		root = ".assets/workspace/example1"
 		archive = workspaceexample1
 	}
@@ -36,7 +36,7 @@ func (t *workspaceCreate) generate(ctx *kingpin.ParseContext) (err error) {
 			return err
 		}
 
-		dst := filepath.Join(t.path, strings.TrimPrefix(path, root))
+		dst := filepath.Join(t.Directory, strings.TrimPrefix(path, root))
 
 		log.Println("cloning", root, path, "->", dst, os.FileMode(0755), os.FileMode(0600))
 
