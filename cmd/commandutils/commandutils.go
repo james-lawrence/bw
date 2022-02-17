@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/davecgh/go-spew/spew"
+	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/pkg/errors"
 
 	"github.com/james-lawrence/bw"
@@ -212,4 +213,11 @@ func DebugLog(debug bool) *log.Logger {
 	}
 
 	return log.New(ioutil.Discard, log.Prefix(), log.Flags())
+}
+
+func RaftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {
+	sopts := raftboltdb.Options{
+		Path: p,
+	}
+	return raftboltdb.New(sopts)
 }

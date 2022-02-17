@@ -294,7 +294,7 @@ func (t *agentCmd) display(ctx *kingpin.ParseContext) (err error) {
 		lstats stats
 	)
 
-	store, err := raftStoreFilepath(t.raftFile)
+	store, err := commandutils.RaftStoreFilepath(t.raftFile)
 	if err != nil {
 		return err
 	}

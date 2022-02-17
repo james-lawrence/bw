@@ -5,6 +5,6 @@ type cmdWorkspace struct {
 }
 
 type cmdWorkspaceCreate struct {
-	Directory string `arg:"" help:"path of the workspace directory to create" default:"${vars.bw.default.deployspace.directory}"`
+	Directory string `arg:"" help:"path of the workspace directory to create" default:"${vars_bw_default_deployspace_directory}"`
 	Example   bool   `help:"include examples" default:"false"`
 }

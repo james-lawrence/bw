@@ -12,7 +12,6 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	raftboltdb "github.com/hashicorp/raft-boltdb"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
@@ -131,7 +130,7 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, node *memberli
 				return s, ss, errors.WithStack(err)
 			}
 
-			if s, err = raftStore(conf); err != nil {
+			if s, err = commandutils.RaftStoreFilepath(filepath.Join(dir, "state.bin")); err != nil {
 				return s, ss, errors.WithStack(err)
 			}
 
@@ -149,17 +148,6 @@ func (t *clusterCmd) Raft(ctx context.Context, conf agent.Config, node *memberli
 		eq,
 		append(defaultOptions, options...)...,
 	)
-}
-
-func raftStore(c agent.Config) (*raftboltdb.BoltStore, error) {
-	return raftStoreFilepath(filepath.Join(c.Root, "raft.d", "state.bin"))
-}
-
-func raftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {
-	sopts := raftboltdb.Options{
-		Path: p,
-	}
-	return raftboltdb.New(sopts)
 }
 
 type p2p struct {

@@ -26,12 +26,12 @@ type Notify struct {
 	Notifications string `name:"notification-config" help:"name of the notification configuration file in the same directory as the agent config" default:"notifications.toml"`
 }
 
-func (t *Notify) Run(ctx *cmdopts.Global, configctx *agent.Config) (err error) {
+func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	var (
 		ns        notary.Composite
 		ss        notary.Signer
 		tlsconfig *tls.Config
-		config    = configctx.Clone()
+		config    = aconfig.Clone()
 	)
 	defer ctx.Shutdown()
 

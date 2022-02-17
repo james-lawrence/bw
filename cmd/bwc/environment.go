@@ -19,7 +19,7 @@ type cmdEnv struct {
 }
 
 type cmdEnvCreate struct {
-	Directory string `help:"path of the environment directory to create" default:"${vars.bw.default.deployspace.config.directory}"`
+	Directory string `help:"path of the environment directory to create" default:"${vars_bw_default_deployspace_config_directory}"`
 	Name      string `help:"name of the environment being created"`
 	Address   string `help:"address to dial when connecting to this environment"`
 }

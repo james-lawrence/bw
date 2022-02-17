@@ -23,7 +23,7 @@ import (
 )
 
 type BeardedWookieEnv struct {
-	Environment string `arg:"" name:"environment" predictor:"bw.environment" default:"${vars.bw.default.env.name}"`
+	Environment string `arg:"" name:"environment" predictor:"bw.environment" default:"${vars_bw_default_env_name}"`
 }
 
 type BeardedWookieEnvRequired struct {
@@ -62,14 +62,17 @@ func main() {
 		&shellCli,
 		kong.Name("bwc"),
 		kong.Description("user frontend to bearded-wookie"),
-		kong.UsageOnError(),
 		kong.Vars{
-			"vars.bw.default.env.name":                     bw.DefaultEnvironmentName,
-			"vars.bw.default.deployspace.directory":        bw.DefaultDeployspaceDir,
-			"vars.bw.default.deployspace.config.directory": bw.DefaultDeployspaceConfigDir,
-			"vars.bw.default.agent.configuration.location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
-			"vars.bw.placeholder.agent.address":            systemip.String(),
+			"vars_bw_default_env_name":                     bw.DefaultEnvironmentName,
+			"vars_bw_default_deployspace_directory":        bw.DefaultDeployspaceDir,
+			"vars_bw_default_deployspace_config_directory": bw.DefaultDeployspaceConfigDir,
+			"vars_bw_default_agent_configuration_location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
+			"vars_bw_default_agent_address":                systemip.String(),
+			"env_bw_agent_bind_primary":                    bw.EnvAgentP2PBind,
+			"env_bw_agent_bind_advertised":                 bw.EnvAgentP2PAdvertised,
+			"env_bw_agent_bind_secondary":                  bw.EnvAgentP2PAlternatesBind,
 		},
+		kong.UsageOnError(),
 		kong.Bind(&shellCli.Global),
 		kong.Bind(&agentconfigdefaults),
 	)
