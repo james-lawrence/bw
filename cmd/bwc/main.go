@@ -33,8 +33,9 @@ type BeardedWookieEnvRequired struct {
 func main() {
 	var shellCli struct {
 		cmdopts.Global
+		Environment        cmdEnv                       `cmd:"" help:"nvironment related commands"`
 		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
-		Deploy             deployCmd                    `cmd:"" help:"deployment related commands"`
+		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
 		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
@@ -65,6 +66,7 @@ func main() {
 		kong.Vars{
 			"vars.bw.default.env.name":                     bw.DefaultEnvironmentName,
 			"vars.bw.default.deployspace.directory":        bw.DefaultDeployspaceDir,
+			"vars.bw.default.deployspace.config.directory": bw.DefaultDeployspaceConfigDir,
 			"vars.bw.default.agent.configuration.location": bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
 			"vars.bw.placeholder.agent.address":            systemip.String(),
 		},

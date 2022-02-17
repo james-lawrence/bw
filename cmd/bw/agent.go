@@ -150,15 +150,6 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 
 	local := cluster.NewLocal(
 		t.config.Peer(),
-		// agent.NewPeerFromTemplate(
-		// 	t.config.Peer(),
-		// 	agent.PeerOptionIP(
-		// 		ipx.DefaultIfBlank(
-		// 			t.p2padvertised,
-		// 			t.config.P2PBind.IP,
-		// 		),
-		// 	),
-		// ),
 	)
 
 	clusterevents := cluster.NewEventsQueue(local)

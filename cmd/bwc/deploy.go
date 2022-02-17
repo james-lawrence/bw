@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 )
 
-type deployCmd struct {
+type cmdDeploy struct {
 	Cluster  cmdDeployEnvironment `cmd:"" name:"env" aliases:"deploy"`
 	Locally  cmdDeployLocal       `cmd:"" name:"locally"`
 	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot"`
