@@ -4,15 +4,14 @@
 package main
 
 import (
+	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
+	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/alecthomas/kingpin"
-	"github.com/pkg/errors"
 )
 
-func (t *cmdWorkspaceCreate) Run(ctx *Global) (err error) {
+func (t *cmdWorkspaceCreate) Run(ctx *cmdopts.Global) (err error) {
 	// TODO: tarball url instead of inlining like so.
 	// - command: "echo %H %m %d %f %u %U %h %bwroot %bwcwd %%"
 	// - command: git fetch --all
