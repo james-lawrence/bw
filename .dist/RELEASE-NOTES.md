@@ -1,3 +1,182 @@
+commit 8b164513e771f9c90ebc3ec71c6707db037c8dc2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 16:27:30 2022 -0500
+
+    ensure cache directory is set by systemd
+
+commit a6acba3106b047ccf3361dacee3e9ea13cd47390
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 10:14:36 2022 -0500
+
+    fix up ports and peering
+
+commit 58721a85511ea79943e8fbf904e56ee9daeac14e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 08:45:04 2022 -0500
+
+    debug
+
+commit 06e8a29458e02078a4be0025628115298f86119f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 17 18:24:17 2022 -0500
+
+    rename bw to bwd and promote bwc to bw
+
+commit 8bdc8b8740a16d818c7b9d35875c0b1bbaff199c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 17 18:22:17 2022 -0500
+
+    cleanup deploy commands
+
+commit 0699bd7029fa077b44f7df1571aef7135f025e43
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 17 18:12:24 2022 -0500
+
+    remove old remenants of having to bind to multiple ports
+
+commit d091f64279b2c7cd2833afd898a3892ca9c31349
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 17 17:58:55 2022 -0500
+
+    finish agent commands
+
+commit 4fc57b1a2b4d2c0b41d1bedbcd5e6990171edd44
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 17 07:34:51 2022 -0500
+
+    agent commands
+
+commit ee3052153a53ebe0db362af34dfadf45f1044039
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 16 19:11:18 2022 -0500
+
+    reimplement environment cmd
+
+commit 62507a091d4caf5c078cb0f89a99465b3b7581e3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 16 19:00:00 2022 -0500
+
+    notify command
+
+commit 661d009d53e148d6cce85610f785df5113219309
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 14 21:27:36 2022 -0500
+
+    add workspace command
+
+commit f5e6386ad6921a3938a81dd065fea6fbbef36c26
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 14 21:13:36 2022 -0500
+
+    reimplmenet deploy, info, and me commands with autocomplete
+
+commit 2617c86edb88dc4447c7bdaa6d3d8b35b3c5b614
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 13 11:57:04 2022 -0500
+
+    move deployment logic into its own module
+
+commit efe00dae74e93f03f5ee4d45975bbe0fd8438791
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 12 18:19:01 2022 -0500
+
+    refactoring logging
+
+commit 04d1dad9b2e7e017e9416203bfb22a979d88f958
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 12 14:42:18 2022 -0500
+
+    shell completions
+
+commit 4f9bad4c9c0e1161397ecb155db4723973f11589
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 9 16:08:30 2022 -0500
+
+    allow quorum to range from 1-5.
+    
+    technically one doesn't want to have a quorum of less than 3 and larger
+    than 5 is probably inadvisable.
+
+commit 2e028bf100e48689f72fe95b40299c28393f5b24
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 9 15:37:24 2022 -0500
+
+    more debugging logs
+
+commit bda97155e7355ce29b571f109f50c83b3f1acb66
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 9 15:33:36 2022 -0500
+
+    debug adjustments
+
+commit a6a5a01d823983ef278ff40750d3b052b643a4f8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 9 15:31:53 2022 -0500
+
+    adjust advertised ip
+
+commit 53df204566782b35f2cad3242f30eb9aa2f07816
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Feb 9 14:41:06 2022 -0500
+
+    allow overriding the ip address advertised to peers
+
+commit 1961cd2ef9f048f5dbbbd6c6bc2554243f763220
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 22:07:42 2022 -0500
+
+    fix bootstrap for coordination servers
+
+commit 8c5160f661b07b05e76cc87b644952ed3522ed9a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 22:02:28 2022 -0500
+
+    ensure cache directory is populated for services
+
+commit 3c24cca366fbd9450bd86e77d3e514d93fb26006
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 20:29:44 2022 -0500
+
+    move primary IP to the p2p address.
+    
+    remove old unused environment variables.
+
+commit 644e7d61154d668a306fcfc2650633a033f297a5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 18:19:54 2022 -0500
+
+    updating ginkgo to version 2
+
+commit ef19e114f008adb5a18e6ffde5525d0b01b7e868
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 18:07:29 2022 -0500
+
+    test fixes
+
+commit 2d431379cd6352847f8bb8860d2acc0c3d9bb03d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Feb 8 17:19:39 2022 -0500
+
+    update default systemd services
+
+commit 5e78050f790ea5cca73d0f52c2f9608258878c26
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 22:22:09 2022 -0500
+
+    fix go1.14 build
+
+commit ed0318eac9e7f128767b0f5afc21e01f44f78e22
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 22:13:03 2022 -0500
+
+    fix go1.14 build
+
+commit 3c924f2cd770b03f091410824db40e001063da8e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 6 22:02:44 2022 -0500
+
+    release 0.1.1644202908-04831b70
+
 commit 04831b70473a0b18e7e5acd4b20ec2fb0b541007
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Feb 6 22:01:48 2022 -0500
