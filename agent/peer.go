@@ -22,18 +22,18 @@ func P2PRawAddress(p *Peer) string {
 	return net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort))
 }
 
-// AgentP2PAddress generate a muxer protocol address.
-func AgentP2PAddress(address string) string {
+// URIAgent generate a muxer protocol address.
+func URIAgent(address string) string {
 	return fmt.Sprintf("%s://%s", bw.ProtocolAgent, address)
 }
 
-// DiscoveryP2PAddress generate a muxer protocol address.
-func DiscoveryP2PAddress(address string) string {
+// URIDiscovery generate a muxer protocol address.
+func URIDiscovery(address string) string {
 	return fmt.Sprintf("%s://%s", bw.ProtocolDiscovery, address)
 }
 
-// P2PAddress for a peer
-func P2PAddress(p *Peer, proto string) string {
+// URIPeer for a peer
+func URIPeer(p *Peer, proto string) string {
 	if p.P2PPort == 0 {
 		return ""
 	}
@@ -43,35 +43,27 @@ func P2PAddress(p *Peer, proto string) string {
 
 // RPCAddress for a peer.
 func RPCAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PAddress(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort)))
 }
 
 // DiscoveryAddress for a peer.
 func DiscoveryAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PAddress(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.DiscoveryPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.DiscoveryPort)))
 }
 
 // AutocertAddress for a peer.
 func AutocertAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PAddress(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.AutocertPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.AutocertPort)))
 }
 
 // SWIMAddress for peer.
 func SWIMAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PAddress(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort)))
 }
 
 // RaftAddress for peer.
 func RaftAddress(p *Peer) string {
 	return stringsx.DefaultIfBlank(P2PRawAddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort)))
-}
-
-func TorrentPort(p *Peer) int {
-	if p.P2PPort != 0 {
-		return int(p.P2PPort)
-	}
-
-	return int(p.TorrentPort)
 }
 
 // StaticPeeringStrategy ...
@@ -142,6 +134,7 @@ func NewPeer(id string, opts ...PeerOption) *Peer {
 	p := Peer{
 		Name:          id,
 		Ip:            systemx.HostIP(hn).String(),
+		P2PPort:       bw.DefaultP2PPort,
 		RPCPort:       bw.DefaultP2PPort,
 		SWIMPort:      bw.DefaultP2PPort,
 		RaftPort:      bw.DefaultP2PPort,

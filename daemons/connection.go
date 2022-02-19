@@ -104,7 +104,7 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 		return d, c, err
 	}
 
-	if nodes, err = discovery.Snapshot(agent.DiscoveryP2PAddress(config.Address), dd.Defaults()...); err != nil {
+	if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
 		return d, c, err
 	}
 
@@ -112,5 +112,5 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 		return d, c, errors.New("no agents found")
 	}
 
-	return dialers.NewDirect(agent.DiscoveryP2PAddress(config.Address), dd.Defaults()...), clustering.NewStatic(nodes...), err
+	return dialers.NewDirect(agent.URIDiscovery(config.Address), dd.Defaults()...), clustering.NewStatic(nodes...), err
 }

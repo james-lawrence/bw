@@ -73,7 +73,7 @@ func (t Notary) Refresh() (err error) {
 		return err
 	}
 
-	dd := dialers.NewDirect(agent.AgentP2PAddress(t.Address), d.Defaults()...)
+	dd := dialers.NewDirect(agent.URIAgent(t.Address), d.Defaults()...)
 	client := nsvc.NewClient(dd)
 
 	if ca, key, cert, err = client.Refresh(); err != nil {

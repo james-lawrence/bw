@@ -9,8 +9,8 @@ import (
 )
 
 type P2P struct {
-	address string
-	d       dialers.Defaults
+	Address string
+	Dialer  dialers.Defaults
 }
 
 func (t P2P) Peers(ctx context.Context) (results []string, err error) {
@@ -18,7 +18,7 @@ func (t P2P) Peers(ctx context.Context) (results []string, err error) {
 		nodes []*memberlist.Node
 	)
 
-	if nodes, err = discovery.Snapshot(t.address, t.d.Defaults()...); err != nil {
+	if nodes, err = discovery.Snapshot(t.Address, t.Dialer.Defaults()...); err != nil {
 		return nil, err
 	}
 

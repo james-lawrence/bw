@@ -20,7 +20,7 @@ type torrentD struct {
 func peerToNode(p *agent.Peer) torrent.Peer {
 	return torrent.Peer{
 		IP:      net.ParseIP(p.Ip),
-		Port:    agent.TorrentPort(p),
+		Port:    int(p.P2PPort),
 		Source:  "X",
 		Trusted: true,
 	}

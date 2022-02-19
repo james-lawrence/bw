@@ -177,7 +177,7 @@ func p2ppeering(c agent.Config) (s clustering.Source, err error) {
 	}
 
 	return p2p{
-		address: agent.DiscoveryP2PAddress(address),
+		address: agent.URIDiscovery(address),
 		d:       d,
 	}, nil
 }

@@ -101,7 +101,7 @@ func CheckCredentials(address string, path string, d dialers.Defaults) (err erro
 		return errors.New("failed to generate fingerprint")
 	}
 
-	if cc, err = dialers.NewDirect(agent.AgentP2PAddress(address)).Dial(d.Defaults()...); err != nil {
+	if cc, err = dialers.NewDirect(agent.URIAgent(address)).Dial(d.Defaults()...); err != nil {
 		return err
 	}
 	defer cc.Close()
