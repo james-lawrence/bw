@@ -8,6 +8,7 @@ Conflicts=bearded-wookie-coordinator.service
 [Service]
 Type=simple
 Restart=always
+ConfigurationDirectory=%N
 CacheDirectory=%N
 # Load the environment variables specified by agent.env.
 # to see all available environment variables and their uses

@@ -8,6 +8,7 @@ Conflicts=bearded-wookie.service
 [Service]
 Type=simple
 Restart=always
+ConfigurationDirectory=%N
 CacheDirectory=%N
 # Load the environment variables specified by agent.env.
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
