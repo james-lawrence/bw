@@ -28,6 +28,9 @@ release() {
   echo "UPLOAD COMPLETED ${DISTRO} - ${VERSION}"
 }
 
+rm -rf src
+rm -rf deb
+
 export CHANGELOG_DATE=$(date +"%a, %d %b %Y %T %z")
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-k'${DEBFULLNAME} <${DEBEMAIL}>' -sa"
 ARCHIVE=../build/bearded-wookie-source-${BUILD_VERSION}.tar.gz
