@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ func ParseTCPAddr(ctx *kong.DecodeContext, target reflect.Value) (err error) {
 	)
 
 	if addr, err = net.ResolveTCPAddr("tcp", saddr); err != nil {
-		return errors.Wrapf(err, "unable to resolve tcp address %s", saddr)
+		return errors.Wrapf(err, "unable to resolve tcp address %s - %s", saddr, spew.Sdump(ctx))
 	}
 
 	target.Set(reflect.ValueOf(addr))
