@@ -72,6 +72,7 @@ func Peering(dctx Context) (_ Context, err error) {
 		dctx.Config,
 		clustering.OptionNodeID(dctx.Local.Peer.Name),
 		clustering.OptionAdvertiseAddress(dctx.AdvertisedIP),
+		clustering.OptionAdvertisePort(int(dctx.Local.Peer.P2PPort)),
 		clustering.OptionDelegate(dctx.PeeringEvents),
 		clustering.OptionKeyring(keyring),
 		clustering.OptionEventDelegate(dctx.PeeringEvents),
