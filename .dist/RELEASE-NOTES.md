@@ -1,3 +1,15 @@
+commit b814aba6d1f12337b04be09872cf2ac285872b4a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 17:16:19 2022 -0500
+
+    fix release build
+
+commit 588a0dd7c6882adf94108ed78c6196125e97d76b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 17:07:35 2022 -0500
+
+    release 0.1.1645308026-322b7916
+
 commit 322b791685514409c6e58f92303130ff1ab66c1a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Feb 19 17:00:26 2022 -0500
