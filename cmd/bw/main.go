@@ -4,8 +4,10 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sync"
 	"syscall"
 
@@ -25,7 +27,8 @@ import (
 func main() {
 	var shellCli struct {
 		cmdopts.Global
-		Environment        cmdEnv                       `cmd:"" help:"nvironment related commands"`
+		Version            cmdVersion                   `cmd:"" help:"display versioning information"`
+		Environment        cmdEnv                       `cmd:"" help:"environment related commands"`
 		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
@@ -71,6 +74,9 @@ func main() {
 		kong.Bind(&shellCli.Global),
 		kong.Bind(&agentconfigdefaults),
 		kong.Bind(&peeringopts),
+		kong.TypeMapper(reflect.TypeOf(&net.IP{}), kong.MapperFunc(cmdopts.ParseIP)),
+		kong.TypeMapper(reflect.TypeOf(&net.TCPAddr{}), kong.MapperFunc(cmdopts.ParseTCPAddr)),
+		kong.TypeMapper(reflect.TypeOf([]*net.TCPAddr(nil)), kong.MapperFunc(cmdopts.ParseTCPAddrArray)),
 	)
 
 	// Run kongplete.Complete to handle completion requests
@@ -80,7 +86,8 @@ func main() {
 	)
 
 	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
-		log.Fatalln(err)
+		commandutils.LogCause(err)
+		os.Exit(1)
 	}
 
 	ctx.FatalIfErrorf(commandutils.LogCause(ctx.Run()))

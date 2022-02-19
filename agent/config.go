@@ -11,7 +11,6 @@ import (
 	"github.com/hashicorp/memberlist"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 )
 
@@ -133,16 +132,6 @@ func (t ConfigClient) Dir() string {
 // Partitioner ...
 func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionFromFloat64(t.Concurrency)
-}
-
-// BootstrapPeers converts a list of Peers into a list of addresses to bootstrap from.
-func BootstrapPeers(peers ...*Peer) peering.Static {
-	speers := make([]string, 0, len(peers))
-	for _, p := range peers {
-		speers = append(speers, SWIMAddress(p))
-	}
-
-	return peering.NewStatic(speers...)
 }
 
 // NewConfig creates a default configuration.
@@ -272,6 +261,10 @@ func (t Config) EnsureDefaults() Config {
 
 	if t.CA == "" {
 		t.CA = filepath.Join(t.CredentialsDir, bw.DefaultTLSCertCA)
+	}
+
+	if t.P2PAdvertised == nil {
+		t.P2PAdvertised = t.P2PBind.IP
 	}
 
 	return t

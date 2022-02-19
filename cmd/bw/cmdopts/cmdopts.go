@@ -15,7 +15,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
@@ -131,25 +130,14 @@ func (t *Peering) Raft(ctx context.Context, conf agent.Config, node *memberlist.
 	)
 }
 
-type p2p struct {
-	address string
-	d       dialers.Defaults
-}
-
-func (t p2p) Peers(ctx context.Context) (results []string, err error) {
-	var (
-		nodes []*memberlist.Node
-	)
-
-	if nodes, err = discovery.Snapshot(t.address, t.d.Defaults()...); err != nil {
-		return nil, err
+// BootstrapPeers converts a list of Peers into a list of addresses to bootstrap from.
+func BootstrapPeers(peers ...*agent.Peer) peering.Static {
+	speers := make([]string, 0, len(peers))
+	for _, p := range peers {
+		speers = append(speers, agent.SWIMAddress(p))
 	}
 
-	for _, n := range nodes {
-		results = append(results, n.Address())
-	}
-
-	return results, nil
+	return peering.NewStatic(speers...)
 }
 
 func p2ppeering(c agent.Config) (s clustering.Source, err error) {

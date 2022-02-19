@@ -2,7 +2,9 @@ package peering
 
 import (
 	"context"
+	"io/fs"
 	"io/ioutil"
+	"os"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -19,6 +21,10 @@ func (t File) Peers(context.Context) (results []string, err error) {
 	var (
 		data []byte
 	)
+
+	if _, err = os.Stat(t.Path); errors.Is(err, fs.ErrNotExist) {
+		return results, nil
+	}
 
 	if data, err = ioutil.ReadFile(t.Path); err != nil {
 		return results, errors.Wrapf(err, "failed to peers from file: %s", t.Path)
