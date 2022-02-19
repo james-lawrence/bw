@@ -82,7 +82,6 @@ func main() {
 	// Run kongplete.Complete to handle completion requests
 	kongplete.Complete(parser,
 		kongplete.WithPredictor("bw.environment", complete.PredictFunc(autocomplete.Deployspaces)),
-		kongplete.WithPredictor("file", complete.PredictFiles("*")),
 	)
 
 	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
