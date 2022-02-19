@@ -2,7 +2,6 @@ package peering
 
 import (
 	"context"
-	"io/fs"
 	"io/ioutil"
 	"os"
 
@@ -22,7 +21,7 @@ func (t File) Peers(context.Context) (results []string, err error) {
 		data []byte
 	)
 
-	if _, err = os.Stat(t.Path); errors.Is(err, fs.ErrNotExist) {
+	if _, err = os.Stat(t.Path); os.IsNotExist(err) {
 		return results, nil
 	}
 
