@@ -40,7 +40,7 @@ func (t *cmdWorkspaceCreate) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if t.includeExamples {
+	if t.Example {
 		if err = ioutil.WriteFile(filepath.Join(t.Directory, ".remote", "01_shell.bwcmd"), []byte(skeletonShellDirective), 0600); err != nil {
 			return errors.WithStack(err)
 		}
