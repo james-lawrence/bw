@@ -1,6 +1,7 @@
 package cmdopts
 
 import (
+	"log"
 	"net"
 	"reflect"
 	"strings"
@@ -25,6 +26,7 @@ func ParseTCPAddr(ctx *kong.DecodeContext, target reflect.Value) (err error) {
 		return nil
 	}
 
+	log.Println("parsing TCP Address array", saddr)
 	var (
 		addr *net.TCPAddr
 	)
@@ -48,6 +50,7 @@ func ParseTCPAddrArray(ctx *kong.DecodeContext, target reflect.Value) (err error
 		return nil
 	}
 
+	log.Println("parsing TCP Address array", token)
 	for _, saddr := range strings.Split(token, "\n") {
 		var (
 			addr *net.TCPAddr
