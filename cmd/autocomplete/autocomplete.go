@@ -1,7 +1,7 @@
 package autocomplete
 
 import (
-	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -11,7 +11,7 @@ import (
 
 func Deployspaces(args complete.Args) (results []string) {
 	root := bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir)
-	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	filepath.Walk(root, func(path string, d os.FileInfo, err error) error {
 		if root == path {
 			return nil
 		}
