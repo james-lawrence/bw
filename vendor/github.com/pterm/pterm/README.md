@@ -38,7 +38,7 @@
 </a>
 
 <a href="https://codecov.io/gh/pterm/pterm" style="text-decoration: none">
-<!-- unittestcount:start --><img src="https://img.shields.io/badge/Unit_Tests-28671-magenta?style=flat-square" alt="Forks"><!-- unittestcount:end -->
+<!-- unittestcount:start --><img src="https://img.shields.io/badge/Unit_Tests-28751-magenta?style=flat-square" alt="Forks"><!-- unittestcount:end -->
 </a>
 
 <a href="https://github.com/pterm/pterm/tree/master/_examples/demo" style="text-decoration: none">
@@ -114,7 +114,7 @@ We take special precautions to ensure that PTerm works on as many operating syst
 
 > PTerm has a 100% test coverage, which means that every line of code inside PTerm gets tested automatically
 
-We test PTerm continuously. However, since a human cannot test everything all the time, we have our own test system with which we currently run <!-- unittestcount2:start -->**`28671`**<!-- unittestcount2:end -->
+We test PTerm continuously. However, since a human cannot test everything all the time, we have our own test system with which we currently run <!-- unittestcount2:start -->**`28751`**<!-- unittestcount2:end -->
 automated tests to ensure that PTerm has no bugs. 
 
 ### • ✨ Consistent Colors
@@ -214,10 +214,12 @@ func main() {
 ```go
 package main
 
-import "github.com/pterm/pterm"
+import (
+	"github.com/pterm/pterm"
+)
 
 func main() {
-	bars := pterm.Bars{
+	positiveBars := pterm.Bars{
 		pterm.Bar{
 			Label: "Bar 1",
 			Value: 5,
@@ -232,8 +234,97 @@ func main() {
 		},
 	}
 
-	_ = pterm.DefaultBarChart.WithBars(bars).Render()
-	_ = pterm.DefaultBarChart.WithHorizontal().WithBars(bars).Render()
+	pterm.Info.Println("Chart example with positive only values (bars use 100% of chart area)")
+	_ = pterm.DefaultBarChart.WithBars(positiveBars).Render()
+	_ = pterm.DefaultBarChart.WithHorizontal().WithBars(positiveBars).Render()
+}
+
+```
+
+</details>
+
+### barchart-mixed-values
+
+![Animation](https://raw.githubusercontent.com/pterm/pterm/master/_examples/barchart-mixed-values/animation.svg)
+
+<details>
+
+<summary>SHOW SOURCE</summary>
+
+```go
+package main
+
+import (
+	"github.com/pterm/pterm"
+)
+
+func main() {
+	mixedBars := pterm.Bars{
+		pterm.Bar{
+			Label: "Bar 1",
+			Value: 2,
+		},
+		pterm.Bar{
+			Label: "Bar 2",
+			Value: -3,
+		},
+		pterm.Bar{
+			Label: "Bar 3",
+			Value: -2,
+		},
+		pterm.Bar{
+			Label: "Bar 4",
+			Value: 5,
+		},
+		pterm.Bar{
+			Label: "Longer Label",
+			Value: 7,
+		},
+	}
+
+	pterm.DefaultSection.Println("Chart example with mixed values (note screen space usage in case when ABSOLUTE values of negative and positive parts are differ too much)")
+	_ = pterm.DefaultBarChart.WithBars(mixedBars).WithShowValue().Render()
+	_ = pterm.DefaultBarChart.WithHorizontal().WithBars(mixedBars).WithShowValue().Render()
+}
+
+```
+
+</details>
+
+### barchart-negative-values
+
+![Animation](https://raw.githubusercontent.com/pterm/pterm/master/_examples/barchart-negative-values/animation.svg)
+
+<details>
+
+<summary>SHOW SOURCE</summary>
+
+```go
+package main
+
+import (
+	"github.com/pterm/pterm"
+)
+
+func main() {
+	negativeBars := pterm.Bars{
+		pterm.Bar{
+			Label: "Bar 1",
+			Value: -5,
+		},
+		pterm.Bar{
+			Label: "Bar 2",
+			Value: -3,
+		},
+		pterm.Bar{
+			Label: "Longer Label",
+			Value: -7,
+		},
+	}
+
+	pterm.Info.Println("Chart example with negative only values (bars use 100% of chart area)")
+	_ = pterm.DefaultBarChart.WithBars(negativeBars).WithShowValue().Render()
+	_ = pterm.DefaultBarChart.WithHorizontal().WithBars(negativeBars).WithShowValue().Render()
 }
 
 ```
@@ -465,7 +556,7 @@ func installingPseudoList() {
 
 	p, _ := pterm.DefaultProgressbar.WithTotal(len(pseudoProgramList)).WithTitle("Installing stuff").Start()
 	for i := 0; i < p.Total; i++ {
-		p.Title = "Installing " + pseudoProgramList[i]
+		p.UpdateTitle("Installing " + pseudoProgramList[i])
 		if pseudoProgramList[i] == "pseudo-minecraft" {
 			pterm.Warning.Println("Could not install pseudo-minecraft\nThe company policy forbids games.")
 		} else {
@@ -532,7 +623,7 @@ func introScreen() {
 		"\n" +
 		"\nThis demo was updated at: " + pterm.Green(time.Now().Format("02 Jan 2006 - 15:04:05 MST")))
 	pterm.Println()
-	introSpinner, _ := pterm.DefaultSpinner.WithRemoveWhenDone(true).Start("Waiting for 15 seconds...")
+	introSpinner, _ := pterm.DefaultSpinner.WithShowTimer(false).WithRemoveWhenDone(true).Start("Waiting for 15 seconds...")
 	time.Sleep(second)
 	for i := 14; i > 0; i-- {
 		if i > 1 {
@@ -635,7 +726,7 @@ func installingPseudoList() {
 
 	p, _ := pterm.DefaultProgressbar.WithTotal(len(pseudoProgramList)).WithTitle("Installing stuff").Start()
 	for i := 0; i < p.Total; i++ {
-		p.Title = "Installing " + pseudoProgramList[i]
+		p.UpdateTitle("Installing " + pseudoProgramList[i])
 		if pseudoProgramList[i] == "pseudo-minecraft" {
 			pterm.Warning.Println("Could not install pseudo-minecraft\nThe company policy forbids games.")
 		} else {
@@ -836,7 +927,7 @@ func installingPseudoList() {
 
 	p, _ := pterm.DefaultProgressbar.WithTotal(len(pseudoProgramList)).WithTitle("Installing stuff").Start()
 	for i := 0; i < p.Total; i++ {
-		p.Title = "Installing " + pseudoProgramList[i]
+		p.UpdateTitle("Installing " + pseudoProgramList[i])
 		if pseudoProgramList[i] == "pseudo-minecraft" {
 			pterm.Warning.Println("Could not install pseudo-minecraft\nThe company policy forbids games.")
 		} else {
@@ -944,6 +1035,8 @@ import "github.com/pterm/pterm"
 func main() {
 	// Print a default header.
 	pterm.DefaultHeader.Println("This is the default header!")
+	pterm.Println() // spacer
+	pterm.DefaultHeader.WithFullWidth().Println("This is a full-width header.")
 }
 
 ```
@@ -1342,7 +1435,7 @@ func main() {
 	p, _ := pterm.DefaultProgressbar.WithTotal(len(fakeInstallList)).WithTitle("Downloading stuff").Start()
 
 	for i := 0; i < p.Total; i++ {
-		p.Title = "Downloading " + fakeInstallList[i]              // Update the title of the progressbar.
+		p.UpdateTitle("Downloading " + fakeInstallList[i])         // Update the title of the progressbar.
 		pterm.Success.Println("Downloading " + fakeInstallList[i]) // If a progressbar is running, each print will be printed above the progressbar.
 		p.Increment()                                              // Increment the progressbar by one. Use Add(x int) to increment by a custom amount.
 		time.Sleep(time.Millisecond * 350)                         // Sleep 350 milliseconds.
@@ -1478,6 +1571,16 @@ func main() {
 		{"Callie", "Mckay", "egestas.nunc.sed@est.com"},
 		{"Libby", "Camacho", "aliquet.lobortis@semper.com"},
 	}).Render()
+
+	pterm.Println() // Blank line
+        
+	// Create a table with right alignment.
+	pterm.DefaultTable.WithHasHeader().WithData(pterm.TableData{
+		{"Firstname", "Lastname", "Email"},
+		{"Paul", "Dean", "nisi.dictum.augue@velitAliquam.co.uk"},
+		{"Callie", "Mckay", "egestas.nunc.sed@est.com"},
+		{"Libby", "Camacho", "aliquet.lobortis@semper.com"},
+	}).WithRightAlignment().Render()
 }
 
 ```

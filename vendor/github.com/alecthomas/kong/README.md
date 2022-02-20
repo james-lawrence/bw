@@ -384,6 +384,21 @@ var CLI struct {
 
 For flags, multiple key+value pairs should be separated by `mapsep:"rune"` tag (defaults to `;`) eg. `--set="key1=value1;key2=value2"`.
 
+## Nested data structure
+
+Kong support a nested data structure as well with `embed:""`. You can combine `embed:""` with `prefix:""`:
+
+```go
+var CLI struct {
+  Logging struct {
+    Level string `enum:"debug,info,warn,error" default:"info"`
+    Type string `enum:"json,console" default:"console"`
+  } `embed:"" prefix:"logging."`
+}
+```
+
+This configures Kong to accept flags `--logging.level` and `--logging.type`.
+
 ## Custom named decoders
 
 Kong includes a number of builtin custom type mappers. These can be used by
@@ -459,7 +474,7 @@ Tag                    | Description
 `envprefix:"X"`        | Envar prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed:""`             | If present, this field's children will be embedded in the parent. Useful for composition.
-`passthrough:""`       | If present, this positional argument stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`.
+`passthrough:""`       | If present on a positional argument, it stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`. On a command it requires that the command contains only one argument of type `[]string` which is then filled with everything following the command, unparsed.
 `-`                    | Ignore the field. Useful for adding non-CLI fields to a configuration struct. e.g `` `kong:"-"` ``
 
 ## Plugins
@@ -568,7 +583,7 @@ eg.
 kong.Parse(&cli, kong.Configuration(kong.JSON, "/etc/myapp.json", "~/.myapp.json"))
 ```
 
-[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L103) for an example of how the JSON file is structured.
+[See the tests](https://github.com/alecthomas/kong/blob/master/resolver_test.go#L206) for an example of how the JSON file is structured.
 
 ### `Resolver(...)` - support for default values from external sources
 

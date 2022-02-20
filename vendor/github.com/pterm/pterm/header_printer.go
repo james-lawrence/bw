@@ -1,7 +1,10 @@
 package pterm
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/mattn/go-runewidth"
 
 	"github.com/pterm/pterm/internal"
 )
@@ -69,7 +72,7 @@ func (p HeaderPrinter) Sprint(a ...interface{}) string {
 	var blankLine string
 
 	longestLine := internal.ReturnLongestLine(text, "\n")
-	longestLineLen := len(RemoveColorFromString(longestLine)) + p.Margin*2
+	longestLineLen := runewidth.StringWidth(RemoveColorFromString(longestLine)) + p.Margin*2
 
 	if p.FullWidth {
 		text = splitText(text, GetTerminalWidth()-p.Margin*2)
@@ -88,7 +91,7 @@ func (p HeaderPrinter) Sprint(a ...interface{}) string {
 	var ret string
 
 	if p.FullWidth {
-		longestLineLen = len(RemoveColorFromString(internal.ReturnLongestLine(text, "\n")))
+		longestLineLen = runewidth.StringWidth(RemoveColorFromString(internal.ReturnLongestLine(text, "\n")))
 		marginString = strings.Repeat(" ", (GetTerminalWidth()-longestLineLen)/2)
 	} else {
 		marginString = strings.Repeat(" ", p.Margin)
@@ -98,8 +101,8 @@ func (p HeaderPrinter) Sprint(a ...interface{}) string {
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.ReplaceAll(line, "\n", "")
 		line = marginString + line + marginString
-		if len(line) < len(blankLine) {
-			line += strings.Repeat(" ", len(blankLine)-len(line))
+		if runewidth.StringWidth(line) < runewidth.StringWidth(blankLine) {
+			line += strings.Repeat(" ", runewidth.StringWidth(blankLine)-runewidth.StringWidth(line))
 		}
 		ret += p.BackgroundStyle.Sprint(p.TextStyle.Sprint(line)) + "\n"
 	}
@@ -112,7 +115,7 @@ func splitText(text string, width int) string {
 	var lines []string
 	linesTmp := strings.Split(text, "\n")
 	for _, line := range linesTmp {
-		if len(RemoveColorFromString(line)) > width {
+		if runewidth.StringWidth(RemoveColorFromString(line)) > width {
 			extraLines := []string{""}
 			extraLinesCounter := 0
 			for i, letter := range line {
@@ -200,6 +203,22 @@ func (p *HeaderPrinter) PrintOnError(a ...interface{}) *TextPrinter {
 		if err, ok := arg.(error); ok {
 			if err != nil {
 				p.Println(err)
+			}
+		}
+	}
+
+	tp := TextPrinter(p)
+	return &tp
+}
+
+// PrintOnErrorf wraps every error which is not nil and prints it.
+// If every error is nil, nothing will be printed.
+// This can be used for simple error checking.
+func (p *HeaderPrinter) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
+	for _, arg := range a {
+		if err, ok := arg.(error); ok {
+			if err != nil {
+				p.Println(fmt.Errorf(format, err))
 			}
 		}
 	}

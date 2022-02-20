@@ -73,6 +73,13 @@ func Print(a ...interface{}) {
 	}
 
 	color.Print(Sprint(ret))
+
+	// Refresh all progressbars in case they were overwritten previously. Reference: #302
+	for _, bar := range ActiveProgressBarPrinters {
+		if bar.IsActive {
+			bar.UpdateTitle(bar.Title)
+		}
+	}
 }
 
 // Println formats using the default formats for its operands and writes to standard output.
@@ -103,6 +110,19 @@ func PrintOnError(a ...interface{}) {
 		if err, ok := arg.(error); ok {
 			if err != nil {
 				Println(err)
+			}
+		}
+	}
+}
+
+// PrintOnErrorf wraps every error which is not nil and prints it.
+// If every error is nil, nothing will be printed.
+// This can be used for simple error checking.
+func PrintOnErrorf(format string, a ...interface{}) {
+	for _, arg := range a {
+		if err, ok := arg.(error); ok {
+			if err != nil {
+				Println(fmt.Errorf(format, err))
 			}
 		}
 	}

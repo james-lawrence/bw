@@ -2,7 +2,6 @@ package api
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"encoding/json"
 	"errors"
@@ -71,7 +70,7 @@ func (a *Core) post(uri string, reqBody, response interface{}) (*http.Response, 
 }
 
 // postAsGet performs an HTTP POST ("POST-as-GET") request.
-// https://tools.ietf.org/html/rfc8555#section-6.3
+// https://www.rfc-editor.org/rfc/rfc8555.html#section-6.3
 func (a *Core) postAsGet(uri string, response interface{}) (*http.Response, error) {
 	return a.retrievablePost(uri, []byte{}, response)
 }
@@ -82,8 +81,6 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 	bo.InitialInterval = 200 * time.Millisecond
 	bo.MaxInterval = 5 * time.Second
 	bo.MaxElapsedTime = 20 * time.Second
-
-	ctx, cancel := context.WithCancel(context.Background())
 
 	var resp *http.Response
 	operation := func() error {
@@ -96,8 +93,7 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 				return err
 			}
 
-			cancel()
-			return err
+			return backoff.Permanent(err)
 		}
 
 		return nil
@@ -107,7 +103,7 @@ func (a *Core) retrievablePost(uri string, content []byte, response interface{})
 		log.Infof("retry due to: %v", err)
 	}
 
-	err := backoff.RetryNotify(operation, backoff.WithContext(bo, ctx), notify)
+	err := backoff.RetryNotify(operation, bo, notify)
 	if err != nil {
 		return resp, err
 	}

@@ -361,6 +361,10 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 		flags = append(flags, group...)
 	}
 
+	if node.Passthrough {
+		c.endParsing()
+	}
+
 	for !c.scan.Peek().IsEOL() {
 		token := c.scan.Peek()
 		switch token.Type {
@@ -578,7 +582,7 @@ func (c *Context) Resolve() error {
 			})
 		}
 	}
-	c.Path = append(inserted, c.Path...)
+	c.Path = append(c.Path, inserted...)
 	return nil
 }
 
@@ -789,8 +793,8 @@ func checkMissingFlags(flags []*Flag) error {
 			missing = append(missing, flag.Summary())
 		}
 	}
-	for _, flags := range xorGroup {
-		if len(flags) > 1 {
+	for xor, flags := range xorGroup {
+		if !xorGroupSet[xor] && len(flags) > 1 {
 			missing = append(missing, strings.Join(flags, " or "))
 		}
 	}
@@ -898,6 +902,16 @@ func checkEnum(value *Value, target reflect.Value) error {
 		}
 		sort.Strings(enums)
 		return fmt.Errorf("%s must be one of %s but got %q", value.ShortSummary(), strings.Join(enums, ","), target.Interface())
+	}
+}
+
+func checkPassthroughArg(target reflect.Value) bool {
+	typ := target.Type()
+	switch typ.Kind() {
+	case reflect.Slice:
+		return typ.Elem().Kind() == reflect.String
+	default:
+		return false
 	}
 }
 

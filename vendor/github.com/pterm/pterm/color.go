@@ -151,7 +151,7 @@ func (c Color) Sprint(a ...interface{}) string {
 	message := Sprint(a...)
 	messageLines := strings.Split(message, "\n")
 	for i, line := range messageLines {
-		messageLines[i] = color.RenderCode(c.String(), strings.ReplaceAll(line, color.ResetSet, Sprintf("\u001B[%sm", c.String())))
+		messageLines[i] = color.RenderCode(c.String(), strings.ReplaceAll(line, color.ResetSet, Sprintf("\x1b[0m\u001B[%sm", c.String())))
 	}
 	message = strings.Join(messageLines, "\n")
 	return message
@@ -225,6 +225,22 @@ func (p Color) PrintOnError(a ...interface{}) *TextPrinter {
 	return &tp
 }
 
+// PrintOnErrorf wraps every error which is not nil and prints it.
+// If every error is nil, nothing will be printed.
+// This can be used for simple error checking.
+func (p Color) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
+	for _, arg := range a {
+		if err, ok := arg.(error); ok {
+			if err != nil {
+				p.Println(fmt.Errorf(format, err))
+			}
+		}
+	}
+
+	tp := TextPrinter(p)
+	return &tp
+}
+
 // String converts the color to a string. eg "35".
 func (c Color) String() string {
 	return fmt.Sprintf("%d", c)
@@ -260,7 +276,11 @@ func (s Style) Add(styles ...Style) Style {
 // Input will be colored with the parent Style.
 func (s Style) Sprint(a ...interface{}) string {
 	message := Sprint(a...)
-	message = strings.ReplaceAll(message, color.ResetSet, Sprintf("\u001B[%sm", s.String()))
+	messageLines := strings.Split(message, "\n")
+	for i, line := range messageLines {
+		messageLines[i] = color.RenderCode(s.String(), strings.ReplaceAll(line, color.ResetSet, Sprintf("\x1b[0m\u001B[%sm", s.String())))
+	}
+	message = strings.Join(messageLines, "\n")
 	return color.RenderCode(s.String(), message)
 }
 

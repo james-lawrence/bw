@@ -84,11 +84,12 @@ var (
 
 // PrefixPrinter is the printer used to print a Prefix.
 type PrefixPrinter struct {
-	Prefix         Prefix
-	Scope          Scope
-	MessageStyle   *Style
-	Fatal          bool
-	ShowLineNumber bool
+	Prefix           Prefix
+	Scope            Scope
+	MessageStyle     *Style
+	Fatal            bool
+	ShowLineNumber   bool
+	LineNumberOffset int
 	// If Debugger is true, the printer will only print if PrintDebugMessages is set to true.
 	// You can change PrintDebugMessages with EnableDebugMessages and DisableDebugMessages, or by setting the variable itself.
 	Debugger bool
@@ -132,6 +133,14 @@ func (p PrefixPrinter) WithShowLineNumber(b ...bool) *PrefixPrinter {
 // You can change PrintDebugMessages with EnableDebugMessages and DisableDebugMessages, or by setting the variable itself.
 func (p PrefixPrinter) WithDebugger(b ...bool) *PrefixPrinter {
 	p.Debugger = internal.WithBoolean(b)
+	return &p
+}
+
+// WithLineNumberOffset can be used to exclude a specific amount of calls in the call stack.
+// If you make a wrapper function for example, you can set this to one.
+// The printed line number will then be the line number where your wrapper function is called.
+func (p PrefixPrinter) WithLineNumberOffset(offset int) *PrefixPrinter {
+	p.LineNumberOffset = offset
 	return &p
 }
 
@@ -182,7 +191,7 @@ func (p *PrefixPrinter) Sprint(a ...interface{}) string {
 		}
 	}
 
-	_, fileName, line, _ := runtime.Caller(3)
+	_, fileName, line, _ := runtime.Caller(3 + p.LineNumberOffset)
 
 	if p.ShowLineNumber {
 		ret += FgGray.Sprint("\n└ " + fmt.Sprintf("(%s:%d)\n", fileName, line))
@@ -284,6 +293,22 @@ func (p *PrefixPrinter) PrintOnError(a ...interface{}) *TextPrinter {
 		if err, ok := arg.(error); ok {
 			if err != nil {
 				p.Println(err)
+			}
+		}
+	}
+
+	tp := TextPrinter(p)
+	return &tp
+}
+
+// PrintOnErrorf wraps every error which is not nil and prints it.
+// If every error is nil, nothing will be printed.
+// This can be used for simple error checking.
+func (p *PrefixPrinter) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
+	for _, arg := range a {
+		if err, ok := arg.(error); ok {
+			if err != nil {
+				p.Println(fmt.Errorf(format, err))
 			}
 		}
 	}

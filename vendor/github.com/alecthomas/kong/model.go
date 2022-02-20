@@ -41,20 +41,21 @@ const (
 
 // Node is a branch in the CLI. ie. a command or positional argument.
 type Node struct {
-	Type       NodeType
-	Parent     *Node
-	Name       string
-	Help       string // Short help displayed in summaries.
-	Detail     string // Detailed help displayed when describing command/arg alone.
-	Group      *Group
-	Hidden     bool
-	Flags      []*Flag
-	Positional []*Positional
-	Children   []*Node
-	DefaultCmd *Node
-	Target     reflect.Value // Pointer to the value in the grammar that this Node is associated with.
-	Tag        *Tag
-	Aliases    []string
+	Type        NodeType
+	Parent      *Node
+	Name        string
+	Help        string // Short help displayed in summaries.
+	Detail      string // Detailed help displayed when describing command/arg alone.
+	Group       *Group
+	Hidden      bool
+	Flags       []*Flag
+	Positional  []*Positional
+	Children    []*Node
+	DefaultCmd  *Node
+	Target      reflect.Value // Pointer to the value in the grammar that this Node is associated with.
+	Tag         *Tag
+	Aliases     []string
+	Passthrough bool // Set to true to stop flag parsing when encountered.
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
@@ -319,6 +320,9 @@ func (v *Value) IsCounter() bool {
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
+	if target.Kind() == reflect.Ptr && target.IsNil() {
+		target.Set(reflect.New(target.Type().Elem()))
+	}
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
 		return errors.Wrap(err, v.ShortSummary())
