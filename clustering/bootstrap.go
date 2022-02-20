@@ -91,11 +91,23 @@ func BootstrapOptionBackoff(s backoff) BootstrapOption {
 	}
 }
 
+func BootstrapOptionBanned(b ...string) BootstrapOption {
+	banned := make(map[string]struct{}, len(b))
+	for _, n := range b {
+		banned[n] = struct{}{}
+	}
+
+	return func(b *bootstrap) {
+		b.Banned = banned
+	}
+}
+
 type bootstrap struct {
 	Backoff      backoff
 	AllowRetry   allowRetry
 	JoinStrategy joinStrategy
 	Peering      []Source
+	Banned       map[string]struct{}
 }
 
 func (t bootstrap) retrieve(ctx context.Context, s Source) (peers []string, err error) {
@@ -123,6 +135,12 @@ func (t bootstrap) collect(ctx context.Context, sources ...Source) (peers []stri
 		if _, ok := dedup[p]; ok {
 			continue
 		}
+
+		if _, ok := t.Banned[p]; ok {
+			log.Println("skipping banned peer", p)
+			continue
+		}
+
 		dedup[p] = true
 	}
 
@@ -139,6 +157,7 @@ func newBootstrap(options ...BootstrapOption) bootstrap {
 		Backoff:      backoffDefault{},
 		AllowRetry:   MaximumAttempts(100),
 		JoinStrategy: MinimumPeers(1),
+		Banned:       make(map[string]struct{}),
 	}
 
 	for _, opt := range options {
@@ -165,12 +184,6 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 	b := newBootstrap(options...)
 
 	for attempts := 0; ; attempts++ {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
 		peers, _ = b.collect(ctx, b.Peering...)
 
 		log.Printf("located %d peers: %s\n", len(peers), spew.Sdump(peers))

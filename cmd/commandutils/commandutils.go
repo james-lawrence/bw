@@ -6,8 +6,10 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -23,6 +25,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/netx"
 	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -198,8 +201,14 @@ func ClusterJoin(ctx context.Context, conf agent.Config, c clustering.Joiner, de
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))
 	attempts := clustering.BootstrapOptionAllowRetry(clustering.MaximumAttempts(conf.Bootstrap.Attempts))
 	peerings := clustering.BootstrapOptionPeeringStrategies(defaultPeers...)
-
-	if err = clustering.Bootstrap(ctx, c, peerings, joins, attempts); err != nil {
+	banned := clustering.BootstrapOptionBanned(
+		append(
+			netx.AddrToString(conf.AlternateBinds...),
+			net.JoinHostPort(conf.P2PAdvertised.String(), strconv.Itoa(conf.P2PBind.Port)),
+			conf.P2PBind.String(),
+		)...,
+	)
+	if err = clustering.Bootstrap(ctx, c, peerings, joins, attempts, banned); err != nil {
 		return errors.Wrap(err, "failed to bootstrap cluster")
 	}
 

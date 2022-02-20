@@ -26,3 +26,12 @@ func (noopListener) Addr() net.Addr {
 		Net:  "unix",
 	}
 }
+
+func AddrToString(addrs ...*net.TCPAddr) []string {
+	result := make([]string, 0, len(addrs))
+	for _, addr := range addrs {
+		result = append(result, addr.String())
+	}
+
+	return result
+}
