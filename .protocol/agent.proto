@@ -18,13 +18,6 @@ message PeerMetadata {
   bytes capability = 1;
   int32 Status = 6;
   uint32 P2PPort = 9;
-  // deprecated - temporary ports until libp2p is deployed
-  uint32 RPCPort = 2;
-  uint32 RaftPort = 3;
-  uint32 SWIMPort = 4;
-  uint32 TorrentPort = 5;
-  uint32 DiscoveryPort = 7;
-  uint32 AutocertPort = 8;
 }
 
 message Peer {
@@ -37,13 +30,6 @@ message Peer {
   string ip = 2;
   string name = 3;
   uint32 P2PPort = 10;
-  // deprecated - temporary ports until libp2p is deployed
-  uint32 AutocertPort = 9;
-  uint32 RPCPort = 4;
-  uint32 RaftPort = 5;
-  uint32 SWIMPort = 6;
-  uint32 TorrentPort = 7;
-  uint32 DiscoveryPort = 8;
   bytes PublicKey = 11;
 }
 

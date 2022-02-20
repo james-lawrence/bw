@@ -37,7 +37,7 @@ func TorrentOptionDHTPeers(a cluster) TorrentOption {
 	return func(c *TorrentConfig) {
 		c.ClientConfig.DhtStartingNodes = func() (peers []dht.Addr, err error) {
 			for _, peer := range a.Quorum() {
-				addr := net.UDPAddr{IP: net.ParseIP(peer.Ip), Port: int(peer.TorrentPort)}
+				addr := net.UDPAddr{IP: net.ParseIP(peer.Ip), Port: int(peer.P2PPort)}
 				peers = append(peers, dht.NewAddr(&addr))
 			}
 			return peers, err

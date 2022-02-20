@@ -30,7 +30,7 @@ func NewCluster(p *agent.Peer, opts ...clustering.Option) (c cluster.Cluster, er
 		opts,
 		clustering.OptionNodeID(ip.String()),
 		clustering.OptionBindAddress(ip.String()),
-		clustering.OptionBindPort(int(local.Peer.SWIMPort)),
+		clustering.OptionBindPort(int(local.Peer.P2PPort)),
 	)
 
 	if cp, err = clustering.NewCluster(opts...); err != nil {

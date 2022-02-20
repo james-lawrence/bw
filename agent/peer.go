@@ -43,27 +43,27 @@ func URIPeer(p *Peer, proto string) string {
 
 // RPCAddress for a peer.
 func RPCAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.RPCPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // DiscoveryAddress for a peer.
 func DiscoveryAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.DiscoveryPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // AutocertAddress for a peer.
 func AutocertAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.AutocertPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // SWIMAddress for peer.
 func SWIMAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.SWIMPort)))
+	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // RaftAddress for peer.
 func RaftAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PRawAddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.RaftPort)))
+	return stringsx.DefaultIfBlank(P2PRawAddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // StaticPeeringStrategy ...
@@ -83,27 +83,6 @@ type PeerOption func(*Peer)
 func PeerOptionIP(ip net.IP) PeerOption {
 	return func(p *Peer) {
 		p.Ip = ip.String()
-	}
-}
-
-// PeerOptionRPCPort ...
-func PeerOptionRPCPort(port uint32) PeerOption {
-	return func(p *Peer) {
-		p.RPCPort = port
-	}
-}
-
-// PeerOptionSWIMPort ...
-func PeerOptionSWIMPort(port uint32) PeerOption {
-	return func(p *Peer) {
-		p.SWIMPort = port
-	}
-}
-
-// PeerOptionRaftPort ...
-func PeerOptionRaftPort(port uint32) PeerOption {
-	return func(p *Peer) {
-		p.RaftPort = port
 	}
 }
 
@@ -132,16 +111,10 @@ func PeerOptionPublicKey(k []byte) PeerOption {
 func NewPeer(id string, opts ...PeerOption) *Peer {
 	hn := systemx.HostnameOrLocalhost()
 	p := Peer{
-		Name:          id,
-		Ip:            systemx.HostIP(hn).String(),
-		P2PPort:       bw.DefaultP2PPort,
-		RPCPort:       bw.DefaultP2PPort,
-		SWIMPort:      bw.DefaultP2PPort,
-		RaftPort:      bw.DefaultP2PPort,
-		TorrentPort:   bw.DefaultP2PPort,
-		DiscoveryPort: bw.DefaultP2PPort,
-		AutocertPort:  bw.DefaultP2PPort,
-		Status:        Peer_Node,
+		Name:    id,
+		Ip:      systemx.HostIP(hn).String(),
+		P2PPort: bw.DefaultP2PPort,
+		Status:  Peer_Node,
 	}
 
 	return NewPeerFromTemplate(&p, opts...)
@@ -179,14 +152,8 @@ func NodesToPeers(nodes ...*memberlist.Node) []*Peer {
 // PeerToMetadata ...
 func PeerToMetadata(p *Peer) *PeerMetadata {
 	return &PeerMetadata{
-		Status:        int32(p.Status),
-		P2PPort:       p.P2PPort,
-		RPCPort:       p.RPCPort,
-		RaftPort:      p.RaftPort,
-		SWIMPort:      p.SWIMPort,
-		TorrentPort:   p.TorrentPort,
-		DiscoveryPort: p.DiscoveryPort,
-		AutocertPort:  p.AutocertPort,
+		Status:  int32(p.Status),
+		P2PPort: p.P2PPort,
 	}
 }
 
@@ -204,7 +171,7 @@ func PeerToNode(p *Peer) memberlist.Node {
 	return memberlist.Node{
 		Name: p.Name,
 		Addr: net.ParseIP(p.Ip),
-		Port: uint16(p.SWIMPort),
+		Port: uint16(p.P2PPort),
 		Meta: meta,
 	}
 }
@@ -232,16 +199,10 @@ func NodeToPeer(n *memberlist.Node) (_zerop *Peer, err error) {
 	}
 
 	return &Peer{
-		Status:        Peer_State(m.Status),
-		Name:          n.Name,
-		Ip:            n.Addr.String(),
-		RPCPort:       m.RPCPort,
-		SWIMPort:      m.SWIMPort,
-		RaftPort:      m.RaftPort,
-		TorrentPort:   m.TorrentPort,
-		DiscoveryPort: m.DiscoveryPort,
-		AutocertPort:  m.AutocertPort,
-		P2PPort:       m.P2PPort,
+		Status:  Peer_State(m.Status),
+		Name:    n.Name,
+		Ip:      n.Addr.String(),
+		P2PPort: m.P2PPort,
 	}, nil
 }
 

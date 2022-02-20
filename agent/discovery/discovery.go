@@ -22,28 +22,18 @@ type cluster interface {
 
 func peerToNode(p *agent.Peer) Node {
 	return Node{
-		Ip:            p.Ip,
-		Name:          p.Name,
-		RPCPort:       p.RPCPort,
-		RaftPort:      p.RaftPort,
-		SWIMPort:      p.SWIMPort,
-		TorrentPort:   p.TorrentPort,
-		DiscoveryPort: p.DiscoveryPort,
-		P2PPort:       p.P2PPort,
+		Ip:      p.Ip,
+		Name:    p.Name,
+		P2PPort: p.P2PPort,
 	}
 }
 
 // nodeToPeer ...
 func nodeToPeer(n *Node) *agent.Peer {
 	return &agent.Peer{
-		Ip:            n.Ip,
-		Name:          n.Name,
-		RPCPort:       n.RPCPort,
-		RaftPort:      n.RaftPort,
-		SWIMPort:      n.SWIMPort,
-		TorrentPort:   n.TorrentPort,
-		DiscoveryPort: n.DiscoveryPort,
-		P2PPort:       n.P2PPort,
+		Ip:      n.Ip,
+		Name:    n.Name,
+		P2PPort: n.P2PPort,
 	}
 }
 
