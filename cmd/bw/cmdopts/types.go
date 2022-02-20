@@ -18,13 +18,13 @@ func ParseIP(ctx *kong.DecodeContext, target reflect.Value) (err error) {
 }
 
 func ParseTCPAddr(ctx *kong.DecodeContext, target reflect.Value) (err error) {
-	var (
-		saddr = ctx.Scan.Pop().String()
-	)
-
 	if ctx.Scan.Len() == 0 {
 		return nil
 	}
+
+	var (
+		saddr = ctx.Scan.Pop().String()
+	)
 
 	log.Println("parsing TCP Address array", saddr)
 	var (
@@ -41,17 +41,19 @@ func ParseTCPAddr(ctx *kong.DecodeContext, target reflect.Value) (err error) {
 }
 
 func ParseTCPAddrArray(ctx *kong.DecodeContext, target reflect.Value) (err error) {
-	var (
-		results []*net.TCPAddr
-		token   = ctx.Scan.Pop().String()
-	)
 
 	if ctx.Scan.Len() == 0 {
 		return nil
 	}
 
+	var (
+		results []*net.TCPAddr
+		token   = ctx.Scan.Pop().String()
+	)
+
+	token = strings.ReplaceAll(token, "\n", ",")
 	log.Println("parsing TCP Address array", token)
-	for _, saddr := range strings.Split(token, "\n") {
+	for _, saddr := range strings.Split(token, ",") {
 		var (
 			addr *net.TCPAddr
 		)
