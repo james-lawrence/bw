@@ -1,3 +1,51 @@
+commit b7a21312a3c307c8da0683246b12bfc5325942c5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 20:28:18 2022 -0500
+
+    fix tcp address parsing
+
+commit 1d45860064d2bf55885829ac7d3cc45dc7308108
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 19:31:13 2022 -0500
+
+    ban self from peer set
+
+commit ee1298f8e1cc2fb99c71d1dc09f45a284e1f665a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 19:13:19 2022 -0500
+
+    remove old and deprecated ports
+
+commit 5d924b2a2f9bb6254cc07f56845fb2a9bf2c1117
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 18:56:40 2022 -0500
+
+    debug parse tcp
+
+commit 0a59edb990a27ff149f7acf695a6780e6f13b3bb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 18:52:46 2022 -0500
+
+    remove files predictor
+
+commit b2b30ae83d5029f7644ccdd03b42e93d33f83810
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 18:47:59 2022 -0500
+
+    debug address
+
+commit e7ddbd2897c94c83bc7bc0f157fb4768a3717ff6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 18:44:36 2022 -0500
+
+    fix tokens parsing?
+
+commit 5d7f8cb7451300588a5bec2d56389bdae74e5281
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 18:38:10 2022 -0500
+
+    release 0.1.1645313826-e5779098
+
 commit e577909850609c5e92c56817aed3edc2f6851f7d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Feb 19 18:37:06 2022 -0500
