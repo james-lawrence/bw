@@ -150,6 +150,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bwtmp", t.tmpdir, -1)
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.id%", t.deploymentID, -1)
+	cmd = strings.Replace(cmd, "%bw.archive.directory%", t.dir, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
 
 	return cmd
@@ -167,6 +168,7 @@ func (t Context) environmentSubst() []string {
 		fmt.Sprintf("BW_ENVIRONMENT_USERID=%s", t.User.Uid),
 		fmt.Sprintf("BW_ENVIRONMENT_USERHOME=%s", t.User.HomeDir),
 		fmt.Sprintf("BW_ENVIRONMENT_ROOT=%s", t.dir),
+		fmt.Sprintf("BW_ENVIRONMENT_ARCHIVE_DIRECTORY=%s", t.dir),
 		fmt.Sprintf("BW_ENVIRONMENT_WORK_DIRECTORY=%s", t.WorkDirectory),
 		fmt.Sprintf("BW_ENVIRONMENT_TEMP_DIRECTORY=%s", t.tmpdir),
 	)
