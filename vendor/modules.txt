@@ -414,9 +414,8 @@ github.com/sean-/seed
 # github.com/subosito/gotenv v1.2.0
 ## explicit
 github.com/subosito/gotenv
-# github.com/traefik/yaegi v0.11.2
+# github.com/traefik/yaegi v0.9.8
 ## explicit
-github.com/traefik/yaegi/internal/unsafe2
 github.com/traefik/yaegi/interp
 github.com/traefik/yaegi/stdlib
 # github.com/willabides/kongplete v0.3.0

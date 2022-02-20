@@ -48,7 +48,7 @@ require (
 	github.com/posener/complete v1.2.3
 	github.com/pterm/pterm v0.12.37
 	github.com/subosito/gotenv v1.2.0
-	github.com/traefik/yaegi v0.11.2
+	github.com/traefik/yaegi v0.9.8
 	github.com/willabides/kongplete v0.3.0
 	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8

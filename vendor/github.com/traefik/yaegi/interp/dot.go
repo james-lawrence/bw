@@ -3,6 +3,7 @@ package interp
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -68,7 +69,7 @@ func (nopCloser) Close() error { return nil }
 // dotWriter returns an output stream to a dot(1) co-process where to write data in .dot format.
 func dotWriter(dotCmd string) io.WriteCloser {
 	if dotCmd == "" {
-		return nopCloser{io.Discard}
+		return nopCloser{ioutil.Discard}
 	}
 	fields := strings.Fields(dotCmd)
 	cmd := exec.Command(fields[0], fields[1:]...)

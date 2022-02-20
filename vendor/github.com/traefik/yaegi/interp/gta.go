@@ -1,8 +1,8 @@
 package interp
 
 import (
-	"path"
 	"path/filepath"
+	"reflect"
 )
 
 // gta performs a global types analysis on the AST, registering types,
@@ -10,8 +10,8 @@ import (
 // All function bodies are skipped. GTA is necessary to handle out of
 // order declarations and multiple source files packages.
 // rpath is the relative path to the directory containing the source for the package.
-func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([]*node, error) {
-	sc := interp.initScopePkg(importPath, pkgName)
+func (interp *Interpreter) gta(root *node, rpath, importPath string) ([]*node, error) {
+	sc := interp.initScopePkg(importPath)
 	var err error
 	var revisit []*node
 
@@ -25,9 +25,8 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 		case constDecl:
 			// Early parse of constDecl subtree, to compute all constant
 			// values which may be used in further declarations.
-			if _, err = interp.cfg(n, sc, importPath, pkgName); err != nil {
+			if _, err = interp.cfg(n, importPath); err != nil {
 				// No error processing here, to allow recovery in subtree nodes.
-				// TODO(marc): check for a non recoverable error and return it for better diagnostic.
 				err = nil
 			}
 
@@ -37,17 +36,10 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 
 		case defineStmt:
-			var (
-				atyp *itype
-				err2 error
-			)
+			var atyp *itype
 			if n.nleft+n.nright < len(n.child) {
 				// Type is declared explicitly in the assign expression.
-				if atyp, err2 = nodeType(interp, sc, n.child[n.nleft]); err2 != nil {
-					// The type does not exist yet, stash the error and come back
-					// when the type is known.
-					n.meta = err2
-					revisit = append(revisit, n)
+				if atyp, err = nodeType(interp, sc, n.child[n.nleft]); err != nil {
 					return false
 				}
 			}
@@ -59,9 +51,9 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 
 			for i := 0; i < n.nleft; i++ {
 				dest, src := n.child[i], n.child[sbase+i]
-				val := src.rval
+				val := reflect.ValueOf(sc.iota)
 				if n.anc.kind == constDecl {
-					if _, err2 := interp.cfg(n, sc, importPath, pkgName); err2 != nil {
+					if _, err2 := interp.cfg(n, importPath); err2 != nil {
 						// Constant value can not be computed yet.
 						// Come back when child dependencies are known.
 						revisit = append(revisit, n)
@@ -70,11 +62,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				}
 				typ := atyp
 				if typ == nil {
-					if typ, err2 = nodeType(interp, sc, src); err2 != nil || typ == nil {
-						// The type does is not known yet, stash the error and come back
-						// when the type is known.
-						n.meta = err2
-						revisit = append(revisit, n)
+					if typ, err = nodeType(interp, sc, src); err != nil {
 						return false
 					}
 					val = src.rval
@@ -89,9 +77,11 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					return false
 				}
 				if typ.isBinMethod {
-					typ = valueTOf(typ.methodCallType(), isBinMethod(), withScope(sc))
+					typ = &itype{cat: valueT, rtype: typ.methodCallType(), isBinMethod: true, scope: sc}
 				}
-				sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
+				if sc.sym[dest.ident] == nil || sc.sym[dest.ident].typ.incomplete {
+					sc.sym[dest.ident] = &symbol{kind: varSym, global: true, index: sc.add(typ), typ: typ, rval: val, node: n}
+				}
 				if n.anc.kind == constDecl {
 					sc.sym[dest.ident].kind = constSym
 					if childPos(n) == len(n.anc.child)-1 {
@@ -125,7 +115,6 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 					sc.sym[c.ident] = &symbol{index: sc.add(n.typ), kind: varSym, global: true, typ: n.typ, node: n}
 					continue
 				}
-				c.level = globalFrame
 
 				// redeclaration error
 				if sym.typ.node != nil && sym.typ.node.anc != nil {
@@ -149,28 +138,27 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				n.ident = ident
 				rcvr := n.child[0].child[0]
 				rtn := rcvr.lastChild()
-				typName, typPtr := rtn.ident, false
-				if typName == "" {
-					typName, typPtr = rtn.child[0].ident, true
+				typeName := rtn.ident
+				if typeName == "" {
+					// The receiver is a pointer, retrieve typeName from indirection
+					typeName = rtn.child[0].ident
+					elementType := sc.getType(typeName)
+					if elementType == nil {
+						// Add type if necessary, so method can be registered
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn.child[0], scope: sc}}
+						elementType = sc.sym[typeName].typ
+					}
+					rcvrtype = &itype{cat: ptrT, val: elementType, incomplete: elementType.incomplete, node: rtn, scope: sc}
+					elementType.method = append(elementType.method, n)
+				} else {
+					rcvrtype = sc.getType(typeName)
+					if rcvrtype == nil {
+						// Add type if necessary, so method can be registered
+						sc.sym[typeName] = &symbol{kind: typeSym, typ: &itype{name: typeName, path: importPath, incomplete: true, node: rtn, scope: sc}}
+						rcvrtype = sc.sym[typeName].typ
+					}
 				}
-				sym, _, found := sc.lookup(typName)
-				if !found {
-					n.meta = n.cfgErrorf("undefined: %s", typName)
-					revisit = append(revisit, n)
-					return false
-				}
-				if sym.kind != typeSym || (sym.node != nil && sym.node.kind == typeSpecAssign) {
-					err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(sym.typ).id())
-					return false
-				}
-				rcvrtype = sym.typ
-				if typPtr {
-					elementType := sym.typ
-					rcvrtype = ptrOf(elementType, withNode(rtn), withScope(sc))
-					rcvrtype.incomplete = elementType.incomplete
-					elementType.addMethod(n)
-				}
-				rcvrtype.addMethod(n)
+				rcvrtype.method = append(rcvrtype.method, n)
 				n.child[0].child[0].lastChild().typ = rcvrtype
 			case ident == "init":
 				// init functions do not get declared as per the Go spec.
@@ -199,34 +187,28 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 			// Try to import a binary package first, or a source package
 			var pkgName string
-			if packageName := path.Base(ipath); path.Dir(ipath) == packageName {
-				ipath = packageName
-			}
-			if pkg := interp.binPkg[ipath]; pkg != nil {
+			if interp.binPkg[ipath] != nil {
 				switch name {
 				case "_": // no import of symbols
 				case ".": // import symbols in current scope
-					for n, v := range pkg {
+					for n, v := range interp.binPkg[ipath] {
 						typ := v.Type()
 						if isBinType(v) {
 							typ = typ.Elem()
 						}
-						sc.sym[n] = &symbol{kind: binSym, typ: valueTOf(typ, withScope(sc)), rval: v}
+						sc.sym[n] = &symbol{kind: binSym, typ: &itype{cat: valueT, rtype: typ, scope: sc}, rval: v}
 					}
 				default: // import symbols in package namespace
 					if name == "" {
-						name = interp.pkgNames[ipath]
+						name = identifier.FindString(ipath)
 					}
-					// Imports of a same package are all mapped in the same scope, so we cannot just
+					// imports of a same package are all mapped in the same scope, so we cannot just
 					// map them by their names, otherwise we could have collisions from same-name
 					// imports in different source files of the same package. Therefore, we suffix
 					// the key with the basename of the source file.
 					name = filepath.Join(name, baseName)
-					if sym, exists := sc.sym[name]; !exists {
+					if _, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: binPkgT, path: ipath, scope: sc}}
-						break
-					} else if sym.kind == pkgSym && sym.typ.cat == srcPkgT && sym.typ.path == ipath {
-						// ignore re-import of identical package
 						break
 					}
 
@@ -249,11 +231,8 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 						name = pkgName
 					}
 					name = filepath.Join(name, baseName)
-					if sym, exists := sc.sym[name]; !exists {
+					if _, exists := sc.sym[name]; !exists {
 						sc.sym[name] = &symbol{kind: pkgSym, typ: &itype{cat: srcPkgT, path: ipath, scope: sc}}
-						break
-					} else if sym.kind == pkgSym && sym.typ.cat == srcPkgT && sym.typ.path == ipath {
-						// ignore re-import of identical package
 						break
 					}
 
@@ -265,7 +244,7 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 				err = n.cfgErrorf("import %q error: %v", ipath, err)
 			}
 
-		case typeSpec, typeSpecAssign:
+		case typeSpec:
 			typeName := n.child[0].ident
 			var typ *itype
 			if typ, err = nodeType(interp, sc, n.child[1]); err != nil {
@@ -276,16 +255,13 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 
 			switch n.child[1].kind {
 			case identExpr, selectorExpr:
-				n.typ = namedOf(typ, pkgName, typeName, withNode(n.child[0]), withScope(sc))
-				n.typ.incomplete = typ.incomplete
-				n.typ.field = typ.field
+				n.typ = &itype{cat: aliasT, val: typ, name: typeName, path: importPath, field: typ.field, incomplete: typ.incomplete, scope: sc, node: n.child[0]}
 				copy(n.typ.method, typ.method)
 			default:
 				n.typ = typ
 				n.typ.name = typeName
-				n.typ.path = pkgName
+				n.typ.path = importPath
 			}
-			n.typ.str = n.typ.path + "." + n.typ.name
 
 			asImportName := filepath.Join(typeName, baseName)
 			if _, exists := sc.sym[asImportName]; exists {
@@ -295,21 +271,15 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 			}
 			sym, exists := sc.sym[typeName]
 			if !exists {
-				sc.sym[typeName] = &symbol{kind: typeSym, node: n}
+				sc.sym[typeName] = &symbol{kind: typeSym}
 			} else {
 				if sym.typ != nil && (len(sym.typ.method) > 0) {
-					if n.kind == typeSpecAssign {
-						err = n.cfgErrorf("cannot define new methods on non-local type %s", baseType(typ).id())
-						return false
-					}
 					// Type has already been seen as a receiver in a method function
-					for _, m := range sym.typ.method {
-						n.typ.addMethod(m)
-					}
+					n.typ.method = append(n.typ.method, sym.typ.method...)
 				} else {
 					// TODO(mpl): figure out how to detect redeclarations without breaking type aliases.
 					// Allow redeclarations for now.
-					sc.sym[typeName] = &symbol{kind: typeSym, node: n}
+					sc.sym[typeName] = &symbol{kind: typeSym}
 				}
 			}
 			sc.sym[typeName].typ = n.typ
@@ -327,23 +297,12 @@ func (interp *Interpreter) gta(root *node, rpath, importPath, pkgName string) ([
 	return revisit, err
 }
 
-func baseType(t *itype) *itype {
-	for {
-		switch t.cat {
-		case ptrT, aliasT:
-			t = t.val
-		default:
-			return t
-		}
-	}
-}
-
 // gtaRetry (re)applies gta until all global constants and types are defined.
-func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) error {
+func (interp *Interpreter) gtaRetry(nodes []*node, importPath string) error {
 	revisit := []*node{}
 	for {
 		for _, n := range nodes {
-			list, err := interp.gta(n, importPath, importPath, pkgName)
+			list, err := interp.gta(n, importPath, importPath)
 			if err != nil {
 				return err
 			}
@@ -359,55 +318,7 @@ func (interp *Interpreter) gtaRetry(nodes []*node, importPath, pkgName string) e
 	}
 
 	if len(revisit) > 0 {
-		n := revisit[0]
-		switch n.kind {
-		case typeSpec, typeSpecAssign:
-			if err := definedType(n.typ); err != nil {
-				return err
-			}
-		case defineStmt, funcDecl:
-			if err, ok := n.meta.(error); ok {
-				return err
-			}
-		}
-		return n.cfgErrorf("constant definition loop")
-	}
-	return nil
-}
-
-func definedType(typ *itype) error {
-	if !typ.incomplete {
-		return nil
-	}
-	switch typ.cat {
-	case interfaceT, structT:
-		for _, f := range typ.field {
-			if err := definedType(f.typ); err != nil {
-				return err
-			}
-		}
-	case funcT:
-		for _, t := range typ.arg {
-			if err := definedType(t); err != nil {
-				return err
-			}
-		}
-		for _, t := range typ.ret {
-			if err := definedType(t); err != nil {
-				return err
-			}
-		}
-	case mapT:
-		if err := definedType(typ.key); err != nil {
-			return err
-		}
-		fallthrough
-	case aliasT, arrayT, chanT, chanSendT, chanRecvT, ptrT, variadicT:
-		if err := definedType(typ.val); err != nil {
-			return err
-		}
-	case nilT:
-		return typ.node.cfgErrorf("undefined: %s", typ.node.ident)
+		return revisit[0].cfgErrorf("constant definition loop")
 	}
 	return nil
 }

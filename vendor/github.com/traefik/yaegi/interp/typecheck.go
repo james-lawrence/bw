@@ -14,9 +14,7 @@ type opPredicates map[action]func(reflect.Type) bool
 // Due to variant type systems (itype vs reflect.Type) a single
 // type system should used, namely reflect.Type with exception
 // of the untyped flag on itype.
-type typecheck struct {
-	scope *scope
-}
+type typecheck struct{}
 
 // op type checks an expression against a set of expression predicates.
 func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) error {
@@ -34,15 +32,12 @@ func (check typecheck) op(p opPredicates, a action, n, c *node, t reflect.Type) 
 //
 // Use typ == nil to indicate assignment to an untyped blank identifier.
 func (check typecheck) assignment(n *node, typ *itype, context string) error {
-	if n.typ == nil {
-		return n.cfgErrorf("invalid type in %s", context)
-	}
 	if n.typ.untyped {
 		if typ == nil || isInterface(typ) {
 			if typ == nil && n.typ.cat == nilT {
 				return n.cfgErrorf("use of untyped nil in %s", context)
 			}
-			typ = n.typ.defaultType(n.rval, check.scope)
+			typ = n.typ.defaultType()
 		}
 		if err := check.convertUntyped(n, typ); err != nil {
 			return err
@@ -53,7 +48,7 @@ func (check typecheck) assignment(n *node, typ *itype, context string) error {
 		return nil
 	}
 
-	if !n.typ.assignableTo(typ) && typ.str != "*unsafe2.dummy" {
+	if !n.typ.assignableTo(typ) {
 		if context == "" {
 			return n.cfgErrorf("cannot use type %s as type %s", n.typ.id(), typ.id())
 		}
@@ -70,7 +65,7 @@ func (check typecheck) assignExpr(n, dest, src *node) error {
 		isConst := n.anc.kind == constDecl
 		if !isConst {
 			// var operations must be typed
-			dest.typ = dest.typ.defaultType(src.rval, check.scope)
+			dest.typ = dest.typ.defaultType()
 		}
 
 		return check.assignment(src, dest.typ, "assignment")
@@ -103,7 +98,6 @@ func (check typecheck) addressExpr(n *node) error {
 			c := c0.child[0]
 			if isArray(c.typ) || isMap(c.typ) {
 				c0 = c
-				found = true
 				continue
 			}
 		case compositeLitExpr, identExpr:
@@ -145,7 +139,10 @@ func (check typecheck) unaryExpr(n *node) error {
 		return nil
 	}
 
-	return check.op(unaryOpPredicates, n.action, n, c0, t0)
+	if err := check.op(unaryOpPredicates, n.action, n, c0, t0); err != nil {
+		return err
+	}
+	return nil
 }
 
 // shift type checks a shift binary expression.
@@ -165,7 +162,7 @@ func (check typecheck) shift(n *node) error {
 
 	switch {
 	case c1.typ.untyped:
-		if err := check.convertUntyped(c1, check.scope.getType("uint")); err != nil {
+		if err := check.convertUntyped(c1, &itype{cat: uintT, name: "uint"}); err != nil {
 			return n.cfgErrorf("invalid operation: shift count type %v, must be integer", c1.typ.id())
 		}
 	case isInt(t1):
@@ -231,15 +228,6 @@ func (check typecheck) binaryExpr(n *node) error {
 	}
 
 	switch n.action {
-	case aAdd:
-		if n.typ == nil {
-			break
-		}
-		// Catch mixing string and number for "+" operator use.
-		k, k0, k1 := isNumber(n.typ.TypeOf()), isNumber(c0.typ.TypeOf()), isNumber(c1.typ.TypeOf())
-		if k != k0 || k != k1 {
-			return n.cfgErrorf("cannot use type %s as type %s in assignment", c0.typ.id(), n.typ.id())
-		}
 	case aRem:
 		if zeroConst(c1) {
 			return n.cfgErrorf("invalid operation: division by zero")
@@ -266,8 +254,10 @@ func (check typecheck) binaryExpr(n *node) error {
 	}
 
 	t0 := c0.typ.TypeOf()
-
-	return check.op(binaryOpPredicates, a, n, c0, t0)
+	if err := check.op(binaryOpPredicates, a, n, c0, t0); err != nil {
+		return err
+	}
+	return nil
 }
 
 func zeroConst(n *node) bool {
@@ -275,7 +265,7 @@ func zeroConst(n *node) bool {
 }
 
 func (check typecheck) index(n *node, max int) error {
-	if err := check.convertUntyped(n, check.scope.getType("int")); err != nil {
+	if err := check.convertUntyped(n, &itype{cat: intT, name: "int"}); err != nil {
 		return err
 	}
 
@@ -295,10 +285,7 @@ func (check typecheck) index(n *node, max int) error {
 }
 
 // arrayLitExpr type checks an array composite literal expression.
-func (check typecheck) arrayLitExpr(child []*node, typ *itype) error {
-	cat := typ.cat
-	length := typ.length
-	typ = typ.val
+func (check typecheck) arrayLitExpr(child []*node, typ *itype, length int) error {
 	visited := make(map[int]bool, len(child))
 	index := 0
 	for _, c := range child {
@@ -310,7 +297,7 @@ func (check typecheck) arrayLitExpr(child []*node, typ *itype) error {
 			}
 			n = c.child[1]
 			index = int(vInt(c.child[0].rval))
-		case cat == arrayT && index >= length:
+		case length > 0 && index >= length:
 			return c.cfgErrorf("index %d is out of bounds (>= %d)", index, length)
 		}
 
@@ -438,7 +425,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 				return c.cfgErrorf("unknown field %s in struct literal", name)
 			}
 
-			if err := check.assignment(val, valueTOf(field.Type), "struct literal"); err != nil {
+			if err := check.assignment(val, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
 				return err
 			}
 
@@ -464,7 +451,7 @@ func (check typecheck) structBinLitExpr(child []*node, typ reflect.Type) error {
 			return c.cfgErrorf("implicit assignment to unexported field %s in %s literal", field.Name, typ)
 		}
 
-		if err := check.assignment(c, valueTOf(field.Type), "struct literal"); err != nil {
+		if err := check.assignment(c, &itype{cat: valueT, rtype: field.Type}, "struct literal"); err != nil {
 			return err
 		}
 	}
@@ -649,7 +636,7 @@ func (check typecheck) conversion(n *node, typ *itype) error {
 		return nil
 	}
 	if isInterface(typ) || !isConstType(typ) {
-		typ = n.typ.defaultType(n.rval, check.scope)
+		typ = n.typ.defaultType()
 	}
 	return check.convertUntyped(n, typ)
 }
@@ -733,19 +720,20 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 	case bltnAppend:
 		typ := params[0].Type()
 		t := typ.TypeOf()
-		if t == nil || t.Kind() != reflect.Slice {
+		if t.Kind() != reflect.Slice {
 			return params[0].nod.cfgErrorf("first argument to append must be slice; have %s", typ.id())
 		}
 
-		if nparams == 1 {
-			return nil
-		}
 		// Special case append([]byte, "test"...) is allowed.
 		t1 := params[1].Type()
 		if nparams == 2 && ellipsis && t.Elem().Kind() == reflect.Uint8 && t1.TypeOf().Kind() == reflect.String {
 			if t1.untyped {
-				return check.convertUntyped(params[1].nod, check.scope.getType("string"))
+				return check.convertUntyped(params[1].nod, &itype{cat: stringT, name: "string"})
 			}
+			return nil
+		}
+		// We cannot check a recursive type.
+		if isRecursiveType(typ, typ.TypeOf()) {
 			return nil
 		}
 
@@ -754,7 +742,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 				cat: funcT,
 				arg: []*itype{
 					typ,
-					{cat: variadicT, val: valueTOf(t.Elem())},
+					{cat: variadicT, val: &itype{cat: valueT, rtype: t.Elem()}},
 				},
 				ret: []*itype{typ},
 			},
@@ -793,7 +781,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		case !typ0.untyped && typ1.untyped:
 			err = check.convertUntyped(p1.nod, typ0)
 		case typ0.untyped && typ1.untyped:
-			fltType := check.scope.getType("float64")
+			fltType := &itype{cat: float64T, name: "float64"}
 			err = check.convertUntyped(p0.nod, fltType)
 			if err != nil {
 				break
@@ -816,7 +804,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		p := params[0]
 		typ := p.Type()
 		if typ.untyped {
-			if err := check.convertUntyped(p.nod, check.scope.getType("complex128")); err != nil {
+			if err := check.convertUntyped(p.nod, &itype{cat: complex128T, name: "complex128"}); err != nil {
 				return err
 			}
 		}
@@ -850,7 +838,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 			return params[0].nod.cfgErrorf("first argument to delete must be map; have %s", typ.id())
 		}
 		ktyp := params[1].Type()
-		if typ.key != nil && !ktyp.assignableTo(typ.key) {
+		if !ktyp.assignableTo(typ.key) {
 			return params[1].nod.cfgErrorf("cannot use %s as type %s in delete", ktyp.id(), typ.key.id())
 		}
 	case bltnMake:
@@ -883,7 +871,7 @@ func (check typecheck) builtin(name string, n *node, child []*node, ellipsis boo
 		}
 
 	case bltnPanic:
-		return check.assignment(params[0].nod, check.scope.getType("interface{}"), "argument to panic")
+		return check.assignment(params[0].nod, &itype{cat: interfaceT}, "argument to panic")
 	case bltnPrint, bltnPrintln:
 		for _, param := range params {
 			if param.typ != nil {
@@ -907,12 +895,12 @@ func arrayDeref(typ *itype) *itype {
 	if typ.cat == valueT && typ.TypeOf().Kind() == reflect.Ptr {
 		t := typ.TypeOf()
 		if t.Elem().Kind() == reflect.Array {
-			return valueTOf(t.Elem())
+			return &itype{cat: valueT, rtype: t.Elem()}
 		}
 		return typ
 	}
 
-	if typ.cat == ptrT && typ.val.cat == arrayT {
+	if typ.cat == ptrT && typ.val.cat == arrayT && typ.val.sizedef {
 		return typ.val
 	}
 	return typ
@@ -967,8 +955,8 @@ func (check typecheck) argument(p param, ftyp *itype, i, l int, ellipsis bool) e
 			return p.nod.cfgErrorf("can only use ... with matching parameter")
 		}
 		t := p.Type().TypeOf()
-		if t.Kind() != reflect.Slice || !(valueTOf(t.Elem())).assignableTo(atyp) {
-			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (sliceOf(atyp)).id())
+		if t.Kind() != reflect.Slice || !(&itype{cat: valueT, rtype: t.Elem()}).assignableTo(atyp) {
+			return p.nod.cfgErrorf("cannot use %s as type %s", p.nod.typ.id(), (&itype{cat: arrayT, val: atyp}).id())
 		}
 		return nil
 	}
@@ -990,8 +978,6 @@ func getArg(ftyp *itype, i int) *itype {
 		return arg
 	case i < l:
 		return ftyp.in(i)
-	case ftyp.cat == valueT && i < ftyp.rtype.NumIn():
-		return valueTOf(ftyp.rtype.In(i))
 	default:
 		return nil
 	}
@@ -1051,8 +1037,9 @@ func (check typecheck) convertUntyped(n *node, typ *itype) error {
 		if len(n.typ.methods()) > 0 { // untyped cannot be set to iface
 			return convErr
 		}
-		ityp = n.typ.defaultType(n.rval, check.scope)
+		ityp = n.typ.defaultType()
 		rtyp = ntyp
+
 	case isArray(typ) || isMap(typ) || isChan(typ) || isFunc(typ) || isPtr(typ):
 		// TODO(nick): above we are acting on itype, but really it is an rtype check. This is not clear which type
 		// 		 	   plain we are in. Fix this later.
