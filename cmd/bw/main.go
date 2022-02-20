@@ -58,7 +58,7 @@ func main() {
 
 	parser := kong.Must(
 		&shellCli,
-		kong.Name("bwc"),
+		kong.Name("bw"),
 		kong.Description("user frontend to bearded-wookie"),
 		kong.Vars{
 			"vars_bw_default_env_name":                     bw.DefaultEnvironmentName,
