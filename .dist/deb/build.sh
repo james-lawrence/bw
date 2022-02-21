@@ -39,7 +39,8 @@ cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
 mkdir -p src/github.com/james-lawrence/bw
 
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/github.com/james-lawrence/bw
-pushd src; /usr/lib/go-1.14/bin/go install src/github.com/james-lawrence/bw/cmd/...; popd
+
+pushd src; /usr/lib/go-1.14/bin/go install github.com/james-lawrence/bw/cmd/...; popd
 
 i=-1
 for distro in "$@"
