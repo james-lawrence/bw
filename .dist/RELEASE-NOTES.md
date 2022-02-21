@@ -1,3 +1,51 @@
+commit f5c878df021f8bf83f59bc169126c2c1fabb20c6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 08:10:49 2022 -0500
+
+    advertise correct ip/port in raft protocol and API responses.
+
+commit 89745effe4a134d30cdb266131e84684d944ef5d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 13:16:09 2022 -0500
+
+    add %bw.archive.directory% shell replacement
+
+commit d09fabc68c18131602f0d0090863d9f8f9758fb3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 12:57:49 2022 -0500
+
+    revert yaegi version
+
+commit d7754b2cbeaea124231dae90435be4567d4624d5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 11:07:35 2022 -0500
+
+    add autocomplete to profile.d
+
+commit 14c4624f9277766baa9c648d5082fb6fdb1842c1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 10:38:30 2022 -0500
+
+    fix command completion
+
+commit da5d15ee8561e7f275f4a27c93f245ad13f1bfe6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 10:37:55 2022 -0500
+
+    dependency update
+
+commit 082646d872a0aed2f1cd8340e7a12c66a7aabfb4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Feb 20 10:04:20 2022 -0500
+
+    cleanup debug parsing for tcp flags
+
+commit 1409076157fcf1bec8e15593a1cf4d3757263d2b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Feb 19 20:38:01 2022 -0500
+
+    release 0.1.1645320498-b7a21312
+
 commit b7a21312a3c307c8da0683246b12bfc5325942c5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Feb 19 20:28:18 2022 -0500
