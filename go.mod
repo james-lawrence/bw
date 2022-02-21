@@ -17,7 +17,7 @@ require (
 	github.com/corpix/uarand v0.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/fsnotify/fsnotify v1.5.1
-	github.com/go-acme/lego/v4 v4.6.0
+	github.com/go-acme/lego/v4 v4.4.0
 	github.com/go-chi/chi v4.0.2+incompatible // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible
 	github.com/gorilla/mux v1.8.0

@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -49,30 +49,22 @@ type Resource struct {
 // If you do not want that you can supply your own private key in the privateKey parameter.
 // If this parameter is non-nil it will be used instead of generating a new one.
 //
-// If `Bundle` is true, the `[]byte` contains both the issuer certificate and your issued certificate as a bundle.
-//
-// If `AlwaysDeactivateAuthorizations` is true, the authorizations are also relinquished if the obtain request was successful.
-// See https://datatracker.ietf.org/doc/html/rfc8555#section-7.5.2.
+// If bundle is true, the []byte contains both the issuer certificate and your issued certificate as a bundle.
 type ObtainRequest struct {
-	Domains                        []string
-	Bundle                         bool
-	PrivateKey                     crypto.PrivateKey
-	MustStaple                     bool
-	PreferredChain                 string
-	AlwaysDeactivateAuthorizations bool
+	Domains        []string
+	Bundle         bool
+	PrivateKey     crypto.PrivateKey
+	MustStaple     bool
+	PreferredChain string
 }
 
 // ObtainForCSRRequest The request to obtain a certificate matching the CSR passed into it.
 //
-// If `Bundle` is true, the `[]byte` contains both the issuer certificate and your issued certificate as a bundle.
-//
-// If `AlwaysDeactivateAuthorizations` is true, the authorizations are also relinquished if the obtain request was successful.
-// See https://datatracker.ietf.org/doc/html/rfc8555#section-7.5.2.
+// If bundle is true, the []byte contains both the issuer certificate and your issued certificate as a bundle.
 type ObtainForCSRRequest struct {
-	CSR                            *x509.CertificateRequest
-	Bundle                         bool
-	PreferredChain                 string
-	AlwaysDeactivateAuthorizations bool
+	CSR            *x509.CertificateRequest
+	Bundle         bool
+	PreferredChain string
 }
 
 type resolver interface {
@@ -125,14 +117,14 @@ func (c *Certifier) Obtain(request ObtainRequest) (*Resource, error) {
 	authz, err := c.getAuthorizations(order)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.
-		c.deactivateAuthorizations(order, request.AlwaysDeactivateAuthorizations)
+		c.deactivateAuthorizations(order)
 		return nil, err
 	}
 
 	err = c.resolver.Solve(authz)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.
-		c.deactivateAuthorizations(order, request.AlwaysDeactivateAuthorizations)
+		c.deactivateAuthorizations(order)
 		return nil, err
 	}
 
@@ -144,10 +136,6 @@ func (c *Certifier) Obtain(request ObtainRequest) (*Resource, error) {
 		for _, auth := range authz {
 			failures[challenge.GetTargetedDomain(auth)] = err
 		}
-	}
-
-	if request.AlwaysDeactivateAuthorizations {
-		c.deactivateAuthorizations(order, true)
 	}
 
 	// Do not return an empty failures map, because
@@ -190,14 +178,14 @@ func (c *Certifier) ObtainForCSR(request ObtainForCSRRequest) (*Resource, error)
 	authz, err := c.getAuthorizations(order)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.
-		c.deactivateAuthorizations(order, request.AlwaysDeactivateAuthorizations)
+		c.deactivateAuthorizations(order)
 		return nil, err
 	}
 
 	err = c.resolver.Solve(authz)
 	if err != nil {
 		// If any challenge fails, return. Do not generate partial SAN certificates.
-		c.deactivateAuthorizations(order, request.AlwaysDeactivateAuthorizations)
+		c.deactivateAuthorizations(order)
 		return nil, err
 	}
 
@@ -209,10 +197,6 @@ func (c *Certifier) ObtainForCSR(request ObtainForCSRRequest) (*Resource, error)
 		for _, auth := range authz {
 			failures[challenge.GetTargetedDomain(auth)] = err
 		}
-	}
-
-	if request.AlwaysDeactivateAuthorizations {
-		c.deactivateAuthorizations(order, true)
 	}
 
 	if cert != nil {
@@ -241,7 +225,7 @@ func (c *Certifier) getForOrder(domains []string, order acme.ExtendedOrder, bund
 	commonName := domains[0]
 
 	// RFC8555 Section 7.4 "Applying for Certificate Issuance"
-	// https://www.rfc-editor.org/rfc/rfc8555.html#section-7.4
+	// https://tools.ietf.org/html/rfc8555#section-7.4
 	// says:
 	//   Clients SHOULD NOT make any assumptions about the sort order of
 	//   "identifiers" or "authorizations" elements in the returned order
@@ -365,11 +349,6 @@ func (c *Certifier) checkResponse(order acme.ExtendedOrder, certRes *Resource, b
 
 // Revoke takes a PEM encoded certificate or bundle and tries to revoke it at the CA.
 func (c *Certifier) Revoke(cert []byte) error {
-	return c.RevokeWithReason(cert, nil)
-}
-
-// RevokeWithReason takes a PEM encoded certificate or bundle and tries to revoke it at the CA.
-func (c *Certifier) RevokeWithReason(cert []byte, reason *uint) error {
 	certificates, err := certcrypto.ParsePEMBundle(cert)
 	if err != nil {
 		return err
@@ -382,7 +361,6 @@ func (c *Certifier) RevokeWithReason(cert []byte, reason *uint) error {
 
 	revokeMsg := acme.RevokeCertMessage{
 		Certificate: base64.RawURLEncoding.EncodeToString(x509Cert.Raw),
-		Reason:      reason,
 	}
 
 	return c.core.Certificates.Revoke(revokeMsg)
@@ -441,11 +419,10 @@ func (c *Certifier) Renew(certRes Resource, bundle, mustStaple bool, preferredCh
 	}
 
 	query := ObtainRequest{
-		Domains:        certcrypto.ExtractDomains(x509Cert),
-		Bundle:         bundle,
-		PrivateKey:     privateKey,
-		MustStaple:     mustStaple,
-		PreferredChain: preferredChain,
+		Domains:    certcrypto.ExtractDomains(x509Cert),
+		Bundle:     bundle,
+		PrivateKey: privateKey,
+		MustStaple: mustStaple,
 	}
 	return c.Obtain(query)
 }
@@ -488,7 +465,7 @@ func (c *Certifier) GetOCSP(bundle []byte) ([]byte, *ocsp.Response, error) {
 		}
 		defer resp.Body.Close()
 
-		issuerBytes, errC := io.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
+		issuerBytes, errC := ioutil.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
 		if errC != nil {
 			return nil, nil, errC
 		}
@@ -517,7 +494,7 @@ func (c *Certifier) GetOCSP(bundle []byte) ([]byte, *ocsp.Response, error) {
 	}
 	defer resp.Body.Close()
 
-	ocspResBytes, err := io.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
+	ocspResBytes, err := ioutil.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -583,11 +560,11 @@ func checkOrderStatus(order acme.ExtendedOrder) (bool, error) {
 	}
 }
 
-// https://www.rfc-editor.org/rfc/rfc8555.html#section-7.1.4
+// https://tools.ietf.org/html/rfc8555#section-7.1.4
 // The domain name MUST be encoded in the form in which it would appear in a certificate.
 // That is, it MUST be encoded according to the rules in Section 7 of [RFC5280].
 //
-// https://www.rfc-editor.org/rfc/rfc5280.html#section-7
+// https://tools.ietf.org/html/rfc5280#section-7
 func sanitizeDomain(domains []string) []string {
 	var sanitizedDomains []string
 	for _, domain := range domains {

@@ -62,10 +62,6 @@ func RetryNotifyWithTimer(operation Operation, b BackOff, notify Notify, t Timer
 		}
 
 		if next = b.NextBackOff(); next == Stop {
-			if cerr := ctx.Err(); cerr != nil {
-				return cerr
-			}
-
 			return err
 		}
 
