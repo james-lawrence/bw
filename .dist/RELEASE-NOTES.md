@@ -1,3 +1,27 @@
+commit 6ce2516b80b03e740f509783229826fc2028f0f5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 08:49:09 2022 -0500
+
+    fix golang.org/x/net dependency to compile on golang 1.14
+
+commit ca34bb88b7e77a9794f536e873e359882bed8c3c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 08:33:32 2022 -0500
+
+    revert hashicorp dependency
+
+commit 1629054bbb7fb0fdec7916f680ba834325bb3b22
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 08:23:14 2022 -0500
+
+    revert lego upgrade
+
+commit cd9f120c498cfdc512101f71496310ae1ec7d23b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 08:17:26 2022 -0500
+
+    release 0.1.1645449318-f5c878df
+
 commit f5c878df021f8bf83f59bc169126c2c1fabb20c6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Feb 21 08:10:49 2022 -0500
