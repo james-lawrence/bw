@@ -154,7 +154,6 @@ type MountConfigInput struct {
 	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 	AllowedResponseHeaders    []string          `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string          `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
@@ -182,7 +181,6 @@ type MountConfigOutput struct {
 	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
 	AllowedResponseHeaders    []string `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`

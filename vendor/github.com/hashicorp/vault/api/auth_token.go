@@ -1,8 +1,6 @@
 package api
 
-import (
-	"context"
-)
+import "context"
 
 // TokenAuth is used to perform token backend operations on Vault
 type TokenAuth struct {
