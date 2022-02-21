@@ -5,20 +5,15 @@ After=network.target
 [Service]
 Type=simple
 Restart=always
-Restart=no
 StateDirectory=%p/%i
 RuntimeDirectory=%p/%i
 CacheDirectory=%p/%i
-EnvironmentFile=-%C/%p/%i/agent.env
+Environment=HOME=%h
 Environment=BEARDED_WOOKIE_TOKEN1="d9108d25-72db-48db-90f8-2ebff433de93"
 Environment=BEARDED_WOOKIE_TOKEN2="b9ff094b-3e06-40e6-89c5-127790897eb3"
-Environment=HOME=%h
 Environment=LEGO_CA_CERTIFICATES="%h/.config/bearded-wookie-pebble/certs/pebble.minica.pem"
 Environment=BEARDED_WOOKIE_AGENT_CERTIFICATE_AUTHORITY="%h/.config/bearded-wookie-pebble/certs/pebble.pem"
-Environment=BEARDED_WOOKIE_LOGS_VERBOSE=1
-Environment=BEARDED_WOOKIE_LOGS_GOSSIP=1
-Environment=BEARDED_WOOKIE_LOGS_GRPC=1
-Environment=BEARDED_WOOKIE_LOGS_RAFT=1
+EnvironmentFile=-%C/%p/%i/agent.env
 SyslogIdentifier=%p-%i
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
 ExecStartPre=mkdir -p ${CACHE_DIRECTORY}/tls/authorities
@@ -26,7 +21,7 @@ ExecStartPre=echo curl --insecure https://localhost:15000/intermediates/0 --outp
 ExecStartPre=curl --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
 ExecStartPre=echo curl --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
 ExecStartPre=curl --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
-ExecStart=%h/go/bin/bw agent --agent-name="%i" --agent-config="%C/%p/%i/agent.config" ${BEARDED_WOOKIE_CLI_OPTIONS}
+ExecStart=%h/go/bin/bw agent runtime --agent-config="%C/%p/%i/agent.config"
 
 [Install]
 WantedBy=default.target

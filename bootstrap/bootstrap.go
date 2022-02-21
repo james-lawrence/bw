@@ -24,6 +24,7 @@ import (
 	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 )
 
@@ -132,11 +133,11 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		deployment.CoordinatorOptionDeployResults(results),
 	)
 
-	if current, err = Latest(ctx, SocketLocal(c), grpc.WithInsecure()); ignore(err) != nil {
+	if current, err = Latest(ctx, SocketLocal(c), grpc.WithTransportCredentials(insecure.NewCredentials())); ignore(err) != nil {
 		return errors.Wrapf(err, "latest local failed: %s", SocketLocal(c))
 	}
 
-	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); ignore(err) != nil {
+	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials())); ignore(err) != nil {
 		log.Println(errors.Wrap(err, "latest quorum failed"))
 	}
 
@@ -145,7 +146,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	}
 
 	if err != nil && !agentutil.IsActiveDeployment(err) {
-		if latest, err = getfallback(c, grpc.WithInsecure()); err != nil {
+		if latest, err = getfallback(c, grpc.WithTransportCredentials(insecure.NewCredentials())); err != nil {
 			if agentutil.IsNoDeployments(err) {
 				return nil
 			}
@@ -189,7 +190,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	// again retrieve the latest deployment information from the cluster.
 	// if a deploy is ongoing or is different from the deploy we just used to bootstrap
 	// we want to consider the bootstrap a failure and retry.
-	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithInsecure()); err != nil && !agentutil.IsActiveDeployment(err) {
+	if latest, err = Latest(ctx, SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials())); err != nil && !agentutil.IsActiveDeployment(err) {
 		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 

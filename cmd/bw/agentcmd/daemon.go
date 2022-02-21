@@ -31,11 +31,12 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 )
 
 type CmdDaemon struct {
-	Runtime     CmdRuntime           `cmd:"" help:"run the deploy agent runtime" default:"1" aliases:"deploy"`
+	Runtime     CmdRuntime           `cmd:"" help:"run the deploy agent runtime" default:"true" aliases:"deploy"`
 	Coordinator CmdCoordinator       `cmd:"" help:"run a coordination server that purely acts as a command and control node, a deploy to the cluster will store the archive but not actually process it within the deployment runtime"`
 	QuorumLog   CmdDaemonDebugRaft   `cmd:"" name:"quorum-state" help:"display the quorum log"`
 	Quorum      CmdDaemonDebugQuorum `cmd:"" name:"quorum" help:"display quorum member information, only runs on the server"`
@@ -166,12 +167,11 @@ func (t *daemon) bind(ctx *cmdopts.Global, clusteropts *cmdopts.Peering, config 
 	// grpc can be insecure because the socket itself has tls.
 	dialer := dialers.NewDefaults(
 		dialers.WithMuxer(tlsx.NewDialer(tlscreds), l.Addr()),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithPerRPCCredentials(ss),
 	)
 
 	dctx := daemons.Context{
-		AdvertisedIP:      config.P2PAdvertised.String(),
 		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,

@@ -12,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/onsi/gomega"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const rootDir = ".tests"
@@ -49,7 +50,7 @@ func NewGRPCServer(bind func(s *grpc.Server), options ...grpc.DialOption) (c *gr
 	}()
 
 	options = append([]grpc.DialOption{
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, address string) (conn net.Conn, err error) {
 			ctx, done := context.WithTimeout(ctx, time.Second)
 			defer done()
@@ -75,7 +76,7 @@ func NewGRPCServer2(bind func(s *grpc.Server), options ...grpc.DialOption) (d di
 
 	options = append(
 		options,
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDialer(func(addr string, to time.Duration) (c net.Conn, err error) {
 			ctx, done := context.WithTimeout(context.Background(), to)
 			defer done()

@@ -64,7 +64,7 @@ func ProtocolOptionTransport(t func() (raft.Transport, error)) ProtocolOption {
 }
 
 // ProtocolOptionMuxerTransport set the transport using a muxer.
-func ProtocolOptionMuxerTransport(addr net.Addr, m *muxer.M, d dialer) ProtocolOption {
+func ProtocolOptionMuxerTransport(addr net.Addr, advert net.Addr, m *muxer.M, d dialer) ProtocolOption {
 	return ProtocolOptionTransport(func() (_ raft.Transport, err error) {
 		var (
 			l net.Listener

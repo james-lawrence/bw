@@ -41,16 +41,16 @@ func (t Global) BeforeApply() error {
 }
 
 type Peering struct {
-	bootstrap     []*net.TCPAddr `kong:"-" name:"bootstrap-static-addresses" help:"addresses of the cluster to bootstrap from" env:"${bw.EnvAgentClusterBootstrap}"`
-	DNSEnabled    bool           `name:"bootstrap-dns-enable" alias:"cluster-dns-enable" help:"enable dns peering" env:"${bw.EnvAgentClusterEnableDNS}"`
-	AWSEnabled    bool           `name:"bootstrap-aws-enable" alias:"cluster-aws-enable" help:"enable aws autoscaling group peering" env:"${bw.EnvAgentClusterEnableAWSAutoscaling}"`
-	GCloudEnabled bool           `name:"bootstrap-gcloud-enable" alias:"cluster-gcloud-enable" help:"enable gcloud target pools peering" env:"${bw.EnvAgentClusterEnableGoogleCloudPool}"`
+	Bootstrap     []*net.TCPAddr `name:"bootstrap-static-addresses" help:"addresses of the cluster to bootstrap from" env:"${env_bw_agent_bootstrap_static}"`
+	DNSEnabled    bool           `name:"bootstrap-dns-enable" alias:"cluster-dns-enable" help:"enable dns peering" env:"${env_bw_agent_bootstrap_dns_enabled}"`
+	AWSEnabled    bool           `name:"bootstrap-aws-enable" alias:"cluster-aws-enable" help:"enable aws autoscaling group peering" env:"${env_bw_agent_bootstrap_aws_autoscaling_enabled}"`
+	GCloudEnabled bool           `name:"bootstrap-gcloud-enable" alias:"cluster-gcloud-enable" help:"enable gcloud target pools peering" env:"${env_bw_agent_bootstrap_gcloud_taget_pool_enabled}"`
 }
 
 func (t *Peering) Join(ctx context.Context, config agent.Config, c clustering.Joiner, snap peering.File) (err error) {
 	var (
 		p2ppeers    clustering.Source
-		clipeers    clustering.Source = peering.NewStaticTCP(t.bootstrap...)
+		clipeers    clustering.Source = peering.NewStaticTCP(t.Bootstrap...)
 		awspeers    clustering.Source = peering.NewStaticTCP()
 		gcloudpeers clustering.Source = peering.NewStaticTCP()
 		dnspeers    clustering.Source = peering.NewStaticTCP()

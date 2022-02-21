@@ -55,3 +55,32 @@ func (t StreamLayer) Dial(address raft.ServerAddress, timeout time.Duration) (co
 
 	return conn, nil
 }
+
+type Advertised struct {
+	StreamLayer
+	Addr net.Addr
+}
+
+func (t Advertised) Dial(address raft.ServerAddress, timeout time.Duration) (conn net.Conn, err error) {
+	if conn, err = t.StreamLayer.Dial(address, timeout); err != nil {
+		return nil, err
+	}
+
+	return newLocalConn(t.Addr, conn), err
+}
+
+func newLocalConn(a net.Addr, c net.Conn) localconn {
+	return localconn{
+		Addr: a,
+		Conn: c,
+	}
+}
+
+type localconn struct {
+	net.Addr
+	net.Conn
+}
+
+func (t localconn) LocalAddr() net.Addr {
+	return t.Addr
+}

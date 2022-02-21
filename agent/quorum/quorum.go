@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -88,7 +89,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 		sm:                    &DisabledMachine{},
 		uploads:               upload,
 		rp:                    rp,
-		dialer:                dialers.NewQuorum(c, grpc.WithInsecure()),
+		dialer:                dialers.NewQuorum(c, grpc.WithTransportCredentials(insecure.NewCredentials())),
 		m:                     &sync.Mutex{},
 		c:                     c,
 		lost:                  make(chan struct{}),

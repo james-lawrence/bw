@@ -15,6 +15,7 @@ import (
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/internal/x/testingx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var _ = Describe("Local", func() {
@@ -53,7 +54,7 @@ var _ = Describe("Local", func() {
 		defer testingx.GRPCCleanup(nil, srv)
 
 		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Succeed())
 	})
 
@@ -73,7 +74,7 @@ var _ = Describe("Local", func() {
 		defer testingx.GRPCCleanup(nil, srv)
 
 		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
 	})
 
@@ -91,7 +92,7 @@ var _ = Describe("Local", func() {
 		defer testingx.GRPCCleanup(nil, srv)
 
 		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(HaveOccurred())
 	})
 })

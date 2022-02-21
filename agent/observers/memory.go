@@ -16,6 +16,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 )
 
@@ -138,7 +139,7 @@ func (t Memory) connect(id string) (err error) {
 	ctx, done := context.WithTimeout(context.Background(), 5*time.Second)
 	defer done()
 
-	if conn, err = grpc.DialContext(ctx, id, grpcx.DialInmem(), grpc.WithInsecure(), grpc.WithBlock(), kopt); err != nil {
+	if conn, err = grpc.DialContext(ctx, id, grpcx.DialInmem(), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), kopt); err != nil {
 		return errors.Wrap(err, "failed to connect observer")
 	}
 

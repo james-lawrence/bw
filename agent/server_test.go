@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/icrowley/fake"
@@ -50,7 +51,7 @@ func testClient() harness {
 		grpcs.Serve(socket)
 	}()
 
-	conn, err := Dial(socket.Addr().String(), grpc.WithInsecure())
+	conn, err := Dial(socket.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	Expect(err).ToNot(HaveOccurred())
 
 	return harness{client: conn, cluster: c, listener: socket}

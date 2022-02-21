@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/x/testingx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var _ = Describe("Cluster", func() {
@@ -57,7 +58,7 @@ var _ = Describe("Cluster", func() {
 
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Succeed())
 	})
 
@@ -78,7 +79,7 @@ var _ = Describe("Cluster", func() {
 
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
 	})
 
@@ -96,7 +97,7 @@ var _ = Describe("Cluster", func() {
 
 		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewCluster(mc, d))).To(Succeed())
-		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithInsecure())
+		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(HaveOccurred())
 	})
 })

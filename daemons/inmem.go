@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func Inmem(dctx Context) (_ Context, err error) {
@@ -38,7 +39,7 @@ func Inmem(dctx Context) (_ Context, err error) {
 	dctx.Inmem, err = grpc.DialContext(
 		dialctx,
 		inmemconn,
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithBlock(),
 		grpcx.DialInmem(),
 	)

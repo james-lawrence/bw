@@ -182,7 +182,7 @@ func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 	)
 }
 
-// ConfigOptionP2P sets the libp2p address to bind.
+// ConfigOptionP2P sets the address to bind.
 func ConfigOptionP2P(p *net.TCPAddr) ConfigOption {
 	return func(c *Config) {
 		c.P2PBind = p
@@ -190,7 +190,7 @@ func ConfigOptionP2P(p *net.TCPAddr) ConfigOption {
 }
 
 // ConfigOptionAdvertised set the ip address to advertise.
-func ConfigOptionAdvertised(ip net.IP) ConfigOption {
+func ConfigOptionAdvertised(ip *net.TCPAddr) ConfigOption {
 	return func(c *Config) {
 		c.P2PAdvertised = ip
 	}
@@ -225,7 +225,7 @@ type Config struct {
 	Bootstrap         bootstrap     `yaml:"bootstrap"`
 	SnapshotFrequency time.Duration `yaml:"snapshotFrequency"`
 	P2PBind           *net.TCPAddr
-	P2PAdvertised     net.IP
+	P2PAdvertised     *net.TCPAddr
 	AlternateBinds    []*net.TCPAddr
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
@@ -264,7 +264,7 @@ func (t Config) EnsureDefaults() Config {
 	}
 
 	if t.P2PAdvertised == nil {
-		t.P2PAdvertised = t.P2PBind.IP
+		t.P2PAdvertised = t.P2PBind
 	}
 
 	return t
@@ -289,7 +289,7 @@ func (t Config) Peer() *Peer {
 	return &Peer{
 		Status:  Peer_Node,
 		Name:    t.Name,
-		Ip:      t.P2PBind.IP.String(),
+		Ip:      t.P2PAdvertised.String(),
 		P2PPort: uint32(t.P2PBind.Port),
 	}
 }

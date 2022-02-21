@@ -48,7 +48,6 @@ type dialer interface {
 
 // Context common information passed to all daemons.
 type Context struct {
-	AdvertisedIP       string
 	Deploys            Deployer
 	Local              *_cluster.Local
 	Listener           net.Listener

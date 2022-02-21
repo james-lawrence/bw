@@ -71,7 +71,7 @@ func Peering(dctx Context) (_ Context, err error) {
 	cdialer := NewClusterDialer(
 		dctx.Config,
 		clustering.OptionNodeID(dctx.Local.Peer.Name),
-		clustering.OptionAdvertiseAddress(dctx.AdvertisedIP),
+		clustering.OptionAdvertiseAddress(dctx.Config.P2PAdvertised.IP.String()),
 		clustering.OptionAdvertisePort(int(dctx.Local.Peer.P2PPort)),
 		clustering.OptionDelegate(dctx.PeeringEvents),
 		clustering.OptionKeyring(keyring),

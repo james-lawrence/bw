@@ -33,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
@@ -175,12 +176,11 @@ func (t *agentCmd) bind(deployer daemons.Deployer) (err error) {
 	// grpc can be insecure because the socket itself has tls.
 	dialer := dialers.NewDefaults(
 		dialers.WithMuxer(tlsx.NewDialer(tlscreds), l.Addr()),
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithPerRPCCredentials(ss),
 	)
 
 	dctx := daemons.Context{
-		AdvertisedIP:      t.p2padvertised.String(),
 		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,
