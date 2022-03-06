@@ -1,3 +1,15 @@
+commit 14096df7b508de3ff89415223ec14b090ffa2a02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 6 15:29:54 2022 -0500
+
+    fix improper setting of peer ip from config
+
+commit ee8c8f0db750bb103d563a2e2b989bfaa143d911
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Feb 21 09:01:45 2022 -0500
+
+    release 0.1.1645451851-6ce2516b
+
 commit 6ce2516b80b03e740f509783229826fc2028f0f5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Feb 21 08:49:09 2022 -0500
