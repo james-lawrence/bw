@@ -32,7 +32,7 @@ type cmdInfo struct {
 	Watch cmdInfoWatch `cmd:"" help:"watch cluster activity"`
 	Nodes cmdInfoNodes `cmd:"" help:"retrieve nodes within the cluster"`
 	Logs  cmdInfoLogs  `cmd:"" help:"log retrieval for the latest deployment"`
-	Check cmdInfoCheck `cmd:"" help:"check connectivity with the discovery service"`
+	Check cmdInfoCheck `cmd:"" help:"check connectivity with the discovery service" hidden:"true"`
 }
 
 type cmdInfoWatch struct {

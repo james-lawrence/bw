@@ -289,8 +289,8 @@ func (t Config) Peer() *Peer {
 	return &Peer{
 		Status:  Peer_Node,
 		Name:    t.Name,
-		Ip:      t.P2PAdvertised.String(),
-		P2PPort: uint32(t.P2PBind.Port),
+		Ip:      t.P2PAdvertised.IP.String(),
+		P2PPort: uint32(t.P2PAdvertised.Port),
 	}
 }
 

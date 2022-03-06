@@ -6,10 +6,8 @@ import (
 	"crypto/tls"
 	"io/ioutil"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/davecgh/go-spew/spew"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -204,7 +202,7 @@ func ClusterJoin(ctx context.Context, conf agent.Config, c clustering.Joiner, de
 	banned := clustering.BootstrapOptionBanned(
 		append(
 			netx.AddrToString(conf.AlternateBinds...),
-			net.JoinHostPort(conf.P2PAdvertised.String(), strconv.Itoa(conf.P2PBind.Port)),
+			conf.P2PAdvertised.String(),
 			conf.P2PBind.String(),
 		)...,
 	)

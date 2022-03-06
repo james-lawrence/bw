@@ -31,7 +31,7 @@ func main() {
 		Environment        cmdEnv                       `cmd:"" help:"environment related commands"`
 		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
-		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment" hidden:""`
+		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment"`
 		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
 		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
 		Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
