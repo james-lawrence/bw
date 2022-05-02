@@ -1,3 +1,15 @@
+commit 69d8323517df73c3aa03637e70f3c5be8a4a77f5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon May 2 08:29:29 2022 -0400
+
+    add ubuntu 22.04
+
+commit 24317d21bd6ebb762687f4888497c17d181f4c1e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Mar 6 16:52:29 2022 -0500
+
+    release 0.1.1646598594-14096df7
+
 commit 14096df7b508de3ff89415223ec14b090ffa2a02
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Mar 6 15:29:54 2022 -0500
