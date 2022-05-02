@@ -28,10 +28,6 @@ release() {
   echo "UPLOAD COMPLETED ${DISTRO} - ${VERSION}"
 }
 
-echo "CHECKPOINT 1 - $(which go)"
-ls -lha /usr/bin
-ls -lha /usr/lib/go-1.18
-
 rm -rf src
 rm -rf deb
 
@@ -43,8 +39,6 @@ cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
 mkdir -p src/github.com/james-lawrence/bw
 
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/github.com/james-lawrence/bw
-
-echo $(which go)
 
 pushd src; /usr/lib/go-1.18/bin/go install -buildvcs=false github.com/james-lawrence/bw/cmd/...; popd
 

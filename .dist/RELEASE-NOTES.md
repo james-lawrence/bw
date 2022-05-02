@@ -1,3 +1,15 @@
+commit bc66d56b30b099ab8372eee03ec4dc15504534dd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon May 2 13:09:51 2022 -0400
+
+    update docker image for building releases
+
+commit dc73573eccb67825c24842039ef83b5cc5ff4ce6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon May 2 09:03:05 2022 -0400
+
+    release 0.1.1651496483-69d83235
+
 commit 69d8323517df73c3aa03637e70f3c5be8a4a77f5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon May 2 08:29:29 2022 -0400
