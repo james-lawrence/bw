@@ -62,7 +62,7 @@ func (t *cmdWorkspaceCreate) Run(ctx *cmdopts.Global) (err error) {
 	})
 }
 
-//go:embed .assets/workspace/empty/.local/.gitignore .assets/workspace/empty/.remote/.gitignore
+//go:embed .assets/workspace/empty/*
 var workspaceempty embed.FS
 
 //go:embed .assets/workspace/example1/*

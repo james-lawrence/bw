@@ -28,7 +28,7 @@ release() {
   echo "UPLOAD COMPLETED ${DISTRO} - ${VERSION}"
 }
 
-rm -rf src
+rm -rf src && mkdir -p src
 rm -rf deb
 
 export CHANGELOG_DATE=$(date +"%a, %d %b %Y %T %z")
@@ -36,11 +36,10 @@ export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-k'${DEBFULLNAME} <${DEBEMAIL}>' -sa"
 ARCHIVE=../build/bearded-wookie-source-${BUILD_VERSION}.tar.gz
 
 cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
-mkdir -p src/github.com/james-lawrence/bw
 
-tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/github.com/james-lawrence/bw
+tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/
 
-pushd src; /usr/lib/go-1.18/bin/go install -buildvcs=false github.com/james-lawrence/bw/cmd/...; popd
+pushd src; /usr/lib/go-1.18/bin/go install -buildvcs=false cmd/...; popd
 
 i=-1
 for distro in "$@"
