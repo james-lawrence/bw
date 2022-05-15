@@ -1,2 +1,0 @@
-# unpack archive
-- command: tar xf archive.tar.gz -C .
