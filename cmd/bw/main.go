@@ -95,9 +95,8 @@ func main() {
 
 	if err = commandutils.LogCause(ctx.Run()); err != nil {
 		shellCli.Shutdown()
-	} else {
-		log.Println("waiting for shutdown signal")
 	}
+
 	shellCli.Cleanup.Wait()
 	ctx.FatalIfErrorf(err)
 }
