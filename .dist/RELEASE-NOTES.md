@@ -1,3 +1,21 @@
+commit d785fec23c48a57d29422c2490644196824442d4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 15 11:45:02 2022 -0400
+
+    remove debug log statement
+
+commit 9ad56b4c30e40536e78f2089b82cd49df67e7487
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun May 15 11:44:14 2022 -0400
+
+    remove old bw agent
+
+commit 15be747cc74e7acfbe54a6b581dec1d8a082413c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 4 09:36:04 2022 -0400
+
+    release 0.1.1651671228-3c1f47a3
+
 commit 3c1f47a36789e0786c4bbc6b0e5e6d6b306d37ca
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 3 09:51:11 2022 -0400
