@@ -138,7 +138,13 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 			config.Credentials.Insecure,
 		),
 	); err != nil {
-		return config, errors.Wrap(err, "unable to load credentials")
+		return config, errors.Wrapf(
+			err,
+			"unable to load credentials: %s %s %s",
+			path,
+			stringsx.DefaultIfBlank(config.Credentials.Directory, config.Credentials.Directory),
+			stringsx.DefaultIfBlank(config.Credentials.Mode, config.Credentials.Mode),
+		)
 	}
 
 	if envx.Boolean(false, bw.EnvLogsConfiguration) {
