@@ -125,12 +125,16 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		return s, errors.Wrap(err, "failed to generate authorization key")
 	}
 
+	if err = os.MkdirAll(filepath.Dir(location), 0700); err != nil {
+		return s, errors.Wrapf(err, "failed to create credential directory '%s'", filepath.Dir(location))
+	}
+
 	if err = ioutil.WriteFile(location, encoded, 0600); err != nil {
-		return s, errors.Wrap(err, "failed to generate authorization key")
+		return s, errors.Wrapf(err, "failed to write authorization key '%s'", location)
 	}
 
 	if pubencoded, err = sshx.PublicKey(encoded); err != nil {
-		return s, errors.Wrap(err, "failed to generate authorization key")
+		return s, errors.Wrap(err, "failed to write public key")
 	}
 
 	if err = ioutil.WriteFile(pub, sshx.Comment(pubencoded, comment), 0600); err != nil {
