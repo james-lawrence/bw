@@ -42,7 +42,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 
 	env := sctx.environmentSubst()
 	for _, path := range t.LoadEnv {
-		if environ, err := EnvironFromFile(path); err != nil {
+		if environ, err := EnvironFromFile(sctx.variableSubst(path)); err != nil {
 			return err
 		} else {
 			env = append(env, environ...)
