@@ -32,6 +32,7 @@ type Exec struct {
 	Lenient bool
 	Timeout time.Duration
 	Environ string
+	LoadEnv []string `yaml:"loadenv"`
 }
 
 func (t Exec) execute(ctx context.Context, sctx Context) error {
@@ -40,6 +41,14 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	defer done()
 
 	env := sctx.environmentSubst()
+	for _, path := range t.LoadEnv {
+		if environ, err := EnvironFromFile(path); err != nil {
+			return err
+		} else {
+			env = append(env, environ...)
+		}
+	}
+
 	env = append(env, Environ(os.Expand(t.Environ, Subst(env)))...)
 
 	command := sctx.variableSubst(t.Command)
