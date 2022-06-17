@@ -1,3 +1,15 @@
+commit 2a1eb537951bd28c33f0bac8ca8ad7796019ce2e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 18:29:04 2022 -0400
+
+    implement %bw.cache.directory% variable
+
+commit 82cf4f907316e65c9162b50ded4872bbe2695c46
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 14:56:36 2022 -0400
+
+    release 0.1.1655491765-5b6ddade
+
 commit 5b6ddade491ba535bcbbfb91a6e793b7e3aa7d16
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 14:49:25 2022 -0400
