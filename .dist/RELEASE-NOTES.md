@@ -1,3 +1,15 @@
+commit 148bcd4656269bce6a7efcbebf15d0b2c0a089ad
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 12:45:34 2022 -0400
+
+    load environments from files for shell commands.
+
+commit 45d56b65cdf105fee805fc7e12ca0f54a0431c84
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 08:42:48 2022 -0400
+
+    release 0.1.1655469606-ca9d0e00
+
 commit ca9d0e009028508910d597bf22a2d1568239c91b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 08:40:06 2022 -0400
