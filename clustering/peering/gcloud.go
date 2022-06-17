@@ -53,6 +53,8 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 
 	if r := pathsuffix(createdBy, "/"); r == "" {
 		return results, errors.New("invalid created by")
+	} else {
+		createdBy = r
 	}
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
