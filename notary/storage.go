@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
@@ -50,6 +51,8 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 	if err = bw.ExpandAndDecode(bin, &nc); err != nil {
 		return c, err
 	}
+
+	log.Println("adding automatic authority", filepath.Join(root, bw.AuthKeysFile))
 	authority := append(nc.Config.Authority, filepath.Join(root, bw.AuthKeysFile))
 	buckets := make([]storage, 0, len(authority))
 
@@ -121,8 +124,11 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 		return nil
 	}
 
-	log.Println("loading authorization keys from", path)
-
+	ts := time.Now()
+	log.Printf("authorization load initiated %s\n", path)
+	defer func() {
+		log.Printf("authorization load completed %s %d\n", path, time.Now().Sub(ts))
+	}()
 	if encoded, err = ioutil.ReadFile(path); err != nil {
 		return err
 	}
