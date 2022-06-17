@@ -46,7 +46,7 @@ type CmdRuntime struct {
 	daemon
 }
 
-func (t CmdRuntime) Run(ctx *cmdopts.Global, cluster *cmdopts.Peering, aconfig *agent.Config) (err error) {
+func (t CmdRuntime) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	var (
 		sctx shell.Context
 	)
@@ -59,15 +59,15 @@ func (t CmdRuntime) Run(ctx *cmdopts.Global, cluster *cmdopts.Peering, aconfig *
 		deployment.DirectiveOptionShellContext(sctx),
 	)
 
-	return t.daemon.bind(ctx, cluster, aconfig.Clone(), deployer)
+	return t.daemon.bind(ctx, aconfig.Clone(), deployer)
 }
 
 type CmdCoordinator struct {
 	daemon
 }
 
-func (t CmdCoordinator) Run(ctx *cmdopts.Global, cluster *cmdopts.Peering, aconfig *agent.Config) (err error) {
-	return t.daemon.bind(ctx, cluster, aconfig.Clone(), deployment.Cached{})
+func (t CmdCoordinator) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
+	return t.daemon.bind(ctx, aconfig.Clone(), deployment.Cached{})
 }
 
 type daemon struct {
@@ -75,7 +75,7 @@ type daemon struct {
 	Config
 }
 
-func (t *daemon) bind(ctx *cmdopts.Global, clusteropts *cmdopts.Peering, config agent.Config, deployer daemons.Deployer) (err error) {
+func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons.Deployer) (err error) {
 	var (
 		ring      *memberlist.Keyring
 		l         net.Listener
@@ -225,11 +225,11 @@ func (t *daemon) bind(ctx *cmdopts.Global, clusteropts *cmdopts.Peering, config 
 
 	dctx.MuxerListen(ctx.Context, bound...)
 
-	if dctx, err = daemons.Peered(dctx, clusteropts); err != nil {
+	if dctx, err = daemons.Peered(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize peering service")
 	}
 
-	if dctx, err = daemons.Quorum(dctx, clusteropts); err != nil {
+	if dctx, err = daemons.Quorum(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum service")
 	}
 

@@ -44,7 +44,6 @@ func main() {
 		ctx                 *kong.Context
 		systemip            = systemx.HostIP(systemx.HostnameOrLocalhost())
 		agentconfigdefaults = agent.NewConfig(agent.ConfigOptionDefaultBind(systemip))
-		peeringopts         = cmdopts.Peering{}
 	)
 
 	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
@@ -77,7 +76,6 @@ func main() {
 		kong.UsageOnError(),
 		kong.Bind(&shellCli.Global),
 		kong.Bind(&agentconfigdefaults),
-		kong.Bind(&peeringopts),
 		kong.TypeMapper(reflect.TypeOf(&net.IP{}), kong.MapperFunc(cmdopts.ParseIP)),
 		kong.TypeMapper(reflect.TypeOf(&net.TCPAddr{}), kong.MapperFunc(cmdopts.ParseTCPAddr)),
 		kong.TypeMapper(reflect.TypeOf([]*net.TCPAddr(nil)), kong.MapperFunc(cmdopts.ParseTCPAddrArray)),
