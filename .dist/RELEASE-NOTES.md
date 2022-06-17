@@ -1,3 +1,27 @@
+commit ca9d0e009028508910d597bf22a2d1568239c91b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 08:40:06 2022 -0400
+
+    enable regional instance managers for gcp
+
+commit 44429c8f961010dd782fe3b6c2df6679a596e5ea
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 2 12:12:32 2022 -0400
+
+    more detail errors for generating personal key
+
+commit e60752451f2c263d3bf96794474e335362b9893c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 2 11:16:00 2022 -0400
+
+    debug credentials
+
+commit d5654bbad9156b0f0cb7e623a05016e8ea27a8ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu May 19 06:11:03 2022 -0400
+
+    release 0.1.1652629502-d785fec2
+
 commit d785fec23c48a57d29422c2490644196824442d4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun May 15 11:45:02 2022 -0400
