@@ -17,10 +17,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/timex"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -50,7 +54,9 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	}
 
 	env = append(env, Environ(os.Expand(t.Environ, Subst(env)))...)
-
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("shell environment\n", strings.Join(env, "\n"))
+	}
 	command := sctx.variableSubst(t.Command)
 	cmd := exec.CommandContext(deadline, sctx.Shell, "-c", command)
 	cmd.Env = env
