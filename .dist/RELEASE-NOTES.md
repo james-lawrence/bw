@@ -1,3 +1,15 @@
+commit 4855b227de9e1d0ef380c035ca7fc4d53827de1a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 13:44:15 2022 -0400
+
+    allow variable substitution in loadenv
+
+commit 93f0182b123a371c11aff327bc3f386546cd5f36
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 13:38:55 2022 -0400
+
+    release 0.1.1655486958-105e91d4
+
 commit 105e91d46806adb40f15f5df2b8ad46b11c356b1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 13:29:18 2022 -0400
