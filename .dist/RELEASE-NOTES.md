@@ -1,3 +1,15 @@
+commit 105e91d46806adb40f15f5df2b8ad46b11c356b1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 13:29:18 2022 -0400
+
+    fix peering options
+
+commit fe6e5c985c66b8e55dd808f0cf228b0f89b12524
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 12:51:32 2022 -0400
+
+    release 0.1.1655484343-148bcd46
+
 commit 148bcd4656269bce6a7efcbebf15d0b2c0a089ad
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 12:45:34 2022 -0400
