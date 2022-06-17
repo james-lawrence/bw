@@ -1,3 +1,15 @@
+commit d6461da2bf938f73b5b6a495fc6f12402b43ac36
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 14:28:32 2022 -0400
+
+    add shell context debug logging
+
+commit 7e6cdf4258e069a61f7e63bb92e8e6acb520f07f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 13:46:37 2022 -0400
+
+    release 0.1.1655487855-4855b227
+
 commit 4855b227de9e1d0ef380c035ca7fc4d53827de1a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 13:44:15 2022 -0400
