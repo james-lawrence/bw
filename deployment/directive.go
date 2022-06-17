@@ -64,13 +64,14 @@ func (t Directive) Deploy(dctx *DeployContext) {
 
 func (t Directive) deploy(dctx *DeployContext) {
 	var (
-		err     error
-		dinterp directives.InterpLoader
-		dfs     directives.ArchiveLoader
-		dshell  directives.ShellLoader
-		loaded  []directives.Loaded
-		environ []string
-		tmpdir  string
+		err      error
+		dinterp  directives.InterpLoader
+		dfs      directives.ArchiveLoader
+		dshell   directives.ShellLoader
+		loaded   []directives.Loaded
+		environ  []string
+		tmpdir   string
+		cachedir string
 	)
 
 	if environ, err = shell.EnvironFromFile(filepath.Join(dctx.ArchiveRoot, bw.EnvFile)); err != nil {
@@ -78,13 +79,18 @@ func (t Directive) deploy(dctx *DeployContext) {
 		return
 	}
 
-	if tmpdir, err = mkdirTemp(dctx.ArchiveRoot, ".bw-tmp-*"); err != nil {
+	if tmpdir, err = mkdirTemp(dctx.TempRoot, ".bw-tmp-*"); err != nil {
 		dctx.Done(err)
 		return
 	}
-
 	done := func(cause error) {
 		dctx.Done(errorsx.Compact(err, os.RemoveAll(tmpdir)))
+	}
+
+	cachedir = filepath.Join(dctx.CacheRoot, bw.DirCache)
+	if err = os.MkdirAll(cachedir, 0750); err != nil {
+		dctx.Done(err)
+		return
 	}
 
 	dc := directives.Context{
@@ -100,6 +106,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
 			shell.OptionDir(dctx.ArchiveRoot),
 			shell.OptionTempDir(tmpdir),
+			shell.OptionCacheDir(cachedir),
 		),
 	}
 

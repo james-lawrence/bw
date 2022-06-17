@@ -46,6 +46,20 @@ func DeployContextOptionArchiveRoot(ar string) DeployContextOption {
 	}
 }
 
+// DeployContextOptionTempRoot set the parent of the temp directory.
+func DeployContextOptionTempRoot(ar string) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.TempRoot = ar
+	}
+}
+
+// DeployContextOptionCacheRoot set the parent of the cache directory.
+func DeployContextOptionCacheRoot(ar string) DeployContextOption {
+	return func(dctx *DeployContext) {
+		dctx.CacheRoot = ar
+	}
+}
+
 // DeployContextOptionDisableReset disables resetting the root directory.
 func DeployContextOptionDisableReset(dctx *DeployContext) {
 	dctx.disableReset = true
@@ -66,6 +80,8 @@ func NewDeployContext(ctx context.Context, root string, p *agent.Peer, dopts *ag
 		ID:            id,
 		Root:          root,
 		ArchiveRoot:   root,
+		TempRoot:      root,
+		CacheRoot:     root,
 		ArchiveFile:   filepath.Join(root, bw.ArchiveFile),
 		MetadataFile:  filepath.Join(root, deployMetadataName),
 		LogFile:       filepath.Join(root, bw.DeployLog),
@@ -137,6 +153,8 @@ type DeployContext struct {
 	Root          string
 	ArchiveFile   string
 	ArchiveRoot   string
+	TempRoot      string
+	CacheRoot     string
 	MetadataFile  string
 	LogFile       string
 	Log           logger

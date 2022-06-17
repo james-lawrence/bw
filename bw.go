@@ -22,13 +22,8 @@ import (
 //go:generate protoc -I=.protocol --go_out=muxer --go_opt=paths=source_relative .protocol/muxer.proto
 
 const (
-	// DirCache used as the top level cache directory below the root.
-	// used to store data that can be regenerated. examples:
-	// - torrents
-	// - tls credentials
-	// - deploy archives
-	// - snapshots
-	DirCache = "cache.d"
+	// DirCache cached data for deployments
+	DirCache = ".cached"
 	// DirDeploys the name of the deploys directory.
 	DirDeploys = "deploys"
 	// DirRaft the name of the directory dealing with the raft state.

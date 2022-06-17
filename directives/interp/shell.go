@@ -14,6 +14,7 @@ func exportShell(sctx shell.Context) (exported map[string]reflect.Value) {
 		"Timeout":    reflect.ValueOf(shell.OptionTimeout),
 		"WorkingDir": reflect.ValueOf(shell.OptionDir),
 		"TempDir":    reflect.ValueOf(shell.OptionTempDir),
+		"CacheDir":   reflect.ValueOf(shell.OptionCacheDir),
 		"Run": reflect.ValueOf(func(ctx context.Context, cmd string, options ...shell.Option) error {
 			return shell.Execute(ctx, shell.NewContext(sctx, options...), shell.Exec{Command: cmd})
 		}),

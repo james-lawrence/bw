@@ -30,7 +30,6 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 	var (
 		sctx    shell.Context
 		dctx    *deployment.DeployContext
-		archive agent.Archive
 		environ []string
 		cdir    string
 	)
@@ -60,18 +59,20 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		shell.OptionDir(cdir),
 	)
 
-	archive = agent.Archive{}
-
-	dopts := agent.DeployOptions{
-		Timeout: int64(config.DeployTimeout),
-	}
-
-	opts := []deployment.DeployContextOption{
+	dctx, err = deployment.NewDeployContext(
+		context.Background(),
+		cdir,
+		local,
+		&agent.DeployOptions{
+			Timeout: int64(config.DeployTimeout),
+		},
+		&agent.Archive{},
 		deployment.DeployContextOptionLog(deployment.StdErrLogger("[LOCAL] ")),
+		deployment.DeployContextOptionTempRoot(config.Dir()),
+		deployment.DeployContextOptionCacheRoot(config.Dir()),
 		deployment.DeployContextOptionDisableReset,
-	}
-
-	if dctx, err = deployment.NewDeployContext(context.Background(), cdir, local, &dopts, &archive, opts...); err != nil {
+	)
+	if err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 

@@ -22,12 +22,11 @@ import (
 
 func Locally(ctx *Context, debug bool) (err error) {
 	var (
-		dst      *os.File
-		sctx     shell.Context
-		dctx     *deployment.DeployContext
-		root     string
-		darchive agent.Archive
-		config   agent.ConfigClient
+		dst    *os.File
+		sctx   shell.Context
+		dctx   *deployment.DeployContext
+		root   string
+		config agent.ConfigClient
 	)
 
 	if config, err = commandutils.ReadConfiguration(ctx.Environment); err != nil {
@@ -90,15 +89,20 @@ func Locally(ctx *Context, debug bool) (err error) {
 		return errors.Wrap(err, "failed to unpack archive")
 	}
 
-	darchive = agent.Archive{
-		Location: dst.Name(),
-	}
-
-	dopts := agent.DeployOptions{
-		Timeout: int64(config.DeployTimeout),
-	}
-
-	if dctx, err = deployment.NewRemoteDeployContext(context.Background(), root, local, &dopts, &darchive, deployment.DeployContextOptionDisableReset); err != nil {
+	dctx, err = deployment.NewRemoteDeployContext(
+		context.Background(),
+		root,
+		local,
+		&agent.DeployOptions{
+			Timeout: int64(config.DeployTimeout),
+		},
+		&agent.Archive{
+			Location: dst.Name(),
+		},
+		deployment.DeployContextOptionCacheRoot(bw.DefaultCacheDirectory()),
+		deployment.DeployContextOptionDisableReset,
+	)
+	if err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
 	}
 
