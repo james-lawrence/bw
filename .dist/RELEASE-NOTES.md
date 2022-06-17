@@ -1,3 +1,15 @@
+commit 5b6ddade491ba535bcbbfb91a6e793b7e3aa7d16
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 14:49:25 2022 -0400
+
+    fix gcloud
+
+commit c1f8f93e8acc74a160aeb47c9f46287a1719bbdc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 14:44:56 2022 -0400
+
+    release 0.1.1655490512-d6461da2
+
 commit d6461da2bf938f73b5b6a495fc6f12402b43ac36
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 14:28:32 2022 -0400
