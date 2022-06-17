@@ -8,6 +8,10 @@ import (
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
+	"github.com/davecgh/go-spew/spew"
+	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 )
@@ -25,9 +29,6 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 		project   string
 		zone      string
 		createdBy string
-		idx       int
-		req       *compute.InstanceGroupManagersListManagedInstancesCall
-		resp      *compute.InstanceGroupManagersListManagedInstancesResponse
 	)
 
 	if !metadata.OnGCE() {
@@ -50,14 +51,62 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 		return results, errors.WithStack(err)
 	}
 
-	if idx = strings.LastIndex(createdBy, "/"); idx < 0 || idx > len(createdBy)-1 {
+	if r := pathsuffix(createdBy, "/"); r == "" {
 		return results, errors.New("invalid created by")
 	}
-	createdBy = createdBy[idx+1:]
 
-	req = c.InstanceGroupManagers.ListManagedInstances(project, zone, createdBy)
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("instance created by", createdBy)
+	}
 
-	if resp, err = req.Do(); err != nil {
+	if peers, cause := t.standard(ctx, c, project, zone, createdBy); cause == nil {
+		results = append(results, peers...)
+	} else {
+		if envx.Boolean(false, bw.EnvLogsVerbose) {
+			log.Println("instance group peers failed", cause)
+		}
+		err = errorsx.Compact(err, cause)
+	}
+
+	if peers, cause := t.region(ctx, c, project, zone, createdBy); cause == nil {
+		results = append(results, peers...)
+	} else {
+		if envx.Boolean(false, bw.EnvLogsVerbose) {
+			log.Println("region instance group peers failed", cause)
+		}
+		err = errorsx.Compact(err, cause)
+	}
+
+	if len(results) > 0 {
+		err = nil
+	}
+
+	return results, err
+}
+
+func (t GCloudTargetPool) region(ctx context.Context, c *compute.Service, project string, zone string, createdBy string) (results []string, err error) {
+	var (
+		region string
+		igreq  *compute.RegionInstanceGroupManagersGetCall
+		igresp *compute.InstanceGroupManager
+		req    *compute.RegionInstanceGroupManagersListManagedInstancesCall
+		resp   *compute.RegionInstanceGroupManagersListInstancesResponse
+	)
+	if prefix := regionstring(zone, "-"); prefix == "" {
+		log.Println("cannot convert zone to region", zone)
+		return results, nil
+	} else {
+		region = prefix
+	}
+	igreq = c.RegionInstanceGroupManagers.Get(project, region, createdBy)
+	if igresp, err = igreq.Context(ctx).Do(); err != nil {
+		return results, errors.WithStack(err)
+	}
+
+	zones := extractzones(igresp.DistributionPolicy)
+	req = c.RegionInstanceGroupManagers.ListManagedInstances(project, region, createdBy)
+
+	if resp, err = req.Context(ctx).Do(); err != nil {
 		return results, errors.WithStack(err)
 	}
 
@@ -66,8 +115,45 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 		maximum = len(resp.ManagedInstances)
 	}
 
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("located gcloud instance group manager")
+	}
+
 	for _, inst := range resp.ManagedInstances {
-		if ip := t.ip(c, project, zone, inst); len(ip) > 0 {
+		if ip := t.ip(c, project, inst, zones...); len(ip) > 0 {
+			results = append(results, fmt.Sprintf("%s:%d", ip, t.Port))
+
+			// 2 * maximum in case some are in a building state and to handle ip == current instance
+			if len(results) > maximum {
+				return results, nil
+			}
+		}
+	}
+	return results, nil
+}
+
+func (t GCloudTargetPool) standard(ctx context.Context, c *compute.Service, project string, zone string, createdBy string) (results []string, err error) {
+	var (
+		req  *compute.InstanceGroupManagersListManagedInstancesCall
+		resp *compute.InstanceGroupManagersListManagedInstancesResponse
+	)
+	req = c.InstanceGroupManagers.ListManagedInstances(project, zone, createdBy)
+
+	if resp, err = req.Context(ctx).Do(); err != nil {
+		return results, errors.WithStack(err)
+	}
+
+	maximum := 2 * t.Maximum
+	if maximum == 0 {
+		maximum = len(resp.ManagedInstances)
+	}
+
+	if envx.Boolean(false, bw.EnvLogsVerbose) {
+		log.Println("located gcloud instance group manager")
+	}
+
+	for _, inst := range resp.ManagedInstances {
+		if ip := t.ip(c, project, inst, zone); len(ip) > 0 {
 			results = append(results, fmt.Sprintf("%s:%d", ip, t.Port))
 
 			// 2 * maximum in case some are in a building state and to handle ip == current instance
@@ -80,23 +166,71 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 	return results, nil
 }
 
-func (t GCloudTargetPool) ip(c *compute.Service, project, zone string, mi *compute.ManagedInstance) string {
+func (t GCloudTargetPool) ip(c *compute.Service, project string, mi *compute.ManagedInstance, zones ...string) string {
 	var (
-		err      error
-		id       string
-		instance *compute.Instance
+		err error
 	)
 
-	if instance, err = c.Instances.Get(project, zone, strconv.FormatUint(mi.Id, 10)).Do(); err != nil {
-		log.Println("failed to retrieve instance", strconv.FormatUint(mi.Id, 10), id, err)
+	for _, zone := range zones {
+		var (
+			cause    error
+			instance *compute.Instance
+		)
+
+		if instance, cause = c.Instances.Get(project, zone, strconv.FormatUint(mi.Id, 10)).Do(); cause != nil {
+			err = errorsx.Compact(err, cause)
+			continue
+		}
+
+		if envx.Boolean(false, bw.EnvLogsVerbose) {
+			log.Println("gcloud peer info", spew.Sdump(instance))
+		}
+
+		// return first IP found.
+		for _, n := range instance.NetworkInterfaces {
+			return n.NetworkIP
+		}
+	}
+
+	if err != nil {
+		log.Println("failed to retrieve instance", strconv.FormatUint(mi.Id, 10), err)
+	}
+
+	return ""
+}
+
+func extractzones(policy *compute.DistributionPolicy) (res []string) {
+	if policy == nil {
+		return res
+	}
+
+	for _, z := range policy.Zones {
+		res = append(res, pathsuffix(z.Zone, "/"))
+	}
+
+	return res
+}
+
+func pathsuffix(s string, sep string) string {
+	var (
+		idx int
+	)
+
+	if idx = strings.LastIndex(s, sep); idx < 0 || idx > len(s)-1 {
 		return ""
 	}
 
-	// return first IP found.
-	for _, n := range instance.NetworkInterfaces {
-		return n.NetworkIP
+	return s[idx+1:]
+}
+
+func regionstring(s string, sep string) string {
+	var (
+		idx int
+	)
+
+	if idx = strings.LastIndex(s, sep); idx < 0 || idx > len(s)-1 {
+		return ""
 	}
 
-	// log.Println("response", spew.Sdump(instance))
-	return ""
+	return s[:idx]
 }
