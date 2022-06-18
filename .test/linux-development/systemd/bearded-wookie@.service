@@ -1,6 +1,7 @@
 [Unit]
 Description=bearded-wookie agent
 After=network.target
+Requires=bearded-wookie-pebble.service
 
 [Service]
 Type=simple

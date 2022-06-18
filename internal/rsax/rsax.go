@@ -9,6 +9,8 @@ import (
 	"encoding/pem"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/pkg/errors"
@@ -47,6 +49,10 @@ func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) 
 	}
 
 	if pkey, err = AutoDeterministic(seed); err != nil {
+		return nil, err
+	}
+
+	if err = os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return nil, err
 	}
 

@@ -225,16 +225,16 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 
 	dctx.MuxerListen(ctx.Context, bound...)
 
+	if err = daemons.Discovery(dctx); err != nil {
+		return errors.Wrap(err, "failed to initialize discovery service")
+	}
+
 	if dctx, err = daemons.Peered(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize peering service")
 	}
 
 	if dctx, err = daemons.Quorum(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum service")
-	}
-
-	if err = daemons.Discovery(dctx); err != nil {
-		return errors.Wrap(err, "failed to initialize discovery service")
 	}
 
 	if err = daemons.Autocert(dctx); err != nil {

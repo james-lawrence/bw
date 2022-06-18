@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/pkg/errors"
@@ -48,10 +49,12 @@ type file struct {
 }
 
 func (t *file) background() *file {
-	log.Println("loading", t.source)
+	ts := time.Now()
+	log.Printf("authorization load initiated %s\n", t.source)
 	if err := loadAuthorizedKeys(t.storage, t.source); err != nil {
 		log.Println("failed to load keys", err)
 	}
+	log.Printf("authorization load completed %s %s\n", t.source, time.Now().Sub(ts))
 
 	go func() {
 		for {

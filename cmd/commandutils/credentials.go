@@ -1,15 +1,21 @@
 package commandutils
 
 import (
+	"log"
+	"path/filepath"
+
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/md5x"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/notary"
 )
 
-func genkey(k []byte) (dpriv []byte, dpub []byte, err error) {
-	if dpriv, err = rsax.AutoDeterministic(k); err != nil {
+func genkey(config agent.Config, k []byte) (dpriv []byte, dpub []byte, err error) {
+	cachepath := filepath.Join(config.Root, bw.DirCache, "tokens", md5x.Digest(k))
+	if dpriv, err = rsax.CachedAutoDeterministic(k, cachepath); err != nil {
 		return dpriv, dpub, err
 	}
 
@@ -27,12 +33,15 @@ func Generatecredentials(config agent.Config, n notary.Composite) (ss notary.Sig
 		dpub  []byte
 	)
 
+	log.Println("generating credentials initiated")
+	defer log.Println("generating credentials completed")
+
 	if ring, err = config.Keyring(); err != nil {
 		return ss, err
 	}
 
 	for _, k := range ring.GetKeys() {
-		if _, dpub, err = genkey(k); err != nil {
+		if _, dpub, err = genkey(config, k); err != nil {
 			return ss, err
 		}
 
@@ -41,7 +50,7 @@ func Generatecredentials(config agent.Config, n notary.Composite) (ss notary.Sig
 		}
 	}
 
-	if dpriv, _, err = genkey(ring.GetPrimaryKey()); err != nil {
+	if dpriv, _, err = genkey(config, ring.GetPrimaryKey()); err != nil {
 		return ss, err
 	}
 
