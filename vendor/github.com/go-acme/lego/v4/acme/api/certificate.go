@@ -4,7 +4,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/go-acme/lego/v4/acme"
@@ -39,7 +39,7 @@ func (c *CertificateService) GetAll(certURL string, bundle bool) (map[string]*ac
 	certs := map[string]*acme.RawCertificate{certURL: cert}
 
 	// URLs of "alternate" link relation
-	// - https://tools.ietf.org/html/rfc8555#section-7.4.2
+	// - https://www.rfc-editor.org/rfc/rfc8555.html#section-7.4.2
 	alts := getLinks(headers, "alternate")
 
 	for _, alt := range alts {
@@ -71,7 +71,7 @@ func (c *CertificateService) get(certURL string, bundle bool) (*acme.RawCertific
 		return nil, nil, err
 	}
 
-	data, err := ioutil.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
+	data, err := io.ReadAll(http.MaxBytesReader(nil, resp.Body, maxBodySize))
 	if err != nil {
 		return nil, resp.Header, err
 	}
@@ -92,7 +92,7 @@ func (c *CertificateService) getCertificateChain(cert []byte, headers http.Heade
 
 	// The issuer certificate link may be supplied via an "up" link
 	// in the response headers of a new certificate.
-	// See https://tools.ietf.org/html/rfc8555#section-7.4.2
+	// See https://www.rfc-editor.org/rfc/rfc8555.html#section-7.4.2
 	up := getLink(headers, "up")
 
 	issuer, err := c.getIssuerFromLink(up)

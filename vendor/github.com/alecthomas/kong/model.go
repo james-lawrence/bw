@@ -7,8 +7,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // A Visitable component in the model.
@@ -257,6 +255,16 @@ func (v *Value) EnumMap() map[string]bool {
 	return out
 }
 
+// EnumSlice returns a slice of the enums in this value.
+func (v *Value) EnumSlice() []string {
+	parts := strings.Split(v.Enum, ",")
+	out := make([]string, len(parts))
+	for i, part := range parts {
+		out[i] = strings.TrimSpace(part)
+	}
+	return out
+}
+
 // ShortSummary returns a human-readable summary of the value, not including any placeholders/defaults.
 func (v *Value) ShortSummary() string {
 	if v.Flag != nil {
@@ -325,7 +333,7 @@ func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
 	}
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
-		return errors.Wrap(err, v.ShortSummary())
+		return fmt.Errorf("%s: %w", v.ShortSummary(), err)
 	}
 	v.Set = true
 	return nil

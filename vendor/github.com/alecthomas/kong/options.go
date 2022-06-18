@@ -1,6 +1,8 @@
 package kong
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/user"
@@ -8,8 +10,6 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 // An Option applies optional changes to the Kong application.
@@ -240,6 +240,21 @@ func ConfigureHelp(options HelpOptions) Option {
 	})
 }
 
+// AutoGroup automatically assigns groups to flags.
+func AutoGroup(format func(parent Visitable, flag *Flag) *Group) Option {
+	return PostBuild(func(kong *Kong) error {
+		parents := []Visitable{kong.Model}
+		return Visit(kong.Model, func(node Visitable, next Next) error {
+			if flag, ok := node.(*Flag); ok && flag.Group == nil {
+				flag.Group = format(parents[len(parents)-1], flag)
+			}
+			parents = append(parents, node)
+			defer func() { parents = parents[:len(parents)-1] }()
+			return next(nil)
+		})
+	})
+}
+
 // Groups associates `group` field tags with group metadata.
 //
 // This option is used to simplify Kong tags while providing
@@ -329,7 +344,7 @@ func IgnoreFields(regexes ...string) Option {
 
 			re, err := regexp.Compile(r)
 			if err != nil {
-				return errors.Wrap(err, "unable to compile regex")
+				return fmt.Errorf("unable to compile regex: %v", err)
 			}
 
 			k.ignoreFields = append(k.ignoreFields, re)
@@ -365,7 +380,7 @@ func Configuration(loader ConfigurationLoader, paths ...string) Option {
 
 			resolver, err := k.LoadConfig(path)
 			if err != nil {
-				return errors.Wrap(err, path)
+				return fmt.Errorf("%s: %v", path, err)
 			}
 			if resolver != nil {
 				k.resolvers = append(k.resolvers, resolver)
