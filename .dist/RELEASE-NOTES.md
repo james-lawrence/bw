@@ -1,3 +1,57 @@
+commit 99625b0eeb299689093df9c4ada8244c23f05082
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 13:40:28 2022 -0400
+
+    fix local direct connection
+
+commit 21689b8c18705f9eb1433f6b5bc780cc9ea0fe11
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 13:07:48 2022 -0400
+
+    fix debug command
+
+commit e9397804ac19f26e4256a1bc85cbc68a0665e6f0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 12:23:54 2022 -0400
+
+    update workspace assets
+
+commit f8bb5428823b4545fabfd28eee50d5c2ccb67705
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 12:14:51 2022 -0400
+
+    readme fixes
+
+commit 2cab06dde04653a5e22b107ecfccf85443ee0bee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 12:06:46 2022 -0400
+
+    update raft dependency
+
+commit b2a62e7d4b01d6aac1f15124e7cbe0d34a5d8dfa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 12:01:56 2022 -0400
+
+    upgrade dependencies
+
+commit 3e07d51e1ad910526680f0515c90c6b95420d6b9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 11:48:19 2022 -0400
+
+    more test fixes
+
+commit c7767ee15c476e841b95a749eacfcf3cd30485af
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 11:42:24 2022 -0400
+
+    test fixes
+
+commit 3ab969d74b8a4d39811ca1bc1e65fe7e4e0b5fbb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 05:50:28 2022 -0400
+
+    release 0.1.1655512542-79a6eb08
+
 commit 79a6eb0820cd77862b977ca6956d24f664873cb5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 20:35:42 2022 -0400
