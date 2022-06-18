@@ -1,8 +1,6 @@
 # cloud.google.com/go/compute v1.7.0
 ## explicit
 cloud.google.com/go/compute/metadata
-# contrib.go.opencensus.io/exporter/ocagent v0.4.12
-## explicit
 # github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 ## explicit
 github.com/0xAX/notificator
@@ -165,8 +163,6 @@ github.com/go-acme/lego/v4/platform/wait
 github.com/go-acme/lego/v4/providers/dns/gcloud
 github.com/go-acme/lego/v4/providers/dns/route53
 github.com/go-acme/lego/v4/registration
-# github.com/go-chi/chi v4.0.2+incompatible
-## explicit
 # github.com/godbus/dbus/v5 v5.0.4
 github.com/godbus/dbus/v5
 # github.com/gofrs/uuid v4.2.0+incompatible
@@ -259,10 +255,10 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/memberlist v0.3.1
 ## explicit
 github.com/hashicorp/memberlist
-# github.com/hashicorp/raft v1.3.5
+# github.com/hashicorp/raft v1.3.9
 ## explicit
 github.com/hashicorp/raft
-# github.com/hashicorp/raft-boltdb v0.0.0-20211202195631-7d34b9fb3f42
+# github.com/hashicorp/raft-boltdb v0.0.0-20220329195025-15018e9b97e0
 ## explicit
 github.com/hashicorp/raft-boltdb
 # github.com/hashicorp/vault/api v1.7.2
@@ -318,8 +314,6 @@ github.com/jmespath/go-jmespath
 # github.com/joho/godotenv v1.4.0
 ## explicit
 github.com/joho/godotenv
-# github.com/konsorten/go-windows-terminal-sequences v1.0.2
-## explicit
 # github.com/kylelemons/godebug v1.1.0
 ## explicit
 # github.com/logrusorgru/aurora v2.0.3+incompatible
@@ -416,8 +410,6 @@ github.com/subosito/gotenv
 ## explicit
 github.com/traefik/yaegi/interp
 github.com/traefik/yaegi/stdlib
-# github.com/urfave/cli v1.22.4
-## explicit
 # github.com/willabides/kongplete v0.3.0
 ## explicit
 github.com/willabides/kongplete
