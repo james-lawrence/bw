@@ -1,3 +1,15 @@
+commit 86fc28bf6c275cf81b5c214ec45e998a6959b312
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 15:46:50 2022 -0400
+
+    remove the auto environment makes the CLI clunky
+
+commit b15dbe267de3bce12254341aad11ececfb8974a9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 14:18:17 2022 -0400
+
+    release 0.1.1655576151-99625b0e
+
 commit 99625b0eeb299689093df9c4ada8244c23f05082
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jun 18 13:40:28 2022 -0400
