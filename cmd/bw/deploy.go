@@ -12,12 +12,11 @@ import (
 )
 
 type cmdDeploy struct {
-	Env      cmdDeployEnvironment        `cmd:"" name:"env" aliases:"deploy" help:"deploy to nodes within the cluster of the specified environment"`
-	Auto     cmdDeployEnvironmentDefault `cmd:"" name:"env-default" default:"true" help:"deploy to the default environment, used when no deploy command is specified"`
-	Locally  cmdDeployLocal              `cmd:"" name:"locally" aliases:"local" help:"deploy to the local system"`
-	Snapshot cmdDeploySnapshot           `cmd:"" name:"snapshot" help:"generate a deployment archive without uploading it anywhere"`
-	Redeploy cmdDeployRedeploy           `cmd:"" name:"redeploy" aliases:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
-	Cancel   cmdDeployCancel             `cmd:"" name:"cancel" help:"cancel any current deploy"`
+	Env      cmdDeployEnvironment `cmd:"" name:"env" aliases:"deploy" help:"deploy to nodes within the cluster of the specified environment"`
+	Locally  cmdDeployLocal       `cmd:"" name:"locally" aliases:"local" help:"deploy to the local system"`
+	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot" help:"generate a deployment archive without uploading it anywhere"`
+	Redeploy cmdDeployRedeploy    `cmd:"" name:"redeploy" aliases:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
+	Cancel   cmdDeployCancel      `cmd:"" name:"cancel" help:"cancel any current deploy"`
 }
 
 type DeployCluster struct {
