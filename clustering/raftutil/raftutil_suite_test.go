@@ -2,7 +2,7 @@ package raftutil_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"path/filepath"
@@ -18,7 +18,7 @@ import (
 
 func TestRaftutil(t *testing.T) {
 	log.SetFlags(log.Flags() | log.Lshortfile)
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Raftutil Suite")
 }

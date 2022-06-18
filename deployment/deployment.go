@@ -3,7 +3,7 @@ package deployment
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -85,7 +85,7 @@ func NewDeployContext(ctx context.Context, root string, p *agent.Peer, dopts *ag
 		ArchiveFile:   filepath.Join(root, bw.ArchiveFile),
 		MetadataFile:  filepath.Join(root, deployMetadataName),
 		LogFile:       filepath.Join(root, bw.DeployLog),
-		Log:           dlog{Logger: log.New(ioutil.Discard, "", 0)},
+		Log:           dlog{Logger: log.New(io.Discard, "", 0)},
 		Archive:       a,
 		DeployOptions: dopts,
 		dispatcher:    agentutil.LogDispatcher{},
@@ -131,7 +131,7 @@ func NewRemoteDeployContext(ctx context.Context, workdir string, p *agent.Peer, 
 		return _did, errors.WithMessage(err, "failed to create deployment directory")
 	}
 
-	logger = dlog{Logger: log.New(ioutil.Discard, "", 0)}
+	logger = dlog{Logger: log.New(io.Discard, "", 0)}
 	if !dopts.SilenceDeployLogs {
 		if logger, err = newLogger(id, root, fmt.Sprintf("[DEPLOY] [%s] ", id)); err != nil {
 			return _did, err

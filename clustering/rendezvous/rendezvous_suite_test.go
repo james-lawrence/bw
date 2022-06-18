@@ -1,7 +1,7 @@
 package rendezvous_test
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestRendezvous(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Rendezvous Suite")
 }

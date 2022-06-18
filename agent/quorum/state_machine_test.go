@@ -3,7 +3,7 @@ package quorum_test
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"log"
 	"runtime"
 
@@ -78,7 +78,7 @@ func newPeer(c Transcoder, name string, leader bool) (raft.Server, *raft.InmemTr
 		transport *raft.InmemTransport
 	)
 	config := raft.DefaultConfig()
-	config.LogOutput = ioutil.Discard
+	config.LogOutput = io.Discard
 	config.LocalID = raft.ServerID(name)
 	storage := raft.NewInmemStore()
 	snapshot := raft.NewInmemSnapshotStore()
@@ -147,22 +147,22 @@ var _ = Describe("StateMachine", func() {
 	DescribeTable("persisting state",
 		func(n int, messages ...*agent.Message) {
 			var (
-				decoded []agent.Message
+				decoded []*agent.Message
 			)
 			convert := func(c []*agent.Message) *agent.WAL {
 				return &agent.WAL{Messages: c}
 			}
 			protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).To(Succeed())
 			leader := awaitLeader(protocols...)
 			sm := NewMachine(
 				agent.NewPeer("node"),
 				leader,
 			)
 
-			Expect(sm.Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
+			Expect(sm.Dispatch(context.Background(), messages...)).To(Succeed())
 			snapshotfuture := leader.Snapshot()
-			Expect(snapshotfuture.Error()).ToNot(HaveOccurred())
+			Expect(snapshotfuture.Error()).To(Succeed())
 			_, ior, err := snapshotfuture.Open()
 			Expect(err).To(Succeed())
 			preamble := &agent.WALPreamble{}
@@ -175,7 +175,7 @@ var _ = Describe("StateMachine", func() {
 
 			Expect(
 				proto.Equal(
-					convert(agent.MessagesToPtr(decoded...)),
+					convert(decoded),
 					convert(messages[n:]),
 				),
 			).To(BeTrue())

@@ -1,7 +1,7 @@
 package shell_test
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -16,5 +16,5 @@ func TestShell(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 })

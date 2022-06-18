@@ -2,7 +2,7 @@ package agent_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 
 	"github.com/james-lawrence/bw/agent"
@@ -13,7 +13,7 @@ import (
 )
 
 func TestAgent(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Agent Suite")
 }

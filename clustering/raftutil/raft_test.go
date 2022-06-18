@@ -2,7 +2,7 @@ package raftutil_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"net"
@@ -33,7 +33,7 @@ func testRaftConfig() *raft.Config {
 	conf.CommitTimeout = 5 * time.Millisecond
 	conf.SnapshotThreshold = 100
 	conf.TrailingLogs = 10
-	conf.LogOutput = ioutil.Discard
+	conf.LogOutput = io.Discard
 
 	return conf
 }
@@ -196,7 +196,7 @@ func newPeer(ctx context.Context, tmpdir string, obs *raft.Observer, network *me
 		events.Bind(srv)
 	})
 
-	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(events), clustering.OptionLogOutput(ioutil.Discard))
+	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(events), clustering.OptionLogOutput(io.Discard))
 	Expect(err).ToNot(HaveOccurred())
 	_, err = clusteringtestutil.Connect(c, clusters(peers...)...)
 	Expect(err).ToNot(HaveOccurred())

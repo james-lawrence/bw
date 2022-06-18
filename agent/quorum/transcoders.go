@@ -116,9 +116,9 @@ func encodeProtoTo(dst io.Writer, m proto.Message) (err error) {
 	return nil
 }
 
-func encodeTo(dst io.Writer, messages ...agent.Message) (err error) {
+func encodeTo(dst io.Writer, messages ...*agent.Message) (err error) {
 	for _, m := range messages {
-		if err = encodeProtoTo(dst, &m); err != nil {
+		if err = encodeProtoTo(dst, m); err != nil {
 			return err
 		}
 	}
@@ -149,14 +149,14 @@ func Decode(src io.Reader, m proto.Message) (err error) {
 }
 
 // DecodeEvery reads all messages from the reader into an array
-func DecodeEvery(src io.Reader) (buf []agent.Message, err error) {
+func DecodeEvery(src io.Reader) (buf []*agent.Message, err error) {
 	for {
 		var decoded agent.Message
 		if err = Decode(src, &decoded); err != nil {
 			break
 		}
 
-		buf = append(buf, decoded)
+		buf = append(buf, &decoded)
 	}
 
 	if err != io.EOF {

@@ -1,7 +1,7 @@
 package grpcx
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"strconv"
 
@@ -9,9 +9,9 @@ import (
 )
 
 func NewLogger() grpclog.LoggerV2 {
-	errorW := ioutil.Discard
-	warningW := ioutil.Discard
-	infoW := ioutil.Discard
+	errorW := io.Discard
+	warningW := io.Discard
+	infoW := io.Discard
 
 	logLevel := os.Getenv("GRPC_GO_LOG_SEVERITY_LEVEL")
 	switch logLevel {

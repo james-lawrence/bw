@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/internal/x/contextx"
 
 	"github.com/hashicorp/raft"
@@ -14,8 +16,33 @@ import (
 )
 
 type passive struct {
+	failures uint64
 	protocol *Protocol
 	sgroup   *sync.WaitGroup
+}
+
+func (t passive) unstable() delayedTransition {
+	b := backoff.New(
+		backoff.Exponential(time.Second),
+		backoff.Jitter(0.25),
+		backoff.Maximum(time.Minute),
+	)
+
+	dup := t
+	atomic.AddUint64(&dup.failures, 1)
+	return delayedTransition{
+		next:     dup,
+		Duration: b.Backoff(int(dup.failures)),
+	}
+}
+
+func (t passive) stable() conditionTransition {
+	dup := t
+	atomic.SwapUint64(&dup.failures, 0)
+	return conditionTransition{
+		next: dup,
+		cond: dup.protocol.ClusterChange,
+	}
 }
 
 func (t passive) Update(c rendezvous) state {
@@ -25,16 +52,9 @@ func (t passive) Update(c rendezvous) state {
 		transport raft.Transport
 	)
 
-	unstable := delayedTransition{
-		next:     t,
-		Duration: time.Second,
-	}
-
+	unstable := t.unstable()
+	maintainState := t.stable()
 	quorum := t.protocol.isMember(c)
-	maintainState := conditionTransition{
-		next: t,
-		cond: t.protocol.ClusterChange,
-	}
 
 	if !quorum {
 		return maintainState

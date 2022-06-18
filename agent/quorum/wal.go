@@ -16,8 +16,9 @@ import (
 )
 
 // CommandToMessage ...
-func commandToMessage(cmd []byte) (m agent.Message, err error) {
-	return m, errors.WithStack(proto.Unmarshal(cmd, &m))
+func commandToMessage(cmd []byte) (_ *agent.Message, err error) {
+	var m agent.Message
+	return &m, errors.WithStack(proto.Unmarshal(cmd, &m))
 }
 
 // NewWAL ...
@@ -32,8 +33,9 @@ func NewWAL(c transcoder) WAL {
 }
 
 type innerstate struct {
-	ctx  TranscoderContext
-	logs []agent.Message
+	ctx       TranscoderContext
+	snapshots uint64
+	logs      []*agent.Message
 }
 
 // WAL for the quorum.
@@ -65,14 +67,14 @@ func (t *WAL) Apply(l *raft.Log) interface{} {
 func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 	var (
 		err error
-		m   agent.Message
+		m   *agent.Message
 	)
 
 	if m, err = commandToMessage(buf); err != nil {
 		return err
 	}
 
-	if err = t.c.Decode(ctx, &m); err != nil {
+	if err = t.c.Decode(ctx, m); err != nil {
 		return err
 	}
 
@@ -94,7 +96,7 @@ func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 // the FSM should be implemented in a fashion that allows for concurrent
 // updates while a snapshot is happening.
 func (t *WAL) Snapshot() (raft.FSMSnapshot, error) {
-	return &walSnapshot{wal: t, max: len(t.logs)}, nil
+	return &walSnapshot{wal: t, snapshot: atomic.AddUint64(&t.snapshots, 1), max: len(t.logs)}, nil
 }
 
 // Restore is used to restore an FSM from a snapshot. It is not called
@@ -117,7 +119,7 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	// reset the internal state of the write ahead log.
 	t.innerstate = innerstate{
 		ctx:  t.ctx,
-		logs: make([]agent.Message, 0, 128),
+		logs: make([]*agent.Message, 0, 128),
 	}
 
 	// read and discard version message, for future use.
@@ -143,6 +145,7 @@ func (t *WAL) advance(n int) {
 }
 
 type walSnapshot struct {
+	snapshot uint64
 	wal      *WAL
 	min, max int
 }
@@ -151,7 +154,7 @@ type walSnapshot struct {
 // and call sink.Close() when finished or call sink.Cancel() on error.
 func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 	var (
-		msg agent.Message
+		msg *agent.Message
 		i   int
 	)
 
@@ -187,5 +190,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 
 // Release is invoked when we are finished with the snapshot.
 func (t walSnapshot) Release() {
-	t.wal.advance(t.min)
+	if t.snapshot == t.wal.snapshots {
+		t.wal.advance(t.min)
+	}
 }

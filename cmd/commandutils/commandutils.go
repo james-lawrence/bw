@@ -4,6 +4,7 @@ package commandutils
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -225,7 +226,7 @@ func DebugLog(debug bool) *log.Logger {
 		return log.New(os.Stderr, log.Prefix(), log.Flags())
 	}
 
-	return log.New(ioutil.Discard, log.Prefix(), log.Flags())
+	return log.New(io.Discard, log.Prefix(), log.Flags())
 }
 
 func RaftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {

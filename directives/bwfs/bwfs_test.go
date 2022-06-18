@@ -1,6 +1,7 @@
 package bwfs_test
 
 import (
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -28,7 +29,7 @@ var _ = Describe("Bwfs", func() {
 			Expect(err).ToNot(HaveOccurred())
 		}
 
-		execer = New(log.New(ioutil.Discard, "TEST ", log.LstdFlags), ".fixtures")
+		execer = New(log.New(io.Discard, "TEST ", log.LstdFlags), ".fixtures")
 	})
 
 	AfterEach(func() {

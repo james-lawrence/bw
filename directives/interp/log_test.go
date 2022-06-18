@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"go/build"
-	"io/ioutil"
+	"io"
 	"log"
 	"strings"
 
@@ -23,7 +23,7 @@ var _ = Describe("log", func() {
 				Build:   build.Default,
 				Environ: []string{},
 				Exports: []yaegi.Exports{},
-				Log:     log.New(ioutil.Discard, "DISCARD", 0),
+				Log:     log.New(io.Discard, "DISCARD", 0),
 			}
 
 			buf := strings.NewReader(`package main

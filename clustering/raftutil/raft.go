@@ -4,7 +4,7 @@ package raftutil
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -322,7 +322,7 @@ func (t *Protocol) Overlay(c rendezvous, options ...ProtocolOption) {
 func defaultRaftConfig() *raft.Config {
 	conf := raft.DefaultConfig()
 
-	conf.LogOutput = ioutil.Discard
+	conf.LogOutput = io.Discard
 	if envx.Boolean(false, bw.EnvLogsRaft, bw.EnvLogsVerbose) {
 		conf.LogOutput = os.Stderr
 	}

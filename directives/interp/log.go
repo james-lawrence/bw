@@ -3,7 +3,6 @@ package interp
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"reflect"
 
@@ -13,7 +12,7 @@ import (
 // logfix overrides some basic logging, mainly changing the standard logger
 func logfix(std logger) (exported map[string]reflect.Value) {
 	if std == nil {
-		std = log.New(ioutil.Discard, "DISCARD", 0)
+		std = log.New(io.Discard, "DISCARD", 0)
 	}
 
 	exported = stdlib.Symbols["log"]

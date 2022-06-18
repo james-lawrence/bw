@@ -2,7 +2,7 @@ package ux_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"syscall"
 	"testing"
@@ -15,7 +15,7 @@ import (
 
 func TestUx(t *testing.T) {
 	go debugx.DumpOnSignal(context.Background(), syscall.SIGUSR2)
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "UX Suite")
 }

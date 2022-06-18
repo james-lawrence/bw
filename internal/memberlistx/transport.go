@@ -3,7 +3,7 @@ package memberlistx
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -82,7 +82,7 @@ func NewSWIMTransport(d dialer, options ...SWIMTransportOption) (*SWIMTransport,
 		dialer:   d,
 		packetCh: make(chan *memberlist.Packet),
 		streamCh: make(chan net.Conn),
-		logger:   log.New(ioutil.Discard, "", 0),
+		logger:   log.New(io.Discard, "", 0),
 	}
 
 	for _, opt := range options {

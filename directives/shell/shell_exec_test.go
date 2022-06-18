@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/user"
 	"time"
@@ -27,7 +27,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				os.Environ(),
 				"FOO=BAR",
 			),
-			output: ioutil.Discard,
+			output: io.Discard,
 		}
 		ginkgo.DescribeTable("Execute functions", func(ctx Context, err error, output string, c Exec) {
 			buf := bytes.NewBufferString("")

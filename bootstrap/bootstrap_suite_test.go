@@ -1,7 +1,7 @@
 package bootstrap_test
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"testing"
 
@@ -11,7 +11,7 @@ import (
 )
 
 func TestBootstrap(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bootstrap Suite")
 }

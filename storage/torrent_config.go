@@ -2,7 +2,7 @@ package storage
 
 import (
 	"crypto/sha256"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -56,7 +56,7 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		ClientConfig: torrent.NewDefaultClientConfig(),
 	}
 
-	c.ClientConfig.Logger = log.New(ioutil.Discard, "", 0)
+	c.ClientConfig.Logger = log.New(io.Discard, "", 0)
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
 		c.ClientConfig.Logger = log.New(os.Stderr, "TORRENT ", 0)
 		c.ClientConfig.Debug = log.New(os.Stderr, "TORRENT DEBUG ", 0)

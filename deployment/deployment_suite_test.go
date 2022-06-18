@@ -1,7 +1,7 @@
 package deployment_test
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 
 	"github.com/james-lawrence/bw/internal/x/testingx"
@@ -12,7 +12,7 @@ import (
 )
 
 func TestDeployment(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Deployment Suite")
 }

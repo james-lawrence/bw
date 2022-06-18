@@ -1,6 +1,7 @@
 package notary
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -24,7 +25,8 @@ var _ = Describe("newAutoSignerPath", func() {
 
 	It("should fail when unable to write to disk", func() {
 		tmp := testingx.TempDir()
-		os.RemoveAll(tmp)
+		fmt.Println("WAAT", tmp)
+		os.Chmod(tmp, 0400)
 		_, err := newAutoSignerPath(
 			filepath.Join(tmp, bw.DefaultNotaryKey),
 			"",

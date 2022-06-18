@@ -3,7 +3,7 @@ package interp_test
 import (
 	"context"
 	"go/build"
-	"io/ioutil"
+	"io"
 	"log"
 	"reflect"
 	"strings"
@@ -22,7 +22,7 @@ var _ = Describe("osfix", func() {
 			Build:   build.Default,
 			Environ: []string{},
 			Exports: []yaegi.Exports{},
-			Log:     log.New(ioutil.Discard, "DISCARD", 0),
+			Log:     log.New(io.Discard, "DISCARD", 0),
 		}
 
 		buf := strings.NewReader(`package main

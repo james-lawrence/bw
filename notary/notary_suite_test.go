@@ -2,7 +2,7 @@ package notary_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"log"
 	"testing"
 
@@ -17,7 +17,7 @@ import (
 )
 
 func TestNotary(t *testing.T) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Notary Suite")
 }
