@@ -38,20 +38,19 @@ var _ = Describe("Rebind", func() {
 
 		m := New()
 		l, err := net.Listen("tcp", ":0")
+		l1, err := m.Rebind("proto", l.Addr())
+		Expect(err).To(Succeed())
+		defer l1.Close()
+		l2, err := m.Rebind("proto", l.Addr())
+		Expect(err).To(Succeed())
+		defer l2.Close()
 		go func() {
+			go counter(l1, &c1)
+			go counter(l2, &c2)
 			Listen(context.Background(), m, l)
 		}()
 		Expect(err).To(Succeed())
 		defer l.Close()
-
-		l1, err := m.Rebind("proto", l.Addr())
-		Expect(err).To(Succeed())
-		defer l1.Close()
-		go counter(l1, &c1)
-		l2, err := m.Rebind("proto", l.Addr())
-		Expect(err).To(Succeed())
-		defer l2.Close()
-		go counter(l2, &c2)
 
 		d1 := NewDialer("proto", &net.Dialer{})
 
@@ -59,8 +58,8 @@ var _ = Describe("Rebind", func() {
 			conn, err := d1.DialContext(context.Background(), "tcp", l.Addr().String())
 			Expect(err).To(Succeed())
 			Expect(conn.Close()).To(Succeed())
-			Expect(atomic.LoadInt64(&c1)).To(Equal(int64(0)))
-			Expect(atomic.LoadInt64(&c2)).To(Equal(int64(i + 1)))
+			Eventually(atomic.LoadInt64(&c1)).Should(Equal(int64(0)))
+			Eventually(atomic.LoadInt64(&c2)).Should(Equal(int64(i + 1)))
 		}
 	})
 })
@@ -81,18 +80,17 @@ var _ = Describe("Dial and accept", func() {
 
 		m := New()
 		l, err := net.Listen("tcp", ":0")
+		l1, err := m.Bind("proto1", l.Addr())
+		Expect(err).To(Succeed())
+		l2, err := m.Bind("proto2", l.Addr())
+		Expect(err).To(Succeed())
 		go func() {
+			go counter(l1, &c1)
+			go counter(l2, &c2)
 			Listen(context.Background(), m, l)
 		}()
 		Expect(err).To(Succeed())
 		defer l.Close()
-
-		l1, err := m.Bind("proto1", l.Addr())
-		Expect(err).To(Succeed())
-		go counter(l1, &c1)
-		l2, err := m.Bind("proto2", l.Addr())
-		Expect(err).To(Succeed())
-		go counter(l2, &c2)
 
 		d1 := NewDialer("proto1", &net.Dialer{})
 
