@@ -1,3 +1,22 @@
+commit 79a6eb0820cd77862b977ca6956d24f664873cb5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 20:35:42 2022 -0400
+
+    implement the ability to peer to peer bootstrap before acme credentials
+    are gathered.
+
+commit fa35f3ccb83586abb6f84abba23b7c888ffed116
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 19:35:46 2022 -0400
+
+    notary slowness debugging
+
+commit 9433a8ee16b0e6b985be89078f9e984794b052f7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 17 18:40:34 2022 -0400
+
+    release 0.1.1655505505-39d2bf61
+
 commit 39d2bf616ea22c42d6fa5597cda51064f6c597c5
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 17 18:38:25 2022 -0400
