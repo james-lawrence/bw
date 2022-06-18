@@ -102,7 +102,7 @@ type CmdDaemonDebugQuorum struct {
 	Config
 }
 
-func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig agent.Config) (err error) {
+func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		d      dialers.Dialer
