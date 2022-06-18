@@ -1,0 +1,20 @@
+- command: "echo deployment id \'%bw.deploy.id%\'"
+- command: "echo work directory \'%bw.work.directory%\'"
+- command: "echo archive directory \'%bw.archive.directory%\'"
+- command: "echo cache directory \'%bw.cache.directory%\'"
+- command: "echo temp directory \'%bw.temp.directory%\'"
+- command: "echo hostname \'%bw.machine.hostname%\'"
+- command: "echo machine id \'%bw.machine.id%\'"
+- command: "echo domain \'%bw.machine.domain%\'"
+- command: "echo fqdn \'%bw.machine.fqdn%\'"
+- command: "echo user id \'%bw.user.id%\'"
+- command: "echo user name \'%bw.user.name%\'"
+- command: "echo user home directory \'%bw.user.home.directory%\'"
+- command: "echo "HELLO=WORLD" > %bw.temp.directory%/example.env"
+- command: "/usr/bin/sleep 15"
+  timeout: 0s   # timeout for the command
+  lenient: true # allows the command to fail.
+  environ: |
+    FOO=BAR
+  loadenv:
+    - "%bw.temp.directory%/example.env"
