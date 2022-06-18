@@ -1,18 +1,25 @@
 package agentcmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
+	"path/filepath"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/muxer"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/uxterm"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -104,11 +111,14 @@ type CmdDaemonDebugQuorum struct {
 
 func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	var (
-		conn   *grpc.ClientConn
-		d      dialers.Dialer
-		creds  credentials.TransportCredentials
-		quorum *agent.InfoResponse
-		config = aconfig.Clone()
+		ns        notary.Composite
+		ss        notary.Signer
+		tlsconfig *tls.Config
+		conn      *grpc.ClientConn
+		d         dialers.Dialer
+		creds     credentials.TransportCredentials
+		quorum    *agent.InfoResponse
+		config    = aconfig.Clone()
 	)
 	defer ctx.Shutdown()
 
@@ -116,14 +126,42 @@ func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (
 		return errors.Wrap(err, "unable to load configuration")
 	}
 
-	log.Println(spew.Sdump(config))
+	log.Println(spew.Sdump(config.Sanitize()))
+
+	local := config.Peer()
 
 	if creds, err = certificatecache.GRPCGenServer(config); err != nil {
 		return err
 	}
 
+	if tlsconfig, err = certificatecache.TLSGenServer(config); err != nil {
+		return err
+	}
+
+	if ns, err = notary.NewFromFile(filepath.Join(config.Root, bw.DirAuthorizations), t.Location); err != nil {
+		return err
+	}
+
+	if ss, err = commandutils.Generatecredentials(config, ns); err != nil {
+		return err
+	}
+
+	var di = discovery.ProxyDialer{
+		Proxy:  agent.P2PRawAddress(local),
+		Signer: ss,
+		Dialer: muxer.NewDialer(
+			bw.ProtocolProxy,
+			tlsx.NewDialer(tlsconfig),
+		),
+	}
+
+	log.Println("address", agent.RPCAddress(local))
 	d = dialers.NewDirect(
-		agent.RPCAddress(config.Peer()),
+		agent.RPCAddress(local),
+		dialers.WithMuxer(
+			di,
+			&net.TCPAddr{IP: net.ParseIP(local.Ip), Port: int(local.P2PPort)},
+		),
 		grpc.WithTransportCredentials(creds),
 	)
 

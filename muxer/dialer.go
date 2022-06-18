@@ -47,8 +47,8 @@ type Dialer struct {
 }
 
 func (t Dialer) Dial(network string, address string) (conn net.Conn, err error) {
-	// log.Printf("muxer.Dial initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
-	// defer log.Printf("muxer.Dial completed: %T %s %s %s\n", t.d, t.protocol, network, address)
+	log.Printf("muxer.Dial initiated: %T %s %s %s\n", t.d, t.protocol, network, address)
+	defer log.Printf("muxer.Dial completed: %T %s %s %s\n", t.d, t.protocol, network, address)
 	return t.DialContext(context.Background(), network, address)
 }
 
