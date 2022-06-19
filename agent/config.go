@@ -129,6 +129,16 @@ func (t ConfigClient) Dir() string {
 	return t.root
 }
 
+func (t ConfigClient) Deployspace() string {
+	cdir := t.DeployDataDir
+	if !filepath.IsAbs(cdir) {
+		cdir = filepath.Dir(bw.LocateDeployspace(filepath.Base(filepath.Dir(t.DeployDataDir))))
+		cdir = filepath.Join(cdir, t.DeployDataDir)
+	}
+
+	return cdir
+}
+
 // Partitioner ...
 func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionFromFloat64(t.Concurrency)

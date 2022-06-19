@@ -20,7 +20,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 	debugx.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
 	defer debugx.Println("done checking")
 
-	_, err := os.Stat(filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
+	_, err := os.Stat(filepath.Join(config.Deployspace(), deployment.RemoteDirName))
 	logx.MaybeLog(errors.Wrap(err, "stat failed"))
 	return err == nil
 }
@@ -31,14 +31,8 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		sctx    shell.Context
 		dctx    *deployment.DeployContext
 		environ []string
-		cdir    string
+		cdir    string = config.Deployspace()
 	)
-
-	cdir = config.DeployDataDir
-	if !filepath.IsAbs(cdir) {
-		cdir = filepath.Dir(bw.LocateDeployspace(filepath.Base(filepath.Dir(config.DeployDataDir))))
-		cdir = filepath.Join(cdir, config.DeployDataDir)
-	}
 
 	if err = ioutil.WriteFile(filepath.Join(cdir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err

@@ -122,12 +122,13 @@ func Into(ctx *Context) error {
 
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
-	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	deployspace := config.Deployspace()
+	if err = ioutil.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
 	if _, err := os.Stat(filepath.Join(config.Dir(), bw.AuthKeysFile)); !os.IsNotExist(err) {
-		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.AuthKeysFile)); err != nil {
+		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(deployspace, bw.AuthKeysFile)); err != nil {
 			return err
 		}
 	}
@@ -140,7 +141,7 @@ func Into(ctx *Context) error {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = archive.Pack(dst, config.DeployDataDir); err != nil {
+	if err = archive.Pack(dst, deployspace); err != nil {
 		return err
 	}
 
