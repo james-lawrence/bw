@@ -139,6 +139,10 @@ func (t ConfigClient) Deployspace() string {
 	return cdir
 }
 
+func (t ConfigClient) WorkDir() string {
+	return filepath.Dir(filepath.Dir(t.Dir()))
+}
+
 // Partitioner ...
 func (t ConfigClient) Partitioner() (_ bw.Partitioner) {
 	return bw.PartitionFromFloat64(t.Concurrency)
