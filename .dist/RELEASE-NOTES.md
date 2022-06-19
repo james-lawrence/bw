@@ -1,3 +1,39 @@
+commit 3b6f901d1e08c3539825fa271b94f3912ecdca15
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 19 15:25:57 2022 -0400
+
+    fix client deploy deadlock when remote deploy request fails.
+
+commit 00b42631f10a793c585c52406548cb17d34e54ad
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 19 13:32:17 2022 -0400
+
+    when dispatch fails prod cluster state
+
+commit e6748d7553ae5d1270997be82c9edcd3748d371d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 19 13:03:48 2022 -0400
+
+    more work dir fixes
+
+commit fc920c6dc45c9b734cd9ee1e87e1abf3bae2ecc7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 19 12:38:29 2022 -0400
+
+    more fixes to correctly detecting deploy spaces
+
+commit ac51f9c28596d6c7e525750e14ce71f478081bf3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 19 12:27:10 2022 -0400
+
+    ensure we always get the correct deployspace directory for local directives
+
+commit 3f9c9398ef6b8c548194c8b2413490305b86b23d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 18 16:19:17 2022 -0400
+
+    release 0.1.1655581610-86fc28bf
+
 commit 86fc28bf6c275cf81b5c214ec45e998a6959b312
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jun 18 15:46:50 2022 -0400
