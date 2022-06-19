@@ -2,13 +2,14 @@ package quorum
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // NewProxyMachine stores the state of the cluster.
@@ -45,7 +46,7 @@ func (t *ProxyMachine) leader() (peader *agent.Peer, err error) {
 		return p, nil
 	}
 
-	return nil, errors.New("failed to locate leader")
+	return nil, status.Error(codes.Unavailable, "failed to locate leader")
 }
 
 // DialLeader dials the leader using the given dialer.
