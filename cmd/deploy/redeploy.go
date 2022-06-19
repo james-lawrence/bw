@@ -85,7 +85,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	client = agent.NewDeployConn(conn)
 
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, events)
+	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, local.Peer, events)
 
 	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
 	go func() {
@@ -128,8 +128,8 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.DeployTimeout),
-		IgnoreFailures:    ctx.IgnoreFailures,
-		SilenceDeployLogs: ctx.SilenceLogs,
+		IgnoreFailures:    ctx.Lenient,
+		SilenceDeployLogs: ctx.Silent,
 	}
 
 	if len(peers) == 0 && !ctx.AllowEmpty {

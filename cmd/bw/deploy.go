@@ -49,17 +49,17 @@ func (t cmdDeployEnvironmentDefault) Run(ctx *cmdopts.Global) error {
 	}
 
 	return deploy.Into(&deploy.Context{
-		Context:        ctx.Context,
-		CancelFunc:     ctx.Shutdown,
-		WaitGroup:      ctx.Cleanup,
-		Environment:    bw.DefaultEnvironmentName,
-		Concurrency:    t.Concurrency,
-		Insecure:       t.Insecure,
-		IgnoreFailures: t.Lenient,
-		SilenceLogs:    t.Silent,
-		Canary:         t.Canary,
-		Filter:         deployment.Or(filters...),
-		AllowEmpty:     len(filters) == 0,
+		Context:     ctx.Context,
+		CancelFunc:  ctx.Shutdown,
+		WaitGroup:   ctx.Cleanup,
+		Environment: bw.DefaultEnvironmentName,
+		Concurrency: t.Concurrency,
+		Insecure:    t.Insecure,
+		Lenient:     t.Lenient,
+		Silent:      t.Silent,
+		Canary:      t.Canary,
+		Filter:      deployment.Or(filters...),
+		AllowEmpty:  len(filters) == 0,
 	})
 }
 
@@ -84,17 +84,17 @@ func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 	}
 
 	return deploy.Into(&deploy.Context{
-		Context:        ctx.Context,
-		CancelFunc:     ctx.Shutdown,
-		WaitGroup:      ctx.Cleanup,
-		Environment:    t.Environment,
-		Concurrency:    t.Concurrency,
-		Insecure:       t.Insecure,
-		IgnoreFailures: t.Lenient,
-		SilenceLogs:    t.Silent,
-		Canary:         t.Canary,
-		Filter:         deployment.Or(filters...),
-		AllowEmpty:     len(filters) == 0,
+		Context:     ctx.Context,
+		CancelFunc:  ctx.Shutdown,
+		WaitGroup:   ctx.Cleanup,
+		Environment: t.Environment,
+		Concurrency: t.Concurrency,
+		Insecure:    t.Insecure,
+		Lenient:     t.Lenient,
+		Silent:      t.Silent,
+		Canary:      t.Canary,
+		Filter:      deployment.Or(filters...),
+		AllowEmpty:  len(filters) == 0,
 	})
 }
 
@@ -120,17 +120,17 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 	}
 
 	return deploy.Redeploy(&deploy.Context{
-		Context:        ctx.Context,
-		CancelFunc:     ctx.Shutdown,
-		WaitGroup:      ctx.Cleanup,
-		Environment:    t.Environment,
-		Concurrency:    t.Concurrency,
-		Insecure:       t.Insecure,
-		IgnoreFailures: t.Lenient,
-		SilenceLogs:    t.Silent,
-		Canary:         t.Canary,
-		Filter:         deployment.Or(filters...),
-		AllowEmpty:     len(filters) == 0,
+		Context:     ctx.Context,
+		CancelFunc:  ctx.Shutdown,
+		WaitGroup:   ctx.Cleanup,
+		Environment: t.Environment,
+		Concurrency: t.Concurrency,
+		Insecure:    t.Insecure,
+		Lenient:     t.Lenient,
+		Silent:      t.Silent,
+		Canary:      t.Canary,
+		Filter:      deployment.Or(filters...),
+		AllowEmpty:  len(filters) == 0,
 	}, t.DeploymentID)
 }
 

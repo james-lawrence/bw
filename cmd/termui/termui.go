@@ -9,10 +9,10 @@ import (
 	"github.com/james-lawrence/bw/ux"
 )
 
-func New(ctx context.Context, shutdown context.CancelFunc, wg *sync.WaitGroup, c dialers.Defaults, events chan *agent.Message) {
+func New(ctx context.Context, shutdown context.CancelFunc, wg *sync.WaitGroup, c dialers.Defaults, local *agent.Peer, events chan *agent.Message) {
 	wg.Add(1)
 	go func() {
-		ux.Deploy(ctx, wg, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(c)))
+		ux.Deploy(ctx, wg, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, c)))
 		shutdown()
 	}()
 }

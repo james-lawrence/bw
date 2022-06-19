@@ -65,17 +65,19 @@ type FailureDisplayNoop struct{}
 func (t FailureDisplayNoop) Display(cState, *agent.Message) {}
 
 // NewFailureDisplayPrint ...
-func NewFailureDisplayPrint(d dialers.Defaults) FailureDisplayPrint {
+func NewFailureDisplayPrint(local *agent.Peer, d dialers.Defaults) FailureDisplayPrint {
 	return FailureDisplayPrint{
-		n: new(int64),
-		d: d,
+		local: local,
+		n:     new(int64),
+		d:     d,
 	}
 }
 
 // FailureDisplayPrint prints the logs for each unique error encountered
 type FailureDisplayPrint struct {
-	n *int64
-	d dialers.Defaults
+	local *agent.Peer
+	n     *int64
+	d     dialers.Defaults
 }
 
 // Display prints the logs for each message
@@ -88,6 +90,10 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 
 	if m.Peer == nil {
 		log.Println("unexpected nil peer skipping", spew.Sdump(m))
+		return
+	}
+
+	if m.Peer.Name == t.local.Name {
 		return
 	}
 

@@ -92,7 +92,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 	events := make(chan *agent.Message, 100)
 
 	ctx.Cleanup.Add(1)
-	go ux.Logging(ctx.Context, ctx.Cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(qd)))
+	go ux.Logging(ctx.Context, ctx.Cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)))
 	log.Println("awaiting events")
 	agentutil.WatchClusterEvents(ctx.Context, qd, local.Peer, events)
 

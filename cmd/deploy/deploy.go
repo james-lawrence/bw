@@ -33,14 +33,15 @@ import (
 )
 
 type Context struct {
-	Environment    string
-	Concurrency    int64
-	Filter         deployment.Filter
-	Insecure       bool
-	IgnoreFailures bool
-	SilenceLogs    bool
-	AllowEmpty     bool
-	Canary         bool
+	Environment string
+	Concurrency int64
+	Filter      deployment.Filter
+	Insecure    bool
+	Lenient     bool
+	Silent      bool
+	AllowEmpty  bool
+	Canary      bool
+	Debug       bool
 	context.Context
 	context.CancelFunc
 	*sync.WaitGroup
@@ -106,7 +107,7 @@ func Into(ctx *Context) error {
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
+	if conn, err = qd.DialContext(ctx.Context, grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)); err != nil {
 		return errors.Wrap(err, "unable to create a connection")
 	}
 
@@ -117,7 +118,7 @@ func Into(ctx *Context) error {
 
 	client = agent.NewDeployConn(conn)
 
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, events)
+	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, local, events)
 	events <- agentutil.LogEvent(local, "connected to cluster")
 
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
@@ -190,8 +191,8 @@ func Into(ctx *Context) error {
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.DeployTimeout),
-		IgnoreFailures:    ctx.IgnoreFailures,
-		SilenceDeployLogs: ctx.SilenceLogs,
+		IgnoreFailures:    ctx.Lenient,
+		SilenceDeployLogs: ctx.Silent,
 	}
 
 	if len(peers) == 0 && !ctx.AllowEmpty {
@@ -200,9 +201,11 @@ func Into(ctx *Context) error {
 		return cause
 	}
 
-	events <- agentutil.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
+	events <- agentutil.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
 	if cause := client.RemoteDeploy(ctx.Context, &dopts, &darchive, peers...); cause != nil {
-		events <- agentutil.LogEvent(local, fmt.Sprintln("deployment failed", cause))
+		events <- agentutil.LogError(local, errors.Wrap(cause, "deploy failed"))
+		events <- agentutil.DeployEventFailed(local, &dopts, &darchive, cause)
+		events <- agentutil.DeployCommand(local, agentutil.DeployCommandFailed("", &darchive, &dopts))
 	}
 
 	return err

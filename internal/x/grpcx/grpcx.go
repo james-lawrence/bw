@@ -50,15 +50,15 @@ func DebugStreamIntercepter(srv interface{}, ss grpc.ServerStream, info *grpc.St
 
 // DebugClientIntercepter prints each rpc invoked.
 func DebugClientIntercepter(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-	log.Printf("%s initiated\n", method)
-	defer log.Printf("%s completed\n", method)
+	log.Printf("%s/%s initiated\n", cc.Target(), method)
+	defer log.Printf("%s/%s completed\n", cc.Target(), method)
 	return invoker(ctx, method, req, reply, cc, opts...)
 }
 
 // DebugClientStreamIntercepter prints each stream invocation.
 func DebugClientStreamIntercepter(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-	log.Printf("stream %s initiated\n", method)
-	defer log.Printf("stream %s completed\n", method)
+	log.Printf("%s/%s stream initiated\n", cc.Target(), method)
+	defer log.Printf("%s/%s stream completed\n", cc.Target(), method)
 	return streamer(ctx, desc, cc, method, opts...)
 }
 

@@ -59,7 +59,7 @@ func Cancel(ctx *Context) (err error) {
 
 	client = agent.NewDeployConn(conn)
 
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, events)
+	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, local, events)
 
 	events <- agentutil.LogEvent(local, "connected to cluster")
 	go func() {

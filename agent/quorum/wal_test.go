@@ -113,7 +113,7 @@ var _ = DescribeTable(
 	Entry(
 		"failed deployment",
 		agentutil.DeployCommand(p, agentutil.DeployCommandBegin("foo", nil, nil)),
-		agentutil.DeployCommand(p, agentutil.DeployCommandFailed()),
+		agentutil.DeployCommand(p, agentutil.DeployCommandFailedQuick()),
 	),
 	Entry(
 		"cancelled deployment",
@@ -137,7 +137,7 @@ var _ = DescribeTable(
 	Entry(
 		"sequential failed, cancelled deployment",
 		agentutil.DeployCommand(p, agentutil.DeployCommandBegin("foo", nil, nil)),
-		agentutil.DeployCommand(p, agentutil.DeployCommandFailed()),
+		agentutil.DeployCommand(p, agentutil.DeployCommandFailedQuick()),
 		agentutil.DeployCommand(p, agentutil.DeployCommandBegin("foo", nil, nil)),
 		agentutil.DeployCommand(p, agentutil.DeployCommandCancel("bar")),
 		agentutil.DeployCommand(p, agentutil.DeployCommandBegin("foo", nil, nil)),

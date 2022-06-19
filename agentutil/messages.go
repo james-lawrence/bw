@@ -165,10 +165,20 @@ func DeployCommandDone() *agent.DeployCommand {
 	}
 }
 
-// DeployCommandFailed ...
-func DeployCommandFailed() *agent.DeployCommand {
+// DeployCommandFailedQuick ...
+func DeployCommandFailedQuick() *agent.DeployCommand {
 	return &agent.DeployCommand{
 		Command: agent.DeployCommand_Failed,
+	}
+}
+
+// DeployCommandFailed ...
+func DeployCommandFailed(by string, a *agent.Archive, opts *agent.DeployOptions) *agent.DeployCommand {
+	return &agent.DeployCommand{
+		Command:   agent.DeployCommand_Failed,
+		Initiator: by,
+		Archive:   a,
+		Options:   opts,
 	}
 }
 
@@ -194,16 +204,20 @@ func DeployCommand(p *agent.Peer, dc *agent.DeployCommand) *agent.Message {
 
 // DeployEvent represents a deploy being triggered.
 func DeployEvent(p *agent.Peer, d *agent.Deploy) *agent.Message {
-	return deployEvent(d.Stage, p, deployToOptions(d), deployToArchive(d))
+	return deployEvent(d.Stage, p, deployToOptions(d), deployToArchive(d), "")
 }
 
-func deployEvent(t agent.Deploy_Stage, p *agent.Peer, di *agent.DeployOptions, a *agent.Archive) *agent.Message {
+func DeployEventFailed(p *agent.Peer, di *agent.DeployOptions, a *agent.Archive, cause error) *agent.Message {
+	return deployEvent(agent.Deploy_Failed, p, di, a, cause.Error())
+}
+
+func deployEvent(t agent.Deploy_Stage, p *agent.Peer, di *agent.DeployOptions, a *agent.Archive, err string) *agent.Message {
 	return &agent.Message{
 		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  agent.Message_DeployEvent,
 		Peer:  p,
 		Ts:    time.Now().Unix(),
-		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Options: di, Archive: a}},
+		Event: &agent.Message_Deploy{Deploy: &agent.Deploy{Stage: t, Options: di, Archive: a, Error: err}},
 	}
 }
 
