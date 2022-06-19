@@ -34,11 +34,17 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		cdir    string
 	)
 
-	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	cdir = config.DeployDataDir
+	if !filepath.IsAbs(cdir) {
+		cdir = filepath.Dir(bw.LocateDeployspace(filepath.Base(filepath.Dir(config.DeployDataDir))))
+		cdir = filepath.Join(cdir, config.DeployDataDir)
+	}
+
+	if err = ioutil.WriteFile(filepath.Join(cdir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
-	if environ, err = shell.EnvironFromFile(filepath.Join(config.DeployDataDir, bw.EnvFile)); err != nil {
+	if environ, err = shell.EnvironFromFile(filepath.Join(cdir, bw.EnvFile)); err != nil {
 		dctx.Done(err)
 		return
 	}
@@ -46,10 +52,6 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 	local := NewClientPeer()
 
 	if sctx, err = shell.DefaultContext(); err != nil {
-		return err
-	}
-
-	if cdir, err = filepath.Abs(config.DeployDataDir); err != nil {
 		return err
 	}
 
