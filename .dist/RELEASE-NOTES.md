@@ -1,3 +1,23 @@
+commit 1b88e825948f9db1186cf1e974fef139ae226a79
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 20 15:13:53 2022 -0400
+
+    add insecure flag to deploy cancel
+
+commit 43c0c4be36d9d4900e0753de1bb5363b2c5f9dff
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 20 15:12:38 2022 -0400
+
+    implement systemd.RemainActive utility function.
+    
+    allows for ensuring a systemd service isn't in a crashing/restart cycle.
+
+commit 211f83c757451387230055f58716ddaf4afc3592
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 20 09:57:56 2022 -0400
+
+    release 0.1.1655733123-c4e5b4c4
+
 commit c4e5b4c4aebbe6feba1129afb223217742b2653d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jun 20 09:52:03 2022 -0400
