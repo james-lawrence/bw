@@ -44,18 +44,21 @@ func logfix(std logger) (exported map[string]reflect.Value) {
 	})
 
 	exported["Fatal"] = reflect.ValueOf(func(v ...interface{}) {
-		std.Output(2, fmt.Sprint(v...))
-		panic(1)
+		msg := fmt.Sprint(v...)
+		std.Output(2, msg)
+		panic(msg)
 	})
 
 	exported["Fatalf"] = reflect.ValueOf(func(format string, v ...interface{}) {
-		std.Output(2, fmt.Sprintf(format, v...))
-		panic(1)
+		msg := fmt.Sprintf(format, v...)
+		std.Output(2, msg)
+		panic(msg)
 	})
 
 	exported["Fatalln"] = reflect.ValueOf(func(v ...interface{}) {
-		std.Output(2, fmt.Sprintln(v...))
-		panic(1)
+		msg := fmt.Sprintln(v...)
+		std.Output(2, msg)
+		panic(msg)
 	})
 
 	return exported

@@ -3,5 +3,4 @@ discovery: bearded-wookie.lan:2000
 deployDataDir: ".test/.bw"
 concurrency: 2
 servername: "bearded-wookie.lan"
-ca: "${HOME}/.config/bearded-wookie-pebble/certs/pebble.pem"
 deployTimeout: 30s

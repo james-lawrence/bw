@@ -7,6 +7,7 @@ deployments. it attempts to support fully the stdlib minus unsafe - see [yaegi](
 - access to the BW environment variables.
 - access to aws elbv2 attach/detach (see AWSELBv2.md).
 - access to the BW shell, identical functionality to the bwcmd files.
+- systemd unit monitoring and restart/reload/stopping.
 
 ### changes to the runtime
 - `os.Getwd()` is overridden to be the root of unpacked archive.

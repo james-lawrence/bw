@@ -17,6 +17,15 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	// sctx, scancel := context.WithTimeout(ctx, 2*time.Second)
+	// defer scancel()
+	// if err := systemdu.StartUnit(sctx, "wds-ssh-agent.service"); err != nil {
+	// 	log.Fatalln(err)
+	// }
+
+	// if err := systemdu.RemainActive(sctx, "wds-ssh-agent.service"); err != nil {
+	// 	log.Fatalln(err)
+	// }
 	// if err := elb.Restart(ctx, restart); err != nil {
 	// 	log.Fatalln(err)
 	// }

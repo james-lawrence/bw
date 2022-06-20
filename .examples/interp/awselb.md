@@ -26,8 +26,8 @@ func main() {
       "systemd restart foo.service", // the command to be executed.
       shell.Environ("Foo=Bar", "Biz=Baz"), // supply additional environment variables.
       shell.Lenient, // allow the command to fail, this means run will always return nil
-      shell.Timeout(time.Second), // if the ctx's timeout is far longer than you want the command to execute for
-      // use shell.Timeout to specify maximum time.
+      shell.Timeout(time.Second), // if the ctx's timeout is far longer than you want
+      // the command to execute for use shell.Timeout to specify maximum time.
     )
   })
 

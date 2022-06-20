@@ -91,7 +91,7 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 	}
 
 	if err = panicSafe(func() error { return eval(ctx, i, formatted) }); err != nil {
-		return errors.Wrap(err, "failed to compile")
+		return errors.Wrap(err, "interpreter failed")
 	}
 
 	return nil
