@@ -22,6 +22,7 @@ type cmdDeploy struct {
 type DeployCluster struct {
 	Insecure    bool             `help:"skip tls verification"`
 	Silent      bool             `help:"prevent logs from being generated during a deploy"`
+	Debug       bool             `help:"leaves artifacts on the filesystem for debugging"`
 	Lenient     bool             `name:"ignore-failures" help:"ignore failed deploys"`
 	Canary      bool             `name:"canary" help:"deploy to the canary server" default:"false"`
 	Names       []*regexp.Regexp `name:"name" help:"regex to match names against"`
@@ -135,8 +136,8 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeployLocal struct {
+	DeployCluster
 	cmdopts.BeardedWookieEnv
-	Debug bool `help:"leaves artifacts on the filesystem for debugging"`
 }
 
 func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
@@ -144,6 +145,7 @@ func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Insecure:    t.Insecure,
 		Environment: t.Environment,
 	}, t.Debug)
 }
@@ -167,6 +169,7 @@ func (t cmdDeploySnapshot) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeployCancel struct {
+	DeployCluster
 	cmdopts.BeardedWookieEnv
 }
 
@@ -176,5 +179,6 @@ func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
 		Environment: t.Environment,
+		Insecure:    t.Insecure,
 	})
 }
