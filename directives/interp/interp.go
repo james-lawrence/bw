@@ -61,14 +61,15 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 	}
 
 	i.Use(interp.Exports{
-		"os":                 osfix(t.WorkingDirectory), // fixes os.Exit to prevent complete destruction of the program.
-		"log":                logfix(t.Log),
-		"context":            contextfix(ctx),
-		"bw/interp/shell":    exportShell(t.ShellContext),
-		"bw/interp/env":      exportEnviron(t.Environ...),
-		"bw/interp/envx":     exportEnvx(),
-		"bw/interp/aws/elb":  elb(),
-		"bw/interp/aws/elb2": elb2(),
+		"os":                          osfix(t.WorkingDirectory), // fixes os.Exit to prevent complete destruction of the program.
+		"log":                         logfix(t.Log),
+		"context":                     contextfix(ctx),
+		"bw/interp/shell":             exportShell(t.ShellContext),
+		"bw/interp/env":               exportEnviron(t.Environ...),
+		"bw/interp/envx":              exportEnvx(),
+		"bw/interp/aws/elb":           elb(),
+		"bw/interp/aws/elb2":          elb2(),
+		"bw/interp/gcloud/targetpool": gcloudtargetpool(),
 	})
 
 	if conn, exports, err := systemd.Export(); err == nil {

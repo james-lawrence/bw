@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/gcloudx"
 	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
@@ -47,14 +47,8 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 		return results, errors.WithStack(err)
 	}
 
-	if createdBy, err = metadata.InstanceAttributeValue("created-by"); err != nil {
-		return results, errors.WithStack(err)
-	}
-
-	if r := pathsuffix(createdBy, "/"); r == "" {
-		return results, errors.New("invalid created by")
-	} else {
-		createdBy = r
+	if createdBy, err = gcloudx.InstanceGroupManagerName(); err != nil {
+		return results, err
 	}
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
@@ -94,7 +88,7 @@ func (t GCloudTargetPool) region(ctx context.Context, c *compute.Service, projec
 		req    *compute.RegionInstanceGroupManagersListManagedInstancesCall
 		resp   *compute.RegionInstanceGroupManagersListInstancesResponse
 	)
-	if prefix := regionstring(zone, "-"); prefix == "" {
+	if prefix := gcloudx.ZonalRegion(zone, "-"); prefix == "" {
 		log.Println("cannot convert zone to region", zone)
 		return results, nil
 	} else {
@@ -105,7 +99,7 @@ func (t GCloudTargetPool) region(ctx context.Context, c *compute.Service, projec
 		return results, errors.WithStack(err)
 	}
 
-	zones := extractzones(igresp.DistributionPolicy)
+	zones := gcloudx.DistributionPolicyZones(igresp.DistributionPolicy)
 	req = c.RegionInstanceGroupManagers.ListManagedInstances(project, region, createdBy)
 
 	if resp, err = req.Context(ctx).Do(); err != nil {
@@ -199,40 +193,4 @@ func (t GCloudTargetPool) ip(c *compute.Service, project string, mi *compute.Man
 	}
 
 	return ""
-}
-
-func extractzones(policy *compute.DistributionPolicy) (res []string) {
-	if policy == nil {
-		return res
-	}
-
-	for _, z := range policy.Zones {
-		res = append(res, pathsuffix(z.Zone, "/"))
-	}
-
-	return res
-}
-
-func pathsuffix(s string, sep string) string {
-	var (
-		idx int
-	)
-
-	if idx = strings.LastIndex(s, sep); idx < 0 || idx > len(s)-1 {
-		return ""
-	}
-
-	return s[idx+1:]
-}
-
-func regionstring(s string, sep string) string {
-	var (
-		idx int
-	)
-
-	if idx = strings.LastIndex(s, sep); idx < 0 || idx > len(s)-1 {
-		return ""
-	}
-
-	return s[:idx]
 }
