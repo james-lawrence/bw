@@ -1,3 +1,15 @@
+commit ca7ff6459e68f8106d173dde2689cb301a3a7011
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 19:19:23 2022 -0400
+
+    fix InstanceGroupManagerName
+
+commit 6712d28ecbc43352cb49d8ff85edb13ae180e940
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 20 15:16:11 2022 -0400
+
+    release 0.1.1655752433-1b88e825
+
 commit 1b88e825948f9db1186cf1e974fef139ae226a79
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jun 20 15:13:53 2022 -0400
