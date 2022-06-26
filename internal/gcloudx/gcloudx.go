@@ -15,6 +15,8 @@ func InstanceGroupManagerName() (createdBy string, err error) {
 
 	if r := PathSuffix(createdBy, "/"); r == "" {
 		return "", errors.New("unable to extract instance group manager name from path")
+	} else {
+		createdBy = r
 	}
 
 	return createdBy, nil
