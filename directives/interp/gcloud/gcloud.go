@@ -74,6 +74,8 @@ func targetPools(ctx context.Context) (_ []string, err error) {
 		return targetPools, err
 	}
 
+	log.Println("instance manager", createdBy)
+
 	if tmp, err = igmTargetPools(ctx, c, project, zone, createdBy); err != nil {
 		return targetPools, err
 	} else {
