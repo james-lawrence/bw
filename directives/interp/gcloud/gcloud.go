@@ -50,7 +50,6 @@ func targetPools(ctx context.Context) (_ []string, err error) {
 		project     string
 		zone        string
 		createdBy   string
-		tmp         []string
 		targetPools []string
 	)
 
@@ -74,21 +73,21 @@ func targetPools(ctx context.Context) (_ []string, err error) {
 		return targetPools, err
 	}
 
-	log.Println("instance manager", createdBy)
-
-	if tmp, err = igmTargetPools(ctx, c, project, zone, createdBy); err != nil {
-		return targetPools, err
+	if tmp, cause := igmTargetPools(ctx, c, project, zone, createdBy); cause != nil {
+		err = cause
 	} else {
+		err = nil
 		targetPools = append(targetPools, tmp...)
 	}
 
-	if tmp, err = rigmTargetPools(ctx, c, project, zone, createdBy); err != nil {
-		return targetPools, err
+	if tmp, cause := rigmTargetPools(ctx, c, project, zone, createdBy); cause != nil {
+		err = cause
 	} else {
+		err = nil
 		targetPools = append(targetPools, tmp...)
 	}
 
-	return targetPools, nil
+	return targetPools, err
 }
 
 func igmTargetPools(ctx context.Context, c *compute.Service, project, zone, createdBy string) (_ []string, err error) {
