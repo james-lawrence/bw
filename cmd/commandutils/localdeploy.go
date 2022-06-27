@@ -3,7 +3,6 @@ package commandutils
 import (
 	"context"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -35,8 +34,7 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		cdir    string = config.Deployspace()
 		root           = config.WorkDir()
 	)
-	log.Println("root", root)
-	log.Println("cdir", cdir)
+
 	if err = ioutil.WriteFile(filepath.Join(cdir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}

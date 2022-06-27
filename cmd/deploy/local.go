@@ -99,7 +99,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		&agent.Archive{
 			Location: dst.Name(),
 		},
-		deployment.DeployContextOptionCacheRoot(bw.DefaultCacheDirectory()),
+		deployment.DeployContextOptionCacheRoot(config.Dir()),
 		deployment.DeployContextOptionDisableReset,
 	)
 	if err != nil {
