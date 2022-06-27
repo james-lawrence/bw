@@ -96,6 +96,13 @@ func OptionAppendEnviron(l ...string) Option {
 	}
 }
 
+// OptionLoadEnv env files to load.
+func OptionLoadEnv(l ...string) Option {
+	return func(ctx *Context) {
+		ctx.loadenv = append(ctx.loadenv, l...)
+	}
+}
+
 // OptionLenient mark the context as lenient, allowing commands to fail.
 func OptionLenient(ctx *Context) {
 	ctx.lenient = true
@@ -134,6 +141,7 @@ type Context struct {
 	FQDN          string
 	WorkDirectory string
 	Environ       []string
+	loadenv       []string
 	output        io.Writer
 	deploymentID  string
 	dir           string
