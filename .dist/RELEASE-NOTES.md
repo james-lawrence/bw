@@ -1,3 +1,15 @@
+commit 96814339d6a3a70ece51a337e40cbe43a2f948d6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 27 18:27:53 2022 -0400
+
+    debug local directives
+
+commit ce8f19b63d3b7cfc9803f2178bf0bf523a1c4115
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 21:14:54 2022 -0400
+
+    release 0.1.1656292358-dedc07b2
+
 commit dedc07b24ecd444f3353eae2af53c0a21693d6c1
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Jun 26 21:12:38 2022 -0400
