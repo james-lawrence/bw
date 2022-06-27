@@ -1,3 +1,15 @@
+commit dedc07b24ecd444f3353eae2af53c0a21693d6c1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 21:12:38 2022 -0400
+
+    add loadenv option to shell interp
+
+commit d265cdba31fdf2537cf2e5a5e78448911467cb00
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 20:27:33 2022 -0400
+
+    release 0.1.1656289460-516f2388
+
 commit 516f2388053dda2e588ca385d07d94594250c17f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Jun 26 20:24:20 2022 -0400
