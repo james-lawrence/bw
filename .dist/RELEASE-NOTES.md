@@ -1,3 +1,15 @@
+commit 516f2388053dda2e588ca385d07d94594250c17f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 20:24:20 2022 -0400
+
+    only return an error if all methods fail
+
+commit d7cb750cec9b3dc657b0796bc5e54be188ca0eee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Jun 26 19:55:04 2022 -0400
+
+    release 0.1.1656287549-f12daa1f
+
 commit f12daa1fde1c11b87d027f97be159925096a2d46
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Jun 26 19:52:29 2022 -0400
