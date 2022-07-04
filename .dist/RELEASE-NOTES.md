@@ -1,3 +1,15 @@
+commit 9d0519ef3671550d4c90621afd764dd91af7ba79
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 4 13:45:28 2022 -0400
+
+    attempt to support arm64
+
+commit 587afd00c2cf6eaf214282917854a8c160e81210
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jun 27 18:43:34 2022 -0400
+
+    release 0.1.1656369321-96814339
+
 commit 96814339d6a3a70ece51a337e40cbe43a2f948d6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jun 27 18:27:53 2022 -0400

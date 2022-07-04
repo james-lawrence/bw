@@ -47,4 +47,5 @@ do
   i=$(( i + 1 ))
   # append the index here to ensure unique versions per distro.
   release "$distro" "${BW_VERSION}${i}" "${BW_LDFLAGS}"
+  # release "$distro" "${BW_VERSION}${i}arm64" "${BW_LDFLAGS}" arm64
 done
