@@ -16,7 +16,7 @@ release() {
   cat .templates/install.tmpl > ${DEBDIR}/install
   cat .templates/rules.tmpl | env BW_LDFLAGS="${BUILDFLAGS}" envsubst > ${DEBDIR}/rules
 
-  echo "9" > ${DEBDIR}/compat
+  echo "10" > ${DEBDIR}/compat
   echo "3.0 (native)" > ${DEBDIR}/source/format
 
   debuild -S
@@ -47,5 +47,4 @@ do
   i=$(( i + 1 ))
   # append the index here to ensure unique versions per distro.
   release "$distro" "${BW_VERSION}${i}" "${BW_LDFLAGS}"
-  # release "$distro" "${BW_VERSION}${i}arm64" "${BW_LDFLAGS}" arm64
 done
