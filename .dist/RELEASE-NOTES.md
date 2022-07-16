@@ -1,3 +1,15 @@
+commit 0acb868359264a4ae08eeecf65ed7d0e99bdd6aa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 16 04:52:08 2022 -0400
+
+    update to debian compat 10
+
+commit a82fa993a82539454b6e401a5d15c5a31e95cece
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jul 4 15:10:17 2022 -0400
+
+    release 0.1.1656961681-54d467d0
+
 commit 54d467d01c26936479185e457f22908d10301449
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Jul 4 13:45:28 2022 -0400
