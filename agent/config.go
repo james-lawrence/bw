@@ -132,8 +132,7 @@ func (t ConfigClient) Dir() string {
 func (t ConfigClient) Deployspace() string {
 	cdir := t.DeployDataDir
 	if !filepath.IsAbs(cdir) {
-		cdir = filepath.Dir(bw.LocateDeployspace(filepath.Base(filepath.Dir(t.DeployDataDir))))
-		cdir = filepath.Join(cdir, t.DeployDataDir)
+		cdir = filepath.Join(t.WorkDir(), t.DeployDataDir)
 	}
 
 	return cdir
