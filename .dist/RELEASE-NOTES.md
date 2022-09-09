@@ -1,3 +1,21 @@
+commit 3d85e6208c762577e1cf876ecdf22f47c577e0d6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 9 01:07:35 2022 -0400
+
+    fix rsa prime generator to be deterministic; golang removed that behavior to break relying on that behavior specifically
+
+commit f10ccc2b40d0eac27ce1f16c49f1ba49a7ab335f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 9 01:03:33 2022 -0400
+
+    update test configurations
+
+commit 626d5473948c4429a7f037b589533ffd2a49c608
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 8 22:27:35 2022 -0400
+
+    release 0.1.1662690168-fd16de1e
+
 commit fd16de1e092405985a0077cfd75c678e0cc5ade2
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Sep 8 22:22:48 2022 -0400
