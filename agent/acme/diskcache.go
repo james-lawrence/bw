@@ -286,8 +286,11 @@ func (t DiskCache) clearCertCache(dir string) {
 			return nil
 		}
 
-		// clear cache after 20 hours
-		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(20*time.Hour).Before(time.Now()) {
+		// clear cache after 7 days
+		// https://letsencrypt.org/docs/rate-limits/ limits the number of
+		// duplicate certificate requests to 5 / week. so lets cache for
+		// 6 days.
+		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(6*24*time.Hour).Before(time.Now()) {
 			logx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
 		} else if err != nil {
 			log.Println("failed to clear cached certificates", err)

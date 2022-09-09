@@ -26,7 +26,7 @@ type ALPNCertCache struct {
 }
 
 // GetCertificate returns a certificate based on the challenge.
-func (t ALPNCertCache) GetCertificate(hello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
+func (t ALPNCertCache) GetCertificate(_ *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
 	var (
 		cc *Challenge
 	)
