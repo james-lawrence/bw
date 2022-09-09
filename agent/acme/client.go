@@ -134,10 +134,10 @@ func NewResolver(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Default
 
 // Client client to deal with acme resolutions.
 type Resolver struct {
-	local *agent.Peer
-	rendezvous
-	dialer dialers.Defaults
-	cache  DiskCache
+	local      *agent.Peer
+	rendezvous rendezvous
+	dialer     dialers.Defaults
+	cache      DiskCache
 }
 
 // Resolution retrieve a resolution.
@@ -151,7 +151,7 @@ func (t Resolver) Resolution(ctx context.Context) (c *Challenge, err error) {
 
 	// here we select a node based on the a disciminator. that node is responsible
 	// for managing the acme account key, registration, etc.
-	if p, err = agent.NodeToPeer(t.Get([]byte(discriminator))); err != nil {
+	if p, err = agent.NodeToPeer(t.rendezvous.Get([]byte(discriminator))); err != nil {
 		return c, err
 	}
 

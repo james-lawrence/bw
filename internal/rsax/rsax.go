@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -28,14 +27,14 @@ func Auto() (pkey []byte, err error) {
 // CachedAuto loads/generates an RSA key at the provided filepath.
 func CachedAuto(path string) (pkey []byte, err error) {
 	if systemx.FileExists(path) {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 
 	if pkey, err = Auto(); err != nil {
 		return nil, err
 	}
 
-	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+	if err = os.WriteFile(path, pkey, 0600); err != nil {
 		return nil, err
 	}
 
@@ -45,7 +44,7 @@ func CachedAuto(path string) (pkey []byte, err error) {
 // CachedAutoDeterministic loads/generates an RSA key at the provided filepath.
 func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) {
 	if systemx.FileExists(path) {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 
 	if pkey, err = AutoDeterministic(seed); err != nil {
@@ -56,7 +55,7 @@ func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) 
 		return nil, err
 	}
 
-	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+	if err = os.WriteFile(path, pkey, 0600); err != nil {
 		return nil, err
 	}
 
@@ -66,14 +65,14 @@ func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) 
 // CachedGenerate loads/generates an SSH key at the provided filepath.
 func CachedGenerate(path string, bits int) (pkey []byte, err error) {
 	if systemx.FileExists(path) {
-		return ioutil.ReadFile(path)
+		return os.ReadFile(path)
 	}
 
 	if pkey, err = Generate(bits); err != nil {
 		return nil, err
 	}
 
-	if err = ioutil.WriteFile(path, pkey, 0600); err != nil {
+	if err = os.WriteFile(path, pkey, 0600); err != nil {
 		return nil, err
 	}
 

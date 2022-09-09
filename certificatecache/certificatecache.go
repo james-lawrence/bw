@@ -71,7 +71,7 @@ func NewRefreshAgent(dir string, a challenger) *ACME {
 // to communicate with temporary credentials while acme is bootstrapping.
 func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 	_, err = RefreshExpired(filepath.Join(dir, DefaultTLSCertServer), time.Now(), selfsigned{
-		// TODO seed: seed,
+		seed:           seed,
 		domain:         domain,
 		credentialsDir: dir,
 	})
