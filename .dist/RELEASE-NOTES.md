@@ -1,3 +1,24 @@
+commit fd16de1e092405985a0077cfd75c678e0cc5ade2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 8 22:22:48 2022 -0400
+
+    increase cache duration of acme certificate.
+    
+    lets encrypt have heavy rate limits on the duplicate certificate
+    requests.
+
+commit 2071bff31df1f32299affb69bdf12a2b004b8447
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 16 08:04:00 2022 -0400
+
+    fix edge case with deploy directory
+
+commit c7a321be2ab812417a58c30c080c2ea686054593
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jul 16 04:54:37 2022 -0400
+
+    release 0.1.1657961528-0acb8683
+
 commit 0acb868359264a4ae08eeecf65ed7d0e99bdd6aa
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jul 16 04:52:08 2022 -0400
