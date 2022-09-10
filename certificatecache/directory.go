@@ -3,7 +3,6 @@ package certificatecache
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -130,7 +129,7 @@ func LoadCert(pool *x509.CertPool, path string) (err error) {
 		log.Println("loading authority", path)
 	}
 
-	if ca, err = ioutil.ReadFile(path); err != nil {
+	if ca, err = os.ReadFile(path); err != nil {
 		return errors.Wrapf(err, "failed to read certificate: %s", path)
 	}
 
@@ -151,7 +150,7 @@ func (t *Directory) refresh() (err error) {
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-		log.Println("loading", certpath, keypath)
+		log.Println("loading certificate", certpath, keypath)
 	}
 
 	if cert, err = tls.LoadX509KeyPair(certpath, keypath); err != nil {

@@ -6,12 +6,17 @@ import (
 	"log"
 	"time"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
+	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // this value is entirely arbitrary, because of how the consistent hashing algorithms
@@ -53,8 +58,25 @@ func (t Challenger) Challenge(ctx context.Context, csr []byte) (key, cert, autho
 	)
 
 	for i := 0; ; i++ {
-		if key, cert, authority, err = t.challenge(ctx, csr); err == nil {
-			return key, cert, authority, nil
+		var (
+			req = &CertificateRequest{
+				CSR: csr,
+			}
+			resp *CertificateResponse
+		)
+
+		if resp, err = t.challenge(ctx, req); err == nil {
+			// attempt to cache the certificate locally.
+			// we do this because as the cluster mutates over time
+			// with new servers the server responsible for dealing with resolutions
+			// can change and we want to limit the number of requests for certificates.
+			// by caching here we ensure that if this server becomes responsible for issuing
+			// certs we'll have the certificate ready to go.
+			if err = t.localcache(req, resp); err != nil {
+				log.Println("failed to cache certificate locally", err)
+			}
+
+			return resp.Private, resp.Certificate, resp.Authority, nil
 		}
 
 		delay := bo.Backoff(i).Round(50 * time.Millisecond)
@@ -68,69 +90,54 @@ func (t Challenger) Challenge(ctx context.Context, csr []byte) (key, cert, autho
 	}
 }
 
-func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
+func (t Challenger) challenge(ctx context.Context, req *CertificateRequest) (resp *CertificateResponse, err error) {
 	var (
 		conn *grpc.ClientConn
 		p    *agent.Peer
-		resp *ChallengeResponse
 	)
-
-	req := &ChallengeRequest{
-		CSR: csr,
-	}
 
 	// here we select a node based on the a disciminator. that node is responsible
 	// for managing the acme account key, registration, etc.
 	if p, err = agent.NodeToPeer(t.rendezvous.Get([]byte(discriminator))); err != nil {
-		return key, cert, authority, err
+		return nil, err
 	}
 
 	if p.Name == t.local.Name {
+		// before initiating a challenge check the quorum for current certificates
+		// we do this because in periods when new servers are created the new node may
+		// become the rendezvous node but we still have a perfectly valid certificate
+		// on the current servers instead of pinging the ACME directory we instead
+		// query the 2 * quorum servers requesting their cached certificate instead.
+		if resp, err = t.quorumcertificate(ctx, req); err == nil {
+			log.Println("quorum returned a certificate; skipping the challenge process")
+			return resp, nil
+		}
+
 		if resp, err = t.cache.Challenge(ctx, req); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "disk cache")
+			return nil, errors.Wrap(err, "disk cache")
 		}
 
-		// dispatch the fact we've resolved the challege to the quorum.
-		// its perfectly okay for this to fail. its just another cache.
-		evt := agentutil.TLSEventMessage(
-			t.local,
-			resp.Authority,
-			resp.Private,
-			resp.Certificate,
-		)
-		if err = t.dispatcher.Dispatch(ctx, evt); err != nil {
-			log.Println("unable to dispatch tls event to quorum", err)
-		}
-
-		return resp.Private, resp.Certificate, resp.Authority, nil
+		return resp, nil
 	}
 
-	// log.Println("attempting to obtain tls from quorum")
+	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
+		log.Println("initiating certificate request to", agent.AutocertAddress(p))
+		defer log.Println("certificate request to", agent.AutocertAddress(p), "completed")
+	}
 
-	log.Println("obtaining from", agent.AutocertAddress(p))
 	if conn, err = dialers.NewDirect(agent.AutocertAddress(p)).DialContext(ctx, t.dialer.Defaults()...); err != nil {
-		return key, cert, authority, err
+		return nil, err
 	}
 	defer conn.Close()
 
 	if resp, err = NewACMEClient(conn).Challenge(ctx, req); err != nil {
-		return key, cert, authority, err
+		return nil, err
 	}
 
-	// attempt to cache the certificate locally.
-	// we do this because as the cluster mutates over time
-	// with new servers the server responsible for dealing with resolutions
-	// can change and we want to limit the number of requests for certificates.
-	// by caching here we ensure that if this server becomes responsible for issuing
-	// certs we'll have the certificate ready to go.
-	if err = t.localcache(req, resp); err != nil {
-		log.Println("failed to cache certificate locally", err)
-	}
-
-	return resp.Private, resp.Certificate, resp.Authority, nil
+	return resp, nil
 }
 
-func (t Challenger) localcache(req *ChallengeRequest, resp *ChallengeResponse) (err error) {
+func (t Challenger) localcache(req *CertificateRequest, resp *CertificateResponse) (err error) {
 	var (
 		template *x509.CertificateRequest
 	)
@@ -144,6 +151,55 @@ func (t Challenger) localcache(req *ChallengeRequest, resp *ChallengeResponse) (
 	}
 
 	return nil
+}
+
+// attempt to retrieve the certificate from existing quorum nodes.
+func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateRequest) (cached *CertificateResponse, err error) {
+	var (
+		conn *grpc.ClientConn
+	)
+
+	retrieve := func(ctx context.Context, p *agent.Peer) (*CertificateResponse, error) {
+		address := agent.AutocertAddress(p)
+
+		if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
+			log.Println("certificate request to", address, "initiated")
+			defer log.Println("certificate request to", address, "completed")
+		}
+
+		if conn, err = dialers.NewDirect(address).DialContext(ctx, t.dialer.Defaults()...); err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		return NewACMEClient(conn).Cached(ctx, req)
+	}
+
+	for _, p := range agent.NodesToPeers(agent.LargeQuorum(t.rendezvous)...) {
+		var (
+			cause error
+		)
+
+		// obviously the current node that is looking for a certificate
+		// will not have one available.
+		if p.Name == t.local.Name {
+			continue
+		}
+
+		if cached, cause = retrieve(ctx, p); cause == nil {
+			return cached, nil
+		}
+
+		err = errorsx.Compact(err, cause)
+	}
+
+	switch status.Code(err) {
+	case codes.NotFound:
+		// ignore not found case its normal and expected.
+	default:
+		log.Println("unable to locate certificate from quoruom", err)
+	}
+	return nil, status.Error(codes.NotFound, "cached certificate not found")
 }
 
 // NewResolver create a new Client

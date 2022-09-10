@@ -25,6 +25,7 @@ import (
 	"github.com/go-acme/lego/v4/providers/dns/gcloud"
 	"github.com/go-acme/lego/v4/providers/dns/route53"
 	"github.com/go-acme/lego/v4/registration"
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/rsax"
@@ -41,7 +42,7 @@ import (
 // newDiskcache new acme service from an agent.Configuration.
 func newDiskcache(c agent.Config, ac certificatecache.ACMEConfig, u account) DiskCache {
 	return DiskCache{
-		cachedir: "cached.certs",
+		cachedir: filepath.Join(bw.DirCache, "acme"),
 		c:        c,
 		ac:       ac,
 		u:        u,
@@ -61,7 +62,7 @@ type DiskCache struct {
 }
 
 // Challenge initiate a challenge.
-func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *ChallengeResponse, err error) {
+func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp *CertificateResponse, err error) {
 	var (
 		template *x509.CertificateRequest
 		client   *lego.Client
@@ -177,7 +178,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 		return resp, status.Error(codes.Aborted, "acme certificate signature request failed")
 	}
 
-	resp = &ChallengeResponse{
+	resp = &CertificateResponse{
 		Private:     priv,
 		Certificate: certificates.Certificate,
 		Authority:   certificates.IssuerCertificate,
@@ -236,12 +237,12 @@ func (t DiskCache) challengeFile() string {
 	return filepath.Join(t.c.Root, "acme.challenge.proto")
 }
 
-func (t DiskCache) cached(csr *x509.CertificateRequest) (cresp *ChallengeResponse, err error) {
+func (t DiskCache) cached(csr *x509.CertificateRequest) (cresp *CertificateResponse, err error) {
 	var (
 		encoded []byte
 	)
 
-	cresp = &ChallengeResponse{}
+	cresp = &CertificateResponse{}
 	digest := t.digestCertificate(csr)
 	dir := filepath.Join(t.c.Root, t.cachedir)
 	defer t.clearCertCache(dir)
@@ -258,7 +259,7 @@ func (t DiskCache) cached(csr *x509.CertificateRequest) (cresp *ChallengeRespons
 	return cresp, err
 }
 
-func (t DiskCache) cacheCertificate(csr *x509.CertificateRequest, c *ChallengeResponse) (_ *ChallengeResponse, err error) {
+func (t DiskCache) cacheCertificate(csr *x509.CertificateRequest, c *CertificateResponse) (_ *CertificateResponse, err error) {
 	digest := t.digestCertificate(csr)
 	dir := filepath.Join(t.c.Root, t.cachedir)
 	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))

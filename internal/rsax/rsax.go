@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -47,7 +46,7 @@ func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) 
 	if systemx.FileExists(path) {
 		return os.ReadFile(path)
 	}
-	log.Println("GENERATING CACHED", hex.EncodeToString(seed), path)
+
 	if pkey, err = AutoDeterministic(seed); err != nil {
 		return nil, err
 	}

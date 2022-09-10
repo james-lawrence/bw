@@ -369,7 +369,7 @@ func (x ArchiveResponse_Info) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ArchiveResponse_Info.Descriptor instead.
 func (ArchiveResponse_Info) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{36, 0}
+	return file_agent_proto_rawDescGZIP(), []int{34, 0}
 }
 
 type ClusterWatchEvents_Event int32
@@ -418,7 +418,7 @@ func (x ClusterWatchEvents_Event) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ClusterWatchEvents_Event.Descriptor instead.
 func (ClusterWatchEvents_Event) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{38, 0}
+	return file_agent_proto_rawDescGZIP(), []int{36, 0}
 }
 
 type Archive struct {
@@ -2344,91 +2344,6 @@ func (x *LogResponse) GetContent() []byte {
 	return nil
 }
 
-type TLSUpdateRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Creds *TLSEvent `protobuf:"bytes,1,opt,name=creds,proto3" json:"creds,omitempty"`
-}
-
-func (x *TLSUpdateRequest) Reset() {
-	*x = TLSUpdateRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[32]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *TLSUpdateRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TLSUpdateRequest) ProtoMessage() {}
-
-func (x *TLSUpdateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[32]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TLSUpdateRequest.ProtoReflect.Descriptor instead.
-func (*TLSUpdateRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *TLSUpdateRequest) GetCreds() *TLSEvent {
-	if x != nil {
-		return x.Creds
-	}
-	return nil
-}
-
-type TLSUpdateResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *TLSUpdateResponse) Reset() {
-	*x = TLSUpdateResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[33]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *TLSUpdateResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*TLSUpdateResponse) ProtoMessage() {}
-
-func (x *TLSUpdateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[33]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use TLSUpdateResponse.ProtoReflect.Descriptor instead.
-func (*TLSUpdateResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{33}
-}
-
 type DispatchRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2440,7 +2355,7 @@ type DispatchRequest struct {
 func (x *DispatchRequest) Reset() {
 	*x = DispatchRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[34]
+		mi := &file_agent_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2453,7 +2368,7 @@ func (x *DispatchRequest) String() string {
 func (*DispatchRequest) ProtoMessage() {}
 
 func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[34]
+	mi := &file_agent_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2466,7 +2381,7 @@ func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchRequest.ProtoReflect.Descriptor instead.
 func (*DispatchRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{34}
+	return file_agent_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *DispatchRequest) GetMessages() []*Message {
@@ -2485,7 +2400,7 @@ type ArchiveRequest struct {
 func (x *ArchiveRequest) Reset() {
 	*x = ArchiveRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[35]
+		mi := &file_agent_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2498,7 +2413,7 @@ func (x *ArchiveRequest) String() string {
 func (*ArchiveRequest) ProtoMessage() {}
 
 func (x *ArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[35]
+	mi := &file_agent_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2511,7 +2426,7 @@ func (x *ArchiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{35}
+	return file_agent_proto_rawDescGZIP(), []int{33}
 }
 
 type ArchiveResponse struct {
@@ -2526,7 +2441,7 @@ type ArchiveResponse struct {
 func (x *ArchiveResponse) Reset() {
 	*x = ArchiveResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[36]
+		mi := &file_agent_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2539,7 +2454,7 @@ func (x *ArchiveResponse) String() string {
 func (*ArchiveResponse) ProtoMessage() {}
 
 func (x *ArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[36]
+	mi := &file_agent_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2552,7 +2467,7 @@ func (x *ArchiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{36}
+	return file_agent_proto_rawDescGZIP(), []int{34}
 }
 
 func (x *ArchiveResponse) GetInfo() ArchiveResponse_Info {
@@ -2580,7 +2495,7 @@ type ClusterWatchRequest struct {
 func (x *ClusterWatchRequest) Reset() {
 	*x = ClusterWatchRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[37]
+		mi := &file_agent_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2593,7 +2508,7 @@ func (x *ClusterWatchRequest) String() string {
 func (*ClusterWatchRequest) ProtoMessage() {}
 
 func (x *ClusterWatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[37]
+	mi := &file_agent_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2606,7 +2521,7 @@ func (x *ClusterWatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterWatchRequest.ProtoReflect.Descriptor instead.
 func (*ClusterWatchRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{37}
+	return file_agent_proto_rawDescGZIP(), []int{35}
 }
 
 type ClusterWatchEvents struct {
@@ -2621,7 +2536,7 @@ type ClusterWatchEvents struct {
 func (x *ClusterWatchEvents) Reset() {
 	*x = ClusterWatchEvents{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_agent_proto_msgTypes[38]
+		mi := &file_agent_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2634,7 +2549,7 @@ func (x *ClusterWatchEvents) String() string {
 func (*ClusterWatchEvents) ProtoMessage() {}
 
 func (x *ClusterWatchEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[38]
+	mi := &file_agent_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2647,7 +2562,7 @@ func (x *ClusterWatchEvents) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterWatchEvents.ProtoReflect.Descriptor instead.
 func (*ClusterWatchEvents) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{38}
+	return file_agent_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *ClusterWatchEvents) GetEvent() ClusterWatchEvents_Event {
@@ -2883,12 +2798,7 @@ var file_agent_proto_rawDesc = []byte{
 	0x2e, 0x50, 0x65, 0x65, 0x72, 0x52, 0x04, 0x70, 0x65, 0x65, 0x72, 0x22, 0x27, 0x0a, 0x0b, 0x4c,
 	0x6f, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07, 0x63, 0x6f,
 	0x6e, 0x74, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0c, 0x52, 0x07, 0x63, 0x6f, 0x6e,
-	0x74, 0x65, 0x6e, 0x74, 0x22, 0x39, 0x0a, 0x10, 0x54, 0x4c, 0x53, 0x55, 0x70, 0x64, 0x61, 0x74,
-	0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x25, 0x0a, 0x05, 0x63, 0x72, 0x65, 0x64,
-	0x73, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x0f, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e,
-	0x54, 0x4c, 0x53, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x52, 0x05, 0x63, 0x72, 0x65, 0x64, 0x73, 0x22,
-	0x13, 0x0a, 0x11, 0x54, 0x4c, 0x53, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x3d, 0x0a, 0x0f, 0x44, 0x69, 0x73, 0x70, 0x61, 0x74, 0x63, 0x68,
+	0x74, 0x65, 0x6e, 0x74, 0x22, 0x3d, 0x0a, 0x0f, 0x44, 0x69, 0x73, 0x70, 0x61, 0x74, 0x63, 0x68,
 	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2a, 0x0a, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61,
 	0x67, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x0e, 0x2e, 0x61, 0x67, 0x65, 0x6e,
 	0x74, 0x2e, 0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x52, 0x08, 0x6d, 0x65, 0x73, 0x73, 0x61,
@@ -2980,29 +2890,24 @@ var file_agent_proto_rawDesc = []byte{
 	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x31, 0x0a, 0x04, 0x4c, 0x6f, 0x67, 0x73, 0x12,
 	0x11, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x4c, 0x6f, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65,
 	0x73, 0x74, 0x1a, 0x12, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x4c, 0x6f, 0x67, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x32, 0x51, 0x0a, 0x0d, 0x43, 0x6f,
-	0x6e, 0x66, 0x69, 0x67, 0x75, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x40, 0x0a, 0x09, 0x54,
-	0x4c, 0x53, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x12, 0x17, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74,
-	0x2e, 0x54, 0x4c, 0x53, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x18, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x54, 0x4c, 0x53, 0x55, 0x70, 0x64,
-	0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x49, 0x0a,
-	0x08, 0x4f, 0x62, 0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x12, 0x3d, 0x0a, 0x08, 0x44, 0x69, 0x73,
-	0x70, 0x61, 0x74, 0x63, 0x68, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x44, 0x69,
-	0x73, 0x70, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e,
-	0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x44, 0x69, 0x73, 0x70, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65,
-	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x47, 0x0a, 0x09, 0x42, 0x6f, 0x6f, 0x74,
-	0x73, 0x74, 0x72, 0x61, 0x70, 0x12, 0x3a, 0x0a, 0x07, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65,
-	0x12, 0x15, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e,
-	0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22,
-	0x00, 0x32, 0x4d, 0x0a, 0x07, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x12, 0x42, 0x0a, 0x05,
-	0x57, 0x61, 0x74, 0x63, 0x68, 0x12, 0x1a, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c,
-	0x75, 0x73, 0x74, 0x65, 0x72, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
-	0x74, 0x1a, 0x19, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65,
-	0x72, 0x57, 0x61, 0x74, 0x63, 0x68, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x00, 0x30, 0x01,
-	0x42, 0x21, 0x5a, 0x1f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6a,
-	0x61, 0x6d, 0x65, 0x73, 0x2d, 0x6c, 0x61, 0x77, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2f, 0x61, 0x67,
-	0x65, 0x6e, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x30, 0x01, 0x32, 0x49, 0x0a, 0x08, 0x4f, 0x62,
+	0x73, 0x65, 0x72, 0x76, 0x65, 0x72, 0x12, 0x3d, 0x0a, 0x08, 0x44, 0x69, 0x73, 0x70, 0x61, 0x74,
+	0x63, 0x68, 0x12, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x44, 0x69, 0x73, 0x70, 0x61,
+	0x74, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x61, 0x67, 0x65,
+	0x6e, 0x74, 0x2e, 0x44, 0x69, 0x73, 0x70, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x47, 0x0a, 0x09, 0x42, 0x6f, 0x6f, 0x74, 0x73, 0x74, 0x72,
+	0x61, 0x70, 0x12, 0x3a, 0x0a, 0x07, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x12, 0x15, 0x2e,
+	0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x41, 0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x16, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x41, 0x72, 0x63,
+	0x68, 0x69, 0x76, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x32, 0x4d,
+	0x0a, 0x07, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x12, 0x42, 0x0a, 0x05, 0x57, 0x61, 0x74,
+	0x63, 0x68, 0x12, 0x1a, 0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74,
+	0x65, 0x72, 0x57, 0x61, 0x74, 0x63, 0x68, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x19,
+	0x2e, 0x61, 0x67, 0x65, 0x6e, 0x74, 0x2e, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x57, 0x61,
+	0x74, 0x63, 0x68, 0x45, 0x76, 0x65, 0x6e, 0x74, 0x73, 0x22, 0x00, 0x30, 0x01, 0x42, 0x21, 0x5a,
+	0x1f, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6a, 0x61, 0x6d, 0x65,
+	0x73, 0x2d, 0x6c, 0x61, 0x77, 0x72, 0x65, 0x6e, 0x63, 0x65, 0x2f, 0x61, 0x67, 0x65, 0x6e, 0x74,
+	0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3018,7 +2923,7 @@ func file_agent_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_agent_proto_goTypes = []interface{}{
 	(Peer_State)(0),               // 0: agent.Peer.State
 	(Message_NodeEvent)(0),        // 1: agent.Message.NodeEvent
@@ -3060,13 +2965,11 @@ var file_agent_proto_goTypes = []interface{}{
 	(*CancelResponse)(nil),        // 37: agent.CancelResponse
 	(*LogRequest)(nil),            // 38: agent.LogRequest
 	(*LogResponse)(nil),           // 39: agent.LogResponse
-	(*TLSUpdateRequest)(nil),      // 40: agent.TLSUpdateRequest
-	(*TLSUpdateResponse)(nil),     // 41: agent.TLSUpdateResponse
-	(*DispatchRequest)(nil),       // 42: agent.DispatchRequest
-	(*ArchiveRequest)(nil),        // 43: agent.ArchiveRequest
-	(*ArchiveResponse)(nil),       // 44: agent.ArchiveResponse
-	(*ClusterWatchRequest)(nil),   // 45: agent.ClusterWatchRequest
-	(*ClusterWatchEvents)(nil),    // 46: agent.ClusterWatchEvents
+	(*DispatchRequest)(nil),       // 40: agent.DispatchRequest
+	(*ArchiveRequest)(nil),        // 41: agent.ArchiveRequest
+	(*ArchiveResponse)(nil),       // 42: agent.ArchiveResponse
+	(*ClusterWatchRequest)(nil),   // 43: agent.ClusterWatchRequest
+	(*ClusterWatchEvents)(nil),    // 44: agent.ClusterWatchEvents
 }
 var file_agent_proto_depIdxs = []int32{
 	10, // 0: agent.Archive.peer:type_name -> agent.Peer
@@ -3102,61 +3005,58 @@ var file_agent_proto_depIdxs = []int32{
 	15, // 30: agent.DeployRequest.options:type_name -> agent.DeployOptions
 	17, // 31: agent.DeployResponse.deploy:type_name -> agent.Deploy
 	10, // 32: agent.LogRequest.peer:type_name -> agent.Peer
-	11, // 33: agent.TLSUpdateRequest.creds:type_name -> agent.TLSEvent
-	13, // 34: agent.DispatchRequest.messages:type_name -> agent.Message
-	6,  // 35: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
-	17, // 36: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
-	7,  // 37: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
-	10, // 38: agent.ClusterWatchEvents.node:type_name -> agent.Peer
-	22, // 39: agent.Deployments.Upload:input_type -> agent.UploadChunk
-	18, // 40: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
-	36, // 41: agent.Deployments.Cancel:input_type -> agent.CancelRequest
-	38, // 42: agent.Deployments.Logs:input_type -> agent.LogRequest
-	24, // 43: agent.Deployments.Watch:input_type -> agent.WatchRequest
-	42, // 44: agent.Deployments.Dispatch:input_type -> agent.DispatchRequest
-	22, // 45: agent.Quorum.Upload:input_type -> agent.UploadChunk
-	24, // 46: agent.Quorum.Watch:input_type -> agent.WatchRequest
-	42, // 47: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
-	18, // 48: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
-	26, // 49: agent.Quorum.Info:input_type -> agent.InfoRequest
-	36, // 50: agent.Quorum.Cancel:input_type -> agent.CancelRequest
-	28, // 51: agent.Agent.Connect:input_type -> agent.ConnectRequest
-	30, // 52: agent.Agent.Info:input_type -> agent.StatusRequest
-	32, // 53: agent.Agent.Deploy:input_type -> agent.DeployRequest
-	36, // 54: agent.Agent.Cancel:input_type -> agent.CancelRequest
-	34, // 55: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
-	38, // 56: agent.Agent.Logs:input_type -> agent.LogRequest
-	40, // 57: agent.Configuration.TLSUpdate:input_type -> agent.TLSUpdateRequest
-	42, // 58: agent.Observer.Dispatch:input_type -> agent.DispatchRequest
-	43, // 59: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
-	45, // 60: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
-	23, // 61: agent.Deployments.Upload:output_type -> agent.UploadResponse
-	19, // 62: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
-	37, // 63: agent.Deployments.Cancel:output_type -> agent.CancelResponse
-	39, // 64: agent.Deployments.Logs:output_type -> agent.LogResponse
-	13, // 65: agent.Deployments.Watch:output_type -> agent.Message
-	25, // 66: agent.Deployments.Dispatch:output_type -> agent.DispatchResponse
-	23, // 67: agent.Quorum.Upload:output_type -> agent.UploadResponse
-	13, // 68: agent.Quorum.Watch:output_type -> agent.Message
-	25, // 69: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
-	19, // 70: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
-	27, // 71: agent.Quorum.Info:output_type -> agent.InfoResponse
-	37, // 72: agent.Quorum.Cancel:output_type -> agent.CancelResponse
-	29, // 73: agent.Agent.Connect:output_type -> agent.ConnectResponse
-	31, // 74: agent.Agent.Info:output_type -> agent.StatusResponse
-	33, // 75: agent.Agent.Deploy:output_type -> agent.DeployResponse
-	37, // 76: agent.Agent.Cancel:output_type -> agent.CancelResponse
-	35, // 77: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
-	39, // 78: agent.Agent.Logs:output_type -> agent.LogResponse
-	41, // 79: agent.Configuration.TLSUpdate:output_type -> agent.TLSUpdateResponse
-	25, // 80: agent.Observer.Dispatch:output_type -> agent.DispatchResponse
-	44, // 81: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
-	46, // 82: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
-	61, // [61:83] is the sub-list for method output_type
-	39, // [39:61] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	13, // 33: agent.DispatchRequest.messages:type_name -> agent.Message
+	6,  // 34: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
+	17, // 35: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
+	7,  // 36: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
+	10, // 37: agent.ClusterWatchEvents.node:type_name -> agent.Peer
+	22, // 38: agent.Deployments.Upload:input_type -> agent.UploadChunk
+	18, // 39: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
+	36, // 40: agent.Deployments.Cancel:input_type -> agent.CancelRequest
+	38, // 41: agent.Deployments.Logs:input_type -> agent.LogRequest
+	24, // 42: agent.Deployments.Watch:input_type -> agent.WatchRequest
+	40, // 43: agent.Deployments.Dispatch:input_type -> agent.DispatchRequest
+	22, // 44: agent.Quorum.Upload:input_type -> agent.UploadChunk
+	24, // 45: agent.Quorum.Watch:input_type -> agent.WatchRequest
+	40, // 46: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
+	18, // 47: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
+	26, // 48: agent.Quorum.Info:input_type -> agent.InfoRequest
+	36, // 49: agent.Quorum.Cancel:input_type -> agent.CancelRequest
+	28, // 50: agent.Agent.Connect:input_type -> agent.ConnectRequest
+	30, // 51: agent.Agent.Info:input_type -> agent.StatusRequest
+	32, // 52: agent.Agent.Deploy:input_type -> agent.DeployRequest
+	36, // 53: agent.Agent.Cancel:input_type -> agent.CancelRequest
+	34, // 54: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
+	38, // 55: agent.Agent.Logs:input_type -> agent.LogRequest
+	40, // 56: agent.Observer.Dispatch:input_type -> agent.DispatchRequest
+	41, // 57: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
+	43, // 58: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
+	23, // 59: agent.Deployments.Upload:output_type -> agent.UploadResponse
+	19, // 60: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
+	37, // 61: agent.Deployments.Cancel:output_type -> agent.CancelResponse
+	39, // 62: agent.Deployments.Logs:output_type -> agent.LogResponse
+	13, // 63: agent.Deployments.Watch:output_type -> agent.Message
+	25, // 64: agent.Deployments.Dispatch:output_type -> agent.DispatchResponse
+	23, // 65: agent.Quorum.Upload:output_type -> agent.UploadResponse
+	13, // 66: agent.Quorum.Watch:output_type -> agent.Message
+	25, // 67: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
+	19, // 68: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
+	27, // 69: agent.Quorum.Info:output_type -> agent.InfoResponse
+	37, // 70: agent.Quorum.Cancel:output_type -> agent.CancelResponse
+	29, // 71: agent.Agent.Connect:output_type -> agent.ConnectResponse
+	31, // 72: agent.Agent.Info:output_type -> agent.StatusResponse
+	33, // 73: agent.Agent.Deploy:output_type -> agent.DeployResponse
+	37, // 74: agent.Agent.Cancel:output_type -> agent.CancelResponse
+	35, // 75: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
+	39, // 76: agent.Agent.Logs:output_type -> agent.LogResponse
+	25, // 77: agent.Observer.Dispatch:output_type -> agent.DispatchResponse
+	42, // 78: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
+	44, // 79: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
+	59, // [59:80] is the sub-list for method output_type
+	38, // [38:59] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -3550,30 +3450,6 @@ func file_agent_proto_init() {
 			}
 		}
 		file_agent_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TLSUpdateRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_agent_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*TLSUpdateResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_agent_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DispatchRequest); i {
 			case 0:
 				return &v.state
@@ -3585,7 +3461,7 @@ func file_agent_proto_init() {
 				return nil
 			}
 		}
-		file_agent_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_agent_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ArchiveRequest); i {
 			case 0:
 				return &v.state
@@ -3597,7 +3473,7 @@ func file_agent_proto_init() {
 				return nil
 			}
 		}
-		file_agent_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_agent_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ArchiveResponse); i {
 			case 0:
 				return &v.state
@@ -3609,7 +3485,7 @@ func file_agent_proto_init() {
 				return nil
 			}
 		}
-		file_agent_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_agent_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ClusterWatchRequest); i {
 			case 0:
 				return &v.state
@@ -3621,7 +3497,7 @@ func file_agent_proto_init() {
 				return nil
 			}
 		}
-		file_agent_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_agent_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ClusterWatchEvents); i {
 			case 0:
 				return &v.state
@@ -3653,9 +3529,9 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_agent_proto_rawDesc,
 			NumEnums:      8,
-			NumMessages:   39,
+			NumMessages:   37,
 			NumExtensions: 0,
-			NumServices:   7,
+			NumServices:   6,
 		},
 		GoTypes:           file_agent_proto_goTypes,
 		DependencyIndexes: file_agent_proto_depIdxs,

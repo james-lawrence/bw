@@ -5,7 +5,6 @@ package certificatecache
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -207,7 +206,7 @@ func expiredCert(path string) (expiration time.Time, err error) {
 		cert *x509.Certificate
 	)
 
-	if data, err = ioutil.ReadFile(path); err != nil {
+	if data, err = os.ReadFile(path); err != nil {
 		log.Println("failed to read certificate", err)
 		return expiration, errors.WithStack(err)
 	}

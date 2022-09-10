@@ -225,14 +225,6 @@ service Agent {
   rpc Logs(LogRequest) returns (stream LogResponse) {}
 }
 
-message TLSUpdateRequest { TLSEvent creds = 1; }
-
-message TLSUpdateResponse {}
-
-service Configuration {
-  rpc TLSUpdate(TLSUpdateRequest) returns (TLSUpdateResponse) {}
-}
-
 message DispatchRequest { repeated Message messages = 1; }
 
 service Observer {

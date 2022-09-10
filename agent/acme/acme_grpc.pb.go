@@ -22,8 +22,11 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ACMEClient interface {
-	// initiates a challenge.
-	Challenge(ctx context.Context, in *ChallengeRequest, opts ...grpc.CallOption) (*ChallengeResponse, error)
+	// initiates a certificate signing request.
+	Challenge(ctx context.Context, in *CertificateRequest, opts ...grpc.CallOption) (*CertificateResponse, error)
+	// return the cached certificate for the cluster.
+	Cached(ctx context.Context, in *CertificateRequest, opts ...grpc.CallOption) (*CertificateResponse, error)
+	// returns the resolution to a challenge.
 	Resolution(ctx context.Context, in *ResolutionRequest, opts ...grpc.CallOption) (*ResolutionResponse, error)
 }
 
@@ -35,9 +38,18 @@ func NewACMEClient(cc grpc.ClientConnInterface) ACMEClient {
 	return &aCMEClient{cc}
 }
 
-func (c *aCMEClient) Challenge(ctx context.Context, in *ChallengeRequest, opts ...grpc.CallOption) (*ChallengeResponse, error) {
-	out := new(ChallengeResponse)
+func (c *aCMEClient) Challenge(ctx context.Context, in *CertificateRequest, opts ...grpc.CallOption) (*CertificateResponse, error) {
+	out := new(CertificateResponse)
 	err := c.cc.Invoke(ctx, "/acme.ACME/Challenge", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aCMEClient) Cached(ctx context.Context, in *CertificateRequest, opts ...grpc.CallOption) (*CertificateResponse, error) {
+	out := new(CertificateResponse)
+	err := c.cc.Invoke(ctx, "/acme.ACME/Cached", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +69,11 @@ func (c *aCMEClient) Resolution(ctx context.Context, in *ResolutionRequest, opts
 // All implementations must embed UnimplementedACMEServer
 // for forward compatibility
 type ACMEServer interface {
-	// initiates a challenge.
-	Challenge(context.Context, *ChallengeRequest) (*ChallengeResponse, error)
+	// initiates a certificate signing request.
+	Challenge(context.Context, *CertificateRequest) (*CertificateResponse, error)
+	// return the cached certificate for the cluster.
+	Cached(context.Context, *CertificateRequest) (*CertificateResponse, error)
+	// returns the resolution to a challenge.
 	Resolution(context.Context, *ResolutionRequest) (*ResolutionResponse, error)
 	mustEmbedUnimplementedACMEServer()
 }
@@ -67,8 +82,11 @@ type ACMEServer interface {
 type UnimplementedACMEServer struct {
 }
 
-func (UnimplementedACMEServer) Challenge(context.Context, *ChallengeRequest) (*ChallengeResponse, error) {
+func (UnimplementedACMEServer) Challenge(context.Context, *CertificateRequest) (*CertificateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Challenge not implemented")
+}
+func (UnimplementedACMEServer) Cached(context.Context, *CertificateRequest) (*CertificateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Cached not implemented")
 }
 func (UnimplementedACMEServer) Resolution(context.Context, *ResolutionRequest) (*ResolutionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Resolution not implemented")
@@ -87,7 +105,7 @@ func RegisterACMEServer(s grpc.ServiceRegistrar, srv ACMEServer) {
 }
 
 func _ACME_Challenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ChallengeRequest)
+	in := new(CertificateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -99,7 +117,25 @@ func _ACME_Challenge_Handler(srv interface{}, ctx context.Context, dec func(inte
 		FullMethod: "/acme.ACME/Challenge",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ACMEServer).Challenge(ctx, req.(*ChallengeRequest))
+		return srv.(ACMEServer).Challenge(ctx, req.(*CertificateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ACME_Cached_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CertificateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ACMEServer).Cached(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/acme.ACME/Cached",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ACMEServer).Cached(ctx, req.(*CertificateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -132,6 +168,10 @@ var ACME_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Challenge",
 			Handler:    _ACME_Challenge_Handler,
+		},
+		{
+			MethodName: "Cached",
+			Handler:    _ACME_Cached_Handler,
 		},
 		{
 			MethodName: "Resolution",

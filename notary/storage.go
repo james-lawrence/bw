@@ -3,7 +3,6 @@ package notary
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -43,7 +42,7 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 		bin       []byte
 	)
 
-	if bin, err = ioutil.ReadAll(in); err != nil {
+	if bin, err = io.ReadAll(in); err != nil {
 		return c, err
 	}
 
@@ -57,7 +56,8 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 	)
 	buckets := make([]storage, 0, len(authority))
 
-	log.Println("loading authorizations", authority)
+	log.Println("authorizations load initiated", len(authority))
+	defer log.Println("authorizations load completed", len(authority))
 	for _, p := range authority {
 		var (
 			b storage
@@ -86,7 +86,7 @@ func CloneAuthorizationFile(from, to string) (err error) {
 	}
 	defer ff.Close()
 
-	if tf, err = ioutil.TempFile(filepath.Dir(to), fmt.Sprintf("%s.sync", filepath.Base(to))); err != nil {
+	if tf, err = os.CreateTemp(filepath.Dir(to), fmt.Sprintf("%s.sync", filepath.Base(to))); err != nil {
 		return err
 	}
 	defer tf.Close()
@@ -125,7 +125,7 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 		return nil
 	}
 
-	if encoded, err = ioutil.ReadFile(path); err != nil {
+	if encoded, err = os.ReadFile(path); err != nil {
 		return err
 	}
 
@@ -169,7 +169,7 @@ func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
 	}
 	defer auths.Close()
 
-	if buf, err = ioutil.TempFile(filepath.Dir(path), fmt.Sprintf("%s.*", filepath.Base(path))); err != nil {
+	if buf, err = os.CreateTemp(filepath.Dir(path), fmt.Sprintf("%s.*", filepath.Base(path))); err != nil {
 		return errors.Wrap(err, "unable to open buffer")
 	}
 	defer os.Remove(buf.Name())
@@ -177,7 +177,7 @@ func ReplaceAuthorizedKey(path, fingerprint string, rpub []byte) (err error) {
 
 	debugx.Println("replacing authorization key within", path)
 
-	if encoded, err = ioutil.ReadFile(path); err != nil {
+	if encoded, err = os.ReadFile(path); err != nil {
 		return err
 	}
 

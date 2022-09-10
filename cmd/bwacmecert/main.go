@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -11,26 +10,26 @@ import (
 
 func main() {
 	var (
-		challenge *acme.ChallengeResponse
+		challenge *acme.CertificateResponse
 	)
 
 	log.Println("args", os.Args)
-	priv, err := ioutil.ReadFile(os.Args[1])
+	priv, err := os.ReadFile(os.Args[1])
 	if err != nil {
 		log.Fatalln("failed to read private key", os.Args[1])
 	}
 
-	cert, err := ioutil.ReadFile(os.Args[2])
+	cert, err := os.ReadFile(os.Args[2])
 	if err != nil {
 		log.Fatalln("failed to read cert", os.Args[2])
 	}
 
-	auth, err := ioutil.ReadFile(os.Args[3])
+	auth, err := os.ReadFile(os.Args[3])
 	if err != nil {
 		log.Fatalln("failed to read authority", os.Args[3])
 	}
 
-	challenge = &acme.ChallengeResponse{
+	challenge = &acme.CertificateResponse{
 		Private:     priv,
 		Certificate: cert,
 		Authority:   auth,

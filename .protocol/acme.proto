@@ -5,14 +5,12 @@ option go_package = "github.com/james-lawrence/agent/acme";
 message Challenge {
   string domain = 1;
   string digest = 2;
-  string token  = 3;
+  string token = 3;
 }
 
-message ChallengeRequest {
-  bytes CSR = 1;
-}
+message CertificateRequest { bytes CSR = 1; }
 
-message ChallengeResponse {
+message CertificateResponse {
   bytes certificate = 1;
   bytes authority = 2;
   bytes private = 3;
@@ -20,15 +18,16 @@ message ChallengeResponse {
 
 message ResolutionRequest {}
 
-message ResolutionResponse {
-  Challenge challenge = 1;
-}
+message ResolutionResponse { Challenge challenge = 1; }
 
 // ACME service is used by the internal RPC server to resolve acme challenges.
 // it achieves this by using rendezvous hashing to have the servers agree on
 // a proxy peer who is responsible for resolving challenges.
 service ACME {
-  // initiates a challenge.
-  rpc Challenge(ChallengeRequest) returns (ChallengeResponse) {}
+  // initiates a certificate signing request.
+  rpc Challenge(CertificateRequest) returns (CertificateResponse) {}
+  // return the cached certificate for the cluster.
+  rpc Cached(CertificateRequest) returns (CertificateResponse) {}
+  // returns the resolution to a challenge.
   rpc Resolution(ResolutionRequest) returns (ResolutionResponse) {}
 }

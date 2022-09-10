@@ -120,11 +120,11 @@ func (t ACME) Refresh() (err error) {
 		return errors.Wrap(err, "failed to create CSR")
 	}
 
-	log.Println("obtaining certificate")
+	log.Println("certificate request initiated")
 	if key, cert, authority, err = t.c.Challenge(context.Background(), csr); err != nil {
 		return errors.Wrap(err, "failed to obtain certificates")
 	}
-	log.Println("obtained certificate")
+	log.Println("certificate request completed")
 
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)

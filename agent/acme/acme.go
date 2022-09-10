@@ -6,6 +6,9 @@ package acme
 
 import (
 	context "context"
+	"crypto/x509"
+	"log"
+	"time"
 
 	"github.com/hashicorp/memberlist"
 	grpc "google.golang.org/grpc"
@@ -15,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/notary"
 )
 
@@ -68,7 +72,7 @@ func (t Server) Bind(srv *grpc.Server) {
 }
 
 // Challenge solve the challenge.
-func (t Server) Challenge(ctx context.Context, req *ChallengeRequest) (resp *ChallengeResponse, err error) {
+func (t Server) Challenge(ctx context.Context, req *CertificateRequest) (resp *CertificateResponse, err error) {
 	if !t.auth.Authorize(ctx).Autocert {
 		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
 	}
@@ -83,4 +87,37 @@ func (t Server) Resolution(ctx context.Context, req *ResolutionRequest) (resp *R
 	}
 
 	return t.cache.Resolution(ctx, req)
+}
+
+func (t Server) Cached(ctx context.Context, req *CertificateRequest) (cached *CertificateResponse, err error) {
+	var (
+		csr *x509.CertificateRequest
+	)
+
+	if !t.auth.Authorize(ctx).Autocert {
+		return cached, status.Error(codes.PermissionDenied, "invalid credentials")
+	}
+
+	if csr, err = x509.ParseCertificateRequest(req.CSR); err != nil {
+		log.Println("invalid certificate", err)
+		return cached, status.Error(codes.FailedPrecondition, "invalid certificate request")
+	}
+
+	if cached, err = t.cache.cached(csr); err != nil {
+		return cached, status.Error(codes.NotFound, "cached certificate not found")
+	}
+
+	// do not return certificates nearing their expiration dates.
+	// the window where we ignore the cached certificate was semi
+	// arbitrarily chosen. mostly due to lets encrypts rate limits
+	// of 5 / week duplicate requests.
+	if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err != nil {
+		log.Println("unable to parse current certificate; treating as not found", err)
+		return nil, status.Error(codes.NotFound, "cached certificate not found")
+	} else if cert.NotAfter.Before(time.Now().Add(7200 * time.Hour)) {
+		log.Printf("certificate is going to expire soon %s; treating as not found\n", cert.NotAfter)
+		return nil, status.Error(codes.NotFound, "cached certificate not found")
+	}
+
+	return cached, nil
 }

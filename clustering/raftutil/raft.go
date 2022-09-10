@@ -371,11 +371,13 @@ func (t *Protocol) connect(c rendezvous) (network raft.Transport, r *raft.Raft, 
 	}
 
 	r.RegisterObserver(raft.NewObserver(nil, false, func(o *raft.Observation) bool {
-		switch evt := o.Data.(type) {
-		case raft.RaftState:
-			log.Printf("%s - raft observation (broadcasting change): %T, %s\n", t.LocalNode.Name, evt, evt.String())
-		default:
-			log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", t.LocalNode.Name, evt, evt)
+		if envx.Boolean(false, bw.EnvLogsRaft, bw.EnvLogsVerbose) {
+			switch evt := o.Data.(type) {
+			case raft.RaftState:
+				log.Printf("%s - raft observation (broadcasting change): %T, %s\n", t.LocalNode.Name, evt, evt.String())
+			default:
+				log.Printf("%s - raft observation (broadcasting change): %T, %#v\n", t.LocalNode.Name, evt, evt)
+			}
 		}
 		t.ClusterChange.Broadcast()
 		return false
