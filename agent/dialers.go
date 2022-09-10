@@ -72,7 +72,7 @@ func AddressProxyDialQuorum(proxy string, options ...grpc.DialOption) (conn Clie
 // ProxyDialQuorum connects to a quorum peer using any agent for bootstrapping.
 func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 	var (
-		cinfo ConnectResponse
+		cinfo *ConnectResponse
 	)
 
 	if cinfo, err = c.Connect(); err != nil {

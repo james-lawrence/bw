@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -152,7 +151,7 @@ func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if d, err = ioutil.TempFile(t.a.Bootstrap.ArchiveDirectory, "download-*.bin"); err != nil {
+	if d, err = os.CreateTemp(t.a.Bootstrap.ArchiveDirectory, "download-*.bin"); err != nil {
 		return errors.WithStack(err)
 	}
 	defer d.Close()
@@ -181,7 +180,6 @@ func (t Filesystem) upload() (err error) {
 		conn *grpc.ClientConn
 		i    os.FileInfo
 		src  *os.File
-		a    agent.Archive
 		dc   *agent.DeployCommand
 	)
 
@@ -210,11 +208,9 @@ func (t Filesystem) upload() (err error) {
 	}
 	defer conn.Close()
 
-	if a, err = agent.NewConn(conn).Upload(dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
+	if dc.Archive, err = agent.NewConn(conn).Upload(dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
 		return err
 	}
-
-	dc.Archive = &a
 
 	if err = agent.WriteMetadata(t.uploaded, dc); err != nil {
 		return err

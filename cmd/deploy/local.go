@@ -3,7 +3,6 @@ package deploy
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -33,7 +32,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		return err
 	}
 
-	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
@@ -53,7 +52,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		return err
 	}
 
-	if root, err = ioutil.TempDir("", "bw-local-deploy-*"); err != nil {
+	if root, err = os.MkdirTemp("", "bw-local-deploy-*"); err != nil {
 		return err
 	}
 
@@ -66,7 +65,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		defer os.RemoveAll(root)
 	}
 
-	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
+	if dst, err = os.CreateTemp("", "bwarchive"); err != nil {
 		return errors.Wrap(err, "archive creation failed")
 	}
 

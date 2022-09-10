@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -59,7 +58,7 @@ func Into(ctx *Context) error {
 		config   agent.ConfigClient
 		c        clustering.LocalRendezvous
 		ss       notary.Signer
-		darchive agent.Archive
+		darchive *agent.Archive
 		peers    []*agent.Peer
 	)
 
@@ -124,7 +123,7 @@ func Into(ctx *Context) error {
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
 	deployspace := config.Deployspace()
-	if err = ioutil.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
@@ -134,7 +133,7 @@ func Into(ctx *Context) error {
 		}
 	}
 
-	if dst, err = ioutil.TempFile("", "bwarchive"); err != nil {
+	if dst, err = os.CreateTemp("", "bwarchive"); err != nil {
 		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
 		events <- agentutil.LogEvent(local, "deployment failed")
 		return nil
@@ -202,10 +201,10 @@ func Into(ctx *Context) error {
 	}
 
 	events <- agentutil.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, &dopts, &darchive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(ctx.Context, &dopts, darchive, peers...); cause != nil {
 		events <- agentutil.LogError(local, errors.Wrap(cause, "deploy failed"))
-		events <- agentutil.DeployEventFailed(local, &dopts, &darchive, cause)
-		events <- agentutil.DeployCommand(local, agentutil.DeployCommandFailed("", &darchive, &dopts))
+		events <- agentutil.DeployEventFailed(local, &dopts, darchive, cause)
+		events <- agentutil.DeployCommand(local, agentutil.DeployCommandFailed("", darchive, &dopts))
 	}
 
 	return err

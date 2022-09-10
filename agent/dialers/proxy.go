@@ -23,7 +23,7 @@ type Proxy struct {
 func (t Proxy) DialContext(ctx context.Context, options ...grpc.DialOption) (conn *grpc.ClientConn, err error) {
 	var (
 		proxy *grpc.ClientConn
-		cinfo agent.ConnectResponse
+		cinfo *agent.ConnectResponse
 	)
 
 	if proxy, err = t.d.DialContext(ctx, options...); err != nil {

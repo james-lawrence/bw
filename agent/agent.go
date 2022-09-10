@@ -33,10 +33,10 @@ type Client interface {
 	Conn() *grpc.ClientConn
 	Shutdown() error
 	Close() error
-	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)
+	Upload(initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
 	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Deploy(*DeployOptions, *Archive) (*Deploy, error)
-	Connect() (ConnectResponse, error)
+	Connect() (*ConnectResponse, error)
 	Cancel(*CancelRequest) error
 	NodeCancel() error
 	QuorumInfo() (InfoResponse, error)
@@ -48,7 +48,7 @@ type Client interface {
 
 // DeployClient - facade interface.
 type DeployClient interface {
-	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)
+	Upload(initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
 	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Watch(ctx context.Context, out chan<- *Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser

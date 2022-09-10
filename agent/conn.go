@@ -15,10 +15,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type qDialer interface {
-	Dial(c cluster) (client Client, err error)
-}
-
 // MaybeConn hack to retrieve the udnerlying grpc.ClientConn until the dial sutation is resolved.
 func MaybeConn(c Client, err error) (*grpc.ClientConn, error) {
 	if err != nil {
@@ -108,7 +104,7 @@ func (t Conn) QuorumInfo() (z InfoResponse, err error) {
 }
 
 // Upload ...
-func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archive, err error) {
+func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Quorum_UploadClient
 		_info  *UploadResponse
@@ -148,7 +144,7 @@ func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info Archiv
 		return info, errors.Errorf("checksums mismatch: archive(%s), expected(%s)", hex.EncodeToString(_info.Archive.Checksum), hex.EncodeToString(checksum.Sum(nil)))
 	}
 
-	return *_info.Archive, err
+	return _info.Archive, err
 }
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
@@ -188,17 +184,13 @@ func (t Conn) Deploy(options *DeployOptions, archive *Archive) (d *Deploy, err e
 }
 
 // Connect ...
-func (t Conn) Connect() (d ConnectResponse, err error) {
-	var (
-		response *ConnectResponse
-	)
-
+func (t Conn) Connect() (d *ConnectResponse, err error) {
 	rpc := NewAgentClient(t.conn)
-	if response, err = rpc.Connect(context.Background(), &ConnectRequest{}); err != nil {
+	if d, err = rpc.Connect(context.Background(), &ConnectRequest{}); err != nil {
 		return d, errors.WithStack(err)
 	}
 
-	return *response, nil
+	return d, nil
 }
 
 // Info ...

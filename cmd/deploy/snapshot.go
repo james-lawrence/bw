@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -26,7 +25,7 @@ func Snapshot(ctx Context, out io.WriteCloser) (err error) {
 
 	log.Println("pid", os.Getpid())
 
-	if err = ioutil.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return errors.Wrap(err, "failed to crreate bw.env")
 	}
 

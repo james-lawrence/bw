@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"time"
 
 	"github.com/anacrolix/stm/rate"
@@ -55,7 +54,7 @@ func (t DeployConn) Cancel(req *CancelRequest) error {
 }
 
 // Upload an archive to be deployed.
-func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info Archive, err error) {
+func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Deployments_UploadClient
 		_info  *UploadResponse
@@ -95,7 +94,7 @@ func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info 
 		return info, errors.Errorf("checksums mismatch: archive(%s), expected(%s)", hex.EncodeToString(_info.Archive.Checksum), hex.EncodeToString(checksum.Sum(nil)))
 	}
 
-	return *_info.Archive, err
+	return _info.Archive, err
 }
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
@@ -148,7 +147,7 @@ func (t DeployConn) Logs(ctx context.Context, p *Peer, did []byte) io.ReadCloser
 
 	rpc := NewDeploymentsClient(t.conn)
 	if c, err = rpc.Logs(ctx, &LogRequest{Peer: p, DeploymentID: did}); err != nil {
-		return ioutil.NopCloser(iox.ErrReader(err))
+		return io.NopCloser(iox.ErrReader(err))
 	}
 
 	return readLogs(c)
