@@ -3,7 +3,7 @@ package httputilx
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/pkg/errors"
@@ -20,7 +20,7 @@ func EncodeJSON(req *http.Request, body interface{}) (err error) {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Body = ioutil.NopCloser(bytes.NewReader(encoded))
+	req.Body = io.NopCloser(bytes.NewReader(encoded))
 
 	return nil
 }

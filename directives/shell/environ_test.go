@@ -1,7 +1,7 @@
 package shell_test
 
 import (
-	"io/ioutil"
+	"os"
 	"sort"
 
 	"github.com/james-lawrence/bw/directives/shell"
@@ -12,7 +12,7 @@ import (
 )
 
 func mustReadString(path string) string {
-	raw, err := ioutil.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		panic(err)
 	}

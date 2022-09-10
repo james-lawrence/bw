@@ -2,7 +2,6 @@ package peering_test
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -22,7 +21,7 @@ var _ = Describe("File", func() {
 	)
 
 	BeforeEach(func() {
-		tmpdir, err = ioutil.TempDir(".", "fs-peering")
+		tmpdir, err = os.MkdirTemp(".", "fs-peering")
 		Expect(err).ToNot(HaveOccurred())
 	})
 

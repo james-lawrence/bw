@@ -1,7 +1,6 @@
 package agentutil_test
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -20,7 +19,7 @@ var _ = Describe("Agentutil", func() {
 		)
 
 		makedir := func(root string) string {
-			d, err := ioutil.TempDir(root, "")
+			d, err := os.MkdirTemp(root, "")
 			Expect(err).ToNot(HaveOccurred())
 			return d
 		}
@@ -29,7 +28,7 @@ var _ = Describe("Agentutil", func() {
 			var (
 				err error
 			)
-			root, err = ioutil.TempDir(".", "dircleanup-test")
+			root, err = os.MkdirTemp(".", "dircleanup-test")
 			Expect(err).ToNot(HaveOccurred())
 		})
 

@@ -3,7 +3,6 @@ package shell
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -34,7 +33,7 @@ func EnvironFromReader(r io.Reader) (environ []string, err error) {
 		raw []byte
 	)
 
-	if raw, err = ioutil.ReadAll(r); err != nil {
+	if raw, err = io.ReadAll(r); err != nil {
 		return environ, errors.WithStack(err)
 	}
 

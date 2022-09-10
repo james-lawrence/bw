@@ -16,7 +16,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -97,7 +96,7 @@ func ParseYAML(r io.Reader) ([]Exec, error) {
 		results []Exec
 	)
 
-	if raw, err = ioutil.ReadAll(r); err != nil {
+	if raw, err = io.ReadAll(r); err != nil {
 		return results, errors.Wrap(err, "failed to read yaml")
 	}
 

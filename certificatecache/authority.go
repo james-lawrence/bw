@@ -5,8 +5,8 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -58,7 +58,7 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 	log.Println("loading ca key", kpath)
 	log.Println("loading ca cert", cpath)
 
-	if raw, err = ioutil.ReadFile(kpath); err != nil {
+	if raw, err = os.ReadFile(kpath); err != nil {
 		log.Println("failed to initialize authority", err)
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
@@ -73,7 +73,7 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if raw, err = ioutil.ReadFile(cpath); err != nil {
+	if raw, err = os.ReadFile(cpath); err != nil {
 		log.Println("failed to initialize authority", err)
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}

@@ -3,7 +3,6 @@ package deployment
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -62,7 +61,7 @@ func readDeployMetadata(path string) (a *agent.Deploy, err error) {
 	)
 	a = &agent.Deploy{}
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		return a, errors.WithStack(err)
 	}
 

@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/naoina/toml"
@@ -16,7 +15,7 @@ func decode(path string) *ast.Table {
 		table *ast.Table
 	)
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		panic(err)
 	}
 

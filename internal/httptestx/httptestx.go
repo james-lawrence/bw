@@ -4,10 +4,10 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -28,7 +28,7 @@ func ReadRequest(path string) (resp *httptest.ResponseRecorder, req *http.Reques
 		raw []byte
 	)
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		return nil, nil, err
 	}
 

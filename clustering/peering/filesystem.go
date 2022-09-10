@@ -2,7 +2,6 @@ package peering
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 
 	yaml "gopkg.in/yaml.v2"
@@ -25,7 +24,7 @@ func (t File) Peers(context.Context) (results []string, err error) {
 		return results, nil
 	}
 
-	if data, err = ioutil.ReadFile(t.Path); err != nil {
+	if data, err = os.ReadFile(t.Path); err != nil {
 		return results, errors.Wrapf(err, "failed to peers from file: %s", t.Path)
 	}
 
@@ -44,5 +43,5 @@ func (t File) Snapshot(peers []string) error {
 		return errors.Wrap(err, "failed to marshal peers")
 	}
 
-	return errors.Wrapf(ioutil.WriteFile(t.Path, data, 0600), "failed to write file: %s", t.Path)
+	return errors.Wrapf(os.WriteFile(t.Path, data, 0600), "failed to write file: %s", t.Path)
 }

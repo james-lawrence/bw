@@ -3,7 +3,6 @@ package deployment
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -265,7 +264,7 @@ func (t *Coordinator) Logs(did []byte) (logs io.ReadCloser) {
 
 	p := filepath.Join(t.deploysRoot, bw.RandomID(did).String(), bw.DeployLog)
 	if logs, err = os.Open(p); err != nil {
-		return ioutil.NopCloser(iox.ErrReader(errors.Wrapf(err, "unable to open logfile %s", p)))
+		return io.NopCloser(iox.ErrReader(errors.Wrapf(err, "unable to open logfile %s", p)))
 	}
 
 	return logs

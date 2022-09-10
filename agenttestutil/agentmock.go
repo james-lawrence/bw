@@ -33,7 +33,6 @@ func (t *FakeAgent) NodeCancel() error {
 }
 
 func (t *FakeAgent) Logs(req *agent.LogRequest, s agent.Agent_LogsServer) error {
-	// return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(did))))
 	return t.ErrResult
 }
 

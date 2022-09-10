@@ -1,7 +1,6 @@
 package protox
 
 import (
-	"io/ioutil"
 	"os"
 
 	"google.golang.org/protobuf/proto"
@@ -17,7 +16,7 @@ func WriteFile(path string, perm os.FileMode, m proto.Message) (err error) {
 		return err
 	}
 
-	if err = ioutil.WriteFile(path, encoded, perm); err != nil {
+	if err = os.WriteFile(path, encoded, perm); err != nil {
 		return err
 	}
 
@@ -30,7 +29,7 @@ func ReadFile(path string, m proto.Message) (err error) {
 		encoded []byte
 	)
 
-	if encoded, err = ioutil.ReadFile(path); err != nil {
+	if encoded, err = os.ReadFile(path); err != nil {
 		return err
 	}
 

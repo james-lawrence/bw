@@ -2,7 +2,6 @@ package bwfs_test
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -25,7 +24,7 @@ var _ = Describe("Bwfs", func() {
 			err error
 		)
 
-		if tmpdir, err = ioutil.TempDir(".", "test"); err != nil {
+		if tmpdir, err = os.MkdirTemp(".", "test"); err != nil {
 			Expect(err).ToNot(HaveOccurred())
 		}
 

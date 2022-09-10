@@ -2,7 +2,6 @@ package testingx
 
 import (
 	"context"
-	"io/ioutil"
 	"net"
 	"os"
 	"time"
@@ -26,7 +25,7 @@ func TempDir() (dir string) {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 
-	if dir, err = ioutil.TempDir(rootDir, "tmp"); err != nil {
+	if dir, err = os.MkdirTemp(rootDir, "tmp"); err != nil {
 		gomega.Expect(err).ToNot(gomega.HaveOccurred())
 	}
 

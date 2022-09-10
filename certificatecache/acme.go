@@ -7,8 +7,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -131,17 +131,17 @@ func (t ACME) Refresh() (err error) {
 	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
 
 	log.Println("writing authority certificate", capath)
-	if err = ioutil.WriteFile(capath, authority, 0600); err != nil {
+	if err = os.WriteFile(capath, authority, 0600); err != nil {
 		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate authority to %s", capath))
 	}
 
 	log.Println("writing certificate", certpath)
-	if err = ioutil.WriteFile(certpath, cert, 0600); err != nil {
+	if err = os.WriteFile(certpath, cert, 0600); err != nil {
 		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate to %s", certpath))
 	}
 
 	log.Println("writing private key", keypath)
-	if err = ioutil.WriteFile(keypath, key, 0600); err != nil {
+	if err = os.WriteFile(keypath, key, 0600); err != nil {
 		return logx.MaybeLog(errors.Wrapf(err, "failed to write private key to %s", keypath))
 	}
 	return nil

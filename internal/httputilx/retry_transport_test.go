@@ -2,7 +2,7 @@ package httputilx_test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,12 +21,12 @@ var _ = Describe("Retry Transport", func() {
 		invoked := 0
 		body := []byte("")
 		c := httptestx.NewTestClient(func(req *http.Request) *http.Response {
-			body, _ = ioutil.ReadAll(req.Body)
+			body, _ = io.ReadAll(req.Body)
 			invoked++
 
 			return &http.Response{
 				StatusCode: http.StatusBadGateway,
-				Body:       ioutil.NopCloser(strings.NewReader("")),
+				Body:       io.NopCloser(strings.NewReader("")),
 				Header:     http.Header{},
 			}
 		})
@@ -62,12 +62,12 @@ var _ = Describe("Retry Transport", func() {
 		invoked := 0
 		body := []byte("")
 		c := httptestx.NewTestClient(func(req *http.Request) *http.Response {
-			body, _ = ioutil.ReadAll(req.Body)
+			body, _ = io.ReadAll(req.Body)
 			invoked++
 
 			return &http.Response{
 				StatusCode: http.StatusBadGateway,
-				Body:       ioutil.NopCloser(strings.NewReader("")),
+				Body:       io.NopCloser(strings.NewReader("")),
 				Header:     http.Header{},
 			}
 		})

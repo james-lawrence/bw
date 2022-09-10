@@ -3,7 +3,6 @@ package quorum
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/observers"
@@ -82,7 +81,7 @@ func snapshotRestore(w WAL, buff io.ReadWriter, commands ...*agent.Message) erro
 		return err
 	}
 
-	if err = w.Restore(ioutil.NopCloser(sink.contents)); err != nil {
+	if err = w.Restore(io.NopCloser(sink.contents)); err != nil {
 		return err
 	}
 
@@ -166,7 +165,7 @@ var _ = DescribeTable(
 		)
 		buf := bytes.NewBuffer(nil)
 		Expect(EncodeEvery(buf, commands...)).To(Succeed())
-		Expect(wal.Restore(ioutil.NopCloser(buf))).To(Succeed())
+		Expect(wal.Restore(io.NopCloser(buf))).To(Succeed())
 	},
 	Entry(
 		"successful deployment",

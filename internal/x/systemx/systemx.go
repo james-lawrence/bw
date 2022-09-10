@@ -3,7 +3,6 @@ package systemx
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -106,7 +105,7 @@ func FileMD5(path string) string {
 		read []byte
 	)
 
-	if read, err = ioutil.ReadFile(path); err != nil {
+	if read, err = os.ReadFile(path); err != nil {
 		log.Println("digest failed", err)
 		return ""
 	}

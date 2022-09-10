@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -131,7 +130,7 @@ func (TorrentUtil) createFile(dir string) (*os.File, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	if dst, err = ioutil.TempFile(dir, "upload-*.bin"); err != nil {
+	if dst, err = os.CreateTemp(dir, "upload-*.bin"); err != nil {
 		return nil, errors.WithStack(err)
 	}
 

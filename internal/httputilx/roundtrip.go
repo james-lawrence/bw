@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
@@ -203,7 +202,7 @@ type RetryTransport struct {
 // RoundTrip - implements http.RoundTripper
 func (t RetryTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
 	if req.Body == nil {
-		req.Body = ioutil.NopCloser(bytes.NewBufferString(""))
+		req.Body = io.NopCloser(bytes.NewBufferString(""))
 	}
 
 	o := req.Body
@@ -212,12 +211,12 @@ func (t RetryTransport) RoundTrip(req *http.Request) (resp *http.Response, err e
 	}
 
 	buf := bytes.NewBuffer(t.pool.Get())
-	tee := ioutil.NopCloser(io.TeeReader(req.Body, buf))
+	tee := io.NopCloser(io.TeeReader(req.Body, buf))
 	req.Body = tee
 
 	if resp, err = t.Delegate.RoundTrip(req); err != nil {
 		if errors.Is(err, context.DeadlineExceeded) {
-			req.Body = ioutil.NopCloser(buf)
+			req.Body = io.NopCloser(buf)
 			return t.Delegate.RoundTrip(req)
 		}
 		return resp, err
@@ -228,6 +227,6 @@ func (t RetryTransport) RoundTrip(req *http.Request) (resp *http.Response, err e
 		return resp, err
 	}
 
-	req.Body = ioutil.NopCloser(buf)
+	req.Body = io.NopCloser(buf)
 	return t.Delegate.RoundTrip(req)
 }

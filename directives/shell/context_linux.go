@@ -1,9 +1,9 @@
 package shell
 
 import (
-	"io/ioutil"
 	"log"
 	"net"
+	"os"
 	"strings"
 
 	"github.com/james-lawrence/bw/internal/x/logx"
@@ -46,7 +46,7 @@ func machineID() string {
 		raw []byte
 	)
 
-	if raw, err = ioutil.ReadFile("/etc/machine-id"); err != nil {
+	if raw, err = os.ReadFile("/etc/machine-id"); err != nil {
 		log.Println("failed to read machine id, defaulting to empty string", err)
 		return ""
 	}

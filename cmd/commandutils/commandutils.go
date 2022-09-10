@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -50,10 +49,10 @@ func PersistAgentName(proto agent.Config) (c agent.Config, err error) {
 	)
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return proto, ioutil.WriteFile(path, []byte(proto.Name), 0600)
+		return proto, os.WriteFile(path, []byte(proto.Name), 0600)
 	}
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		return proto, errors.Wrap(err, "failed to read persisted agent name")
 	}
 

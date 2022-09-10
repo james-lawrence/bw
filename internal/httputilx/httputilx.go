@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime"
 	"net"
@@ -129,7 +128,7 @@ func RecordRequestHandler(original http.Handler) http.Handler {
 			goto next
 		}
 
-		if out, err = ioutil.TempFile("", "request-recording"); err != nil {
+		if out, err = os.CreateTemp("", "request-recording"); err != nil {
 			log.Println("failed to record request", err)
 			goto next
 		}
@@ -331,7 +330,7 @@ func IgnoreError(err error, code ...int) bool {
 // MimeType extracts mimetype from request, defaults to application/
 func MimeType(h http.Header) string {
 	const fallback = "application/octet-stream"
-	t, _, err := mime.ParseMediaType(h.Get(http.CanonicalHeaderKey("Content-Type")))
+	t, _, err := mime.ParseMediaType(h.Get("Content-Type"))
 	if err != nil {
 		return fallback
 	}

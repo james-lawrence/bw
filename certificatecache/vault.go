@@ -1,8 +1,8 @@
 package certificatecache
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 	"os/user"
 	"path/filepath"
 
@@ -70,17 +70,17 @@ func (t Vault) Refresh() (err error) {
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
 
 	log.Println("writing private key", keypath)
-	if err = ioutil.WriteFile(keypath, []byte(credentials.Data["private_key"].(string)), 0600); err != nil {
+	if err = os.WriteFile(keypath, []byte(credentials.Data["private_key"].(string)), 0600); err != nil {
 		return errors.Wrapf(err, "failed to write private key to %s", keypath)
 	}
 
 	log.Println("writing certificate", certpath)
-	if err = ioutil.WriteFile(certpath, []byte(credentials.Data["certificate"].(string)), 0600); err != nil {
+	if err = os.WriteFile(certpath, []byte(credentials.Data["certificate"].(string)), 0600); err != nil {
 		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
 	}
 
 	log.Println("writing authority certificate", capath)
-	if err = ioutil.WriteFile(capath, []byte(credentials.Data["issuing_ca"].(string)), 0600); err != nil {
+	if err = os.WriteFile(capath, []byte(credentials.Data["issuing_ca"].(string)), 0600); err != nil {
 		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
 	}
 
@@ -93,7 +93,7 @@ func (t Vault) readTokenFile() string {
 		raw []byte
 	)
 
-	if raw, err = ioutil.ReadFile(t.DefaultTokenFile); err != nil {
+	if raw, err = os.ReadFile(t.DefaultTokenFile); err != nil {
 		log.Println("failed to read vault token from file", t.DefaultTokenFile, err)
 		return ""
 	}

@@ -5,7 +5,6 @@ package storage
 
 import (
 	"io"
-	"io/ioutil"
 
 	"github.com/james-lawrence/bw/agent"
 )
@@ -21,7 +20,7 @@ type cluster interface {
 }
 
 func newErrReader(err error) io.ReadCloser {
-	return ioutil.NopCloser(errReader{err})
+	return io.NopCloser(errReader{err})
 }
 
 type errReader struct {

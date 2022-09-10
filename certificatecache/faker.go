@@ -5,8 +5,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -54,12 +54,12 @@ func (t faker) Refresh() (err error) {
 	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
 
 	log.Println("writing certificate", certpath)
-	if err = ioutil.WriteFile(certpath, cert, 0600); err != nil {
+	if err = os.WriteFile(certpath, cert, 0600); err != nil {
 		return errors.Wrapf(err, "failed to write certificate to %s", certpath)
 	}
 
 	log.Println("writing authority certificate", capath)
-	if err = ioutil.WriteFile(capath, cert, 0600); err != nil {
+	if err = os.WriteFile(capath, cert, 0600); err != nil {
 		return errors.Wrapf(err, "failed to write certificate authority to %s", capath)
 	}
 

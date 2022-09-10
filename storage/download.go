@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"context"
 	"io"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -123,5 +122,5 @@ func buildArchive(input []byte) io.ReadCloser {
 		return newErrReader(errors.New("failed to build archive"))
 	}
 
-	return ioutil.NopCloser(b)
+	return io.NopCloser(b)
 }

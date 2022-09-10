@@ -1,7 +1,6 @@
 package bw
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -164,7 +163,7 @@ func ExpandAndDecodeFile(path string, dst interface{}) (err error) {
 		return nil
 	}
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		return errors.WithStack(err)
 	}
 
