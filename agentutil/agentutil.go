@@ -34,7 +34,7 @@ const (
 )
 
 type dialer interface {
-	Dial(agent.Peer) (zeroc agent.Client, err error)
+	Dial(*agent.Peer) (zeroc agent.Client, err error)
 }
 
 type dialer3 interface {

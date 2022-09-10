@@ -13,7 +13,7 @@ import (
 )
 
 // EnsureLeader waits for a leader to be established.
-func EnsureLeader(ctx context.Context, d dialer, proxy agent.Peer) (info agent.InfoResponse, err error) {
+func EnsureLeader(ctx context.Context, d dialer, proxy *agent.Peer) (info agent.InfoResponse, err error) {
 	var (
 		qc agent.Client
 	)

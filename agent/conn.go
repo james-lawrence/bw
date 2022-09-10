@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 
 	"google.golang.org/grpc"
 
@@ -263,7 +262,7 @@ func (t Conn) Logs(ctx context.Context, p *Peer, did []byte) io.ReadCloser {
 
 	rpc := NewAgentClient(t.conn)
 	if c, err = rpc.Logs(ctx, &LogRequest{Peer: p, DeploymentID: did}); err != nil {
-		return ioutil.NopCloser(iox.ErrReader(err))
+		return io.NopCloser(iox.ErrReader(err))
 	}
 
 	return readLogs(c)

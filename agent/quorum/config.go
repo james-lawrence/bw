@@ -67,7 +67,7 @@ func (t Configuration) Decode(tctx TranscoderContext, m *agent.Message) (err err
 		return err
 	}
 
-	if c, err = t.d.Dial(*m.Peer); err != nil {
+	if c, err = t.d.Dial(m.Peer); err != nil {
 		return err
 	}
 

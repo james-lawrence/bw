@@ -14,7 +14,7 @@ type rendezvous interface {
 }
 
 type dialer interface {
-	Dial(p Peer) (Client, error)
+	Dial(p *Peer) (Client, error)
 }
 
 // Random returns a single random peer from the set.
@@ -80,7 +80,7 @@ func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 	}
 
 	for _, q := range shuffleQuorum(cinfo.Quorum) {
-		if conn, err = d.Dial(*q); err != nil {
+		if conn, err = d.Dial(q); err != nil {
 			log.Println("failed to dial", RPCAddress(q), err)
 			continue
 		}
@@ -123,12 +123,12 @@ type Dialer struct {
 }
 
 // Dial connects to the provided peer.
-func (t Dialer) Dial(p Peer) (zeroc Client, err error) {
+func (t Dialer) Dial(p *Peer) (zeroc Client, err error) {
 	var (
 		addr string
 	)
 
-	if addr = RPCAddress(&p); addr == "" {
+	if addr = RPCAddress(p); addr == "" {
 		return zeroc, errors.Errorf("failed to determine address of peer: %s", p.Name)
 	}
 
@@ -141,7 +141,7 @@ type ProxyQuorumDialer struct {
 }
 
 // Dial a member of quorum using the provided peer as the proxy.
-func (t ProxyQuorumDialer) Dial(p Peer) (conn Client, err error) {
+func (t ProxyQuorumDialer) Dial(p *Peer) (conn Client, err error) {
 	if conn, err = t.d.Dial(p); err != nil {
 		return conn, err
 	}
@@ -149,29 +149,3 @@ func (t ProxyQuorumDialer) Dial(p Peer) (conn Client, err error) {
 
 	return ProxyDialQuorum(conn, t.d)
 }
-
-// // NewQuorumDialer creates a new dialer that connects to a member of the quorum.
-// func NewQuorumDialer(d dialer) QuorumDialer {
-// 	return QuorumDialer{
-// 		dialer: d,
-// 	}
-// }
-
-// // QuorumDialer connects to a member of the quorum.
-// type QuorumDialer struct {
-// 	dialer dialer
-// }
-
-// // Dial connects to a member of the quorum based on the cluster.
-// func (t QuorumDialer) Dial(c cluster) (client Client, err error) {
-// 	err = errors.New("unable to connect")
-
-// 	for _, p := range shuffleQuorum(c.Quorum()) {
-// 		if client, err = t.dialer.Dial(*p); err == nil {
-// 			break
-// 		}
-// 		log.Println("failed to connect to peer", p.Name, p.Ip)
-// 	}
-
-// 	return client, errors.WithMessage(err, "failed to connect to a member of the quorum")
-// }
