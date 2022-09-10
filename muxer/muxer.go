@@ -13,6 +13,7 @@ import (
 	sync "sync"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/x/debugx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -141,7 +142,7 @@ func accept1(ctx context.Context, m *M, inbound chan net.Conn) (err error) {
 			// log.Printf("accept: completed %T %p backlog(%d) cap(%d)\n", conn, inbound, len(inbound), cap(inbound))
 			if err = accept(ctx, m, conn); err != nil {
 				conn.Close()
-				log.Println("accept failed", err)
+				debugx.Println("accept failed", err)
 			}
 		case <-ctx.Done():
 			log.Println("accept failed", ctx.Err())

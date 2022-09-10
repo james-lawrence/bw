@@ -32,7 +32,7 @@ bw me init
 rm -rf ~/.cache/bearded-wookie/agent* && bw deploy local linux-dev
 
 systemctl --user restart bearded-wookie-deploy-notifications@agent1.service
-systemctl --user restart bearded-wookie@agent{1,2,3,4,5,6,7,8,9,10}.service
+systemctl --user restart bearded-wookie@agent{1,2,3,4}.service
 bw deploy env linux-test --insecure
 ```
 

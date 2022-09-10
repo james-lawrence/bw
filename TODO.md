@@ -23,6 +23,9 @@
 - implement context
 - - should get this mostly for free with tinygo. biggest problem is Background() we're we've overridden the default behavior.
 
+### agent connection pool.
+- do we still need this?
+
 ### nginx serving bearded-wookie on tls port with standard tls server.
 ```nginx
 stream {
