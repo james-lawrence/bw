@@ -1,3 +1,62 @@
+commit b07bb5f91db86725051168d3d58b4746358a0766
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 14:25:46 2022 -0400
+
+    expose check command
+
+commit 184b7c6c1839651ae42913142d7a17fa98be5888
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 13:44:14 2022 -0400
+
+    correct self signed bootstrap certificates issues.
+    
+    the self signed bootstrap certificate wasn't not generating
+    the same serial number resulting in unknown authority errors.
+    
+    this fixes those issues.
+
+commit 9d1f4fc3d8787c55f1b79923819b532f14a8909f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 11:48:05 2022 -0400
+
+    update protocols
+
+commit 180baa4c06330b9de42f2df49255cdce9d2119c8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 11:22:42 2022 -0400
+
+    move cert cache to later
+
+commit 792520d61dec57078dd4138dc6fa7d9c67394536
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 11:22:42 2022 -0400
+
+    move cert cache to later
+
+commit c196ab3eb837ea57ba8c20c2589cb08db9282c13
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 11:22:16 2022 -0400
+
+    remove dead state machine code
+
+commit 8ecbb5ca0133cd6de345d54a838e6dfed9725b14
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 10:38:23 2022 -0400
+
+    code cleanup; remove linting about lock copy
+
+commit f7f0235591de68db10a56e9f67d69193a8b2431f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 9 01:13:35 2022 -0400
+
+    remove test data
+
+commit b533d0817e3cd295bf66cc77ae419105953c7f4c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 9 01:10:06 2022 -0400
+
+    release 0.1.1662700055-3d85e620
+
 commit 3d85e6208c762577e1cf876ecdf22f47c577e0d6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 9 01:07:35 2022 -0400
