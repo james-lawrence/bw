@@ -136,10 +136,6 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return err
 	}
 
-	if acmesvc, err = acme.ReadConfig(config, t.Location); err != nil {
-		return err
-	}
-
 	local := cluster.NewLocal(
 		config.Peer(),
 	)
@@ -170,6 +166,10 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithPerRPCCredentials(ss),
 	)
+
+	if acmesvc, err = acme.ReadConfig(config, t.Location); err != nil {
+		return err
+	}
 
 	dctx := daemons.Context{
 		Deploys:           deployer,
