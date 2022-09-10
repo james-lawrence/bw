@@ -35,7 +35,7 @@ func EnsureLeader(ctx context.Context, d dialer, proxy *agent.Peer) (info *agent
 			continue
 		}
 
-		if info, err = qc.QuorumInfo(); err != nil {
+		if info, err = qc.QuorumInfo(ctx); err != nil {
 			log.Println(errors.Wrap(err, "failed to retrieve quorum information"))
 			continue
 		}

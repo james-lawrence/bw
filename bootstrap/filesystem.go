@@ -208,7 +208,7 @@ func (t Filesystem) upload() (err error) {
 	}
 	defer conn.Close()
 
-	if dc.Archive, err = agent.NewConn(conn).Upload(dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
+	if dc.Archive, err = agent.NewConn(conn).Upload(context.Background(), dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
 		return err
 	}
 

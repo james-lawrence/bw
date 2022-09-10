@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -45,11 +44,11 @@ func (t *cmdEnvCreate) Run(ctx *cmdopts.Global) (err error) {
 		return errors.Wrap(err, "failed to encode configuration, try updating to a newer bearded wookie version")
 	}
 
-	if err = ioutil.WriteFile(filepath.Join(t.Directory, t.Name, bw.DefaultClientConfig), encoded, 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(t.Directory, t.Name, bw.DefaultClientConfig), encoded, 0600); err != nil {
 		return errors.Wrap(err, "failed to write configuration")
 	}
 
-	if err = ioutil.WriteFile(filepath.Join(t.Directory, t.Name, bw.AuthKeysFile), []byte(nil), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(t.Directory, t.Name, bw.AuthKeysFile), []byte(nil), 0600); err != nil {
 		return errors.Wrap(err, "failed to write configuration")
 	}
 

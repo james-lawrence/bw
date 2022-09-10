@@ -59,6 +59,7 @@ func (t cmdDeployEnvironmentDefault) Run(ctx *cmdopts.Global) error {
 		Lenient:     t.Lenient,
 		Silent:      t.Silent,
 		Canary:      t.Canary,
+		Debug:       t.Debug,
 		Filter:      deployment.Or(filters...),
 		AllowEmpty:  len(filters) == 0,
 	})
@@ -94,6 +95,7 @@ func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 		Lenient:     t.Lenient,
 		Silent:      t.Silent,
 		Canary:      t.Canary,
+		Debug:       t.Debug,
 		Filter:      deployment.Or(filters...),
 		AllowEmpty:  len(filters) == 0,
 	})
@@ -130,6 +132,7 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 		Lenient:     t.Lenient,
 		Silent:      t.Silent,
 		Canary:      t.Canary,
+		Debug:       t.Debug,
 		Filter:      deployment.Or(filters...),
 		AllowEmpty:  len(filters) == 0,
 	}, t.DeploymentID)
@@ -147,6 +150,7 @@ func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 		WaitGroup:   ctx.Cleanup,
 		Insecure:    t.Insecure,
 		Environment: t.Environment,
+		Debug:       t.Debug,
 	}, t.Debug)
 }
 
@@ -180,5 +184,6 @@ func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
 		WaitGroup:   ctx.Cleanup,
 		Environment: t.Environment,
 		Insecure:    t.Insecure,
+		Debug:       t.Debug,
 	})
 }

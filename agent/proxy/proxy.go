@@ -3,6 +3,8 @@
 package proxy
 
 import (
+	"context"
+
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"google.golang.org/grpc"
@@ -21,7 +23,7 @@ func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
 
 		defer c.Close()
 
-		if info, err = agent.NewConn(c).Info(); err != nil {
+		if info, err = agent.NewConn(c).Info(context.Background()); err != nil {
 			return _d, err
 		}
 
@@ -46,6 +48,6 @@ func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaul
 		}
 		defer c.Close()
 
-		return agent.NewConn(c).Deploy(dopts, archive)
+		return agent.NewConn(c).Deploy(context.Background(), dopts, archive)
 	}
 }

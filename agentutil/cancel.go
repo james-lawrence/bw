@@ -1,6 +1,8 @@
 package agentutil
 
 import (
+	"context"
+
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 )
@@ -8,7 +10,7 @@ import (
 // Cancel - cancels all deploys across the cluster.
 func Cancel(c peers, d dialers.Defaulted) error {
 	return NewClusterOperation(Operation(func(c agent.Client) error {
-		if cause := c.NodeCancel(); cause != nil {
+		if cause := c.NodeCancel(context.Background()); cause != nil {
 			return cause
 		}
 

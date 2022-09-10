@@ -20,6 +20,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/termui"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
@@ -100,13 +101,19 @@ func Into(ctx *Context) error {
 	)
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	var debugopt grpc.DialOption = grpc.EmptyDialOption{}
+
+	if envx.Boolean(ctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		debugopt = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
+	}
+
+	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context, grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)); err != nil {
+	if conn, err = qd.DialContext(ctx.Context); err != nil {
 		return errors.Wrap(err, "unable to create a connection")
 	}
 
@@ -159,7 +166,7 @@ func Into(ctx *Context) error {
 			return nil
 		}
 
-		if darchive, err = client.Upload(bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
+		if darchive, err = client.Upload(ctx.Context, bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
 			events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
 			events <- agentutil.LogEvent(local, "deployment failed")
 			return err

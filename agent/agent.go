@@ -31,16 +31,16 @@ type ConnectableDispatcher interface {
 // Client - client facade interface.
 type Client interface {
 	Conn() *grpc.ClientConn
-	Shutdown() error
 	Close() error
-	Upload(initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
+	Shutdown(ctx context.Context) error
+	Upload(ctx context.Context, initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
 	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
-	Deploy(*DeployOptions, *Archive) (*Deploy, error)
-	Connect() (*ConnectResponse, error)
-	Cancel(*CancelRequest) error
-	NodeCancel() error
-	QuorumInfo() (*InfoResponse, error)
-	Info() (*StatusResponse, error)
+	Deploy(context.Context, *DeployOptions, *Archive) (*Deploy, error)
+	Connect(ctx context.Context) (*ConnectResponse, error)
+	Cancel(context.Context, *CancelRequest) error
+	NodeCancel(ctx context.Context) error
+	QuorumInfo(ctx context.Context) (*InfoResponse, error)
+	Info(ctx context.Context) (*StatusResponse, error)
 	Watch(ctx context.Context, out chan<- *Message) error
 	Dispatch(ctx context.Context, messages ...*Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
@@ -48,12 +48,12 @@ type Client interface {
 
 // DeployClient - facade interface.
 type DeployClient interface {
-	Upload(initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
+	Close() error
+	Upload(ctx context.Context, initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
 	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Watch(ctx context.Context, out chan<- *Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
-	Close() error
-	Cancel(*CancelRequest) error
+	Cancel(context.Context, *CancelRequest) error
 }
 
 type cluster interface {

@@ -64,7 +64,7 @@ var _ = Describe("Server", func() {
 			defer h.Cleanup()
 
 			q := h.cluster.Quorum()
-			info, err := h.client.Connect()
+			info, err := h.client.Connect(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(info.Quorum).To(ConsistOf(q[0], q[1], q[2]))
 		})
@@ -75,7 +75,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 
-			info, err := h.client.Info()
+			info, err := h.client.Info(context.Background())
 			Expect(err).ToNot(HaveOccurred())
 			Expect(info.Deployments).To(BeEmpty())
 			tmp := h.cluster.Local()
@@ -89,7 +89,7 @@ var _ = Describe("Server", func() {
 			h := testClient()
 			defer h.Cleanup()
 
-			_, err := h.client.Deploy(&DeployOptions{}, &Archive{})
+			_, err := h.client.Deploy(context.Background(), &DeployOptions{}, &Archive{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})

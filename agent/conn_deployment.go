@@ -48,20 +48,20 @@ func (t DeployConn) Close() error {
 
 // Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
-func (t DeployConn) Cancel(req *CancelRequest) error {
-	_, err := NewDeploymentsClient(t.conn).Cancel(context.Background(), req)
+func (t DeployConn) Cancel(ctx context.Context, req *CancelRequest) error {
+	_, err := NewDeploymentsClient(t.conn).Cancel(ctx, req)
 	return errors.WithStack(err)
 }
 
 // Upload an archive to be deployed.
-func (t DeployConn) Upload(initiator string, total uint64, src io.Reader) (info *Archive, err error) {
+func (t DeployConn) Upload(ctx context.Context, initiator string, total uint64, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Deployments_UploadClient
 		_info  *UploadResponse
 		rpc    = NewDeploymentsClient(t.conn)
 	)
 
-	if stream, err = rpc.Upload(context.Background()); err != nil {
+	if stream, err = rpc.Upload(ctx); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
 
@@ -109,7 +109,7 @@ func (t DeployConn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *A
 	}
 
 	for err = status.Error(codes.Unavailable, ""); grpcx.IsUnavailable(err); l.Wait(ctx) {
-		_, err = rpc.Deploy(context.Background(), &req)
+		_, err = rpc.Deploy(ctx, &req)
 	}
 
 	return errors.WithStack(err)

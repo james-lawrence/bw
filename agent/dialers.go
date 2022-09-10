@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"log"
 	"math/rand"
 
@@ -75,7 +76,7 @@ func ProxyDialQuorum(c Client, d dialer) (conn Client, err error) {
 		cinfo *ConnectResponse
 	)
 
-	if cinfo, err = c.Connect(); err != nil {
+	if cinfo, err = c.Connect(context.Background()); err != nil {
 		return conn, err
 	}
 

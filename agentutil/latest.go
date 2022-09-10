@@ -104,7 +104,7 @@ func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z *agent.Deploy, er
 
 	client = agent.NewConn(conn)
 
-	if i, err = client.QuorumInfo(); err != nil {
+	if i, err = client.QuorumInfo(context.Background()); err != nil {
 		return z, errorsx.Compact(err, client.Close())
 	}
 
@@ -152,7 +152,7 @@ func AgentLatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 		info *agent.StatusResponse
 	)
 
-	if info, err = c.Info(); err != nil {
+	if info, err = c.Info(context.Background()); err != nil {
 		return a, errors.Wrap(err, "failed to retrieve latest deployment")
 	}
 
@@ -224,7 +224,7 @@ func AgentDeployments(c agent.Client) (a []*agent.Deploy, err error) {
 		info *agent.StatusResponse
 	)
 
-	if info, err = c.Info(); err != nil {
+	if info, err = c.Info(context.Background()); err != nil {
 		return a, errors.Wrap(err, "failed to retrieve latest deployment")
 	}
 

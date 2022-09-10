@@ -61,9 +61,9 @@ func (t Conn) Close() error {
 }
 
 // NodeCancel causes the current deploy (if any) to be cancelled.
-func (t Conn) NodeCancel() (err error) {
+func (t Conn) NodeCancel(ctx context.Context) (err error) {
 	rpc := NewAgentClient(t.conn)
-	if _, err = rpc.Cancel(context.Background(), &CancelRequest{}); err != nil {
+	if _, err = rpc.Cancel(ctx, &CancelRequest{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -72,10 +72,10 @@ func (t Conn) NodeCancel() (err error) {
 
 // Shutdown causes the agent to shut down. generally the agent process
 // should be configured to automatically restart.
-func (t Conn) Shutdown() (err error) {
+func (t Conn) Shutdown(ctx context.Context) (err error) {
 	rpc := NewAgentClient(t.conn)
 
-	if _, err = rpc.Shutdown(context.Background(), &ShutdownRequest{}); err != nil {
+	if _, err = rpc.Shutdown(ctx, &ShutdownRequest{}); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -84,17 +84,17 @@ func (t Conn) Shutdown() (err error) {
 
 // Cancel proxy the cancellation through the quorum nodes.
 // this cleans up the raft state in addition to the individual nodes.
-func (t Conn) Cancel(req *CancelRequest) error {
-	_, err := NewQuorumClient(t.conn).Cancel(context.Background(), req)
+func (t Conn) Cancel(ctx context.Context, req *CancelRequest) error {
+	_, err := NewQuorumClient(t.conn).Cancel(ctx, req)
 	return errors.WithStack(err)
 }
 
 // QuorumInfo returns high level details about the state of the cluster.
-func (t Conn) QuorumInfo() (z *InfoResponse, err error) {
+func (t Conn) QuorumInfo(ctx context.Context) (z *InfoResponse, err error) {
 	var ()
 
 	rpc := NewQuorumClient(t.conn)
-	if z, err = rpc.Info(context.Background(), &InfoRequest{}); err != nil {
+	if z, err = rpc.Info(ctx, &InfoRequest{}); err != nil {
 		return z, errors.WithStack(err)
 	}
 
@@ -102,14 +102,14 @@ func (t Conn) QuorumInfo() (z *InfoResponse, err error) {
 }
 
 // Upload ...
-func (t Conn) Upload(initiator string, total uint64, src io.Reader) (info *Archive, err error) {
+func (t Conn) Upload(ctx context.Context, initiator string, total uint64, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Quorum_UploadClient
 		_info  *UploadResponse
 	)
 
 	rpc := NewQuorumClient(t.conn)
-	if stream, err = rpc.Upload(context.Background()); err != nil {
+	if stream, err = rpc.Upload(ctx); err != nil {
 		return info, errors.Wrap(err, "failed to create upload stream")
 	}
 
@@ -163,14 +163,14 @@ func (t Conn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive
 }
 
 // Deploy ...
-func (t Conn) Deploy(options *DeployOptions, archive *Archive) (d *Deploy, err error) {
+func (t Conn) Deploy(ctx context.Context, options *DeployOptions, archive *Archive) (d *Deploy, err error) {
 	var (
 		ar *DeployResponse
 	)
 
 	rpc := NewAgentClient(t.conn)
 
-	if ar, err = rpc.Deploy(context.Background(), &DeployRequest{Options: options, Archive: archive}); err != nil {
+	if ar, err = rpc.Deploy(ctx, &DeployRequest{Options: options, Archive: archive}); err != nil {
 		return d, errors.Wrap(err, "failed to initiated deploy")
 	}
 
@@ -182,9 +182,9 @@ func (t Conn) Deploy(options *DeployOptions, archive *Archive) (d *Deploy, err e
 }
 
 // Connect ...
-func (t Conn) Connect() (d *ConnectResponse, err error) {
+func (t Conn) Connect(ctx context.Context) (d *ConnectResponse, err error) {
 	rpc := NewAgentClient(t.conn)
-	if d, err = rpc.Connect(context.Background(), &ConnectRequest{}); err != nil {
+	if d, err = rpc.Connect(ctx, &ConnectRequest{}); err != nil {
 		return d, errors.WithStack(err)
 	}
 
@@ -192,12 +192,12 @@ func (t Conn) Connect() (d *ConnectResponse, err error) {
 }
 
 // Info ...
-func (t Conn) Info() (info *StatusResponse, err error) {
+func (t Conn) Info(ctx context.Context) (info *StatusResponse, err error) {
 	var (
 		_zero StatusRequest
 	)
 	rpc := NewAgentClient(t.conn)
-	if info, err = rpc.Info(context.Background(), &_zero); err != nil {
+	if info, err = rpc.Info(ctx, &_zero); err != nil {
 		return info, errors.Wrap(err, "failed to retrieve info")
 	}
 

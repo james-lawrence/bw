@@ -1,6 +1,8 @@
 package agentutil
 
 import (
+	"context"
+
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 )
@@ -8,7 +10,7 @@ import (
 // Shutdown runs the shutdown command on the entire cluster.
 func Shutdown(c peers, d dialers.Defaults) error {
 	return NewClusterOperation(Operation(func(c agent.Client) error {
-		if cause := c.Shutdown(); cause != nil {
+		if cause := c.Shutdown(context.Background()); cause != nil {
 			return cause
 		}
 

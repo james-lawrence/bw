@@ -71,7 +71,7 @@ func Cancel(ctx *Context) (err error) {
 
 	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
 
-	if err = client.Cancel(&agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
+	if err = client.Cancel(ctx.Context, &agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
 		return err
 	}
 

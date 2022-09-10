@@ -152,7 +152,7 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 			info *agent.StatusResponse
 		)
 
-		if info, err = c.Info(); err != nil {
+		if info, err = c.Info(ctx.Context); err != nil {
 			return errors.WithStack(err)
 		}
 

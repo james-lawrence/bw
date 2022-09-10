@@ -31,7 +31,7 @@ func (t Proxy) DialContext(ctx context.Context, options ...grpc.DialOption) (con
 	}
 	defer proxy.Close()
 
-	if cinfo, err = agent.NewConn(proxy).Connect(); err != nil {
+	if cinfo, err = agent.NewConn(proxy).Connect(ctx); err != nil {
 		return conn, err
 	}
 
