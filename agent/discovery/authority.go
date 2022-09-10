@@ -2,7 +2,7 @@ package discovery
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -33,11 +33,11 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 	var (
 		ok      bool
 		m1      agent.Message
-		m2      *agent.Message_Authority
+		m2      *agent.Message_Credentials
 		encoded []byte
 	)
 
-	if encoded, err = ioutil.ReadFile(t.protoPath); err != nil {
+	if encoded, err = os.ReadFile(t.protoPath); err != nil {
 		return &CheckResponse{}, status.Error(codes.Unavailable, "missing info")
 	}
 
@@ -45,7 +45,7 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
 	}
 
-	if m2, ok = m1.GetEvent().(*agent.Message_Authority); !ok {
+	if m2, ok = m1.GetEvent().(*agent.Message_Credentials); !ok {
 		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
 	}
 
@@ -53,7 +53,7 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
 	}
 
-	if m2.Authority.Fingerprint != req.Fingerprint {
+	if m2.Credentials.Fingerprint != req.Fingerprint {
 		return &CheckResponse{}, status.Error(codes.NotFound, "fingerprint mismatch")
 	}
 

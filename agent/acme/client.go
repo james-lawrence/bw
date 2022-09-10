@@ -8,6 +8,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -19,10 +20,16 @@ const discriminator = "92dcbf3f-b96c-4e97-97a3-a76dc8f1fa1e"
 
 // NewChallenger create a new Client
 func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defaults) Challenger {
+	qdialer := dialers.NewQuorum(
+		r,
+		d.Defaults()...,
+	)
 	return Challenger{
 		local:      p,
 		rendezvous: r,
 		dialer:     d,
+		qd:         qdialer,
+		dispatcher: agentutil.NewDispatcher(qdialer),
 		cache:      cache,
 	}
 }
@@ -31,8 +38,10 @@ func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defau
 type Challenger struct {
 	local *agent.Peer
 	rendezvous
-	dialer dialers.Defaults
-	cache  DiskCache
+	dialer     dialers.Defaults
+	qd         dialers.Quorum
+	dispatcher agent.Dispatcher
+	cache      DiskCache
 }
 
 // Challenge initiate a challenge.
@@ -80,8 +89,23 @@ func (t Challenger) challenge(ctx context.Context, csr []byte) (key, cert, autho
 		if resp, err = t.cache.Challenge(ctx, req); err != nil {
 			return nil, nil, nil, errors.Wrap(err, "disk cache")
 		}
+
+		// dispatch the fact we've resolved the challege to the quorum.
+		// its perfectly okay for this to fail. its just another cache.
+		evt := agentutil.TLSEventMessage(
+			t.local,
+			resp.Authority,
+			resp.Private,
+			resp.Certificate,
+		)
+		if err = t.dispatcher.Dispatch(ctx, evt); err != nil {
+			log.Println("unable to dispatch tls event to quorum", err)
+		}
+
 		return resp.Private, resp.Certificate, resp.Authority, nil
 	}
+
+	// log.Println("attempting to obtain tls from quorum")
 
 	log.Println("obtaining from", agent.AutocertAddress(p))
 	if conn, err = dialers.NewDirect(agent.AutocertAddress(p)).DialContext(ctx, t.dialer.Defaults()...); err != nil {

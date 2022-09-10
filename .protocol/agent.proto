@@ -35,12 +35,10 @@ message Peer {
 
 message TLSEvent {
   string fingerprint = 1;
-  bytes Key = 2;
-  bytes Certificate = 3;
+  bytes Authority = 2;
+  bytes Key = 3;
+  bytes Certificate = 4;
 }
-
-// used to request TLS credentials.
-message TLSRequest {}
 
 message WALPreamble {
   int32 Major = 1;
@@ -62,7 +60,7 @@ message Message {
     DeployEvent = 3;
     PeersFoundEvent = 4;
     PeersCompletedEvent = 5;
-    TLSCAEvent = 6;
+    TLSEvent = 7;
   }
 
   string id = 9;
@@ -83,8 +81,7 @@ message Message {
     DeployCommand deployCommand = 7;
     Deploy deploy = 8;
     NodeEvent membership = 10;
-    TLSEvent authority = 11;
-    TLSRequest TLSRequest = 12;
+    TLSEvent credentials = 12;
   }
 }
 
@@ -190,9 +187,7 @@ service Quorum {
 }
 
 message ConnectRequest {}
-message ConnectResponse {
-  repeated Peer quorum = 2;
-}
+message ConnectResponse { repeated Peer quorum = 2; }
 
 message StatusRequest {}
 message StatusResponse {
@@ -210,9 +205,7 @@ message DeployResponse { Deploy deploy = 1; }
 message ShutdownRequest {}
 message ShutdownResponse {}
 
-message CancelRequest {
-  string initiator = 1;
-}
+message CancelRequest { string initiator = 1; }
 
 message CancelResponse {}
 
@@ -260,10 +253,10 @@ service Bootstrap {
   rpc Archive(ArchiveRequest) returns (ArchiveResponse) {}
 }
 
-
-// ClusterEvents an in memory service for dealing with events that occur within the cluster.
-message ClusterWatchRequest{}
-message ClusterWatchEvents{
+// ClusterEvents an in memory service for dealing with events that occur within
+// the cluster.
+message ClusterWatchRequest {}
+message ClusterWatchEvents {
   enum Event {
     Joined = 0;
     Depart = 1;
@@ -275,5 +268,5 @@ message ClusterWatchEvents{
 }
 
 service Cluster {
-  rpc Watch(ClusterWatchRequest) returns ( stream ClusterWatchEvents){}
+  rpc Watch(ClusterWatchRequest) returns (stream ClusterWatchEvents) {}
 }

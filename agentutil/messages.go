@@ -38,43 +38,29 @@ func LogEvent(p *agent.Peer, s string) *agent.Message {
 }
 
 // TLSEventMessage contains the generated TLS certificate for the cluster.
-func TLSEventMessage(p *agent.Peer, key, cert []byte) *agent.Message {
-	tls := TLSEvent(key, cert)
+func TLSEventMessage(p *agent.Peer, auth, key, cert []byte) *agent.Message {
+	tls := TLSEvent(auth, key, cert)
 	return &agent.Message{
 		Id:          uuid.Must(uuid.NewV4()).String(),
-		Type:        agent.Message_TLSCAEvent,
+		Type:        agent.Message_TLSEvent,
 		Peer:        p,
 		Ts:          time.Now().Unix(),
 		DisallowWAL: true,
 		Hidden:      true,
-		Event: &agent.Message_Authority{
-			Authority: &tls,
+		Event: &agent.Message_Credentials{
+			Credentials: &tls,
 		},
 	}
 }
 
 // TLSEvent ...
-func TLSEvent(key, cert []byte) agent.TLSEvent {
+func TLSEvent(auth, key, cert []byte) agent.TLSEvent {
 	digest := md5.Sum(cert)
 	return agent.TLSEvent{
 		Fingerprint: hex.EncodeToString(digest[:]),
+		Authority:   auth,
 		Key:         key,
 		Certificate: cert,
-	}
-}
-
-// TLSRequest request the clusters tls certificate.
-func TLSRequest(p *agent.Peer) *agent.Message {
-	return &agent.Message{
-		Id:          uuid.Must(uuid.NewV4()).String(),
-		Type:        agent.Message_TLSCAEvent,
-		Peer:        p,
-		Ts:          time.Now().Unix(),
-		DisallowWAL: true,
-		Hidden:      true,
-		Event: &agent.Message_TLSRequest{
-			TLSRequest: &agent.TLSRequest{},
-		},
 	}
 }
 
