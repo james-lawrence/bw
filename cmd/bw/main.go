@@ -96,5 +96,8 @@ func main() {
 	}
 
 	shellCli.Cleanup.Wait()
-	ctx.FatalIfErrorf(err)
+	if err != nil {
+		os.Exit(1)
+	}
+	// ctx.FatalIfErrorf(err)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"log"
 	"os"
@@ -17,9 +18,12 @@ import (
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
+	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/uxterm"
@@ -32,7 +36,7 @@ type cmdInfo struct {
 	Watch cmdInfoWatch `cmd:"" help:"watch cluster activity"`
 	Nodes cmdInfoNodes `cmd:"" help:"retrieve nodes within the cluster"`
 	Logs  cmdInfoLogs  `cmd:"" help:"log retrieval for the latest deployment"`
-	Check cmdInfoCheck `cmd:"" help:"check connectivity with the discovery service" hidden:"true"`
+	Check cmdInfoCheck `cmd:"" help:"check connectivity with the discovery service"`
 }
 
 type cmdInfoWatch struct {
@@ -198,17 +202,58 @@ func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 }
 
 type cmdInfoCheck struct {
-	Address string `help:"address to check"`
+	cmdopts.BeardedWookieEnv
+	Insecure bool   `help:"skip tls verification"`
+	Address  string `help:"address to check"`
 }
 
 func (t cmdInfoCheck) Run(ctx *cmdopts.Global) (err error) {
-	proxy := grpcx.NewCachedClient()
-	cc, err := proxy.Dial(t.Address, grpc.WithTransportCredentials(grpcx.InsecureTLS()))
+	var (
+		dd        dialers.Defaults
+		ss        notary.Signer
+		tlsconfig *tls.Config
+	)
+
+	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+		return errors.Wrap(err, "unable to setup authorization")
+	}
+
+	tlsconfig, err = tlsx.Clone(&tls.Config{
+		NextProtos:         []string{"bw.mux"},
+		InsecureSkipVerify: t.Insecure,
+	})
+	if err != nil {
+		return err
+	}
+
+	var di = discovery.ProxyDialer{
+		Proxy:  t.Address,
+		Signer: ss,
+		Dialer: muxer.NewDialer(
+			bw.ProtocolProxy,
+			tlsx.NewDialer(tlsconfig),
+		),
+	}
+
+	if dd, err = dialers.DefaultDialer(
+		t.Address,
+		di,
+	); err != nil {
+		return err
+	}
+
+	cc, err := dialers.NewDirect(agent.URIDiscovery(t.Address), dd.Defaults()...).DialContext(context.Background())
 	if err != nil {
 		return err
 	}
 
 	resp, err := discovery.NewDiscoveryClient(cc).Quorum(context.Background(), &discovery.QuorumRequest{})
+	if grpcx.IsUnavailable(err) {
+		return errorsx.Notification(
+			errors.Errorf("unable to connect to %s\nfor x509: certificate signed by unknown authority errors use --insecure to bypass\n\n%v\n", t.Address, err),
+		)
+	}
+
 	if err != nil {
 		return err
 	}

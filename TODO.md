@@ -40,3 +40,5 @@ stream {
 	}
 }
 ```
+### useful command for verifying certificates during testing.
+openssl s_client -verify_return_error -CAfile ~/.cache/bearded-wookie/agent1/tls/tlsserver.bootstrap.cert -connect bearded-wookie.lan:2000
