@@ -51,7 +51,6 @@ type DeployClient interface {
 	Upload(initiator string, srcbytes uint64, src io.Reader) (Archive, error)
 	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Watch(ctx context.Context, out chan<- *Message) error
-	Dispatch(ctx context.Context, messages ...*Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
 	Close() error
 	Cancel(*CancelRequest) error

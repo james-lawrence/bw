@@ -139,23 +139,6 @@ func (t DeployConn) Watch(ctx context.Context, out chan<- *Message) (err error) 
 	return errorsx.Compact(errors.WithStack(err), src.CloseSend())
 }
 
-// Dispatch messages to the leader.
-func (t DeployConn) Dispatch(ctx context.Context, messages ...*Message) (err error) {
-	var (
-		out = DispatchRequest{
-			Messages: messages,
-		}
-	)
-
-	c := NewDeploymentsClient(t.conn)
-
-	if _, err = c.Dispatch(ctx, &out); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return nil
-}
-
 // Logs return the logs for the given deployment.
 func (t DeployConn) Logs(ctx context.Context, p *Peer, did []byte) io.ReadCloser {
 	var (

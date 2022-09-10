@@ -173,8 +173,6 @@ service Deployments {
   rpc Cancel(CancelRequest) returns (CancelResponse) {}
   rpc Logs(LogRequest) returns (stream LogResponse) {}
   rpc Watch(WatchRequest) returns (stream Message) {}
-  // TODO: drop dispatch from deployments, believe it should be internal.
-  rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
 }
 
 service Quorum {

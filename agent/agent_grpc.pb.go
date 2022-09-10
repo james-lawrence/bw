@@ -27,8 +27,6 @@ type DeploymentsClient interface {
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*CancelResponse, error)
 	Logs(ctx context.Context, in *LogRequest, opts ...grpc.CallOption) (Deployments_LogsClient, error)
 	Watch(ctx context.Context, in *WatchRequest, opts ...grpc.CallOption) (Deployments_WatchClient, error)
-	// TODO: drop dispatch from deployments, believe it should be internal.
-	Dispatch(ctx context.Context, in *DispatchRequest, opts ...grpc.CallOption) (*DispatchResponse, error)
 }
 
 type deploymentsClient struct {
@@ -155,15 +153,6 @@ func (x *deploymentsWatchClient) Recv() (*Message, error) {
 	return m, nil
 }
 
-func (c *deploymentsClient) Dispatch(ctx context.Context, in *DispatchRequest, opts ...grpc.CallOption) (*DispatchResponse, error) {
-	out := new(DispatchResponse)
-	err := c.cc.Invoke(ctx, "/agent.Deployments/Dispatch", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // DeploymentsServer is the server API for Deployments service.
 // All implementations must embed UnimplementedDeploymentsServer
 // for forward compatibility
@@ -173,8 +162,6 @@ type DeploymentsServer interface {
 	Cancel(context.Context, *CancelRequest) (*CancelResponse, error)
 	Logs(*LogRequest, Deployments_LogsServer) error
 	Watch(*WatchRequest, Deployments_WatchServer) error
-	// TODO: drop dispatch from deployments, believe it should be internal.
-	Dispatch(context.Context, *DispatchRequest) (*DispatchResponse, error)
 	mustEmbedUnimplementedDeploymentsServer()
 }
 
@@ -196,9 +183,6 @@ func (UnimplementedDeploymentsServer) Logs(*LogRequest, Deployments_LogsServer) 
 }
 func (UnimplementedDeploymentsServer) Watch(*WatchRequest, Deployments_WatchServer) error {
 	return status.Errorf(codes.Unimplemented, "method Watch not implemented")
-}
-func (UnimplementedDeploymentsServer) Dispatch(context.Context, *DispatchRequest) (*DispatchResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Dispatch not implemented")
 }
 func (UnimplementedDeploymentsServer) mustEmbedUnimplementedDeploymentsServer() {}
 
@@ -317,24 +301,6 @@ func (x *deploymentsWatchServer) Send(m *Message) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _Deployments_Dispatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DispatchRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DeploymentsServer).Dispatch(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/agent.Deployments/Dispatch",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DeploymentsServer).Dispatch(ctx, req.(*DispatchRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // Deployments_ServiceDesc is the grpc.ServiceDesc for Deployments service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -349,10 +315,6 @@ var Deployments_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Cancel",
 			Handler:    _Deployments_Cancel_Handler,
-		},
-		{
-			MethodName: "Dispatch",
-			Handler:    _Deployments_Dispatch_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

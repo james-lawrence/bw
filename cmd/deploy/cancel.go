@@ -75,10 +75,6 @@ func Cancel(ctx *Context) (err error) {
 		return err
 	}
 
-	if err = client.Dispatch(ctx.Context, agentutil.DeployCommand(local, cmd)); err != nil {
-		return err
-	}
-
 	events <- agentutil.LogEvent(local, "deploy cancelled")
 
 	return nil
