@@ -58,7 +58,7 @@ func genTokenSignature(k ssh.Signer, t *Token) (s *Signature, err error) {
 	return genSignature(k, b)
 }
 
-func (t Signature) sig() *ssh.Signature {
+func (t *Signature) sig() *ssh.Signature {
 	return &ssh.Signature{
 		Format: t.Format,
 		Blob:   t.Data,

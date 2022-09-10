@@ -39,8 +39,8 @@ type Client interface {
 	Connect() (*ConnectResponse, error)
 	Cancel(*CancelRequest) error
 	NodeCancel() error
-	QuorumInfo() (InfoResponse, error)
-	Info() (StatusResponse, error)
+	QuorumInfo() (*InfoResponse, error)
+	Info() (*StatusResponse, error)
 	Watch(ctx context.Context, out chan<- *Message) error
 	Dispatch(ctx context.Context, messages ...*Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
@@ -60,11 +60,6 @@ type cluster interface {
 	Local() *Peer
 	Peers() []*Peer
 	Quorum() []*Peer
-}
-
-// downloader ...
-type downloader interface {
-	Download() io.ReadCloser
 }
 
 // Uploader ...

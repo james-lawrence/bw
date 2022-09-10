@@ -67,10 +67,10 @@ func RaftAddress(p *Peer) string {
 }
 
 // StaticPeeringStrategy ...
-func StaticPeeringStrategy(peers ...Peer) []string {
+func StaticPeeringStrategy(peers ...*Peer) []string {
 	results := make([]string, 0, len(peers))
 	for _, p := range peers {
-		results = append(results, SWIMAddress(&p))
+		results = append(results, SWIMAddress(p))
 	}
 
 	return results

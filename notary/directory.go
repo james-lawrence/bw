@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -44,7 +43,7 @@ func (t Directory) read(path string) (g *Grant, err error) {
 
 	g = &Grant{}
 
-	if encoded, err = ioutil.ReadFile(path); err != nil {
+	if encoded, err = os.ReadFile(path); err != nil {
 		return nil, errors.Wrapf(err, "unable to read %s", path)
 	}
 
@@ -69,6 +68,10 @@ func (t Directory) Sync(ctx context.Context, b Bloomy, c chan *Grant) error {
 	t.m.RLock()
 	defer t.m.RUnlock()
 	return filepath.Walk(t.root, func(path string, d os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
 		if d.IsDir() {
 			return nil
 		}

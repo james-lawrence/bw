@@ -90,17 +90,15 @@ func (t Conn) Cancel(req *CancelRequest) error {
 }
 
 // QuorumInfo returns high level details about the state of the cluster.
-func (t Conn) QuorumInfo() (z InfoResponse, err error) {
-	var (
-		resp *InfoResponse
-	)
+func (t Conn) QuorumInfo() (z *InfoResponse, err error) {
+	var ()
 
 	rpc := NewQuorumClient(t.conn)
-	if resp, err = rpc.Info(context.Background(), &InfoRequest{}); err != nil {
+	if z, err = rpc.Info(context.Background(), &InfoRequest{}); err != nil {
 		return z, errors.WithStack(err)
 	}
 
-	return *resp, nil
+	return z, nil
 }
 
 // Upload ...
@@ -194,17 +192,16 @@ func (t Conn) Connect() (d *ConnectResponse, err error) {
 }
 
 // Info ...
-func (t Conn) Info() (_zeroInfo StatusResponse, err error) {
+func (t Conn) Info() (info *StatusResponse, err error) {
 	var (
 		_zero StatusRequest
-		info  *StatusResponse
 	)
 	rpc := NewAgentClient(t.conn)
 	if info, err = rpc.Info(context.Background(), &_zero); err != nil {
-		return _zeroInfo, errors.Wrap(err, "failed to retrieve info")
+		return info, errors.Wrap(err, "failed to retrieve info")
 	}
 
-	return *info, nil
+	return info, nil
 }
 
 // Watch for messages sent to the leader. blocks.

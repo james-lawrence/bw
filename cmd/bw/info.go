@@ -149,14 +149,14 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 	cx := cluster.New(local, c)
 	return agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
 		var (
-			info agent.StatusResponse
+			info *agent.StatusResponse
 		)
 
 		if info, err = c.Info(); err != nil {
 			return errors.WithStack(err)
 		}
 
-		return uxterm.PrintNode(&info)
+		return uxterm.PrintNode(info)
 	}))(cx, d)
 }
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"strings"
 
@@ -47,7 +46,7 @@ func (t noopDeployer) Deployments() ([]*Deploy, error) {
 }
 
 func (t noopDeployer) Logs(deploymentID []byte) io.ReadCloser {
-	return ioutil.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(deploymentID))))
+	return io.NopCloser(strings.NewReader(fmt.Sprintf("INFO: %s", string(deploymentID))))
 }
 
 // ServerOption ...

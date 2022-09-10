@@ -2,7 +2,7 @@ package notary_test
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("ReplaceAuthorizedKey", func() {
 	It("should allow repeated replace calls without change", func() {
-		auths, err := ioutil.TempFile(GinkgoT().TempDir(), "auths.tmp")
+		auths, err := os.CreateTemp(GinkgoT().TempDir(), "auths.tmp")
 		Expect(err).To(Succeed())
 
 		s1, err := QuickSigner()
@@ -29,7 +29,7 @@ var _ = Describe("ReplaceAuthorizedKey", func() {
 		Expect(ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2"))).To(Succeed())
 		Expect(ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2"))).To(Succeed())
 
-		content, err := ioutil.ReadFile(auths.Name())
+		content, err := os.ReadFile(auths.Name())
 		Expect(err).To(Succeed())
 		Expect(string(content)).To(Equal(
 			string(bytes.Join(

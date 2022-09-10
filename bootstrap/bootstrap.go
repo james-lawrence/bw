@@ -118,8 +118,8 @@ func (t UntilSuccess) Run(ctx context.Context, c agent.Config, d deployer, dl st
 // Bootstrap a server with the latest deploy.
 func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator, dresults chan *deployment.DeployResult) (err error) {
 	var (
-		current agent.Deploy
-		latest  agent.Deploy
+		current *agent.Deploy
+		latest  *agent.Deploy
 		deploy  *deployment.DeployResult
 		results = make(chan *deployment.DeployResult)
 	)
@@ -155,7 +155,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		}
 	}
 
-	if agentutil.SameArchive(current.Archive, latest.Archive) {
+	if current != nil && latest != nil && agentutil.SameArchive(current.Archive, latest.Archive) {
 		log.Println("latest already deployed -", bw.RandomID(current.Archive.DeploymentID))
 		return nil
 	}

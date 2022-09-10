@@ -100,10 +100,10 @@ func QuickKey() ([]byte, []byte) {
 // QuickGrant generate a grant
 func QuickGrant() *notary.Grant {
 	_, pubkey := QuickKey()
-	return notary.Grant{
+	return (&notary.Grant{
 		Permission:    all(),
 		Authorization: pubkey,
-	}.EnsureDefaults()
+	}).EnsureDefaults()
 }
 
 // NewStaticDialer ...

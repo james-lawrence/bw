@@ -3,7 +3,6 @@ package agent
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/pkg/errors"
@@ -20,7 +19,7 @@ func ReadMetadata(path string) (a *DeployCommand, err error) {
 
 	a = &DeployCommand{}
 
-	if raw, err = ioutil.ReadFile(path); err != nil {
+	if raw, err = os.ReadFile(path); err != nil {
 		return a, errors.WithStack(err)
 	}
 

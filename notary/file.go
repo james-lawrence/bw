@@ -54,7 +54,7 @@ func (t *file) background() *file {
 	if err := loadAuthorizedKeys(t.storage, t.source); err != nil {
 		log.Println("failed to load keys", err)
 	}
-	log.Printf("authorization load completed %s %s\n", t.source, time.Now().Sub(ts))
+	log.Printf("authorization load completed %s %s\n", t.source, time.Since(ts))
 
 	go func() {
 		for {

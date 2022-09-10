@@ -142,10 +142,10 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 			continue
 		}
 
-		g := Grant{
+		g := (&Grant{
 			Permission:    UserFull(),
 			Authorization: ssh.MarshalAuthorizedKey(key),
-		}.EnsureDefaults()
+		}).EnsureDefaults()
 
 		if _, err = s.Insert(g); err != nil {
 			log.Println("failed to load:", g.Fingerprint, err)

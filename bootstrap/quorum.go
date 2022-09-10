@@ -33,7 +33,7 @@ func (t Quorum) Bind(ctx context.Context, socket string, options ...grpc.ServerO
 // Archive - implements the bootstrap service.
 func (t Quorum) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *agent.ArchiveResponse, err error) {
 	var (
-		latest agent.Deploy
+		latest *agent.Deploy
 	)
 
 	if latest, err = agentutil.QuorumLatestDeployment(t.c, t.d.Defaults()); err != nil {
@@ -41,7 +41,7 @@ func (t Quorum) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *a
 		case agentutil.ErrActiveDeployment:
 			return &agent.ArchiveResponse{
 				Info:   agent.ArchiveResponse_ActiveDeploy,
-				Deploy: &latest,
+				Deploy: latest,
 			}, nil
 		case agentutil.ErrNoDeployments:
 			return nil, status.Error(codes.NotFound, errors.Wrap(cause, "quorum: no deployments").Error())
@@ -51,6 +51,6 @@ func (t Quorum) Archive(ctx context.Context, req *agent.ArchiveRequest) (resp *a
 	}
 
 	return &agent.ArchiveResponse{
-		Deploy: &latest,
+		Deploy: latest,
 	}, nil
 }

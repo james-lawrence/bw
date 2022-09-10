@@ -12,7 +12,7 @@ func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
 	return func(n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
 			c    *grpc.ClientConn
-			info agent.StatusResponse
+			info *agent.StatusResponse
 		)
 
 		if c, err = dialers.NewDirect(agent.RPCAddress(n)).Dial(d.Defaults()...); err != nil {

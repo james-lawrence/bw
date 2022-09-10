@@ -90,10 +90,10 @@ func quorum(c cluster, votes int) bool {
 
 // QuorumLatestDeployment determines the latest deployment by asking the agents
 // who are in the raft cluster what the latest deployment is.
-func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z agent.Deploy, err error) {
+func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z *agent.Deploy, err error) {
 	var (
 		conn   *grpc.ClientConn
-		i      agent.InfoResponse
+		i      *agent.InfoResponse
 		client agent.Client
 	)
 
@@ -117,14 +117,14 @@ func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z agent.Deploy, err
 	}
 
 	if i.Mode == agent.InfoResponse_Deploying {
-		return agent.Deploy{
+		return &agent.Deploy{
 			Stage:   agent.Deploy_Deploying,
 			Archive: i.Deploying.Archive,
 			Options: i.Deploying.Options,
 		}, errors.WithStack(ErrActiveDeployment)
 	}
 
-	return agent.Deploy{
+	return &agent.Deploy{
 		Stage:   agent.Deploy_Completed,
 		Archive: i.Deployed.Archive,
 		Options: i.Deployed.Options,
@@ -149,7 +149,7 @@ func LocalLatestDeployment(d dialers.ContextDialer) (a *agent.Deploy, err error)
 // AgentLatestDeployment determines the latest deployment of a given agent.
 func AgentLatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 	var (
-		info agent.StatusResponse
+		info *agent.StatusResponse
 	)
 
 	if info, err = c.Info(); err != nil {
@@ -171,19 +171,19 @@ func AgentLatestDeployment(c agent.Client) (a *agent.Deploy, err error) {
 }
 
 // FilterDeployID check if the given deploy matches the provided ID.
-func FilterDeployID(id string) func(d agent.Deploy) bool {
-	return func(d agent.Deploy) bool {
+func FilterDeployID(id string) func(d *agent.Deploy) bool {
+	return func(d *agent.Deploy) bool {
 		return d.Archive != nil && bw.RandomID(d.Archive.DeploymentID).String() == id
 	}
 }
 
 // LocateDeployment returns the deployment info based on the provided filter.
-func LocateDeployment(c cluster, d dialers.Defaults, filter func(agent.Deploy) bool) (latest agent.Deploy, err error) {
+func LocateDeployment(c cluster, d dialers.Defaults, filter func(*agent.Deploy) bool) (latest *agent.Deploy, err error) {
 	const done = errorsx.String("done")
 
 	locate := func(c agent.Client) (err error) {
 		var (
-			ds []agent.Deploy
+			ds []*agent.Deploy
 		)
 
 		if ds, err = AgentDeployments(c); err != nil {
@@ -219,9 +219,9 @@ func LocateDeployment(c cluster, d dialers.Defaults, filter func(agent.Deploy) b
 }
 
 // AgentDeployments returns the set of successful deployments of a given agent.
-func AgentDeployments(c agent.Client) (a []agent.Deploy, err error) {
+func AgentDeployments(c agent.Client) (a []*agent.Deploy, err error) {
 	var (
-		info agent.StatusResponse
+		info *agent.StatusResponse
 	)
 
 	if info, err = c.Info(); err != nil {
@@ -232,9 +232,7 @@ func AgentDeployments(c agent.Client) (a []agent.Deploy, err error) {
 		return a, errors.WithStack(ErrNoDeployments)
 	}
 
-	for _, d := range info.Deployments {
-		a = append(a, *d)
-	}
+	a = append(a, info.Deployments...)
 
 	if len(a) == 0 {
 		return a, errors.WithStack(ErrNoDeployments)

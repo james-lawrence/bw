@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -86,7 +85,7 @@ func AutoSignerInfo() (fp string, pub []byte, err error) {
 		encoded []byte
 	)
 
-	if encoded, err = ioutil.ReadFile(PublicKeyPath()); err != nil {
+	if encoded, err = os.ReadFile(PublicKeyPath()); err != nil {
 		return fp, pub, err
 	}
 
@@ -108,7 +107,7 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		log.Println("authorization key location", location)
 	}
 
-	if encoded, err = ioutil.ReadFile(location); err == nil {
+	if encoded, err = os.ReadFile(location); err == nil {
 		return NewSigner(encoded)
 	}
 
@@ -129,7 +128,7 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		return s, errors.Wrapf(err, "failed to create credential directory '%s'", filepath.Dir(location))
 	}
 
-	if err = ioutil.WriteFile(location, encoded, 0600); err != nil {
+	if err = os.WriteFile(location, encoded, 0600); err != nil {
 		return s, errors.Wrapf(err, "failed to write authorization key '%s'", location)
 	}
 
@@ -137,7 +136,7 @@ func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, 
 		return s, errors.Wrap(err, "failed to write public key")
 	}
 
-	if err = ioutil.WriteFile(pub, sshx.Comment(pubencoded, comment), 0600); err != nil {
+	if err = os.WriteFile(pub, sshx.Comment(pubencoded, comment), 0600); err != nil {
 		return s, errors.Wrap(err, "failed to generate authorization key")
 	}
 

@@ -17,7 +17,7 @@ import (
 )
 
 // Latest get the latest archive from the bootstrap socket.
-func Latest(ctx context.Context, uds string, options ...grpc.DialOption) (latest agent.Deploy, err error) {
+func Latest(ctx context.Context, uds string, options ...grpc.DialOption) (latest *agent.Deploy, err error) {
 	var (
 		c Conn
 	)
@@ -31,7 +31,7 @@ func Latest(ctx context.Context, uds string, options ...grpc.DialOption) (latest
 	return c.Archive(ctx)
 }
 
-func getfallback(c agent.Config, options ...grpc.DialOption) (latest agent.Deploy, err error) {
+func getfallback(c agent.Config, options ...grpc.DialOption) (latest *agent.Deploy, err error) {
 	const done = errorsx.String("done")
 	var (
 		compacted error = agentutil.ErrNoDeployments
@@ -102,7 +102,7 @@ type Conn struct {
 }
 
 // Archive request the latest archive from the service.
-func (t Conn) Archive(ctx context.Context) (latest agent.Deploy, err error) {
+func (t Conn) Archive(ctx context.Context) (latest *agent.Deploy, err error) {
 	var (
 		req  agent.ArchiveRequest
 		resp *agent.ArchiveResponse
@@ -125,8 +125,8 @@ func (t Conn) Archive(ctx context.Context) (latest agent.Deploy, err error) {
 
 	switch resp.Info {
 	case agent.ArchiveResponse_ActiveDeploy:
-		return *resp.Deploy, agentutil.ErrActiveDeployment
+		return resp.Deploy, agentutil.ErrActiveDeployment
 	default:
-		return *resp.Deploy, nil
+		return resp.Deploy, nil
 	}
 }
