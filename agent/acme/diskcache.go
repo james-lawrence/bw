@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -84,7 +83,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *ChallengeRequest) (resp *
 
 	// Lets encrypt has rate limits on certificates generated per domain per month.
 	// lets cache the generated certificates if possible.
-	if resp, err = t.cachedCertificate(template); err == nil {
+	if resp, err = t.cached(template); err == nil {
 		return resp, nil
 	}
 
@@ -237,7 +236,7 @@ func (t DiskCache) challengeFile() string {
 	return filepath.Join(t.c.Root, "acme.challenge.proto")
 }
 
-func (t DiskCache) cachedCertificate(csr *x509.CertificateRequest) (cresp *ChallengeResponse, err error) {
+func (t DiskCache) cached(csr *x509.CertificateRequest) (cresp *ChallengeResponse, err error) {
 	var (
 		encoded []byte
 	)
@@ -248,7 +247,7 @@ func (t DiskCache) cachedCertificate(csr *x509.CertificateRequest) (cresp *Chall
 	defer t.clearCertCache(dir)
 	path := filepath.Join(dir, fmt.Sprintf("%s.acme.certificate.proto", digest))
 
-	if encoded, err = ioutil.ReadFile(path); err != nil {
+	if encoded, err = os.ReadFile(path); err != nil {
 		return cresp, err
 	}
 
@@ -327,7 +326,7 @@ func genRegistration(c agent.Config, client *lego.Client) (zreg registration.Res
 		return zreg, err
 	}
 
-	if err = ioutil.WriteFile(regp, encoded, 0600); err != nil {
+	if err = os.WriteFile(regp, encoded, 0600); err != nil {
 		return zreg, err
 	}
 
@@ -347,7 +346,7 @@ func readRegistration(c agent.Config) (reg *registration.Resource) {
 		return nil
 	}
 
-	if encoded, err = ioutil.ReadFile(regp); err != nil {
+	if encoded, err = os.ReadFile(regp); err != nil {
 		log.Println("failed to read existing registration", err)
 		return nil
 	}

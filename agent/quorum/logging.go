@@ -11,7 +11,7 @@ import (
 // Logging transcoder
 type Logging struct{}
 
-// Decode discards the message
+// Decode logs the message received by the state machine.
 func (t Logging) Decode(_ TranscoderContext, m *agent.Message) error {
 	log.Println("transcoding", spew.Sdump(m))
 	return nil

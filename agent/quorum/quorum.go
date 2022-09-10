@@ -1,6 +1,4 @@
 // Package quorum implements the distributed FSM used to manage deploys.
-// TODO:
-//  - create a agent connection pool.
 package quorum
 
 import (
@@ -63,13 +61,6 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 	}
 }
 
-// OptionInitializers for the state machine.
-func OptionInitializers(inits ...Initializer) Option {
-	return func(q *Quorum) {
-		q.initializers = inits
-	}
-}
-
 // New new quorum instance based on the options.
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
 	deployment := newDeployment(d, c)
@@ -105,16 +96,15 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
-	deployment   *deployment
-	wal          *WAL
-	sm           stateMachine
-	uploads      storage.UploadProtocol
-	m            *sync.Mutex
-	c            cluster
-	dialer       dialers.Defaults
-	lost         chan struct{}
-	initializers []Initializer
-	rp           raftutil.Protocol
+	deployment *deployment
+	wal        *WAL
+	sm         stateMachine
+	uploads    storage.UploadProtocol
+	m          *sync.Mutex
+	c          cluster
+	dialer     dialers.Defaults
+	lost       chan struct{}
+	rp         raftutil.Protocol
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -153,7 +143,6 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					sm := NewMachine(
 						t.c.Local(),
 						o.Raft,
-						t.initializers...,
 					)
 
 					// background this task so dispatches work.
