@@ -6,6 +6,7 @@ const (
 	EnvLogsGossip                        = "BEARDED_WOOKIE_LOGS_GOSSIP"                                // enable logging for gossip protocol. boolean, see strconv.ParseBool for valid values.
 	EnvLogsRaft                          = "BEARDED_WOOKIE_LOGS_RAFT"                                  // enable logging for the raft protocol. boolean, see strconv.ParseBool for valid values.
 	EnvLogsGRPC                          = "BEARDED_WOOKIE_LOGS_GRPC"                                  // enable logging for grpc protocol. boolean, see strconv.ParseBool for valid values.
+	EnvLogsTLS                           = "BEARDED_WOOKIE_LOGS_TLS"                                   // enable logging for tls credentials. boolean, see strconv.ParseBool for valid values.
 	EnvLogsConfiguration                 = "BEARDED_WOOKIE_LOGS_CONFIGURATION"                         // enable logging for configuration. boolean, see strconv.ParseBool for valid values.
 	EnvDisplayName                       = "BEARDED_WOOKIE_DISPLAY_NAME"                               // environment variable to determine display name to be used, defaults to current user's name.
 	EnvAgentP2PAdvertised                = "BEARDED_WOOKIE_AGENT_P2P_ADVERTISED"                       // environment variable to specify the network address to advertise to peers. e.g.) 127.0.0.1:2000

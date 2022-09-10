@@ -8,13 +8,15 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/rsax"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
 
 // minimumExpiration is used to force a certificate refresh of self signed certificates.
 func minimumExpiration() time.Duration {
-	return time.Hour
+	return 24 * time.Hour
 }
 
 // generates a self signed certificate iff the current certificate is missing or
@@ -41,12 +43,16 @@ func (t selfsigned) Refresh() (err error) {
 		return err
 	}
 
-	if template, err = tlsx.X509Template(minimumExpiration(), subject, tlsx.X509OptionCA(), tlsx.X509OptionHosts(t.domain)); err != nil {
+	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
 		return err
 	}
 
-	if _, cert, err = tlsx.SelfSigned(priv, template); err != nil {
+	if _, cert, err = tlsx.SelfSigned(priv, &template); err != nil {
 		return err
+	}
+
+	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
+		log.Println("creating self signed certificate", tlsx.PrintEncoded(cert))
 	}
 
 	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSBootstrapCert), cert); err != nil {

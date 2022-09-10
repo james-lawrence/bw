@@ -122,9 +122,11 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 }
 
 func LoadCert(pool *x509.CertPool, path string) (err error) {
-	var ca []byte
+	var (
+		ca []byte
+	)
 
-	if envx.Boolean(false, bw.EnvLogsVerbose) {
+	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
 		log.Println("loading authority", path)
 	}
 
@@ -148,7 +150,7 @@ func (t *Directory) refresh() (err error) {
 	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSBootstrapCert)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
-	if envx.Boolean(false, bw.EnvLogsVerbose) {
+	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
 		log.Println("loading", certpath, keypath)
 	}
 

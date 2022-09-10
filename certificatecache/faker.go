@@ -42,7 +42,7 @@ func (t faker) Refresh() (err error) {
 		return err
 	}
 
-	if _, cert, err = tlsx.SelfSigned(priv, template); err != nil {
+	if _, cert, err = tlsx.SelfSigned(priv, &template); err != nil {
 		return err
 	}
 

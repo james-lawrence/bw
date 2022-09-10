@@ -62,3 +62,9 @@ func SafeReset(t *time.Timer, d time.Duration) {
 	}
 	t.Reset(d)
 }
+
+type Clock struct{}
+
+func (t Clock) Now() time.Time {
+	return time.Now()
+}

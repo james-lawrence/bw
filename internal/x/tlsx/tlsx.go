@@ -36,7 +36,8 @@ func X509OptionSubject(s pkix.Name) X509Option {
 func X509OptionCA() X509Option {
 	return func(t *x509.Certificate) {
 		t.IsCA = true
-		t.KeyUsage = t.KeyUsage | x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+		t.KeyUsage = t.KeyUsage | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+		t.ExtKeyUsage = append(t.ExtKeyUsage, x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth)
 	}
 }
 
@@ -67,21 +68,45 @@ func X509OptionUsageExt(u ...x509.ExtKeyUsage) X509Option {
 	}
 }
 
-// X509Template ...
-func X509Template(d time.Duration, options ...X509Option) (template x509.Certificate, err error) {
+// X509OptionTimeWindow where the certificate is valid.
+// clock can be nil.
+func X509OptionTimeWindow(c clock, d time.Duration) X509Option {
+	return func(cert *x509.Certificate) {
+		cert.NotBefore = c.Now()
+		cert.NotAfter = cert.NotBefore.Add(d)
+	}
+}
+
+type clock interface {
+	Now() time.Time
+}
+
+type stdlibclock struct{}
+
+func (t stdlibclock) Now() time.Time {
+	return time.Now()
+}
+
+// Default clock that can be used to generate a template cert.
+func DefaultClock() clock {
+	return stdlibclock{}
+}
+
+// X509TemplateRand generate a template using the provided random source.
+// the clock is allowed to be nil.
+func X509TemplateRand(r io.Reader, d time.Duration, c clock, options ...X509Option) (template x509.Certificate, err error) {
 	var (
 		serialNumber *big.Int
 	)
-	notBefore := time.Now()
-	notAfter := notBefore.Add(d)
+
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 
-	if serialNumber, err = rand.Int(rand.Reader, serialNumberLimit); err != nil {
+	if serialNumber, err = rand.Int(r, serialNumberLimit); err != nil {
 		return template, errors.WithStack(err)
 	}
 
 	orgHash := md5.New()
-	if _, err = io.CopyN(orgHash, rand.Reader, 1024); err != nil {
+	if _, err = io.CopyN(orgHash, r, 1024); err != nil {
 		return template, errors.WithStack(err)
 	}
 
@@ -90,18 +115,24 @@ func X509Template(d time.Duration, options ...X509Option) (template x509.Certifi
 		Subject: pkix.Name{
 			Organization: []string{hex.EncodeToString(orgHash.Sum(nil))},
 		},
-		NotBefore:             notBefore,
-		NotAfter:              notAfter,
 		KeyUsage:              0,
 		ExtKeyUsage:           nil,
 		BasicConstraintsValid: true,
 	}
+
+	// ensure there is always a valid window.
+	X509OptionTimeWindow(stdlibclock{}, d)(&template)
 
 	for _, opt := range options {
 		opt(&template)
 	}
 
 	return template, errors.WithStack(err)
+}
+
+// X509Template ...
+func X509Template(d time.Duration, options ...X509Option) (template x509.Certificate, err error) {
+	return X509TemplateRand(rand.Reader, d, stdlibclock{}, options...)
 }
 
 // SignedRSAGen ...
@@ -134,8 +165,13 @@ func SelfSignedRSAGen(bits int, template x509.Certificate) (priv *rsa.PrivateKey
 }
 
 // SelfSigned signs its own certificate ..
-func SelfSigned(priv *rsa.PrivateKey, template x509.Certificate) (_ *rsa.PrivateKey, derBytes []byte, err error) {
-	if derBytes, err = x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv); err != nil {
+func SelfSigned(priv *rsa.PrivateKey, template *x509.Certificate) (_ *rsa.PrivateKey, derBytes []byte, err error) {
+	return SelfSignedRand(rand.Reader, priv, template)
+}
+
+// SelfSignedRand signs its own certificate ..
+func SelfSignedRand(r io.Reader, priv *rsa.PrivateKey, template *x509.Certificate) (_ *rsa.PrivateKey, derBytes []byte, err error) {
+	if derBytes, err = x509.CreateCertificate(r, template, template, &priv.PublicKey, priv); err != nil {
 		return priv, derBytes, errors.WithStack(err)
 	}
 
@@ -258,7 +294,11 @@ func MustClone(c *tls.Config, options ...Option) *tls.Config {
 func PrintEncoded(cx []byte) (s string) {
 	ccc, err := x509.ParseCertificates(cx)
 	if err != nil {
-		return fmt.Sprintf("failed : %s - %s\n", err, string(cx))
+		return fmt.Sprintf("failed: %s - %s\n", err, string(cx))
+	}
+
+	if len(ccc) == 0 {
+		return fmt.Sprintf("failed no certificates found: %s", string(cx))
 	}
 
 	for _, cc := range ccc {
@@ -270,6 +310,15 @@ func PrintEncoded(cx []byte) (s string) {
 	}
 
 	return s
+}
+
+// PrintX509 certificate
+func PrintX509(cx *x509.Certificate) (s string) {
+	ss, err := certinfo.CertificateText(cx)
+	if err != nil {
+		return fmt.Sprintf("failed index: %s", err)
+	}
+	return ss
 }
 
 // Print tls certificate.
