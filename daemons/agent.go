@@ -42,7 +42,6 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		dctx.Cluster,
 		dctx.Dialer.Defaults()...,
 	)
-	dialer := agent.NewDialer(dctx.Dialer.Defaults()...)
 	dispatcher := agentutil.NewDispatcher(qdialer)
 
 	coordinator := deployment.New(
@@ -61,10 +60,6 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		grpc.KeepaliveParams(dctx.RPCKeepalive),
 		grpc.KeepaliveEnforcementPolicy(dctx.RPCKeepalivePolicy),
 	)
-	authority := quorum.NewAuthority(dctx.Config)
-
-	configuration := quorum.NewConfiguration(authority, dctx.Cluster, dialer)
-	configurationsvc := quorum.NewConfigurationService(configuration)
 
 	agent.NewServer(
 		dctx.Cluster,
@@ -78,16 +73,11 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		dctx.Cluster,
 		proxy.NewProxy(dctx.Cluster),
 		quorum.NewTranscoder(
-			// quorum.Logging{},
-			authority,
-			configuration,
+			quorum.Logging{},
 		),
 		upload,
 		dctx.Raft,
 		quorum.OptionDialer(qdialer),
-		quorum.OptionInitializers(
-			authority,
-		),
 	)
 	go (&q).Observe(make(chan raft.Observation, 200))
 
@@ -108,9 +98,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	).Bind(server)
 
 	proxy.NewDeployment(dctx.NotaryAuth, qdialer).Bind(server)
-
-	agent.RegisterConfigurationServer(server, configurationsvc)
-	acme.RegisterACMEServer(server, acme.NewService(dctx.ACMECache, dctx.NotaryAuth))
+	acme.NewService(dctx.ACMECache, dctx.NotaryAuth).Bind(server)
 
 	// sync credentials between servers
 	b := bloom.NewWithEstimates(1000, 0.0001)

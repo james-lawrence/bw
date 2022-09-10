@@ -8,6 +8,7 @@ import (
 	context "context"
 
 	"github.com/hashicorp/memberlist"
+	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 
@@ -19,6 +20,7 @@ import (
 
 type rendezvous interface {
 	Get([]byte) *memberlist.Node
+	GetN(n int, key []byte) []*memberlist.Node
 }
 
 // ReadConfig ...
@@ -59,6 +61,10 @@ type Server struct {
 	UnimplementedACMEServer
 	cache DiskCache
 	auth  auth
+}
+
+func (t Server) Bind(srv *grpc.Server) {
+	RegisterACMEServer(srv, t)
 }
 
 // Challenge solve the challenge.
