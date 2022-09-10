@@ -1,3 +1,45 @@
+commit 5e69b3b576b690390236b21abf3d3d55b70ded97
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 17:13:33 2022 -0400
+
+    improve certificate request resolution
+    
+    lets encrypt rate limits are pretty low for duplicate
+    certificate requests 5 / week. this can be problematic
+    with clusters undergoing significant node churn as new nodes
+    can initiate CSR to lets encrypt when they boot up because they
+    become the rendezvous node while not having a copy of the certificate
+    locally.
+    
+    to resolve this when a node detects its the rendevzous node right
+    before initiating a CSR request via ACME it'll send requests for
+    the cached certificate to members of the extended quorum group (2 *
+    Quorum) this will ensure that as long as the entire extended quorum
+    group are not simultaneously replaced we'll be able to locate a cached
+    certificate instead of initiating a challenge via ACME.
+    
+    We've also have the servers return not found if their cached certificate
+    is about to expire.
+    
+    these changes combined with the earlier change to increasing the
+    lifetime for the cached certificate basically ensures we'll never hit
+    ACME with too many duplicate requests. One edge case remains as noted
+    about when the entire extended quorum group is replaced by new nodes
+    due to the rendezvous algorithms properties; but that really should
+    be vanishingly small.
+
+commit ea79330477b55343596b7149500d7b73fe27ce6e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 11:56:13 2022 -0400
+
+    work towards cleaning up tls
+
+commit 51f082ff207633b2162951a87b51ea7492229b82
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 14:29:47 2022 -0400
+
+    release 0.1.1662834361-b07bb5f9
+
 commit b07bb5f91db86725051168d3d58b4746358a0766
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 10 14:25:46 2022 -0400
