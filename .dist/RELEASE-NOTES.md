@@ -1,3 +1,56 @@
+commit d4d8451d2a8afff81a89a75478e7a54c74768a64
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 23:52:45 2022 -0400
+
+    fix up the client cert notary endpoint.
+
+commit d6357585ce76568c4dc62032a95a91b65c8cebeb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 22:38:31 2022 -0400
+
+    more cleanups
+
+commit 2b55fabf4852d7c50977389d1d9b3377d51cffce
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 19:02:02 2022 -0400
+
+    finish removal of ioutil
+
+commit 704c8c4c3b22b4db22d46e2b07dac385ef889eb2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 18:46:45 2022 -0400
+
+    various cleanups
+    
+    - improve grpc debug logging for client.
+    - add context.Context to more of the facade methods for proper shutdown
+      handling.
+    - allow the deploy.Debug flag to enable grpc logging.
+
+commit 1429afc372167ecebe534cc3d5ad490df0463537
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 18:10:27 2022 -0400
+
+    further linting cleanups
+
+commit b3a1607d8097ccc9a2901a0b7cea9fca326da2f7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 17:44:42 2022 -0400
+
+    clean up grpc linting issues
+
+commit b4ab3fd9c5ee38aa5908fc8db00a39cb95ea9590
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 17:36:06 2022 -0400
+
+    remove the dispatch method from Deployments service
+
+commit 531cfc40823c80dc75781f368684ea65a1642328
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Sep 10 17:27:46 2022 -0400
+
+    release 0.1.1662844413-5e69b3b5
+
 commit 5e69b3b576b690390236b21abf3d3d55b70ded97
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 10 17:13:33 2022 -0400
