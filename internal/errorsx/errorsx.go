@@ -1,6 +1,8 @@
 package errorsx
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"time"
 )
@@ -21,7 +23,17 @@ func MaybeLog(err error) {
 		return
 	}
 
-	log.Println(err)
+	log.Output(1, fmt.Sprintln(err))
+}
+
+func Ignore(err error, ignore ...error) error {
+	for _, i := range ignore {
+		if errors.Is(err, i) {
+			return nil
+		}
+	}
+
+	return err
 }
 
 // CompactMonad an error that collects and returns the first error encountered.
@@ -58,6 +70,10 @@ type Timeout interface {
 
 // Timedout represents a timeout.
 func Timedout(cause error, d time.Duration) error {
+	if cause == nil {
+		return nil
+	}
+
 	return timeout{
 		error: cause,
 		d:     d,

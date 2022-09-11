@@ -1,6 +1,7 @@
 package deployment_test
 
 import (
+	"context"
 	"errors"
 	"sync/atomic"
 
@@ -42,7 +43,7 @@ var _ = Describe("Deploy", func() {
 		deploy := deployment.NewDeploy(
 			p,
 			agentutil.LogDispatcher{},
-			deployment.DeployOptionDeployer(deployment.OperationFunc(func(p *agent.Peer) (ignored *agent.Deploy, err error) {
+			deployment.DeployOptionDeployer(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
 				atomic.AddInt64(&deployCount, 1)
 				return ignored, nil
 			})),
@@ -75,7 +76,7 @@ var _ = Describe("Deploy", func() {
 		deploy := deployment.NewDeploy(
 			p,
 			agentutil.LogDispatcher{},
-			deployment.DeployOptionDeployer(deployment.OperationFunc(func(p *agent.Peer) (ignored *agent.Deploy, err error) {
+			deployment.DeployOptionDeployer(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
 				if atomic.CompareAndSwapInt64(&deployCount, failedDeployID-1, failedDeployID) {
 					return ignored, errors.New("deploy failed")
 				}
@@ -84,7 +85,7 @@ var _ = Describe("Deploy", func() {
 
 				return ignored, nil
 			})),
-			deployment.DeployOptionChecker(deployment.OperationFunc(func(p *agent.Peer) (ignored *agent.Deploy, err error) {
+			deployment.DeployOptionChecker(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
 				switch atomic.LoadInt64(&deployCount) {
 				case failedDeployID:
 					return &failedDeploy, nil
