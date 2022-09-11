@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // DetermineLatestDeployment returns latest agent.Deploy (if any) or an error.

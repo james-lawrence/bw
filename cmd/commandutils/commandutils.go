@@ -19,13 +19,13 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/netx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
+	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/netx"
+	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 )
 
 // NewClientPeer create a client peer.

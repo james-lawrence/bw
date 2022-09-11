@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/timex"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/timex"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 )
 

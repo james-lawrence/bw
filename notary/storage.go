@@ -11,9 +11,9 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/sshx"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/systemx"
 )
 
 // NewFromFile load notary configuration from a file.

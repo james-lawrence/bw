@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"google.golang.org/protobuf/proto"
 )
 

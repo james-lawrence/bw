@@ -9,7 +9,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/backoff"
-	"github.com/james-lawrence/bw/internal/x/contextx"
+	"github.com/james-lawrence/bw/internal/contextx"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"

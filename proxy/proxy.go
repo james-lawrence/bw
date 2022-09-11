@@ -7,7 +7,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 func Proxy(ctx context.Context, client, dst net.Conn, buf io.Reader) error {

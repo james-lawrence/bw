@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/grpclog"

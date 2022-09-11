@@ -7,7 +7,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/internal/x/iox"
+	"github.com/james-lawrence/bw/internal/iox"
 )
 
 // PrintLogs for the given deployment ID.

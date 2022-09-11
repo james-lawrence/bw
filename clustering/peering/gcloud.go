@@ -9,9 +9,9 @@ import (
 	"cloud.google.com/go/compute/metadata"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/gcloudx"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 )

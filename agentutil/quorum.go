@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"

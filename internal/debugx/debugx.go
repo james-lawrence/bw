@@ -12,9 +12,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/iox"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/iox"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 )
 

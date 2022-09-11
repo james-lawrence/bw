@@ -12,7 +12,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/peering"
 	"github.com/james-lawrence/bw/internal/memberlistx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/pkg/errors"
 )

@@ -16,7 +16,7 @@ import (
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 )

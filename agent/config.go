@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/memberlist"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/systemx"
 )
 
 // ConfigClientOption options for the client configuration.

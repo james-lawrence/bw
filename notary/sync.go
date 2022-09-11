@@ -5,8 +5,8 @@ import (
 	"log"
 
 	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/james-lawrence/bw/internal/md5x"
-	"github.com/james-lawrence/bw/internal/x/iox"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

@@ -8,7 +8,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/directives"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 

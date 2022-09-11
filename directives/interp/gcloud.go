@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/james-lawrence/bw/directives/interp/gcloud"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 func gcloudtargetpool() (exported map[string]reflect.Value) {

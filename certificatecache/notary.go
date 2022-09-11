@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	nsvc "github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 

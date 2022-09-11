@@ -7,7 +7,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	"google.golang.org/grpc"
 
 	. "github.com/onsi/ginkgo/v2"

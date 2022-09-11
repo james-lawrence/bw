@@ -15,7 +15,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 )
 
 type deployer interface {

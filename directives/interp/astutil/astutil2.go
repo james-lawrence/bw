@@ -15,7 +15,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // ErrPackageNotFound returned when the requested package cannot be located

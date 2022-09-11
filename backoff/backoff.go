@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/james-lawrence/bw/internal/x/timex"
+	"github.com/james-lawrence/bw/internal/timex"
 )
 
 // Strategy strategy to compute how long to wait before retrying message.

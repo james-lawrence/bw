@@ -10,8 +10,8 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/logx"
 
 	"github.com/pkg/errors"
 )
@@ -160,7 +160,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 		)
 
 		if err != nil {
-			return errors.Wrap(err, "log restart detection failure")
+			return errors.Wrap(err, "unable to write restart events due to leadership change")
 		}
 
 		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {

@@ -13,8 +13,8 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/iox"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )

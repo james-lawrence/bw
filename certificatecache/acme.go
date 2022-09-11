@@ -15,8 +15,8 @@ import (
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/pkg/errors"
 
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/internal/x/logx"
 )
 
 // export LEGO_CA_CERTIFICATES="${HOME}/go/src/github.com/letsencrypt/pebble/test/certs/pebble.minica.pem"

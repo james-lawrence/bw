@@ -19,7 +19,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering/raftutil"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )

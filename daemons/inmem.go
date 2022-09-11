@@ -8,8 +8,8 @@ import (
 	"github.com/akutz/memconn"
 	"github.com/james-lawrence/bw"
 	_cluster "github.com/james-lawrence/bw/cluster"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

@@ -19,10 +19,10 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
 )
 
 const (

@@ -12,8 +12,8 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/timex"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
 )
 
@@ -171,7 +171,7 @@ func (t worker) DeployTo(peer *agent.Peer) {
 		defer done()
 
 		if _, err := t.deploy.Visit(peer); err != nil {
-			agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error())))
+			errorsx.MaybeLog(agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error()))))
 			atomic.AddInt64(t.failed, 1)
 			return
 		}

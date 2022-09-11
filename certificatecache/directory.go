@@ -14,10 +14,10 @@ import (
 	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/systemx"
 )
 
 func mustWatcher(dir string) *fsnotify.Watcher {

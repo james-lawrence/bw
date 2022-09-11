@@ -13,7 +13,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	cc "github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 )
 

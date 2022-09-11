@@ -3,7 +3,7 @@ package daemons
 import (
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 )
 
 // AgentCertificateCache initializes the certificate cache manager.

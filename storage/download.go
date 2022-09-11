@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 

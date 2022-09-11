@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 )
 

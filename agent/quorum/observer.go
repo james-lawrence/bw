@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // NewObserver creates an observer of the state machine.

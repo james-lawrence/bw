@@ -20,7 +20,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

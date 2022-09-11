@@ -7,7 +7,7 @@ import (
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 	"github.com/pkg/errors"
 
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 )
 
 type resolution interface {

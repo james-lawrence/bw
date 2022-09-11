@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 )
 

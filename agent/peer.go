@@ -7,8 +7,8 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/stringsx"
+	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/pkg/errors"
 	proto "google.golang.org/protobuf/proto"
 )

@@ -9,8 +9,8 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 )
 

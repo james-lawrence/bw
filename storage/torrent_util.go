@@ -7,8 +7,8 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/torrent"
 	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/james-lawrence/torrent/metainfo"

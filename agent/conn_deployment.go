@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/grpcx"
-	"github.com/james-lawrence/bw/internal/x/iox"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
+	"github.com/james-lawrence/bw/internal/iox"
 )
 
 // MaybeDeployConn ...

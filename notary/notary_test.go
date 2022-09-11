@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 )
 
 var _ = Describe("Notary", func() {

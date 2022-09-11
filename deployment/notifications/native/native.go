@@ -6,7 +6,7 @@ import (
 	"github.com/0xAX/notificator"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment/notifications"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 )
 

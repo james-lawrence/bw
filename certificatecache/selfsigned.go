@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/internal/x/envx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 )
 
 // minimumExpiration is used to force a certificate refresh of self signed certificates.

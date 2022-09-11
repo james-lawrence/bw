@@ -11,7 +11,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/cmd/termui"
 	"github.com/james-lawrence/bw/daemons"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"

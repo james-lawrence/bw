@@ -13,8 +13,8 @@ import (
 	sync "sync"
 	"time"
 
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 )

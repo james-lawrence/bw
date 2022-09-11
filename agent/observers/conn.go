@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )

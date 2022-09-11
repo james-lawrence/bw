@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/torrent"
 	"github.com/james-lawrence/torrent/connections"
 	"github.com/james-lawrence/torrent/dht/v2"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/pkg/errors"
 )
 

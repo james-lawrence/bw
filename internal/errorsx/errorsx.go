@@ -1,6 +1,7 @@
 package errorsx
 
 import (
+	"log"
 	"time"
 )
 
@@ -13,6 +14,14 @@ func Compact(errs ...error) error {
 	}
 
 	return nil
+}
+
+func MaybeLog(err error) {
+	if err == nil {
+		return
+	}
+
+	log.Println(err)
 }
 
 // CompactMonad an error that collects and returns the first error encountered.

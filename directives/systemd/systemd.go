@@ -8,7 +8,7 @@ import (
 
 	"github.com/coreos/go-systemd/v22/dbus"
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/pkg/errors"
 )
 

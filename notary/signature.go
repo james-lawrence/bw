@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // this method is sacred, it must remain backwards compatible between versions.

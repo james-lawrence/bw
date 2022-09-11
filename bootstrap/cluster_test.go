@@ -16,7 +16,7 @@ import (
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

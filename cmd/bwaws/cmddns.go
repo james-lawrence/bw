@@ -17,8 +17,8 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/dns"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/stringsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
 )

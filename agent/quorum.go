@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/james-lawrence/bw/internal/x/grpcx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"google.golang.org/grpc"
 )
 

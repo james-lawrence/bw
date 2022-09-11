@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"testing"
 
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/systemx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/pkg/errors"

@@ -7,7 +7,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/storage"
 
 	. "github.com/onsi/ginkgo/v2"

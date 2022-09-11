@@ -3,7 +3,7 @@ package acme
 import (
 	"os"
 
-	"github.com/james-lawrence/bw/internal/x/protox"
+	"github.com/james-lawrence/bw/internal/protox"
 )
 
 type solver DiskCache

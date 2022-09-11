@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 )
 

@@ -18,8 +18,8 @@ import (
 	"github.com/james-lawrence/bw/cmd/bw/agentcmd"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 )

@@ -11,8 +11,8 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/logx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
 

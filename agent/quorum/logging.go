@@ -7,7 +7,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/envx"
+	"github.com/james-lawrence/bw/internal/envx"
 )
 
 // Logging transcoder

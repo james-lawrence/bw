@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/james-lawrence/bw/agent/acme"
-	"github.com/james-lawrence/bw/internal/x/protox"
+	"github.com/james-lawrence/bw/internal/protox"
 )
 
 func main() {

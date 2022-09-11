@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/james-lawrence/bw/internal/bytesx"
-	"github.com/james-lawrence/bw/internal/x/errorsx"
-	"github.com/james-lawrence/bw/internal/x/iox"
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/iox"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )

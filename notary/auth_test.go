@@ -9,7 +9,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 )
 
 var _ = Describe("newAutoSignerPath", func() {

@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/stringsx"
+	"github.com/james-lawrence/bw/internal/systemx"
 )
 
 // ConfigClientTLS ...

@@ -19,7 +19,7 @@ import (
 	"github.com/grantae/certinfo"
 	"github.com/pkg/errors"
 
-	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // X509Option ...

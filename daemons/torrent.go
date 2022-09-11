@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/internal/torrentx"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/james-lawrence/torrent"

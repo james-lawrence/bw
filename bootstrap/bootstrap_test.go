@@ -13,7 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agenttestutil"
 	. "github.com/james-lawrence/bw/bootstrap"
 	"github.com/james-lawrence/bw/deployment"
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

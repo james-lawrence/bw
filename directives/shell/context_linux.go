@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/james-lawrence/bw/internal/x/logx"
+	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 )
 

@@ -11,7 +11,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/internal/x/systemx"
+	"github.com/james-lawrence/bw/internal/systemx"
 )
 
 // cluster interface for the package.

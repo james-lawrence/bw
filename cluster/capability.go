@@ -1,6 +1,6 @@
 package cluster
 
-import "github.com/james-lawrence/bw/internal/x/debugx"
+import "github.com/james-lawrence/bw/internal/debugx"
 
 const (
 	// Passive represents a node that communicates with the cluster but isn't considered an actual

@@ -22,8 +22,8 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/backoff"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )

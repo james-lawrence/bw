@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/cmd/commandutils"
-	"github.com/james-lawrence/bw/internal/x/iox"
+	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/pkg/errors"
 )
 

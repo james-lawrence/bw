@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/internal/x/debugx"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 )
 
 type peer struct {

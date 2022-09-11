@@ -9,7 +9,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 
 	"github.com/hashicorp/memberlist"

@@ -12,7 +12,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/logrusorgru/aurora"
 )
 

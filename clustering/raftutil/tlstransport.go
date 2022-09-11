@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 )
 

@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
 
-	"github.com/james-lawrence/bw/internal/x/testingx"
+	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/notary"
 )
 
