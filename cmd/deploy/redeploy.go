@@ -16,7 +16,9 @@ import (
 	"github.com/james-lawrence/bw/cmd/termui"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/x/envx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
+	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/manifoldco/promptui"
@@ -67,8 +69,16 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
 	)
 
+	var debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
+	var debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
+
+	if envx.Boolean(ctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+		debugopt1 = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
+		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
+	}
+
 	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 

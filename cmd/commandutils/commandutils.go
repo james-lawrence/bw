@@ -24,7 +24,6 @@ import (
 	"github.com/james-lawrence/bw/internal/x/grpcx"
 	"github.com/james-lawrence/bw/internal/x/logx"
 	"github.com/james-lawrence/bw/internal/x/netx"
-	"github.com/james-lawrence/bw/internal/x/stringsx"
 	"github.com/james-lawrence/bw/internal/x/systemx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
 )
@@ -130,8 +129,8 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 
 	// load or create credentials.
 	if err = cc.FromConfig(
-		stringsx.DefaultIfBlank(config.Credentials.Directory, config.Credentials.Directory),
-		stringsx.DefaultIfBlank(config.Credentials.Mode, config.Credentials.Mode),
+		config.Credentials.Directory,
+		config.Credentials.Mode,
 		path,
 		cc.NewRefreshClient(
 			config.Credentials.Directory,
@@ -142,8 +141,8 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 			err,
 			"unable to load credentials: %s %s %s",
 			path,
-			stringsx.DefaultIfBlank(config.Credentials.Directory, config.Credentials.Directory),
-			stringsx.DefaultIfBlank(config.Credentials.Mode, config.Credentials.Mode),
+			config.Credentials.Directory,
+			config.Credentials.Mode,
 		)
 	}
 

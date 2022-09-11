@@ -5,7 +5,6 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/deploy"
 	"github.com/james-lawrence/bw/deployment"
@@ -15,7 +14,7 @@ type cmdDeploy struct {
 	Env      cmdDeployEnvironment `cmd:"" name:"env" aliases:"deploy" help:"deploy to nodes within the cluster of the specified environment"`
 	Locally  cmdDeployLocal       `cmd:"" name:"locally" aliases:"local" help:"deploy to the local system"`
 	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot" help:"generate a deployment archive without uploading it anywhere"`
-	Redeploy cmdDeployRedeploy    `cmd:"" name:"redeploy" aliases:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
+	Redeploy cmdDeployRedeploy    `cmd:"" name:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
 	Cancel   cmdDeployCancel      `cmd:"" name:"cancel" help:"cancel any current deploy"`
 }
 
@@ -28,41 +27,6 @@ type DeployCluster struct {
 	Names       []*regexp.Regexp `name:"name" help:"regex to match names against"`
 	IPs         []net.IP         `name:"ip" help:"match against the provided IP addresses"`
 	Concurrency int64            `name:"concurrency" help:"number of nodes allowed to deploy simultaneously"`
-}
-
-type cmdDeployEnvironmentDefault struct {
-	DeployCluster
-}
-
-func (t cmdDeployEnvironmentDefault) Run(ctx *cmdopts.Global) error {
-	filters := make([]deployment.Filter, 0, len(t.Names))
-	for _, n := range t.Names {
-		filters = append(filters, deployment.Named(n))
-	}
-
-	for _, n := range t.IPs {
-		filters = append(filters, deployment.IP(n))
-	}
-
-	// need a filter to be present for the canary to work.
-	if t.Canary {
-		filters = append(filters, deployment.AlwaysMatch)
-	}
-
-	return deploy.Into(&deploy.Context{
-		Context:     ctx.Context,
-		CancelFunc:  ctx.Shutdown,
-		WaitGroup:   ctx.Cleanup,
-		Environment: bw.DefaultEnvironmentName,
-		Concurrency: t.Concurrency,
-		Insecure:    t.Insecure,
-		Lenient:     t.Lenient,
-		Silent:      t.Silent,
-		Canary:      t.Canary,
-		Debug:       t.Debug,
-		Filter:      deployment.Or(filters...),
-		AllowEmpty:  len(filters) == 0,
-	})
 }
 
 type cmdDeployEnvironment struct {

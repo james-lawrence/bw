@@ -101,13 +101,15 @@ func Into(ctx *Context) error {
 	)
 
 	events <- agentutil.LogEvent(local, "connecting to cluster")
-	var debugopt grpc.DialOption = grpc.EmptyDialOption{}
+	var debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
+	var debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
 
 	if envx.Boolean(ctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
-		debugopt = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
+		debugopt1 = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
+		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 

@@ -31,9 +31,7 @@ func (t Authority) Bind(s *grpc.Server) {
 // Check the fingerprint against the authority.
 func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckResponse, err error) {
 	var (
-		ok      bool
-		m1      agent.Message
-		m2      *agent.Message_Credentials
+		m1      agent.TLSCertificates
 		encoded []byte
 	)
 
@@ -45,15 +43,7 @@ func (t Authority) Check(ctx context.Context, req *CheckRequest) (resp *CheckRes
 		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
 	}
 
-	if m2, ok = m1.GetEvent().(*agent.Message_Credentials); !ok {
-		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
-	}
-
-	if m2 == nil {
-		return &CheckResponse{}, status.Error(codes.Unavailable, "invalid authority")
-	}
-
-	if m2.Credentials.Fingerprint != req.Fingerprint {
+	if m1.Fingerprint != req.Fingerprint {
 		return &CheckResponse{}, status.Error(codes.NotFound, "fingerprint mismatch")
 	}
 

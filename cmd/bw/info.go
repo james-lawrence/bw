@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
 	"io"
 	"log"
@@ -202,9 +201,8 @@ func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 }
 
 type cmdInfoCheck struct {
-	cmdopts.BeardedWookieEnv
 	Insecure bool   `help:"skip tls verification"`
-	Address  string `help:"address to check"`
+	Address  string `help:"address to check" arg:""`
 }
 
 func (t cmdInfoCheck) Run(ctx *cmdopts.Global) (err error) {
@@ -242,12 +240,13 @@ func (t cmdInfoCheck) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	cc, err := dialers.NewDirect(agent.URIDiscovery(t.Address), dd.Defaults()...).DialContext(context.Background())
+	cc, err := dialers.NewDirect(agent.URIDiscovery(t.Address), dd.Defaults()...).DialContext(ctx.Context)
 	if err != nil {
 		return err
 	}
+	dc := discovery.NewDiscoveryClient(cc)
 
-	resp, err := discovery.NewDiscoveryClient(cc).Quorum(context.Background(), &discovery.QuorumRequest{})
+	resp, err := dc.Quorum(ctx.Context, &discovery.QuorumRequest{})
 	if grpcx.IsUnavailable(err) {
 		return errorsx.Notification(
 			errors.Errorf("unable to connect to %s\nfor x509: certificate signed by unknown authority errors use --insecure to bypass\n\n%v\n", t.Address, err),

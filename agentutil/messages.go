@@ -37,29 +37,12 @@ func LogEvent(p *agent.Peer, s string) *agent.Message {
 	}
 }
 
-// TLSEventMessage contains the generated TLS certificate for the cluster.
-func TLSEventMessage(p *agent.Peer, auth, key, cert []byte) *agent.Message {
-	tls := TLSEvent(auth, key, cert)
-	return &agent.Message{
-		Id:          uuid.Must(uuid.NewV4()).String(),
-		Type:        agent.Message_TLSEvent,
-		Peer:        p,
-		Ts:          time.Now().Unix(),
-		DisallowWAL: true,
-		Hidden:      true,
-		Event: &agent.Message_Credentials{
-			Credentials: &tls,
-		},
-	}
-}
-
-// TLSEvent ...
-func TLSEvent(auth, key, cert []byte) agent.TLSEvent {
+// TLSCertificates ...
+func TLSCertificates(auth, cert []byte) agent.TLSCertificates {
 	digest := md5.Sum(cert)
-	return agent.TLSEvent{
+	return agent.TLSCertificates{
 		Fingerprint: hex.EncodeToString(digest[:]),
 		Authority:   auth,
-		Key:         key,
 		Certificate: cert,
 	}
 }

@@ -6,7 +6,9 @@ After=network.target
 Type=simple
 Restart=always
 CacheDirectory=bearded-wookie/%i
-EnvironmentFile=-%C/bearded-wookie/%i/agent.env
+EnvironmentFile=%C/bearded-wookie/%i/agent.env
+Environment=BEARDED_WOOKIE_TOKEN1="d9108d25-72db-48db-90f8-2ebff433de93"
+Environment=BEARDED_WOOKIE_TOKEN2="b9ff094b-3e06-40e6-89c5-127790897eb3"
 SyslogIdentifier=%p-%i
 ExecStart=%h/go/bin/bw notify --agent-address=127.0.0.1:2000 --agent-config="%C/bearded-wookie/%i/agent.config"
 

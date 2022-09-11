@@ -33,10 +33,10 @@ message Peer {
   bytes PublicKey = 11;
 }
 
-message TLSEvent {
+// Represents the certificates in use by the system
+message TLSCertificates {
   string fingerprint = 1;
   bytes Authority = 2;
-  bytes Key = 3;
   bytes Certificate = 4;
 }
 
@@ -60,7 +60,6 @@ message Message {
     DeployEvent = 3;
     PeersFoundEvent = 4;
     PeersCompletedEvent = 5;
-    TLSEvent = 7;
   }
 
   string id = 9;
@@ -81,7 +80,6 @@ message Message {
     DeployCommand deployCommand = 7;
     Deploy deploy = 8;
     NodeEvent membership = 10;
-    TLSEvent credentials = 12;
   }
 }
 
