@@ -1,3 +1,15 @@
+commit d65c82673c7fd1f1383d1e6a10ed1ab886bb0e1e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 11 00:16:27 2022 -0400
+
+    reduce window for expiring certs from cache
+
+commit f86abee3ca1f97ef95d60a4449296b534867b304
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 11 00:02:13 2022 -0400
+
+    release 0.1.1662868365-d4d8451d
+
 commit d4d8451d2a8afff81a89a75478e7a54c74768a64
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Sep 10 23:52:45 2022 -0400
