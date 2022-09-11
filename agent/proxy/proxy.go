@@ -10,8 +10,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
-	return func(n *agent.Peer) (_d *agent.Deploy, err error) {
+func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
+	return func(ctx context.Context, n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
 			c    *grpc.ClientConn
 			info *agent.StatusResponse
@@ -23,7 +23,7 @@ func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
 
 		defer c.Close()
 
-		if info, err = agent.NewConn(c).Info(context.Background()); err != nil {
+		if info, err = agent.NewConn(c).Info(ctx); err != nil {
 			return _d, err
 		}
 
@@ -37,8 +37,8 @@ func check(d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
 	}
 }
 
-func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(n *agent.Peer) (*agent.Deploy, error) {
-	return func(n *agent.Peer) (_d *agent.Deploy, err error) {
+func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
+	return func(ctx context.Context, n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
 			c *grpc.ClientConn
 		)
@@ -48,6 +48,6 @@ func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaul
 		}
 		defer c.Close()
 
-		return agent.NewConn(c).Deploy(context.Background(), dopts, archive)
+		return agent.NewConn(c).Deploy(ctx, dopts, archive)
 	}
 }

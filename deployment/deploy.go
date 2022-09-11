@@ -2,7 +2,6 @@ package deployment
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"sync"
 	"sync/atomic"
@@ -11,9 +10,8 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/backoff"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
 )
 
@@ -27,22 +25,22 @@ type partitioner interface {
 
 // applies an operation to the node.
 type operation interface {
-	Visit(*agent.Peer) (*agent.Deploy, error)
+	Visit(context.Context, *agent.Peer) (*agent.Deploy, error)
 }
 
 // OperationFunc pure function operation.
-type OperationFunc func(*agent.Peer) (*agent.Deploy, error)
+type OperationFunc func(context.Context, *agent.Peer) (*agent.Deploy, error)
 
 // Visit implements operation.
-func (t OperationFunc) Visit(c *agent.Peer) (*agent.Deploy, error) {
-	return t(c)
+func (t OperationFunc) Visit(ctx context.Context, c *agent.Peer) (*agent.Deploy, error) {
+	return t(ctx, c)
 }
 
 type constantChecker struct {
 	Deploy *agent.Deploy
 }
 
-func (t constantChecker) Visit(*agent.Peer) (*agent.Deploy, error) {
+func (t constantChecker) Visit(context.Context, *agent.Peer) (*agent.Deploy, error) {
 	return t.Deploy, nil
 }
 
@@ -81,6 +79,14 @@ func DeployOptionDeployer(o operation) Option {
 	}
 }
 
+// DeployOptionMonitor set the monitoring strategy
+// for a deployment defaults to a polling strategy.
+func DeployOptionMonitor(m monitor) Option {
+	return func(d *Deploy) {
+		d.monitor = m
+	}
+}
+
 // DeployOptionIgnoreFailures set whether or not to ignore failures.
 func DeployOptionIgnoreFailures(ignore bool) Option {
 	return func(d *Deploy) {
@@ -88,11 +94,19 @@ func DeployOptionIgnoreFailures(ignore bool) Option {
 	}
 }
 
+// DeployOptionTimeoutGrace set the timeout for each deployment. if it takes longer than
+// the provided timeout + a small grace period then give up and consider it failed.
+func DeployOptionTimeoutGrace(t time.Duration) Option {
+	return func(d *Deploy) {
+		d.worker.timeout = t + deployGracePeriod
+	}
+}
+
 // DeployOptionTimeout set the timeout for each deployment. if it takes longer than
 // the provided timeout + a small grace period then give up and consider it failed.
 func DeployOptionTimeout(t time.Duration) Option {
 	return func(d *Deploy) {
-		d.worker.timeout = t + deployGracePeriod
+		d.worker.timeout = t
 	}
 }
 
@@ -101,7 +115,7 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:          make(chan func()),
+			c:          make(chan func(context.Context) error),
 			wait:       new(sync.WaitGroup),
 			check:      constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
 			deploy:     OperationFunc(loggingDeploy),
@@ -110,12 +124,17 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 			completed:  new(int64),
 			failed:     new(int64),
 			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
+			queue:      make(chan *pending),
 		},
 		partitioner: bw.ConstantPartitioner(1),
 	}
 
 	for _, opt := range options {
 		opt(&d)
+	}
+
+	if d.monitor == nil {
+		d.monitor = NewMonitor(MonitorTicklerPeriodicAuto(d.timeout))
 	}
 
 	return d
@@ -126,67 +145,91 @@ func RunDeploy(p *agent.Peer, c cluster, di dispatcher, options ...Option) (int6
 	return NewDeploy(p, di, options...).Deploy(c)
 }
 
-func loggingDeploy(peer *agent.Peer) (*agent.Deploy, error) {
+func loggingDeploy(ctx context.Context, peer *agent.Peer) (*agent.Deploy, error) {
 	log.Println("deploy triggered for peer", peer.String())
 	return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
 }
 
+type pending struct {
+	*agent.Peer
+	timeout time.Duration
+	done    chan error
+}
+
 type worker struct {
-	c              chan func()
+	c              chan func(context.Context) error
 	wait           *sync.WaitGroup
 	local          *agent.Peer
 	dispatcher     dispatcher
+	monitor        monitor
 	check          operation
 	deploy         operation
 	completed      *int64
 	failed         *int64
 	ignoreFailures bool
 	timeout        time.Duration
+	queue          chan *pending
 }
 
-func (t worker) work() {
+func (t worker) work(ctx context.Context) {
 	defer t.wait.Done()
-	for f := range t.c {
+	for op := range t.c {
 		// Stop deployment when a single node fails.
-		// TODO: make number of failures allowed configurable.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
 			agentutil.Dispatch(t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 			continue
 		}
 
-		f()
+		if err := op(ctx); err != nil {
+			log.Println(err)
+			atomic.AddInt64(t.failed, 1)
+			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agentutil.LogError(t.local, err)))
+		} else {
+			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+		}
 	}
 }
 
 func (t worker) Complete() (int64, bool) {
-	close(t.c)
 	t.wait.Wait()
 	failures := atomic.LoadInt64(t.failed)
 	return failures, t.ignoreFailures || failures == 0
 }
 
-func (t worker) DeployTo(peer *agent.Peer) {
-	t.c <- func() {
-		deadline, done := context.WithTimeout(context.Background(), t.timeout)
-		defer done()
-
-		if _, err := t.deploy.Visit(peer); err != nil {
-			errorsx.MaybeLog(agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, err.Error()))))
-			atomic.AddInt64(t.failed, 1)
-			return
+func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
+	task := &pending{Peer: peer, timeout: t.timeout, done: make(chan error, 1)}
+	perform := func(deadline context.Context) error {
+		if envx.Boolean(false, bw.EnvLogsVerbose) {
+			log.Println("deploy to", peer.Name, "initiated")
+			defer log.Println("deploy to", peer.Name, "completed")
 		}
 
-		if failure := awaitCompletion(t.timeout, t.dispatcher, t.check, nil, peer); failure != nil {
-			atomic.AddInt64(t.failed, 1)
-			switch errors.Cause(failure).(type) {
-			case errorsx.Timeout:
-				agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.LogEvent(t.local, fmt.Sprintf("failed to deploy to: %s - %s\n", peer.Name, failure)))
-			default:
-			}
+		if _, err := t.deploy.Visit(deadline, peer); err != nil {
+			return errors.Wrapf(err, "failed to deploy to: %s", peer.Name)
 		}
 
-		agentutil.ReliableDispatch(deadline, t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+		// send the task to be monitored.
+		select {
+		case t.queue <- task:
+		case <-deadline.Done():
+			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Name)
+		}
+
+		select {
+		case <-deadline.Done():
+			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Name)
+		case cause := <-task.done:
+			return errors.Wrapf(cause, "failed to deploy to: %s", peer.Name)
+		}
 	}
+
+	select {
+	case t.c <- perform:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return nil
 }
 
 // Deploy - handles a deployment.
@@ -199,17 +242,29 @@ type Deploy struct {
 // Deploy deploy to the cluster. returns deployment results.
 // failed nodes and if it was considered a success.
 func (t Deploy) Deploy(c cluster) (int64, bool) {
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 	agentutil.Dispatch(t.dispatcher, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
 		t.worker.wait.Add(1)
-		go t.worker.work()
+		go t.worker.work(ctx)
 	}
 
 	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
-	if failure := awaitCompletion(t.worker.timeout, t.dispatcher, t.worker.check, c, nodes...); failure != nil {
+	initial := make(chan *pending, len(nodes))
+	for _, n := range nodes {
+		initial <- &pending{
+			Peer:    n,
+			timeout: t.timeout,
+			done:    make(chan error),
+		}
+	}
+	close(initial)
+
+	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
@@ -220,8 +275,26 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 
 	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
-	for _, peer := range nodes {
-		t.worker.DeployTo(peer)
+	go func() {
+		for _, peer := range nodes {
+			t.worker.DeployTo(ctx, peer)
+		}
+
+		close(t.c)
+		t.wait.Wait()
+		close(t.queue)
+	}()
+
+	failure := errorsx.Ignore(
+		t.worker.monitor.Await(ctx, t.queue, t.dispatcher, c, t.worker.check),
+		context.Canceled,
+	)
+	if failure != nil {
+		switch errors.Cause(failure).(type) {
+		case errorsx.Timeout:
+			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
+		default:
+		}
 	}
 
 	return t.worker.Complete()
@@ -239,61 +312,35 @@ func ApplyFilter(s Filter, set ...*agent.Peer) []*agent.Peer {
 	return subset
 }
 
-func awaitCompletion(timeout time.Duration, d dispatcher, check operation, c cluster, peers ...*agent.Peer) error {
-	remaining := make([]*agent.Peer, 0, len(peers))
-	failed := error(nil)
-
-	b := backoff.New(
-		backoff.Exponential(time.Second),
-		backoff.Maximum(timex.DurationMin(10*time.Second, timeout/4)),
-		backoff.Jitter(0.25),
+func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
+	var (
+		deploy *agent.Deploy
 	)
-	deadline := time.Now().Add(timeout)
 
-	for attempt := 0; len(peers) > 0; attempt++ {
-		remaining = remaining[:0]
-		for _, peer := range peers {
-			// if deadline has passed, give up.
-			if time.Now().After(deadline) {
-				failed = errorsx.Compact(failed, errorsx.Timedout(errors.Errorf("%s: deadline passed for deploy", peer.Name), timeout))
-				continue
-			}
+	// log.Println("healthcheck", task.Peer.Name, task.timeout, "initiated")
+	// defer log.Println("healthcheck", task.Peer.Name, task.timeout, "completed")
 
-			if deploy, err := check.Visit(peer); err == nil {
-				switch deploy.Stage {
-				case agent.Deploy_Completed:
-					continue
-				case agent.Deploy_Failed:
-					did := bw.RandomID("unknown deployment")
-					if deploy.Archive != nil {
-						did = bw.RandomID(deploy.Archive.DeploymentID)
-					}
-					failed = errorsx.Compact(failed, errors.Errorf("%s: deployment has failed", did))
-					continue
-				}
-			} else {
-				log.Printf("failed to check: %s - %T, %s\n", peer.Name, errors.Cause(err), err)
-			}
+	ctx, done := context.WithTimeout(ctx, task.timeout/4)
+	defer done()
 
-			remaining = append(remaining, peer)
-		}
-
-		// checking if the failed nodes are still within the cluster.
-		if c != nil {
-			remaining = ApplyFilter(Peers(c.Peers()...), remaining...)
-		}
-
-		if len(remaining) > 0 {
-			if d := b.Backoff(attempt); time.Now().Add(d).Before(deadline) {
-				log.Println("sleeping before next attempt", d, deadline)
-				time.Sleep(d)
-			} else {
-				time.Sleep(time.Until(deadline))
-			}
-		}
-
-		peers = remaining
+	if deploy, err = op.Visit(ctx, task.Peer); err != nil {
+		log.Println("DERP", err)
+		return err
 	}
 
-	return failed
+	did := bw.RandomID("unknown deployment")
+	if deploy.Archive != nil {
+		did = bw.RandomID(deploy.Archive.DeploymentID)
+	}
+	switch deploy.Stage {
+	case agent.Deploy_Completed:
+		close(task.done)
+		return nil
+	case agent.Deploy_Failed:
+		task.done <- errors.Errorf("%s: deployment has failed", did)
+		close(task.done)
+		return nil
+	default:
+		return errors.New(deploy.Stage.String())
+	}
 }

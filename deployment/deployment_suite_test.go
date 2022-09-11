@@ -12,6 +12,7 @@ import (
 )
 
 func TestDeployment(t *testing.T) {
+	log.SetFlags(log.Flags() | log.Lshortfile)
 	log.SetOutput(io.Discard)
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Deployment Suite")

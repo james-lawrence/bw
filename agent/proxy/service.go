@@ -40,7 +40,8 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		filter deployment.Filter
 	)
 
-	d := agentutil.NewDispatcher(dialers.NewQuorum(t.c, dialer.Defaults()...))
+	qd := dialers.NewQuorum(t.c, dialer.Defaults()...)
+	d := agentutil.NewDispatcher(qd)
 
 	cmd := &agent.DeployCommand{
 		Command: agent.DeployCommand_Begin,
@@ -63,7 +64,11 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		deployment.DeployOptionFilter(filter),
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
-		deployment.DeployOptionTimeout(time.Duration(dopts.Timeout)),
+		deployment.DeployOptionTimeoutGrace(time.Duration(dopts.Timeout)),
+		deployment.DeployOptionMonitor(deployment.NewMonitor(
+			deployment.MonitorTicklerEvent(t.c.Local(), qd),
+			deployment.MonitorTicklerPeriodicAuto(time.Duration(dopts.Timeout)),
+		)),
 	}
 
 	// At this point the deploy could take awhile, so we shunt it into the background.

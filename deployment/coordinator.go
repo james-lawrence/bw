@@ -46,7 +46,7 @@ func New(local *agent.Peer, d deployer, options ...CoordinatorOption) Coordinato
 	// default options.
 	CoordinatorOptionRoot(os.TempDir())(&coord)
 	CoordinatorOptionKeepN(defaultKeepN)(&coord)
-	CoordinatorOptionDispatcher(agentutil.LogDispatcher{})(&coord)
+	CoordinatorOptionDispatcher(agentutil.DiscardDispatcher{})(&coord)
 
 	return CloneCoordinator(coord, options...)
 }

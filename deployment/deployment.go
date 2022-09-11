@@ -88,7 +88,7 @@ func NewDeployContext(ctx context.Context, root string, p *agent.Peer, dopts *ag
 		Log:           dlog{Logger: log.New(io.Discard, "", 0)},
 		Archive:       a,
 		DeployOptions: dopts,
-		dispatcher:    agentutil.LogDispatcher{},
+		dispatcher:    agentutil.DiscardDispatcher{},
 		completed:     make(chan *DeployResult),
 		done:          &sync.Once{},
 	}
