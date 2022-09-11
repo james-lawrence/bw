@@ -4,31 +4,36 @@ import (
 	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/pem"
+	"crypto/x509/pkix"
 	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
+	"google.golang.org/protobuf/proto"
 )
 
 // ErrAuthorityNotAvailable ...
 const ErrAuthorityNotAvailable = errorsx.String("authority not available")
 
 // NewAuthorityCache cached authority from the directory.
-func NewAuthorityCache(dir string) *AuthorityCache {
+func NewAuthorityCache(domain, dir string) *AuthorityCache {
 	return &AuthorityCache{
-		dir: dir,
-		m:   &sync.RWMutex{},
+		dir:    dir,
+		domain: domain,
+		m:      &sync.RWMutex{},
 	}
 }
 
 // AuthorityCache lazy creation of the authority cache if possible.
 type AuthorityCache struct {
 	dir       string
+	domain    string
 	authority *Authority
 	m         *sync.RWMutex
 }
@@ -36,57 +41,66 @@ type AuthorityCache struct {
 // Create certificate.
 func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tlsx.X509Option) (ca, key, cert []byte, err error) {
 	var (
-		raw []byte
-		b   *pem.Block
+		encoded  []byte
+		template x509.Certificate
 	)
 
 	t.m.RLock()
 	authority := t.authority
 	t.m.RUnlock()
 
-	if authority != nil {
+	if authority != nil && authority.CACert.NotAfter.After(time.Now()) {
 		return authority.Create(duration, bits, options...)
 	}
 
 	t.m.Lock()
 	defer t.m.Unlock()
-	t.authority = &Authority{}
+	subject := tlsx.X509OptionSubject(pkix.Name{
+		CommonName: t.domain,
+	})
 
-	kpath := filepath.Join(t.dir, DefaultTLSGeneratedCAKey)
-	cpath := filepath.Join(t.dir, DefaultDirTLSAuthority, DefaultTLSGeneratedCACert)
+	authority = &Authority{}
+
+	kpath := filepath.Join(t.dir, DefaultTLSKeyServer)
+	certpath := filepath.Join(t.dir, DefaultDirTLSAuthority, DefaultTLSGeneratedCACert)
+	protopath := filepath.Join(t.dir, DefaultTLSGeneratedCAProto)
 
 	log.Println("loading ca key", kpath)
-	log.Println("loading ca cert", cpath)
+	log.Println("writing proto file", protopath)
 
-	if raw, err = os.ReadFile(kpath); err != nil {
+	if authority.CAKey, err = rsax.DecodeFile(kpath); err != nil {
 		log.Println("failed to initialize authority", err)
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if b, _ = pem.Decode(raw); err != nil {
-		log.Println("failed to initialize authority", err)
+	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(nil), time.Minute, tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if t.authority.CAKey, err = x509.ParsePKCS1PrivateKey(b.Bytes); err != nil {
-		log.Println("failed to initialize authority", err)
+	if _, cert, err = tlsx.SelfSigned(authority.CAKey, &template); err != nil {
+		log.Println("unable to create certificate", err)
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if raw, err = os.ReadFile(cpath); err != nil {
-		log.Println("failed to initialize authority", err)
+	if err = tlsx.WriteCertificateFile(certpath, cert); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if b, _ = pem.Decode(raw); err != nil {
-		log.Println("failed to initialize authority", err)
+	if authority.CACert, err = x509.ParseCertificate(cert); err != nil {
+		log.Println("unable to decode certificate", err)
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if t.authority.CACert, err = x509.ParseCertificate(b.Bytes); err != nil {
-		log.Println("failed to initialize authority", err)
+	prototlscert := agentutil.TLSCertificates(cert, cert)
+	if encoded, err = proto.Marshal(&prototlscert); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
+
+	if err = os.WriteFile(protopath, encoded, 0600); err != nil {
+		return ca, key, cert, ErrAuthorityNotAvailable
+	}
+
+	t.authority = authority
 
 	return t.authority.Create(duration, bits, options...)
 }

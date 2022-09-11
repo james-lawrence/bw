@@ -81,8 +81,8 @@ func (t Notary) Refresh() (err error) {
 
 	log.Println("refresh completed")
 	capath := filepath.Join(t.CertificateDir, DefaultTLSCertCA)
-	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyServer)
-	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertServer)
+	keypath := filepath.Join(t.CertificateDir, DefaultTLSKeyClient)
+	certpath := filepath.Join(t.CertificateDir, DefaultTLSCertClient)
 
 	log.Println("writing private key", keypath)
 	if err = os.WriteFile(keypath, key, 0600); err != nil {

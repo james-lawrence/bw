@@ -153,11 +153,16 @@ func SignedRSAGen(bits int, template, parent x509.Certificate, parentKey *rsa.Pr
 
 // SelfSignedRSAGen generate a self signed certificate.
 func SelfSignedRSAGen(bits int, template x509.Certificate) (priv *rsa.PrivateKey, derBytes []byte, err error) {
-	if priv, err = rsa.GenerateKey(rand.Reader, bits); err != nil {
+	return SelfSignedRSARandGen(rand.Reader, bits, template)
+}
+
+// SelfSignedRSAGen generate a self signed certificate.
+func SelfSignedRSARandGen(r io.Reader, bits int, template x509.Certificate) (priv *rsa.PrivateKey, derBytes []byte, err error) {
+	if priv, err = rsa.GenerateKey(r, bits); err != nil {
 		return priv, derBytes, errors.WithStack(err)
 	}
 
-	if derBytes, err = x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv); err != nil {
+	if derBytes, err = x509.CreateCertificate(r, &template, &template, &priv.PublicKey, priv); err != nil {
 		return priv, derBytes, errors.WithStack(err)
 	}
 

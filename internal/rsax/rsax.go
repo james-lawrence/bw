@@ -19,6 +19,10 @@ const (
 	defaultBits = 4096 // 4096 bit keysize, reasonable default.
 )
 
+func AutoBits() int {
+	return defaultBits
+}
+
 // Auto generates a RSA key using package defined defaults.
 func Auto() (pkey []byte, err error) {
 	return Generate(defaultBits)
@@ -144,6 +148,18 @@ func PublicKey(pemkey []byte) (pub []byte, err error) {
 	}
 
 	return x509.MarshalPKCS1PublicKey(&pkey.PublicKey), nil
+}
+
+func DecodeFile(path string) (priv *rsa.PrivateKey, err error) {
+	var (
+		encoded []byte
+	)
+
+	if encoded, err = os.ReadFile(path); err != nil {
+		return nil, err
+	}
+
+	return Decode(encoded)
 }
 
 // Decode decode a RSA private key.

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/x/errorsx"
 	"github.com/james-lawrence/bw/internal/x/tlsx"
@@ -183,7 +184,7 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 		}),
 	}
 
-	if resp.Authority, resp.PrivateKey, resp.Certificate, err = t.authority.Create(20*time.Hour, 4096, caoptions...); err != nil {
+	if resp.Authority, resp.PrivateKey, resp.Certificate, err = t.authority.Create(20*time.Hour, rsax.AutoBits(), caoptions...); err != nil {
 		log.Println("failed to generate credentials", err)
 		return nil, status.Error(codes.Unavailable, "authority not available")
 	}
