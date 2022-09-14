@@ -1,3 +1,23 @@
+commit 0f1b67832f91b6bb202aa717abc01894596c0add
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 11 15:38:44 2022 -0400
+
+    implement an event driven deployment.
+    
+    react to nodes posting their deployment events vs polling.
+
+commit a79366d2370ae2dd356707083ee31bdcba8d24b8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 11 09:17:04 2022 -0400
+
+    move internal/x/ packages to internal
+
+commit c9dea1c477c578ae9719f24fdefe8ffae33cd572
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 11 00:18:52 2022 -0400
+
+    release 0.1.1662869787-d65c8267
+
 commit d65c82673c7fd1f1383d1e6a10ed1ab886bb0e1e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Sep 11 00:16:27 2022 -0400
