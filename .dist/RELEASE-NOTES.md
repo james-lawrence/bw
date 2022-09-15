@@ -1,3 +1,15 @@
+commit a058df283a75b0e2966b8b9f3d6fe0238349b649
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 12:05:30 2022 -0400
+
+    prevent node check from being tied to deploy timeout
+
+commit 25e31637428a2722569d722fe93c97aa5e5236c1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Sep 14 14:17:39 2022 -0400
+
+    release 0.1.1662943877-0f1b6783
+
 commit 0f1b67832f91b6bb202aa717abc01894596c0add
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Sep 11 15:38:44 2022 -0400
