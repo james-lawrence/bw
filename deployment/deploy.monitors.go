@@ -39,7 +39,7 @@ func MonitorTicklerRate(r *rate.Limiter) MonitorTickler {
 	return func(ctx context.Context, tickle *sync.Cond) {
 		defer tickle.Signal()
 		for err := r.Wait(ctx); err == nil; err = r.Wait(ctx) {
-			if envx.Boolean(false, bw.EnvLogsVerbose) {
+			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Printf("initiating periodic healthcheck %f\n", r.Limit())
 			}
 			tickle.Signal()
@@ -58,7 +58,7 @@ func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler 
 				case *agent.Message_Deploy:
 					switch evt.Deploy.Stage {
 					case agent.Deploy_Completed, agent.Deploy_Failed:
-						if envx.Boolean(false, bw.EnvLogsVerbose) {
+						if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 							log.Printf("initiating event driven healthcheck %T - %s\n", evt, evt.Deploy.Stage)
 						}
 						tickle.Signal()
@@ -97,7 +97,7 @@ func (t Monitor) tickler(ctx context.Context, tickle *sync.Cond, q chan struct{}
 }
 
 func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error {
-	if envx.Boolean(false, bw.EnvLogsVerbose) {
+	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 		log.Println("event monitoring initiated")
 		defer log.Println("event monitoring completed")
 	}
@@ -125,7 +125,7 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 			outstanding = append(outstanding, task)
 			tickle.Signal()
 		case <-performcheck:
-			if envx.Boolean(false, bw.EnvLogsVerbose) {
+			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "initiated")
 				defer log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "completed")
 			}

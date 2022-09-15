@@ -121,6 +121,7 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 			deploy:     OperationFunc(loggingDeploy),
 			dispatcher: di,
 			local:      p,
+			blocked:    NewMonitor(MonitorTicklerPeriodicAuto(time.Second)),
 			completed:  new(int64),
 			failed:     new(int64),
 			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
@@ -161,6 +162,7 @@ type worker struct {
 	wait           *sync.WaitGroup
 	local          *agent.Peer
 	dispatcher     dispatcher
+	blocked        monitor
 	monitor        monitor
 	check          operation
 	deploy         operation
@@ -199,7 +201,7 @@ func (t worker) Complete() (int64, bool) {
 func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
 	task := &pending{Peer: peer, timeout: t.timeout, done: make(chan error, 1)}
 	perform := func(deadline context.Context) error {
-		if envx.Boolean(false, bw.EnvLogsVerbose) {
+		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deploy to", peer.Name, "initiated")
 			defer log.Println("deploy to", peer.Name, "completed")
 		}
@@ -264,7 +266,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
-	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
+	if failure := t.blocked.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
