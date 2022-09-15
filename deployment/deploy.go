@@ -121,7 +121,6 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 			deploy:     OperationFunc(loggingDeploy),
 			dispatcher: di,
 			local:      p,
-			blocked:    NewMonitor(MonitorTicklerPeriodicAuto(time.Second)),
 			completed:  new(int64),
 			failed:     new(int64),
 			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
@@ -162,7 +161,6 @@ type worker struct {
 	wait           *sync.WaitGroup
 	local          *agent.Peer
 	dispatcher     dispatcher
-	blocked        monitor
 	monitor        monitor
 	check          operation
 	deploy         operation
@@ -244,7 +242,7 @@ type Deploy struct {
 // Deploy deploy to the cluster. returns deployment results.
 // failed nodes and if it was considered a success.
 func (t Deploy) Deploy(c cluster) (int64, bool) {
-	ctx, done := context.WithCancel(context.Background())
+	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+deployGracePeriod)
 	defer done()
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 	agentutil.Dispatch(t.dispatcher, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
@@ -266,7 +264,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
-	if failure := t.blocked.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
+	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
@@ -319,14 +317,15 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 		deploy *agent.Deploy
 	)
 
-	// log.Println("healthcheck", task.Peer.Name, task.timeout, "initiated")
-	// defer log.Println("healthcheck", task.Peer.Name, task.timeout, "completed")
+	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+		log.Println("healthcheck", task.Peer.Name, task.timeout, "initiated")
+		defer log.Println("healthcheck", task.Peer.Name, task.timeout, "completed")
+	}
 
 	ctx, done := context.WithTimeout(ctx, task.timeout/4)
 	defer done()
 
 	if deploy, err = op.Visit(ctx, task.Peer); err != nil {
-		log.Println("DERP", err)
 		return err
 	}
 

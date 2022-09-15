@@ -97,6 +97,9 @@ func (t Monitor) tickler(ctx context.Context, tickle *sync.Cond, q chan struct{}
 }
 
 func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error {
+	ctx, done := context.WithCancel(ctx)
+	defer done()
+
 	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 		log.Println("event monitoring initiated")
 		defer log.Println("event monitoring completed")
