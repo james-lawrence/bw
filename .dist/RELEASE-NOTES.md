@@ -1,3 +1,15 @@
+commit 88cdf81394a263f8fba4113e2aa873a2d31d61aa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 14:53:52 2022 -0400
+
+    timeout the deploy sanity checks
+
+commit e10fdfa07dd86d7012b0f2a848692e5c9820a8bc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 12:13:16 2022 -0400
+
+    release 0.1.1663258234-a058df28
+
 commit a058df283a75b0e2966b8b9f3d6fe0238349b649
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Sep 15 12:05:30 2022 -0400
