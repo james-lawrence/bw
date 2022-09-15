@@ -20,4 +20,5 @@ const (
 	EnvAgentClusterEnableGoogleCloudPool = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL"            // enable gcloud pool peer detection
 	EnvAgentClusterEnableDNS             = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_DNS"                    // enable dns peer detection
 	EnvAgentClusterP2PDiscoveryPort      = "BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT"           // override the p2p discovery port
+	EnvAgentSelfSignedExpiration         = "BEARDED_WOOKIE_AGENT_BOOTSTRAP_SELF_SIGNED_EXPIRATION"     // environment variable to adjust the expiration period for the self signed bootstrap certificate.
 )

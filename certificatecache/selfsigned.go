@@ -16,7 +16,7 @@ import (
 
 // minimumExpiration is used to force a certificate refresh of self signed certificates.
 func minimumExpiration() time.Duration {
-	return 24 * time.Hour
+	return envx.Duration(24*time.Hour, bw.EnvAgentSelfSignedExpiration)
 }
 
 // generates a self signed certificate iff the current certificate is missing or
@@ -43,7 +43,7 @@ func (t selfsigned) Refresh() (err error) {
 		return err
 	}
 
-	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
+	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain), tlsx.X509OptionCA()); err != nil {
 		return err
 	}
 
