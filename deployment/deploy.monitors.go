@@ -28,7 +28,7 @@ func NewMonitor(ticklers ...MonitorTickler) Monitor {
 type MonitorTickler func(ctx context.Context, tickle *sync.Cond)
 
 func MonitorTicklerPeriodic(d time.Duration) MonitorTickler {
-	return MonitorTicklerRate(rate.NewLimiter(rate.Every(d), 3))
+	return MonitorTicklerRate(rate.NewLimiter(rate.Every(d), 1))
 }
 
 func MonitorTicklerPeriodicAuto(d time.Duration) MonitorTickler {

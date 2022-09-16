@@ -264,7 +264,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
-	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(100*time.Millisecond)); failure != nil {
+	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(time.Second)); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
