@@ -1,3 +1,15 @@
+commit 6ddee2b2f7ddf06ddad13f088296f28595f7de81
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 13:08:27 2022 -0400
+
+    reduce timeout significantly for healthcheck
+
+commit 700ae2c987a39a38e9e063d24cc741a118c0f247
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 11:42:56 2022 -0400
+
+    release 0.1.1663340056-5e21e553
+
 commit 5e21e5531f130a2d49e265d2b72770456d985925
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 16 10:54:16 2022 -0400
