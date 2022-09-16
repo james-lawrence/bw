@@ -1,3 +1,15 @@
+commit a11040fc20c48d5ee20898011c998f39e6237e14
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 17:21:39 2022 -0400
+
+    fix pending task deadlocking
+
+commit 135fd5a6741a7b381440a33ac86df5cd4ec88952
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 16:28:31 2022 -0400
+
+    release 0.1.1663359972-964b3e74
+
 commit 964b3e74a77235928bcdf8ec8f93131269c27e74
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 16 16:26:12 2022 -0400
