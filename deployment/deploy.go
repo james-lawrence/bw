@@ -253,7 +253,6 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		go t.worker.work(ctx)
 	}
 
-	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "waiting for nodes to become ready"))
 	initial := make(chan *pending, len(nodes))
 	for _, n := range nodes {
 		initial <- &pending{
@@ -264,7 +263,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
-	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check, MonitorTicklerPeriodic(time.Second)); failure != nil {
+	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
 			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
@@ -318,11 +317,11 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 	)
 
 	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
-		log.Println("healthcheck", task.Peer.Name, task.timeout, "initiated")
-		defer log.Println("healthcheck", task.Peer.Name, task.timeout, "completed")
+		log.Println("healthcheck", task.Peer.Name, task.Peer.Ip, task.timeout, "initiated")
+		defer log.Println("healthcheck", task.Peer.Name, task.Peer.Ip, task.timeout, "completed")
 	}
 
-	ctx, done := context.WithTimeout(ctx, 15*time.Second)
+	ctx, done := context.WithTimeout(ctx, 10*time.Second)
 	defer done()
 
 	if deploy, err = op.Visit(ctx, task.Peer); err != nil {

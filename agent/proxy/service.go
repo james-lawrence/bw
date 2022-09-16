@@ -2,14 +2,17 @@ package proxy
 
 import (
 	"context"
+	"log"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/logx"
 )
 
@@ -67,7 +70,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		deployment.DeployOptionTimeoutGrace(time.Duration(dopts.Timeout)),
 		deployment.DeployOptionMonitor(deployment.NewMonitor(
 			deployment.MonitorTicklerEvent(t.c.Local(), qd),
-			deployment.MonitorTicklerPeriodicAuto(time.Duration(dopts.Timeout)),
+			deployment.MonitorTicklerPeriodicAuto(time.Minute),
 		)),
 	}
 
@@ -78,6 +81,9 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: dopts}
 		}
 
+		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+			log.Println("deployment complete", spew.Sdump(&dcmd))
+		}
 		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), &dcmd)))
 	}()
 

@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/logx"
 )
 
@@ -191,6 +192,9 @@ func (t DeployContext) Done(result error) error {
 	t.done.Do(func() {
 		logx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
 
+		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+			log.Println("deployment done", t.completed != nil)
+		}
 		if t.completed != nil {
 			t.completed <- &DeployResult{
 				Error:         result,
