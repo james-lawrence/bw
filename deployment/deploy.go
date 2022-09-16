@@ -322,7 +322,7 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 		defer log.Println("healthcheck", task.Peer.Name, task.timeout, "completed")
 	}
 
-	ctx, done := context.WithTimeout(ctx, task.timeout/4)
+	ctx, done := context.WithTimeout(ctx, 15*time.Second)
 	defer done()
 
 	if deploy, err = op.Visit(ctx, task.Peer); err != nil {
