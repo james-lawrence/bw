@@ -1,3 +1,15 @@
+commit 964b3e74a77235928bcdf8ec8f93131269c27e74
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 16:26:12 2022 -0400
+
+    increased logging
+
+commit 8c54b958b6bb9e1eb85934e673cd3fc8f127bd21
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 13:10:49 2022 -0400
+
+    release 0.1.1663348107-6ddee2b2
+
 commit 6ddee2b2f7ddf06ddad13f088296f28595f7de81
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 16 13:08:27 2022 -0400
