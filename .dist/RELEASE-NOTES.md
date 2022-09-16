@@ -1,3 +1,15 @@
+commit 541835fe5addfaff795fd8ef147f90f1a3985f3a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 19:57:53 2022 -0400
+
+    adjust self signed certificate timeout
+
+commit a34b0c120f47134e88b54e2d4982dce390538c1c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 16:22:21 2022 -0400
+
+    release 0.1.1663273147-88cdf813
+
 commit 88cdf81394a263f8fba4113e2aa873a2d31d61aa
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Sep 15 14:53:52 2022 -0400
