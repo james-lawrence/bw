@@ -17,7 +17,7 @@ func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.
 			info *agent.StatusResponse
 		)
 
-		if c, err = dialers.NewDirect(agent.RPCAddress(n)).Dial(d.Defaults()...); err != nil {
+		if c, err = dialers.NewDirect(agent.RPCAddress(n)).DialContext(ctx, d.Defaults()...); err != nil {
 			return _d, err
 		}
 

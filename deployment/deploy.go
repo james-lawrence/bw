@@ -156,6 +156,10 @@ type pending struct {
 	done    chan error
 }
 
+func newPending(p *agent.Peer, d time.Duration) *pending {
+	return &pending{Peer: p, timeout: d, done: make(chan error, 1)}
+}
+
 type worker struct {
 	c              chan func(context.Context) error
 	wait           *sync.WaitGroup
@@ -197,7 +201,7 @@ func (t worker) Complete() (int64, bool) {
 }
 
 func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
-	task := &pending{Peer: peer, timeout: t.timeout, done: make(chan error, 1)}
+	task := newPending(peer, t.timeout)
 	perform := func(deadline context.Context) error {
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deploy to", peer.Name, "initiated")
@@ -255,11 +259,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 
 	initial := make(chan *pending, len(nodes))
 	for _, n := range nodes {
-		initial <- &pending{
-			Peer:    n,
-			timeout: t.timeout,
-			done:    make(chan error),
-		}
+		initial <- newPending(n, t.timeout)
 	}
 	close(initial)
 
