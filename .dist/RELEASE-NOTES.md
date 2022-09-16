@@ -1,3 +1,15 @@
+commit 5e21e5531f130a2d49e265d2b72770456d985925
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 10:54:16 2022 -0400
+
+    adjust monitoring period
+
+commit 3bbfb78bdd25411b39eef49c0cade138b4702dc0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 15 20:00:13 2022 -0400
+
+    release 0.1.1663286273-541835fe
+
 commit 541835fe5addfaff795fd8ef147f90f1a3985f3a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Sep 15 19:57:53 2022 -0400
