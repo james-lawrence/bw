@@ -38,6 +38,8 @@ var _ = Describe("Rebind", func() {
 
 		m := New()
 		l, err := net.Listen("tcp", ":0")
+		Expect(err).To(Succeed())
+		defer l.Close()
 		l1, err := m.Rebind("proto", l.Addr())
 		Expect(err).To(Succeed())
 		defer l1.Close()
@@ -50,7 +52,6 @@ var _ = Describe("Rebind", func() {
 			Listen(context.Background(), m, l)
 		}()
 		Expect(err).To(Succeed())
-		defer l.Close()
 
 		d1 := NewDialer("proto", &net.Dialer{})
 
@@ -59,7 +60,7 @@ var _ = Describe("Rebind", func() {
 			Expect(err).To(Succeed())
 			Expect(conn.Close()).To(Succeed())
 			Eventually(atomic.LoadInt64(&c1)).Should(Equal(int64(0)))
-			Eventually(atomic.LoadInt64(&c2)).Should(Equal(int64(i + 1)))
+			Eventually(func() int64 { return atomic.LoadInt64(&c2) }).Should(Equal(int64(i + 1)))
 		}
 	})
 })
@@ -80,33 +81,35 @@ var _ = Describe("Dial and accept", func() {
 
 		m := New()
 		l, err := net.Listen("tcp", ":0")
+		Expect(err).To(Succeed())
+		defer l.Close()
 		l1, err := m.Bind("proto1", l.Addr())
 		Expect(err).To(Succeed())
+		defer l1.Close()
 		l2, err := m.Bind("proto2", l.Addr())
 		Expect(err).To(Succeed())
+		defer l2.Close()
 		go func() {
 			go counter(l1, &c1)
 			go counter(l2, &c2)
 			Listen(context.Background(), m, l)
 		}()
-		Expect(err).To(Succeed())
-		defer l.Close()
 
 		d1 := NewDialer("proto1", &net.Dialer{})
 
 		conn, err := d1.DialContext(context.Background(), "tcp", l.Addr().String())
 		Expect(err).To(Succeed())
 		Expect(conn.Close()).To(Succeed())
-		Expect(atomic.LoadInt64(&c1)).To(Equal(int64(1)))
-		Expect(atomic.LoadInt64(&c2)).To(Equal(int64(0)))
+		Eventually(func() int64 { return atomic.LoadInt64(&c1) }).Should(Equal(int64(1)))
+		Eventually(func() int64 { return atomic.LoadInt64(&c2) }).Should(Equal(int64(0)))
 
 		d2 := NewDialer("proto2", &net.Dialer{})
 
 		conn, err = d2.DialContext(context.Background(), "tcp", l.Addr().String())
 		Expect(err).To(Succeed())
 		Expect(conn.Close()).To(Succeed())
-		Expect(atomic.LoadInt64(&c1)).To(Equal(int64(1)))
-		Expect(atomic.LoadInt64(&c2)).To(Equal(int64(1)))
+		Eventually(func() int64 { return atomic.LoadInt64(&c1) }).Should(Equal(int64(1)))
+		Eventually(func() int64 { return atomic.LoadInt64(&c2) }).Should(Equal(int64(1)))
 	})
 })
 
