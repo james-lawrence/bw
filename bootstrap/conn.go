@@ -68,6 +68,10 @@ func getfallback(c agent.Config, options ...grpc.DialOption) (latest *agent.Depl
 		}
 	})
 
+	if latest == nil {
+		latest = &agent.Deploy{}
+	}
+
 	if err != done {
 		return latest, compacted
 	}
@@ -120,7 +124,7 @@ func (t Conn) Archive(ctx context.Context) (latest *agent.Deploy, err error) {
 	}
 
 	if resp == nil {
-		return latest, errors.New("invalid response from bootstrap service")
+		return &agent.Deploy{}, errors.New("invalid response from bootstrap service")
 	}
 
 	switch resp.Info {
