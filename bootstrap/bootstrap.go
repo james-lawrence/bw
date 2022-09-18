@@ -141,7 +141,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		log.Println(errors.Wrap(err, "latest quorum failed"))
 	}
 
-	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(current.Archive, latest.Archive) {
+	if agentutil.IsActiveDeployment(err) && agentutil.SameArchive(current.GetArchive(), latest.GetArchive()) {
 		return errors.Wrap(err, "active deploy matches the local deployment, waiting for deployment to complete")
 	}
 
@@ -155,7 +155,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		}
 	}
 
-	if current != nil && latest != nil && agentutil.SameArchive(current.Archive, latest.Archive) {
+	if current != nil && latest != nil && agentutil.SameArchive(current.GetArchive(), latest.GetArchive()) {
 		log.Println("latest already deployed -", bw.RandomID(current.Archive.DeploymentID))
 		return nil
 	}
@@ -194,7 +194,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 		return errors.Wrap(err, "failed to determine latest deployment from quorum, retrying")
 	}
 
-	if !agentutil.SameArchive(latest.Archive, deploy.Archive) {
+	if !agentutil.SameArchive(latest.GetArchive(), deploy.Archive) {
 		return errors.WithStack(agentutil.ErrDifferentDeployment)
 	}
 
