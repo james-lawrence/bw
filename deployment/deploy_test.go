@@ -56,6 +56,48 @@ var _ = Describe("Deploy", func() {
 		Expect(deployCount).To(Equal(int64(len(c.Peers()))))
 	})
 
+	It("should be durable against healthcheck failures", func() {
+		var (
+			deploycount      int64
+			healthcheckcount int64
+		)
+
+		p := agent.NewPeer("node4")
+		l := cluster.NewLocal(p)
+		c := cluster.New(
+			l,
+			clustering.NewMock(
+				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
+				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
+				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
+				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),
+			),
+		)
+
+		deploy := deployment.NewDeploy(
+			p,
+			agentutil.DiscardDispatcher{},
+			deployment.DeployOptionTimeout(100*time.Millisecond),
+			deployment.DeployOptionDeployer(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
+				atomic.AddInt64(&deploycount, 1)
+				return ignored, nil
+			})),
+			deployment.DeployOptionChecker(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
+				switch atomic.AddInt64(&healthcheckcount, 1) {
+				case 1:
+					return &failedDeploy, nil
+				default:
+					return &completedDeploy, nil
+				}
+			})),
+		)
+
+		failures, success := deploy.Deploy(c)
+		Expect(failures).To(Equal(int64(0)))
+		Expect(success).To(BeTrue())
+		Expect(deploycount).To(Equal(int64(4)))
+	})
+
 	It("should stop when a deploy fails", func() {
 		var (
 			deployCount    int64
@@ -80,7 +122,6 @@ var _ = Describe("Deploy", func() {
 			deployment.DeployOptionTimeout(100*time.Millisecond),
 			deployment.DeployOptionDeployer(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
 				atomic.AddInt64(&deployCount, 1)
-
 				return ignored, nil
 			})),
 			deployment.DeployOptionChecker(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
