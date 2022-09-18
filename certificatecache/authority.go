@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/tlsx"
@@ -91,7 +91,7 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	prototlscert := agentutil.TLSCertificates(cert, cert)
+	prototlscert := agent.NewTLSCertificates(cert, cert)
 	if encoded, err = proto.Marshal(&prototlscert); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}

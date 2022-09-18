@@ -11,7 +11,6 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 
 	"github.com/james-lawrence/bw/agent/observers"
 	. "github.com/james-lawrence/bw/agent/quorum"
@@ -141,7 +140,7 @@ var _ = Describe("StateMachine", func() {
 		)
 		cmd := qCommand(agent.DeployCommand_Begin)
 
-		Expect(sm.Dispatch(context.Background(), agentutil.DeployCommand(lp, cmd))).ToNot(HaveOccurred())
+		Expect(sm.Dispatch(context.Background(), agent.NewDeployCommand(lp, cmd))).ToNot(HaveOccurred())
 	})
 
 	DescribeTable("persisting state",
@@ -183,49 +182,49 @@ var _ = Describe("StateMachine", func() {
 		Entry(
 			"example 1",
 			4,
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
-			agentutil.LogEvent(local.Local(), "message 3"),
-			agentutil.LogEvent(local.Local(), "message 4"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agentutil.LogEvent(local.Local(), "message 5"),
-			agentutil.LogEvent(local.Local(), "message 6"),
+			agent.LogEvent(local.Local(), "message 1"),
+			agent.LogEvent(local.Local(), "message 2"),
+			agent.LogEvent(local.Local(), "message 3"),
+			agent.LogEvent(local.Local(), "message 4"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agent.LogEvent(local.Local(), "message 5"),
+			agent.LogEvent(local.Local(), "message 6"),
 		),
 		Entry(
 			"example 2",
 			6,
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agentutil.LogEvent(local.Local(), "message 3"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
-			agentutil.LogEvent(local.Local(), "message 4"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agentutil.LogEvent(local.Local(), "message 5"),
-			agentutil.LogEvent(local.Local(), "message 6"),
+			agent.LogEvent(local.Local(), "message 1"),
+			agent.LogEvent(local.Local(), "message 2"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agent.LogEvent(local.Local(), "message 3"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
+			agent.LogEvent(local.Local(), "message 4"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agent.LogEvent(local.Local(), "message 5"),
+			agent.LogEvent(local.Local(), "message 6"),
 		),
 		Entry(
 			"example 3",
 			0,
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
+			agent.LogEvent(local.Local(), "message 1"),
+			agent.LogEvent(local.Local(), "message 2"),
 		),
 		Entry(
 			"example 4",
 			0,
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
 		),
 		Entry(
 			"example 5",
 			7,
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
-			agentutil.LogEvent(local.Local(), "message 3"),
-			agentutil.LogEvent(local.Local(), "message 4"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agentutil.LogEvent(local.Local(), "message 5"),
-			agentutil.LogEvent(local.Local(), "message 6"),
-			agentutil.DeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
+			agent.LogEvent(local.Local(), "message 1"),
+			agent.LogEvent(local.Local(), "message 2"),
+			agent.LogEvent(local.Local(), "message 3"),
+			agent.LogEvent(local.Local(), "message 4"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+			agent.LogEvent(local.Local(), "message 5"),
+			agent.LogEvent(local.Local(), "message 6"),
+			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
 		),
 	)
 
@@ -240,15 +239,15 @@ var _ = Describe("StateMachine", func() {
 			leader,
 		)
 
-		Expect(sm.Dispatch(context.Background(), agentutil.DeployCommand(local.Local(), cmd))).To(HaveOccurred())
+		Expect(sm.Dispatch(context.Background(), agent.NewDeployCommand(local.Local(), cmd))).To(HaveOccurred())
 	})
 
 	It("should write message to the observer", func() {
 		messages := []*agent.Message{
-			agentutil.LogEvent(local.Local(), "message 1"),
-			agentutil.LogEvent(local.Local(), "message 2"),
-			agentutil.LogEvent(local.Local(), "message 3"),
-			agentutil.LogEvent(local.Local(), "message 4"),
+			agent.LogEvent(local.Local(), "message 1"),
+			agent.LogEvent(local.Local(), "message 2"),
+			agent.LogEvent(local.Local(), "message 3"),
+			agent.LogEvent(local.Local(), "message 4"),
 		}
 
 		obs := make(chan *agent.Message, len(messages))

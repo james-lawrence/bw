@@ -6,7 +6,6 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/james-lawrence/bw/agent/observers"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/testingx"
 	"google.golang.org/grpc"
 
@@ -30,16 +29,16 @@ var _ = Describe("Observers", func() {
 		Expect(
 			obsc.Dispatch(
 				context.Background(),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 0"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 1"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 2"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 3"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 4"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 5"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 6"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 7"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 8"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 9"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 0"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 1"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 2"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 3"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 4"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 5"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 6"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 7"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 8"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 9"),
 			),
 		).To(Succeed())
 
@@ -49,16 +48,16 @@ var _ = Describe("Observers", func() {
 		Expect(
 			obsc.Dispatch(
 				ctx,
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 10"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 11"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 12"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 13"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 14"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 15"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 16"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 17"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 18"),
-				agentutil.LogEvent(agent.NewPeer("peer1"), "hello world 19"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 10"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 11"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 12"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 13"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 14"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 15"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 16"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 17"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 18"),
+				agent.LogEvent(agent.NewPeer("peer1"), "hello world 19"),
 			),
 		).To(HaveOccurred())
 

@@ -52,7 +52,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		Archive: archive,
 	}
 
-	if err = d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), cmd)); err != nil {
+	if err = d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), cmd)); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment complete", spew.Sdump(&dcmd))
 		}
-		logx.MaybeLog(d.Dispatch(context.Background(), agentutil.DeployCommand(t.c.Local(), &dcmd)))
+		logx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), &dcmd)))
 	}()
 
 	return nil

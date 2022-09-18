@@ -209,7 +209,7 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
 		soft = logx.MaybeLog(errors.Wrap(soft, "failed to clear workspace directory"))
-		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, soft))
+		agentutil.Dispatch(t.dispatcher, agent.LogError(t.local, soft))
 	}
 
 	dcopts := []DeployContextOption{
@@ -217,7 +217,7 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 	}
 
 	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
-		agentutil.Dispatch(t.dispatcher, agentutil.LogError(t.local, err))
+		agentutil.Dispatch(t.dispatcher, agent.LogError(t.local, err))
 		return t.ds.current, err
 	}
 
@@ -237,7 +237,7 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Archive.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
 		}
 
-		dctx.Dispatch(agentutil.LogError(t.local, err))
+		dctx.Dispatch(agent.LogError(t.local, err))
 		return t.ds.current, dctx.Done(err)
 	}
 
@@ -245,11 +245,11 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
-		dctx.Dispatch(agentutil.LogError(t.local, err))
+		dctx.Dispatch(agent.LogError(t.local, err))
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
-	dctx.Dispatch(agentutil.DeployEvent(dctx.Local, d))
+	dctx.Dispatch(agent.DeployEvent(dctx.Local, d))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
 		return d, dctx.Done(err)
@@ -281,7 +281,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.local, "cancelled deploy"))
+		agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.local, "cancelled deploy"))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}

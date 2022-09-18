@@ -6,7 +6,6 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 )
 
 // NewClusterEventHandler ...
@@ -47,5 +46,5 @@ func (t ClusterEventHandler) update(peer *memberlist.Node, options ...agent.Peer
 		return
 	}
 
-	t.bus <- agentutil.PeerEvent(agent.NewPeerFromTemplate(p, options...))
+	t.bus <- agent.PeerEvent(agent.NewPeerFromTemplate(p, options...))
 }

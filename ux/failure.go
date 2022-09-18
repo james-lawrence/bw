@@ -19,10 +19,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-type dialer interface {
-	Defaults(...grpc.DialOption) []grpc.DialOption
-}
-
 // gathers up failures
 type failure struct {
 	failures map[string]*agent.Message
@@ -112,14 +108,14 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 	defer conn.Close()
 
 	client = agent.NewDeployConn(conn)
-	s.Logger.Println(s.au.Brown(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
+	s.Logger.Println(s.au.Yellow(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
 	logx.MaybeLog(
 		errorsx.Compact(
 			agentutil.PrintLogs(b, client, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
 			client.Close(),
 		),
 	)
-	s.Logger.Println(s.au.Brown(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
+	s.Logger.Println(s.au.Yellow(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
 
 	atomic.AddInt64(t.n, 1)
 }

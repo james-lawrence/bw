@@ -77,7 +77,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	events <- agentutil.LogEvent(local.Peer, "connecting to cluster")
+	events <- agent.LogEvent(local.Peer, "connecting to cluster")
 	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, local.Peer, events)
 
-	events <- agentutil.LogEvent(local.Peer, "connected to cluster")
+	events <- agent.LogEvent(local.Peer, "connected to cluster")
 	go func() {
 		<-ctx.Context.Done()
 		if err = client.Close(); err != nil {
@@ -109,21 +109,21 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, qd, agentutil.FilterDeployID(deploymentID)); err != nil {
-		events <- agentutil.LogError(local.Peer, errors.Wrap(err, "archive retrieval failed"))
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agent.LogError(local.Peer, errors.Wrap(err, "archive retrieval failed"))
+		events <- agent.LogEvent(local.Peer, "deployment failed")
 		return err
 	}
 
 	if located.Archive == nil {
 		err = errors.New("archive retrieval failed, deployment found but archive is nil")
-		events <- agentutil.LogError(local.Peer, err)
-		events <- agentutil.LogEvent(local.Peer, "deployment failed")
+		events <- agent.LogError(local.Peer, err)
+		events <- agent.LogEvent(local.Peer, "deployment failed")
 		return err
 	}
 
 	archive = located.Archive
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
+	events <- agent.LogEvent(local.Peer, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 
@@ -144,13 +144,13 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	if len(peers) == 0 && !ctx.AllowEmpty {
 		cause := errorsx.String("deployment failed, filter did not match any servers")
-		events <- agentutil.LogError(local.Peer, cause)
+		events <- agent.LogError(local.Peer, cause)
 		return cause
 	}
 
-	events <- agentutil.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
+	events <- agent.LogEvent(local.Peer, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(ctx.Context, &dopts, archive, peers...); cause != nil {
-		events <- agentutil.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
+		events <- agent.LogEvent(local.Peer, fmt.Sprintln("deployment failed", cause))
 	}
 
 	return err

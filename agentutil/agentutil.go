@@ -149,17 +149,17 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan 
 		}
 
 		if err = rl.Wait(ctx); err != nil {
-			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
 			continue
 		}
 
 		if conn, err = d.DialContext(ctx); err != nil {
-			events <- LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+			events <- agent.LogError(local, errors.Wrap(err, "events dialer failed to connect"))
 			continue
 		}
 
 		if err = agent.NewConn(conn).Watch(ctx, events); err != nil {
-			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			events <- agent.LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}
 	}
@@ -185,17 +185,17 @@ func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *age
 		}
 
 		if err = rl.Wait(ctx); err != nil {
-			events <- LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
 			continue
 		}
 
 		if conn, err = d.DialContext(ctx); err != nil {
-			events <- LogError(local, errors.Wrap(err, "unable to connect"))
+			events <- agent.LogError(local, errors.Wrap(err, "unable to connect"))
 			continue
 		}
 
 		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
-			events <- LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			events <- agent.LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
 			continue
 		}
 	}
@@ -214,7 +214,7 @@ func SameArchive(a, b *agent.Archive) bool {
 		return false
 	}
 
-	return bytes.Compare(a.DeploymentID, b.DeploymentID) == 0
+	return bytes.Equal(a.DeploymentID, b.DeploymentID)
 }
 
 // IsActiveDeployment checks if the error is an active deployment.

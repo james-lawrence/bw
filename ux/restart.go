@@ -16,7 +16,7 @@ func (t restart) Consume(m *agent.Message) consumer {
 		// ignore failures and cancels as restart will emit a cancel triggering failures.
 		switch m.GetDeployCommand().Command {
 		case agent.DeployCommand_Begin:
-			return deploying{cState: t.cState}
+			return deploying(t)
 		case agent.DeployCommand_Done: // just in case for some reason we see this.
 			return nil
 		}

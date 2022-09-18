@@ -100,7 +100,7 @@ func Into(ctx *Context) error {
 		agent.PeerOptionName("local"),
 	)
 
-	events <- agentutil.LogEvent(local, "connecting to cluster")
+	events <- agent.LogEvent(local, "connecting to cluster")
 	var debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
 	var debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
 
@@ -127,7 +127,7 @@ func Into(ctx *Context) error {
 	client = agent.NewDeployConn(conn)
 
 	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, local, events)
-	events <- agentutil.LogEvent(local, "connected to cluster")
+	events <- agent.LogEvent(local, "connected to cluster")
 
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
@@ -143,8 +143,8 @@ func Into(ctx *Context) error {
 	}
 
 	if dst, err = os.CreateTemp("", "bwarchive"); err != nil {
-		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local, "deployment failed")
+		events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
+		events <- agent.LogEvent(local, "deployment failed")
 		return nil
 	}
 	defer os.Remove(dst.Name())
@@ -155,22 +155,22 @@ func Into(ctx *Context) error {
 	}
 
 	if dstinfo, err = dst.Stat(); err != nil {
-		events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
-		events <- agentutil.LogEvent(local, "deployment failed")
+		events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
+		events <- agent.LogEvent(local, "deployment failed")
 		return nil
 	}
 
-	events <- agentutil.LogEvent(local, "archive upload initiated")
+	events <- agent.LogEvent(local, "archive upload initiated")
 	err = grpcx.Retry(func() error {
 		if _, err = dst.Seek(0, io.SeekStart); err != nil {
-			events <- agentutil.LogError(local, errors.Wrap(err, "archive creation failed"))
-			events <- agentutil.LogEvent(local, "deployment failed")
+			events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
+			events <- agent.LogEvent(local, "deployment failed")
 			return nil
 		}
 
 		if darchive, err = client.Upload(ctx.Context, bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
-			events <- agentutil.LogError(local, errors.Wrap(err, "archive upload failed"))
-			events <- agentutil.LogEvent(local, "deployment failed")
+			events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
+			events <- agent.LogEvent(local, "deployment failed")
 			return err
 		}
 
@@ -181,7 +181,7 @@ func Into(ctx *Context) error {
 		return err
 	}
 
-	events <- agentutil.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", darchive.Initiator, darchive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", darchive.Initiator, darchive.Location))
 
 	max := ctx.Concurrency
 	if ctx.Concurrency == 0 {
@@ -205,15 +205,15 @@ func Into(ctx *Context) error {
 
 	if len(peers) == 0 && !ctx.AllowEmpty {
 		cause := errorsx.String("deployment failed, filter did not match any servers")
-		events <- agentutil.LogError(local, cause)
+		events <- agent.LogError(local, cause)
 		return cause
 	}
 
-	events <- agentutil.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
+	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
 	if cause := client.RemoteDeploy(ctx.Context, &dopts, darchive, peers...); cause != nil {
-		events <- agentutil.LogError(local, errors.Wrap(cause, "deploy failed"))
-		events <- agentutil.DeployEventFailed(local, &dopts, darchive, cause)
-		events <- agentutil.DeployCommand(local, agentutil.DeployCommandFailed("", darchive, &dopts))
+		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
+		events <- agent.DeployEventFailed(local, &dopts, darchive, cause)
+		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed("", darchive, &dopts))
 	}
 
 	return err

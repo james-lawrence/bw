@@ -9,7 +9,6 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -169,7 +168,7 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		}
 	}
 
-	if err = encodeProtoTo(sink, agentutil.WALPreamble()); err != nil {
+	if err = encodeProtoTo(sink, agent.NewWALPreamble()); err != nil {
 		sink.Cancel()
 		return errors.WithStack(err)
 	}

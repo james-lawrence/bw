@@ -13,7 +13,6 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/contextx"
 	"github.com/james-lawrence/bw/internal/debugx"
@@ -421,11 +420,11 @@ func handleClusterEvent(e Event, obs ...clusterObserver) {
 
 	switch e.Event {
 	case agent.ClusterWatchEvents_Joined:
-		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Joined), 10*time.Second); err != nil {
+		if err := agent.ApplyToStateMachine(e.Raft, agent.NodeEvent(e.Node, agent.Message_Joined), 10*time.Second); err != nil {
 			log.Println("failed apply peer", err)
 		}
 	case agent.ClusterWatchEvents_Depart:
-		if err := agentutil.ApplyToStateMachine(e.Raft, agentutil.NodeEvent(e.Node, agent.Message_Departed), 10*time.Second); err != nil {
+		if err := agent.ApplyToStateMachine(e.Raft, agent.NodeEvent(e.Node, agent.Message_Departed), 10*time.Second); err != nil {
 			log.Println("failed apply peer", err)
 		}
 	}

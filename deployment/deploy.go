@@ -180,16 +180,16 @@ func (t worker) work(ctx context.Context) {
 	for op := range t.c {
 		// Stop deployment when a single node fails.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			agentutil.Dispatch(t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+			agentutil.Dispatch(t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 			continue
 		}
 
 		if err := op(ctx); err != nil {
 			log.Println(err)
 			atomic.AddInt64(t.failed, 1)
-			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agentutil.LogError(t.local, err)))
+			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
 		} else {
-			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agentutil.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+			errorsx.MaybeLog(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 		}
 	}
 }
@@ -249,7 +249,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+deployGracePeriod)
 	defer done()
 	nodes := ApplyFilter(t.filter, c.Peers()...)
-	agentutil.Dispatch(t.dispatcher, agentutil.PeersFoundEvent(t.worker.local, int64(len(nodes))))
+	agentutil.Dispatch(t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
@@ -266,13 +266,13 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
+			agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
 			return 0, false
 		default:
 		}
 	}
 
-	agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "nodes are ready, deploying"))
+	agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
 	go func() {
 		for _, peer := range nodes {
@@ -291,7 +291,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	if failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(t.dispatcher, agentutil.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
+			agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
 		default:
 		}
 	}

@@ -183,7 +183,7 @@ func (t DeployContext) Cancel(reason error) {
 		return
 	}
 
-	t.Dispatch(agentutil.LogError(t.Local, errors.Wrap(reason, "cancelled deploy")))
+	t.Dispatch(agent.LogError(t.Local, errors.Wrap(reason, "cancelled deploy")))
 	t.cancel()
 }
 
@@ -269,7 +269,7 @@ func (t DeployResult) deployComplete() *agent.Deploy {
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
-	t.Dispatch(agentutil.DeployEvent(t.Local, d))
+	t.Dispatch(agent.DeployEvent(t.Local, d))
 	return d
 }
 
@@ -281,8 +281,8 @@ func (t DeployResult) deployFailed(err error) *agent.Deploy {
 	t.Log.Println("------------------- deploy failed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
 	t.Dispatch(
-		agentutil.LogError(t.Local, err),
-		agentutil.DeployEvent(t.Local, d),
+		agent.LogError(t.Local, err),
+		agent.DeployEvent(t.Local, d),
 	)
 	return d
 }

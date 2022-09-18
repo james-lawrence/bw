@@ -120,7 +120,7 @@ func (t *deployment) cancel(ctx context.Context, req *agent.CancelRequest, d dia
 		return err
 	}
 
-	return sm.Dispatch(ctx, agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandCancel(req.Initiator)))
+	return sm.Dispatch(ctx, agent.NewDeployCommand(t.c.Local(), agent.DeployCommandCancel(req.Initiator)))
 }
 
 func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
@@ -139,7 +139,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 	}
 
 	return sm.Dispatch(ctx,
-		agentutil.DeployCommand(t.c.Local(), &agent.DeployCommand{
+		agent.NewDeployCommand(t.c.Local(), &agent.DeployCommand{
 			Command: agent.DeployCommand_Done,
 			Archive: deploy.Archive,
 			Options: deploy.Options,
@@ -155,8 +155,8 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 	if dc = t.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
 		err = sm.Dispatch(
 			ctx,
-			agentutil.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
-			agentutil.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
+			agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
+			agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
 		)
 
 		if err != nil {
@@ -164,15 +164,15 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 		}
 
 		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
-			msg := agentutil.LogEvent(t.c.Local(), "failed to cancel running deployments")
+			msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
 			logx.MaybeLog(sm.Dispatch(ctx, msg))
 			return errors.Wrap(err, "cancellation failure")
 		}
 
 		err = sm.Dispatch(
 			ctx,
-			agentutil.LogEvent(t.c.Local(), "restarting deploy"),
-			agentutil.DeployCommand(t.c.Local(), agentutil.DeployCommandRestart()),
+			agent.LogEvent(t.c.Local(), "restarting deploy"),
+			agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
 		)
 
 		if err != nil {

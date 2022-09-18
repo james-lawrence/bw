@@ -6,7 +6,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/cmd/termui"
@@ -41,7 +40,7 @@ func Cancel(ctx *Context) (err error) {
 
 	local := commandutils.NewClientPeer()
 
-	events <- agentutil.LogEvent(local, "connecting to cluster")
+	events <- agent.LogEvent(local, "connecting to cluster")
 	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
@@ -61,7 +60,7 @@ func Cancel(ctx *Context) (err error) {
 
 	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, local, events)
 
-	events <- agentutil.LogEvent(local, "connected to cluster")
+	events <- agent.LogEvent(local, "connected to cluster")
 	go func() {
 		<-ctx.Context.Done()
 		if err = client.Close(); err != nil {
@@ -69,13 +68,13 @@ func Cancel(ctx *Context) (err error) {
 		}
 	}()
 
-	cmd := agentutil.DeployCommandCancel(bw.DisplayName())
+	cmd := agent.DeployCommandCancel(bw.DisplayName())
 
 	if err = client.Cancel(ctx.Context, &agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
 		return err
 	}
 
-	events <- agentutil.LogEvent(local, "deploy cancelled")
+	events <- agent.LogEvent(local, "deploy cancelled")
 
 	return nil
 }
