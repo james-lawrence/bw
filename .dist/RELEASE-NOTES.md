@@ -1,3 +1,45 @@
+commit 697921742a4793e907f0e99c161d625278de63f2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 23 09:11:04 2022 -0400
+
+    add slice definition to distribution
+
+commit 2b77452f09cf26a39557b963c86f0260ddd610bd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 18 11:09:37 2022 -0400
+
+    more safety around nil deploy
+
+commit c330d40e228c6d0dafe280712f481f3dbfa02a6c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 18 10:51:48 2022 -0400
+
+    ensure we do not return nil deploys
+
+commit 9c04d7d0579e930448c264c9d00ae516e163d28c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 18 10:45:22 2022 -0400
+
+    fix flakey muxer tests.
+
+commit 314e0d3f13ce609d5986f8b28cd065b5a6c919df
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 18 10:01:36 2022 -0400
+
+    move message creation out of agentutil.
+
+commit ee84f80ec9776810018e1acd610811944f41ad00
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Sep 18 09:38:35 2022 -0400
+
+    regression test case for checking cluster status.
+
+commit 7ea63ada978ce3adfcb3174463bd48a06e7dbbc1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 16 17:24:00 2022 -0400
+
+    release 0.1.1663363299-a11040fc
+
 commit a11040fc20c48d5ee20898011c998f39e6237e14
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 16 17:21:39 2022 -0400
