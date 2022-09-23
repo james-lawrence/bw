@@ -8,6 +8,7 @@ Conflicts=bearded-wookie.service
 [Service]
 Type=simple
 Restart=always
+Slice=bma.slice
 ConfigurationDirectory=%N
 CacheDirectory=%N
 # Load the environment variables specified by agent.env.

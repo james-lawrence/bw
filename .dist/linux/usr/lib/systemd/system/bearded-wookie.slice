@@ -1,0 +1,8 @@
+[Unit]
+Description=bearded-wookie resource limits; primarily to make it easy to protect systems it runs on.
+DefaultDependencies=no
+Before=slices.target
+
+[Slice]
+CPUAccounting=true
+CPUQuota=25%
