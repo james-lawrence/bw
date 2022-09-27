@@ -1,3 +1,15 @@
+commit 2fe7f82b3996cb290b886576b2903795055daae3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Sep 27 06:03:06 2022 -0400
+
+    fix slice name
+
+commit 3763d97d6cd3b5f29ba175cb1bfac4fbec21c27c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 23 09:21:03 2022 -0400
+
+    release 0.1.1663938664-69792174
+
 commit 697921742a4793e907f0e99c161d625278de63f2
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 23 09:11:04 2022 -0400
