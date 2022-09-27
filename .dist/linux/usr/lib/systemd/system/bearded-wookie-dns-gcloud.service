@@ -5,6 +5,6 @@ Requires=bearded-wookie-agent.service
 
 [Service]
 Type=oneshot
-Slice=bma.slice
+Slice=bearded-wookie.slice
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 ExecStart=/usr/bin/bwgcloud dns --zone=${DOMAIN}

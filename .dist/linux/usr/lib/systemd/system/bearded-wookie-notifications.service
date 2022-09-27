@@ -6,7 +6,7 @@ Requires=bearded-wookie-agent.service
 [Service]
 Type=simple
 Restart=always
-Slice=bma.slice
+Slice=bearded-wookie.slice
 ConfigurationDirectory=%N
 CacheDirectory=%N
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
