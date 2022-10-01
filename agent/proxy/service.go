@@ -43,6 +43,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 		filter deployment.Filter
 	)
 
+	// qd := dialers.NewRendezvous(archive.DeploymentID, t.c, dialer.Defaults()...)
 	qd := dialers.NewQuorum(t.c, dialer.Defaults()...)
 	d := agentutil.NewDispatcher(qd)
 

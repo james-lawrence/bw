@@ -9,8 +9,8 @@ import (
 
 // Shutdown runs the shutdown command on the entire cluster.
 func Shutdown(c peers, d dialers.Defaults) error {
-	return NewClusterOperation(Operation(func(c agent.Client) error {
-		if cause := c.Shutdown(context.Background()); cause != nil {
+	return NewClusterOperation(context.Background(), Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) error {
+		if cause := c.Shutdown(ctx); cause != nil {
 			return cause
 		}
 

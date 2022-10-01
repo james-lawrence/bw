@@ -26,7 +26,7 @@ func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest *agent.Dep
 	)
 
 	counts := make(map[string]result)
-	getlatest := func(c agent.Client) (err error) {
+	getlatest := func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
 		var (
 			d *agent.Deploy
 		)
@@ -50,7 +50,7 @@ func DetermineLatestDeployment(c cluster, d dialers.Defaults) (latest *agent.Dep
 		return nil
 	}
 
-	if err = NewClusterOperation(Operation(getlatest))(c, d); err != nil {
+	if err = NewClusterOperation(context.Background(), Operation(getlatest))(c, d); err != nil {
 		return latest, err
 	}
 
@@ -181,7 +181,7 @@ func FilterDeployID(id string) func(d *agent.Deploy) bool {
 func LocateDeployment(c cluster, d dialers.Defaults, filter func(*agent.Deploy) bool) (latest *agent.Deploy, err error) {
 	const done = errorsx.String("done")
 
-	locate := func(c agent.Client) (err error) {
+	locate := func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
 		var (
 			ds []*agent.Deploy
 		)
@@ -206,7 +206,7 @@ func LocateDeployment(c cluster, d dialers.Defaults, filter func(*agent.Deploy) 
 		return nil
 	}
 
-	if err = NewClusterOperation(Operation(locate))(c, d); errors.Cause(err) == done {
+	if err = NewClusterOperation(context.Background(), Operation(locate))(c, d); errors.Cause(err) == done {
 		return latest, nil
 	}
 

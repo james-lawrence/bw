@@ -10,15 +10,15 @@ import (
 )
 
 type operation interface {
-	Visit(agent.Client) error
+	Visit(context.Context, *agent.Peer, agent.Client) error
 }
 
 // Operation a pure function operation to apply to the entire cluster.
-type Operation func(c agent.Client) error
+type Operation func(ctx context.Context, p *agent.Peer, c agent.Client) error
 
 // Visit - implements the operation interface.
-func (t Operation) Visit(c agent.Client) error {
-	return t(c)
+func (t Operation) Visit(ctx context.Context, p *agent.Peer, c agent.Client) error {
+	return t(ctx, p, c)
 }
 
 type peers interface {
@@ -34,10 +34,10 @@ func (t PeerSet) Peers() []*agent.Peer {
 }
 
 // NewClusterOperation applies an operation to every node in the cluster.
-func NewClusterOperation(o operation) func(peers, dialers.Defaults) error {
+func NewClusterOperation(ctx context.Context, o operation) func(peers, dialers.Defaults) error {
 	return func(c peers, d dialers.Defaults) (err error) {
 		for _, peer := range c.Peers() {
-			if err = dialAndVisit(d, peer, o); err != nil {
+			if err = dialAndVisit(ctx, d, peer, o); err != nil {
 				return err
 			}
 		}
@@ -46,16 +46,16 @@ func NewClusterOperation(o operation) func(peers, dialers.Defaults) error {
 	}
 }
 
-func dialAndVisit(d dialers.Defaults, p *agent.Peer, o operation) (err error) {
+func dialAndVisit(ctx context.Context, d dialers.Defaults, p *agent.Peer, o operation) (err error) {
 	var (
 		conn *grpc.ClientConn
 	)
 
 	dd := dialers.NewDirect(agent.RPCAddress(p), d.Defaults()...)
-	if conn, err = dd.DialContext(context.Background()); err != nil {
+	if conn, err = dd.DialContext(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 	defer conn.Close()
 
-	return errors.WithStack(o.Visit(agent.NewConn(conn)))
+	return errors.WithStack(o.Visit(ctx, p, agent.NewConn(conn)))
 }

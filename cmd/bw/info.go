@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"io"
 	"log"
@@ -146,12 +147,12 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 	}()
 
 	cx := cluster.New(local, c)
-	return agentutil.NewClusterOperation(agentutil.Operation(func(c agent.Client) (err error) {
+	return agentutil.NewClusterOperation(ctx.Context, agentutil.Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
 		var (
 			info *agent.StatusResponse
 		)
 
-		if info, err = c.Info(ctx.Context); err != nil {
+		if info, err = c.Info(ctx); err != nil {
 			return errors.WithStack(err)
 		}
 

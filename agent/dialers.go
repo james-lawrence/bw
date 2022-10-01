@@ -6,11 +6,12 @@ import (
 	"math/rand"
 
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw/clustering/rendezvous"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
 
-type rendezvous interface {
+type rendez interface {
 	GetN(int, []byte) []*memberlist.Node
 }
 
@@ -34,22 +35,27 @@ func Shuffle(q []*Peer) []*Peer {
 }
 
 // QuorumPeers helper method.
-func QuorumPeers(c rendezvous) []*Peer {
+func QuorumPeers(c rendez) []*Peer {
 	return Shuffle(NodesToPeers(QuorumNodes(c)...))
 }
 
 // QuorumNodes return the quorum nodes.
-func QuorumNodes(c rendezvous) []*memberlist.Node {
+func QuorumNodes(c rendez) []*memberlist.Node {
 	return c.GetN(QuorumDefault, []byte(QuorumKey))
 }
 
 // LargeQuorum returns 2x the nodes required to achieve quorum.
-func LargeQuorum(c rendezvous) []*memberlist.Node {
+func LargeQuorum(c rendez) []*memberlist.Node {
 	return c.GetN(2*QuorumDefault, []byte(QuorumKey))
 }
 
+// DeploymentNode return the quorum nodes.
+func DeploymentNode(c rendez, key []byte) []*memberlist.Node {
+	return rendezvous.MaxN(1, key, QuorumNodes(c))
+}
+
 // SynchronizationPeers based on the provided k generate the peers to synchronize with
-func SynchronizationPeers(k []byte, c rendezvous) []*Peer {
+func SynchronizationPeers(k []byte, c rendez) []*Peer {
 	return Shuffle(NodesToPeers(c.GetN(2*QuorumDefault, k)...))
 }
 

@@ -128,12 +128,9 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			}),
 		),
 	)
-	var (
-		leadership raft.LeaderObservation
-	)
 
 	for o := range events {
-		switch l := o.Data.(type) {
+		switch o.Data.(type) {
 		case raft.RaftState:
 			switch o.Raft.State() {
 			case raft.Shutdown:
@@ -145,8 +142,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			log.Println("leadership observation", o.Raft.State())
 			switch o.Raft.State() {
 			case raft.Leader:
-
-				t.sm = func(leadership raft.LeaderObservation) stateMachine {
+				t.sm = func() stateMachine {
 					sm := NewMachine(
 						t.c.Local(),
 						o.Raft,
@@ -156,16 +152,14 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					go func() {
 						logx.MaybeLog(sm.initialize())
 						logx.Verbose(errors.Wrap(
-							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm, leadership),
+							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm),
 							"failed to restart an active deploy",
 						))
 						logx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
 					}()
 
 					return sm
-				}(leadership)
-
-				leadership = l
+				}()
 			case raft.Follower, raft.Candidate:
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
 			case raft.Shutdown:

@@ -22,9 +22,8 @@ func DeploymentLogs(c cluster, d dialers.Defaults, deploymentID []byte) io.ReadC
 		ctx, done := context.WithTimeout(context.Background(), 20*time.Second)
 		defer done()
 
-		w.CloseWithError(NewClusterOperation(Operation(func(c agent.Client) error {
-			// TODO: change cluster operation to provide peer.
-			return PrintLogs(ctx, c, nil, deploymentID, w)
+		w.CloseWithError(NewClusterOperation(ctx, Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) error {
+			return PrintLogs(ctx, c, p, deploymentID, w)
 		}))(c, d))
 	}()
 	return r

@@ -240,7 +240,6 @@ func (t deploying) Consume(m *agent.Message) consumer {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
 		case agent.DeployCommand_Restart:
-			log.Println("restart detected")
 			return restart(t)
 		case
 			agent.DeployCommand_Done,

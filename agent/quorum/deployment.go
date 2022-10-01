@@ -2,13 +2,11 @@ package quorum
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"sync"
 	"sync/atomic"
 
-	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
@@ -118,7 +116,7 @@ func (t *deployment) deploy(d dialers.Defaults, dopts *agent.DeployOptions, a *a
 
 // Cancel a ongoing deploy.
 func (t *deployment) cancel(ctx context.Context, req *agent.CancelRequest, d dialers.Defaults, sm stateMachine) (err error) {
-	if err = agentutil.Cancel(t.c, d.Defaults()); err != nil {
+	if err = agentutil.Cancel(ctx, t.c, d.Defaults()); err != nil {
 		return err
 	}
 
@@ -149,7 +147,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 	)
 }
 
-func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine, previous raft.LeaderObservation) (err error) {
+func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
 	var (
 		dc *agent.DeployCommand
 	)
@@ -158,12 +156,20 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 		err = sm.Dispatch(
 			ctx,
 			agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
-			agent.LogEvent(t.c.Local(), fmt.Sprintf("previous %s", previous.LeaderAddr)),
-			agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
 		)
 
 		if err != nil {
 			return errors.Wrap(err, "unable to write restart events due to leadership change")
+		}
+
+		err = sm.Dispatch(
+			ctx,
+			agent.LogEvent(t.c.Local(), "restarting deploy"),
+			agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
+			agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
+		)
+		if err != nil {
+			return errors.Wrap(err, "restart command failure")
 		}
 
 		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
@@ -172,17 +178,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 			return errors.Wrap(err, "cancellation failure")
 		}
 
-		err = sm.Dispatch(
-			ctx,
-			agent.LogEvent(t.c.Local(), "restarting deploy"),
-			agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
-		)
-
-		if err != nil {
-			return errors.Wrap(err, "restart command failure")
-		}
-
-		if err = t.deploy(d, dc.Options, dc.Archive); err != nil {
+		if err = t.deploy(d, dc.Options, dc.Archive, t.c.Peers()...); err != nil {
 			return errors.Wrap(err, "deploy failure")
 		}
 	}
