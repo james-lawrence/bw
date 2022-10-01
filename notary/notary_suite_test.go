@@ -43,6 +43,7 @@ type storage interface {
 	Lookup(fingerprint string) (*notary.Grant, error)
 	Insert(*notary.Grant) (*notary.Grant, error)
 	Delete(*notary.Grant) (*notary.Grant, error)
+	Sync(ctx context.Context, b notary.Bloomy, c chan *notary.Grant) (err error)
 }
 
 // QuickStorage ...

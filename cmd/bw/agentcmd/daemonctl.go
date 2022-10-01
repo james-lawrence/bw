@@ -29,6 +29,7 @@ type CmdControl struct {
 
 type controlConnection struct {
 	cmdopts.BeardedWookieEnv
+	Insecure bool `name:"insecure" help:"disable tls verification"`
 }
 
 func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
@@ -37,7 +38,7 @@ func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c 
 		ss     notary.Signer
 	)
 
-	if config, err = commandutils.LoadConfiguration(t.Environment); err != nil {
+	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return d, c, err
 	}
 
@@ -45,7 +46,7 @@ func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c 
 		return d, c, err
 	}
 
-	if d, c, err = daemons.Connect(config, ss); err != nil {
+	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return d, c, err
 	}
 

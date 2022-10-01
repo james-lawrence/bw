@@ -91,6 +91,14 @@ func (t Client) Refresh() (ca, key, cert []byte, err error) {
 }
 
 // Search the service for a given key.
-func (t Client) Search(req *SearchRequest) (resp *SearchResponse, err error) {
-	return &SearchResponse{}, errorsx.String("not implemented")
+func (t Client) Search(ctx context.Context, req *SearchRequest) (resp Notary_SearchClient, err error) {
+	var (
+		c NotaryClient
+	)
+
+	if c, err = t.cached(); err != nil {
+		return resp, err
+	}
+
+	return c.Search(ctx, req)
 }

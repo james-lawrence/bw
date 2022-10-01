@@ -33,6 +33,7 @@ func main() {
 		Redeploy           cmdDeployRedeploy            `cmd:"" name:"redeploy" help:"redeploy an archive to nodes within the cluster of the specified environment"`
 		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment"`
+		Notary             cmdNotary                    `cmd:"" help:"retrieve and manage permissions"`
 		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
 		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
 		Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
@@ -100,5 +101,4 @@ func main() {
 	if err != nil {
 		os.Exit(1)
 	}
-	// ctx.FatalIfErrorf(err)
 }

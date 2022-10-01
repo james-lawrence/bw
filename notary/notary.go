@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/tlsx"
+	"github.com/pkg/errors"
 )
 
 // GrantOption
@@ -82,6 +83,7 @@ type storage interface {
 	Lookup(fingerprint string) (*Grant, error)
 	Insert(*Grant) (*Grant, error)
 	Delete(*Grant) (*Grant, error)
+	Sync(ctx context.Context, b Bloomy, c chan *Grant) (err error)
 }
 
 type option func(*Service)
@@ -193,10 +195,58 @@ func (t Service) Refresh(ctx context.Context, req *RefreshRequest) (_ *RefreshRe
 }
 
 // Search the notary service for grants.
-func (t Service) Search(req *SearchRequest, dst Notary_SearchServer) (err error) {
-	if p := t.auth.Authorize(dst.Context()); !p.Search {
+func (t Service) Search(req *SearchRequest, s Notary_SearchServer) (err error) {
+	if p := t.auth.Authorize(s.Context()); !p.Search {
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
+	grantevent := func(grants []*Grant) *SearchResponse {
+		return &SearchResponse{
+			Grants: grants,
+		}
+	}
 
-	return status.Error(codes.Unimplemented, "not implemented")
+	b := bloom.NewWithEstimates(1000, 0.0001)
+
+	out := make(chan *Grant, 200)
+	errc := make(chan error)
+	go func() {
+		errc <- t.storage.Sync(s.Context(), b, out)
+		close(out)
+	}()
+
+	batch := make([]*Grant, 0, 100)
+
+	for {
+		select {
+		case g, ok := <-out:
+			if !ok {
+				if err = s.Send(grantevent(batch)); err != nil {
+					log.Println(errors.Wrap(err, "failed to send event"))
+					return status.Error(codes.Internal, "failed to send event")
+				}
+				return nil
+			}
+
+			if batch = append(batch, g); len(batch) < cap(batch) {
+				continue
+			}
+
+			if err = s.Send(grantevent(batch)); err != nil {
+				log.Println(errors.Wrap(err, "failed to send event"))
+				return status.Error(codes.Internal, "failed to send event")
+			}
+
+			batch = batch[:0]
+		case err := <-errc:
+			if err == nil {
+				continue
+			}
+
+			if cause := s.Send(grantevent(batch)); cause != nil {
+				log.Println(errors.Wrap(cause, "failed to send event"))
+			}
+
+			return status.Error(codes.Internal, "failed to send event")
+		}
+	}
 }
