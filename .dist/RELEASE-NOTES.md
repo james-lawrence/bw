@@ -1,3 +1,22 @@
+commit a31d2ded00c385039c1fb461f2696b1394960722
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 30 23:05:45 2022 -0400
+
+    hide the notary command for the time being its not read for general use
+
+commit 155bbbaeacc84107f3e58170b581c8ec452aa6a0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 30 23:04:21 2022 -0400
+
+    fix actl restart command.
+    implement a quick and dirty authority lookup.
+
+commit 86e8ec6f4edd49b6fb87d4545c94cb6cde2512fd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Sep 27 06:51:45 2022 -0400
+
+    release 0.1.1664272986-2fe7f82b
+
 commit 2fe7f82b3996cb290b886576b2903795055daae3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Sep 27 06:03:06 2022 -0400
