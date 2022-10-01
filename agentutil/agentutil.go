@@ -16,8 +16,10 @@ import (
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 
+	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/logx"
 )
@@ -137,7 +139,7 @@ func KeepNewestN(n int) Cleaner {
 // WatchEvents connects to the event stream of the cluster using the provided
 // peer as a proxy.
 func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan *agent.Message) {
-	rl := rate.NewLimiter(rate.Every(time.Minute), 1)
+	rl := rate.NewLimiter(rate.Every(10*time.Second), 1)
 	var (
 		err  error
 		conn *grpc.ClientConn
@@ -158,8 +160,10 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan 
 			continue
 		}
 
+		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, "connection established")
 		if err = agent.NewConn(conn).Watch(ctx, events); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			log.Println(errors.Wrap(err, "connection lost, reconnecting"))
+			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, "connection lost, reconnecting")
 			continue
 		}
 	}
@@ -175,7 +179,7 @@ func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *age
 
 	for {
 		if conn != nil {
-			logx.MaybeLog(conn.Close())
+			errorsx.MaybeLog(conn.Close())
 		}
 
 		select {
@@ -185,17 +189,40 @@ func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *age
 		}
 
 		if err = rl.Wait(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			err = errors.Wrap(err, "unable to connect")
+			if envx.Boolean(false, bw.EnvLogsDeploy) {
+				log.Println(err)
+			}
+			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
 			continue
 		}
 
 		if conn, err = d.DialContext(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "unable to connect"))
+			err = errors.Wrap(err, "unable to connect")
+			if envx.Boolean(false, bw.EnvLogsDeploy) {
+				log.Println(err)
+			}
+			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
 			continue
 		}
 
+		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, "connection established")
+		if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
+			select {
+			case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):
+			case <-ctx.Done():
+				events <- agent.LogError(local, errors.Wrap(ctx.Err(), "unable to replay history"))
+			}
+		} else {
+			log.Println("unable to replay history", err)
+		}
+
 		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "connection lost, reconnecting"))
+			err = errors.Wrap(err, "connection lost, reconnecting")
+			if envx.Boolean(false, bw.EnvLogsDeploy) {
+				log.Println(err)
+			}
+			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
 			continue
 		}
 	}

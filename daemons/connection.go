@@ -47,7 +47,7 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.C, err error) {
+func Connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
 	return connect(config, ss, options...)
 }
 
@@ -57,7 +57,7 @@ func ConnectClientUntilSuccess(
 	config agent.ConfigClient,
 	ss notary.Signer,
 	options ...grpc.DialOption,
-) (d dialers.Direct, c clustering.LocalRendezvous, err error) {
+) (d dialers.Direct, c clustering.Rendezvous, err error) {
 	for i := 0; ; i++ {
 		if d, c, err = connect(config, ss, options...); err == nil {
 			return d, c, err
@@ -76,7 +76,7 @@ func ConnectClientUntilSuccess(
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Static, err error) {
+func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
 	var (
 		dd        dialers.Defaults
 		nodes     []*memberlist.Node
@@ -104,13 +104,17 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 		return d, c, err
 	}
 
-	if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
-		return d, c, err
-	}
+	c = clustering.NewCached(func(ctx context.Context) clustering.Rendezvous {
+		if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
+			return clustering.NewStatic()
+		}
 
-	if len(nodes) == 0 {
+		return clustering.NewStatic(nodes...)
+	})
+
+	if len(c.Members()) == 0 {
 		return d, c, errors.New("no agents found")
 	}
 
-	return dialers.NewDirect(agent.URIDiscovery(config.Address), dd.Defaults()...), clustering.NewStatic(nodes...), err
+	return dialers.NewDirect(agent.URIDiscovery(config.Address), dd.Defaults()...), c, err
 }

@@ -33,7 +33,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		d       dialers.Defaults
 		client  agent.DeployClient
 		config  agent.ConfigClient
-		c       clustering.LocalRendezvous
+		c       clustering.Rendezvous
 		located *agent.Deploy
 		archive *agent.Archive
 		peers   []*agent.Peer

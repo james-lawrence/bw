@@ -39,7 +39,6 @@ type cluster interface {
 	Members() []*memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(n int, key []byte) []*memberlist.Node
-	LocalNode() *memberlist.Node
 }
 
 type dialer interface {

@@ -11,6 +11,7 @@ type quorum interface {
 	Deploy(opts *DeployOptions, a *Archive, peers ...*Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
+	History(context.Context) ([]*Message, error)
 	Dispatch(context.Context, ...*Message) error
 	Info(context.Context) (InfoResponse, error)
 	Cancel(context.Context, *CancelRequest) error
@@ -67,6 +68,24 @@ func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *Deplo
 	}
 
 	return &_zero, err
+}
+
+// History
+func (t Quorum) History(ctx context.Context, req *HistoryRequest) (resp *HistoryResponse, err error) {
+	var (
+		history []*Message
+	)
+	if err := t.auth.Deploy(ctx); err != nil {
+		return resp, err
+	}
+
+	if history, err = t.q.History(ctx); err != nil {
+		return resp, err
+	}
+
+	return &HistoryResponse{
+		Messages: history,
+	}, nil
 }
 
 // Upload ...

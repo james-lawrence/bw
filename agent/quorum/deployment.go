@@ -2,11 +2,13 @@ package quorum
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
@@ -147,7 +149,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 	)
 }
 
-func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine) (err error) {
+func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults, sm stateMachine, previous raft.LeaderObservation) (err error) {
 	var (
 		dc *agent.DeployCommand
 	)
@@ -156,6 +158,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 		err = sm.Dispatch(
 			ctx,
 			agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
+			agent.LogEvent(t.c.Local(), fmt.Sprintf("previous %s", previous.LeaderAddr)),
 			agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
 		)
 

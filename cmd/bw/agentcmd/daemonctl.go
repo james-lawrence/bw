@@ -32,7 +32,7 @@ type controlConnection struct {
 	Insecure bool `name:"insecure" help:"disable tls verification"`
 }
 
-func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c clustering.C, err error) {
+func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c clustering.Rendezvous, err error) {
 	var (
 		config agent.ConfigClient
 		ss     notary.Signer
@@ -84,7 +84,7 @@ func (t CmdControlRestart) Run() error {
 func (t CmdControlRestart) shutdown(filter deployment.Filter) (err error) {
 	var (
 		d dialers.Defaults
-		c clustering.C
+		c clustering.Rendezvous
 	)
 
 	local := cluster.NewLocal(
@@ -121,7 +121,7 @@ func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 		ss     notary.Signer
 		conn   *grpc.ClientConn
 		d      dialers.Defaults
-		c      clustering.C
+		c      clustering.Rendezvous
 		quorum *agent.InfoResponse
 	)
 

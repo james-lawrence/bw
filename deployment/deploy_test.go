@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
@@ -33,7 +32,7 @@ var _ = Describe("Deploy", func() {
 		c := cluster.New(
 			l,
 			clustering.NewMock(
-				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
+				agent.PeerToNode(p),
 				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
 				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
 				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),
@@ -67,7 +66,7 @@ var _ = Describe("Deploy", func() {
 		c := cluster.New(
 			l,
 			clustering.NewMock(
-				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
+				agent.PeerToNode(p),
 				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
 				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
 				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),
@@ -109,7 +108,7 @@ var _ = Describe("Deploy", func() {
 		c := cluster.New(
 			l,
 			clustering.NewMock(
-				func() *memberlist.Node { n := agent.PeerToNode(p); return &n }(),
+				agent.PeerToNode(p),
 				clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
 				clusteringtestutil.NewNodeFromAddress("node2", "127.0.0.2"),
 				clusteringtestutil.NewNodeFromAddress("node3", "127.0.0.3"),

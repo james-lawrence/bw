@@ -162,13 +162,13 @@ func EncodeMetadata(p *PeerMetadata) ([]byte, error) {
 }
 
 // PeerToNode converts a Peer to a memberlist.Node
-func PeerToNode(p *Peer) memberlist.Node {
+func PeerToNode(p *Peer) *memberlist.Node {
 	meta, err := EncodeMetadata(PeerToMetadata(p))
 	if err != nil {
 		panic(errors.Wrap(err, "failed to marshal peer to metadata"))
 	}
 
-	return memberlist.Node{
+	return &memberlist.Node{
 		Name: p.Name,
 		Addr: net.ParseIP(p.Ip),
 		Port: uint16(p.P2PPort),
@@ -178,8 +178,7 @@ func PeerToNode(p *Peer) memberlist.Node {
 
 func PeersToNodes(peers ...*Peer) (nodes []*memberlist.Node) {
 	for _, p := range peers {
-		n := PeerToNode(p)
-		nodes = append(nodes, &n)
+		nodes = append(nodes, PeerToNode(p))
 	}
 	return nodes
 }

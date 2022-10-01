@@ -70,6 +70,44 @@ func LogError(p *Peer, s error) *Message {
 	}
 }
 
+func NewConnectionLog(p *Peer, s ConnectionEvent_Type, description string) *Message {
+	return &Message{
+		Id:        uuid.Must(uuid.NewV4()).String(),
+		Type:      Message_LogEvent,
+		Ephemeral: true,
+		Peer:      p,
+		Ts:        time.Now().Unix(),
+		Event: &Message_Connection{
+			Connection: &ConnectionEvent{
+				State:       s,
+				Description: description,
+			},
+		},
+	}
+}
+func NewLogHistoryEvent(m ...*Message) *LogHistoryEvent {
+	return &LogHistoryEvent{
+		Messages: m,
+	}
+}
+
+func NewLogHistoryMessage(p *Peer, log *LogHistoryEvent) *Message {
+	return &Message{
+		Id:        uuid.Must(uuid.NewV4()).String(),
+		Type:      Message_LogHistoryEvent,
+		Ephemeral: true,
+		Peer:      p,
+		Ts:        time.Now().Unix(),
+		Event: &Message_History{
+			History: log,
+		},
+	}
+}
+
+func NewLogHistoryFromMessages(p *Peer, m ...*Message) *Message {
+	return NewLogHistoryMessage(p, NewLogHistoryEvent(m...))
+}
+
 // PeerEvent ...
 func PeerEvent(p *Peer) *Message {
 	return &Message{

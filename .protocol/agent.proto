@@ -46,6 +46,20 @@ message WALPreamble {
   int32 Patch = 3;
 }
 
+message LogHistoryEvent { repeated Message messages = 1; }
+
+// ConnectionEvents are purely informational
+// and only used by the client.
+message ConnectionEvent {
+  enum Type {
+    Disconnected = 0;
+    Connected = 1;
+  }
+
+  Type state = 1;
+  string description = 2;
+}
+
 // Represents every message sent between nodes. effectively describes all
 // possible events we may want to act upon.
 message Message {
@@ -60,11 +74,12 @@ message Message {
     DeployEvent = 3;
     PeersFoundEvent = 4;
     PeersCompletedEvent = 5;
+    LogHistoryEvent = 6;
   }
 
   string id = 9;
   // used to prevent message's from recording in the WAL.
-  bool disallowWAL = 998;
+  bool ephemeral = 998;
   // used to prevent message's from appearing in observers.
   bool hidden = 999;
 
@@ -80,11 +95,10 @@ message Message {
     DeployCommand deployCommand = 7;
     Deploy deploy = 8;
     NodeEvent membership = 10;
+    LogHistoryEvent history = 11;
+    ConnectionEvent connection = 12;
   }
 }
-
-// Write ahead log, deprecated.
-message WAL { repeated Message messages = 1; }
 
 message DeployOptions {
   // sets the number of simultaneously instance deploys to run.
@@ -164,6 +178,10 @@ message InfoResponse {
   repeated Peer quorum = 5;
 }
 
+message HistoryRequest {}
+
+message HistoryResponse { repeated Message messages = 1; }
+
 // Deployments service public facing endpoints for deployments.
 service Deployments {
   rpc Upload(stream UploadChunk) returns (UploadResponse) {}
@@ -180,6 +198,7 @@ service Quorum {
   rpc Deploy(DeployCommandRequest) returns (DeployCommandResult) {}
   rpc Info(InfoRequest) returns (InfoResponse) {}
   rpc Cancel(CancelRequest) returns (CancelResponse) {}
+  rpc History(HistoryRequest) returns (HistoryResponse) {}
 }
 
 message ConnectRequest {}

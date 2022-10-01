@@ -57,7 +57,7 @@ func Into(ctx *Context) error {
 		d        dialers.Defaults
 		client   agent.DeployClient
 		config   agent.ConfigClient
-		c        clustering.LocalRendezvous
+		c        clustering.Rendezvous
 		ss       notary.Signer
 		darchive *agent.Archive
 		peers    []*agent.Peer
@@ -112,8 +112,10 @@ func Into(ctx *Context) error {
 	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
+	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, local, events)
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
+	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
 	if conn, err = qd.DialContext(ctx.Context); err != nil {
 		return errors.Wrap(err, "unable to create a connection")
@@ -126,10 +128,7 @@ func Into(ctx *Context) error {
 
 	client = agent.NewDeployConn(conn)
 
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, local, events)
 	events <- agent.LogEvent(local, "connected to cluster")
-
-	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
 	deployspace := config.Deployspace()
 	if err = os.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {

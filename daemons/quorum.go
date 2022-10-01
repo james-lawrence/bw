@@ -17,7 +17,7 @@ type rafter interface {
 func Quorum(dctx Context, cc rafter) (_ Context, err error) {
 	transport := raftutil.ProtocolOptionMuxerTransport(dctx.Config.P2PBind, dctx.Config.P2PAdvertised, dctx.Muxer, raftutil.NewTLSStreamDialer(dctx.RPCCredentials))
 
-	if dctx.Raft, err = cc.Raft(dctx.Context, dctx.Config, dctx.Cluster.LocalNode(), dctx.Inmem, transport); err != nil {
+	if dctx.Raft, err = cc.Raft(dctx.Context, dctx.Config, agent.PeerToNode(dctx.Local.Peer), dctx.Inmem, transport); err != nil {
 		return dctx, err
 	}
 

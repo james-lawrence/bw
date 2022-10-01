@@ -31,7 +31,6 @@ type stateMachine interface {
 }
 
 type cluster interface {
-	LocalNode() *memberlist.Node
 	Members() []*memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(int, []byte) []*memberlist.Node
@@ -65,11 +64,13 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
 	deployment := newDeployment(d, c)
 	obs := NewObserver(cd)
+	history := NewHistory()
 	wal := NewWAL(
 		NewTranscoder(
 			deployment,
 			codec,
 			obs,
+			history,
 		),
 	)
 
@@ -84,6 +85,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 		m:                     &sync.Mutex{},
 		c:                     c,
 		lost:                  make(chan struct{}),
+		history:               history,
 	}
 
 	for _, opt := range options {
@@ -105,6 +107,7 @@ type Quorum struct {
 	dialer     dialers.Defaults
 	lost       chan struct{}
 	rp         raftutil.Protocol
+	history    History
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -125,9 +128,12 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			}),
 		),
 	)
+	var (
+		leadership raft.LeaderObservation
+	)
 
 	for o := range events {
-		switch o.Data.(type) {
+		switch l := o.Data.(type) {
 		case raft.RaftState:
 			switch o.Raft.State() {
 			case raft.Shutdown:
@@ -139,7 +145,8 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			log.Println("leadership observation", o.Raft.State())
 			switch o.Raft.State() {
 			case raft.Leader:
-				t.sm = func() stateMachine {
+
+				t.sm = func(leadership raft.LeaderObservation) stateMachine {
 					sm := NewMachine(
 						t.c.Local(),
 						o.Raft,
@@ -149,14 +156,16 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					go func() {
 						logx.MaybeLog(sm.initialize())
 						logx.Verbose(errors.Wrap(
-							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm),
+							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm, leadership),
 							"failed to restart an active deploy",
 						))
 						logx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
 					}()
 
 					return sm
-				}()
+				}(leadership)
+
+				leadership = l
 			case raft.Follower, raft.Candidate:
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
 			case raft.Shutdown:
@@ -232,6 +241,16 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 			return err
 		}
 	}
+}
+
+// Watch watch for events.
+func (t *Quorum) History(context.Context) (_ []*agent.Message, err error) {
+	if _, err = t.quorumOnly(); err != nil {
+		return nil, errors.Wrap(err, "history")
+	}
+
+	return t.history.Snapshot(), nil
+
 }
 
 // Watch watch for events.

@@ -30,7 +30,7 @@ func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
 		d      dialers.Direct
 		config agent.ConfigClient
 		ss     notary.Signer
-		c      clustering.C
+		c      clustering.Rendezvous
 		s      notary.Notary_SearchClient
 		page   *notary.SearchResponse
 	)

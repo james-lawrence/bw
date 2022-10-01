@@ -37,14 +37,9 @@ func nodeToPeer(n *Node) *agent.Peer {
 	}
 }
 
-func nodeToMember(n *Node) *memberlist.Node {
-	tmp := agent.PeerToNode(nodeToPeer(n))
-	return &tmp
-}
-
 func nodesToMembers(ns ...*Node) (r []*memberlist.Node) {
 	for _, n := range ns {
-		r = append(r, nodeToMember(n))
+		r = append(r, agent.PeerToNode(nodeToPeer(n)))
 	}
 	return r
 }

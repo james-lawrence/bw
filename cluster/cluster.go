@@ -5,16 +5,10 @@ import (
 	"github.com/james-lawrence/bw/agent"
 )
 
-type rendezvous interface {
-	Get([]byte) *memberlist.Node
-	GetN(n int, key []byte) []*memberlist.Node
-}
-
 type cluster interface {
 	Members() []*memberlist.Node
 	Get([]byte) *memberlist.Node
 	GetN(n int, key []byte) []*memberlist.Node
-	LocalNode() *memberlist.Node
 }
 
 // New ...

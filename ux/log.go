@@ -33,6 +33,7 @@ func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message,
 	var (
 		s consumer = deploying{
 			cState: cState{
+				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
 				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
@@ -50,6 +51,7 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message
 	var (
 		s consumer = tail{
 			cState: cState{
+				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
 				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
@@ -61,12 +63,27 @@ func Logging(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message
 }
 
 func run(ctx context.Context, events chan *agent.Message, s consumer) {
+	var last *agent.Message
 	for {
 		select {
 		case m := <-events:
-			if s = s.Consume(m); s == nil {
+			switch local := m.Event.(type) {
+			case *agent.Message_History:
+				replayable := slice(last, local.History.Messages...)
+				s = consume(s, replayable...)
+			default:
+				s = consume(s, m)
+			}
+
+			if s == nil {
 				// we're done
 				return
+			}
+
+			switch m.Type {
+			case agent.Message_LogEvent:
+			default:
+				last = m
 			}
 		case <-ctx.Done():
 			return
@@ -74,7 +91,36 @@ func run(ctx context.Context, events chan *agent.Message, s consumer) {
 	}
 }
 
+func slice(last *agent.Message, messages ...*agent.Message) []*agent.Message {
+	if last == nil {
+		return []*agent.Message{}
+	}
+
+	consumable := false
+	for idx, m := range messages {
+		if consumable {
+			return messages[idx:]
+		}
+
+		consumable = m.Id == last.Id
+	}
+
+	return []*agent.Message{}
+}
+
+func consume(c consumer, messages ...*agent.Message) consumer {
+	for _, m := range messages {
+		// log.Println("consuming", messageDebug(m))
+		if c = c.Consume(m); c == nil {
+			// we're done
+			return nil
+		}
+	}
+	return c
+}
+
 type cState struct {
+	connection     *agent.ConnectionEvent
 	FailureDisplay failureDisplay
 	Logger         *log.Logger
 	au             aurora.Aurora
@@ -112,12 +158,27 @@ func (t cState) print(m *agent.Message) {
 			bw.RandomID(d.Archive.DeploymentID),
 		)
 	case agent.Message_LogEvent:
-		d := m.GetLog()
-		t.Logger.Printf(
-			"%s - INFO - %s\n",
-			messagePrefix(m),
-			d.Log,
-		)
+		switch local := m.Event.(type) {
+		case *agent.Message_Connection:
+			if t.connection.State == local.Connection.State {
+				return
+			}
+
+			t.Logger.Printf(
+				"%s - INFO - %s -> %s\n",
+				messagePrefix(m),
+				t.connection.State,
+				local.Connection.State,
+			)
+			t.connection.State = local.Connection.State
+		default:
+			d := m.GetLog()
+			t.Logger.Printf(
+				"%s - INFO - %s\n",
+				messagePrefix(m),
+				d.Log,
+			)
+		}
 	default:
 		t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 	}
@@ -179,16 +240,21 @@ func (t deploying) Consume(m *agent.Message) consumer {
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
 		case agent.DeployCommand_Restart:
+			log.Println("restart detected")
 			return restart(t)
 		case
 			agent.DeployCommand_Done,
-			agent.DeployCommand_Cancel:
+			agent.DeployCommand_Cancel,
+			agent.DeployCommand_Failed:
 			return nil
+		default:
+			// log.Println("unhandled deploy command", m.GetDeployCommand().Command)
 		}
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()
 		switch d.Stage {
 		case agent.Deploy_Failed:
+			log.Println("failure detected")
 			digest := md5.Sum([]byte(d.Error))
 			return failure{
 				cState: t.cState,
@@ -196,6 +262,7 @@ func (t deploying) Consume(m *agent.Message) consumer {
 					hex.EncodeToString(digest[:]): m,
 				},
 			}
+		default:
 		}
 	}
 

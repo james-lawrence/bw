@@ -77,7 +77,7 @@ func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 		return err
 	}
 
-	if m.DisallowWAL {
+	if m.Ephemeral {
 		return nil
 	}
 

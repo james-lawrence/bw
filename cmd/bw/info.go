@@ -46,7 +46,7 @@ type cmdInfoWatch struct {
 func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
-		c      clustering.C
+		c      clustering.Rendezvous
 		d      dialers.Direct
 		config agent.ConfigClient
 		quorum *agent.InfoResponse
@@ -110,7 +110,7 @@ type cmdInfoNodes struct {
 func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
-		c      clustering.C
+		c      clustering.Rendezvous
 		d      dialers.Defaults
 		config agent.ConfigClient
 		ss     notary.Signer
@@ -166,7 +166,7 @@ type cmdInfoLogs struct {
 
 func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 	var (
-		c      clustering.C
+		c      clustering.Rendezvous
 		d      dialers.Defaults
 		config agent.ConfigClient
 		latest *agent.Deploy

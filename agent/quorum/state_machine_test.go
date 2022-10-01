@@ -148,11 +148,10 @@ var _ = Describe("StateMachine", func() {
 			var (
 				decoded []*agent.Message
 			)
-			convert := func(c []*agent.Message) *agent.WAL {
-				return &agent.WAL{Messages: c}
-			}
+
 			protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
 			Expect(err).To(Succeed())
+
 			leader := awaitLeader(protocols...)
 			sm := NewMachine(
 				agent.NewPeer("node"),
@@ -174,8 +173,8 @@ var _ = Describe("StateMachine", func() {
 
 			Expect(
 				proto.Equal(
-					convert(decoded),
-					convert(messages[n:]),
+					agent.NewLogHistoryEvent(decoded...),
+					agent.NewLogHistoryEvent(messages[n:]...),
 				),
 			).To(BeTrue())
 		},
