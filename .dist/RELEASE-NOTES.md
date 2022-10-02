@@ -1,3 +1,40 @@
+commit 2f14ca3dd263d32e9b1f730219f028b37cc31fec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 2 13:11:13 2022 -0400
+
+    implement a debug endpoint for retrieving runtime information
+
+commit 378cb969ac63533763eeb589caf5fd498d62caf5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 2 12:20:03 2022 -0400
+
+    speed up healthcheck scan by performing in parallel.
+
+commit 23d09087df92b88fc3bbeb72782bb0d124863ccf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 2 09:47:50 2022 -0400
+
+    have client timeout when a deploy takes too long.
+
+commit b4a8ebf5895fcb47e13a82e675580469d073c7c8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 1 17:55:48 2022 -0400
+
+    first pass at fixing the restart deploy regression
+
+commit 536691cc95b0ded644b4ecf26cd59510b65fb660
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 1 13:05:08 2022 -0400
+
+    implement a basic history function for the client to
+    properly merge state.
+
+commit 464b596c533a2252a220058426aaeffc2b98e6f8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Sep 30 23:08:15 2022 -0400
+
+    release 0.1.1664593545-a31d2ded
+
 commit a31d2ded00c385039c1fb461f2696b1394960722
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Sep 30 23:05:45 2022 -0400
