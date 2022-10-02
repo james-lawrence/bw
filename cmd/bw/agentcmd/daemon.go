@@ -38,7 +38,7 @@ import (
 type CmdDaemon struct {
 	Runtime     CmdRuntime           `cmd:"" help:"run the deploy agent runtime" default:"true" aliases:"deploy"`
 	Coordinator CmdCoordinator       `cmd:"" help:"run a coordination server that purely acts as a command and control node, a deploy to the cluster will store the archive but not actually process it within the deployment runtime"`
-	QuorumLog   CmdDaemonDebugRaft   `cmd:"" name:"quorum-state" help:"display the quorum log"`
+	QuorumLog   CmdDaemonDebugRaft   `cmd:"" name:"quorum-state" help:"display the quorum log, only runs on the server"`
 	Quorum      CmdDaemonDebugQuorum `cmd:"" name:"quorum" help:"display quorum member information, only runs on the server"`
 }
 

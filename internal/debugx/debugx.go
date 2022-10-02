@@ -36,6 +36,10 @@ func genDst() (path string, dst io.WriteCloser) {
 	return path, dst
 }
 
+func DumpRoutinesInto(dst io.WriteCloser) error {
+	return errorsx.Compact(pprof.Lookup("goroutine").WriteTo(dst, 1), dst.Close())
+}
+
 // DumpRoutines writes current goroutine stack traces to a temp file.
 // and returns that files path. if for some reason a file could not be opened
 // it falls back to stderr
@@ -45,7 +49,7 @@ func DumpRoutines() (path string, err error) {
 	)
 
 	path, dst = genDst()
-	return path, errorsx.Compact(pprof.Lookup("goroutine").WriteTo(dst, 1), dst.Close())
+	return path, DumpRoutinesInto(dst)
 }
 
 // DumpOnSignal runs the DumpRoutes method and prints to stderr whenever one of the provided

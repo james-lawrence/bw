@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
+	"github.com/james-lawrence/bw/agent/debug"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/observers"
 	"github.com/james-lawrence/bw/agent/proxy"
@@ -95,6 +96,10 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	notary.NewSyncService(
 		dctx.NotaryAuth,
 		dctx.NotaryStorage,
+	).Bind(server)
+
+	debug.NewService(
+		notary.NewAgentAuth(dctx.NotaryAuth),
 	).Bind(server)
 
 	proxy.NewDeployment(dctx.NotaryAuth, qdialer).Bind(server)

@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package debug;
+
+option go_package = "github.com/james-lawrence/agent/debug";
+
+message StacktraceRequest {}
+message StacktraceResponse { bytes trace = 1; }
+
+service Debug {
+  rpc Stacktrace(StacktraceRequest) returns (StacktraceResponse) {}
+}

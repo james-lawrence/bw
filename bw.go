@@ -17,6 +17,7 @@ import (
 
 //go:generate protoc -I=.protocol --go_out=agent --go_opt=paths=source_relative --go-grpc_out=agent --go-grpc_opt=paths=source_relative .protocol/agent.proto
 //go:generate protoc -I=.protocol --go_out=agent/discovery --go_opt=paths=source_relative --go-grpc_out=agent/discovery --go-grpc_opt=paths=source_relative .protocol/discovery.proto
+//go:generate protoc -I=.protocol --go_out=agent/debug --go_opt=paths=source_relative --go-grpc_out=agent/debug --go-grpc_opt=paths=source_relative .protocol/debug.proto
 //go:generate protoc -I=.protocol --go_out=agent/acme --go_opt=paths=source_relative --go-grpc_out=agent/acme --go-grpc_opt=paths=source_relative .protocol/acme.proto
 //go:generate protoc -I=.protocol --go_out=notary --go_opt=paths=source_relative --go-grpc_out=notary --go-grpc_opt=paths=source_relative .protocol/notary.proto
 //go:generate protoc -I=.protocol --go_out=muxer --go_opt=paths=source_relative .protocol/muxer.proto

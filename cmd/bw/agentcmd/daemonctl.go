@@ -1,13 +1,17 @@
 package agentcmd
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net"
 	"regexp"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/debug"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agent/operations"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
@@ -19,12 +23,14 @@ import (
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/uxterm"
+	"github.com/logrusorgru/aurora"
 	"google.golang.org/grpc"
 )
 
 type CmdControl struct {
-	Restart CmdControlRestart `cmd:"" help:"restart all the nodes within the cluster"`
-	Quorum  CmdControlQuorum  `cmd:"" help:"print information about the quorum members of the cluster"`
+	Restart    CmdControlRestart    `cmd:"" help:"restart all the nodes within the cluster"`
+	Quorum     CmdControlQuorum     `cmd:"" help:"print information about the quorum members of the cluster"`
+	Stacktrace CmdControlStacktrace `cmd:"" help:"print stack trace from each node"`
 }
 
 type controlConnection struct {
@@ -115,22 +121,17 @@ type CmdControlQuorum struct {
 
 func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 	var (
-		ss     notary.Signer
 		conn   *grpc.ClientConn
 		d      dialers.Defaults
 		c      clustering.Rendezvous
 		quorum *agent.InfoResponse
 	)
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
-		return err
-	}
-
 	if d, c, err = t.connect(); err != nil {
 		return err
 	}
 
-	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults(grpc.WithPerRPCCredentials(ss))...); err != nil {
+	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
 		return err
 	}
 
@@ -141,6 +142,43 @@ func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 	if err = uxterm.PrintQuorum(quorum); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+type CmdControlStacktrace struct {
+	controlConnection
+}
+
+func (t CmdControlStacktrace) Run(ctx *cmdopts.Global) (err error) {
+	var (
+		d  dialers.Defaults
+		c  clustering.Rendezvous
+		au = aurora.NewAurora(true)
+	)
+
+	if d, c, err = t.connect(); err != nil {
+		return err
+	}
+
+	err = operations.New(ctx.Context, operations.Fn(func(ctx context.Context, p *agent.Peer, conn grpc.ClientConnInterface) error {
+		var (
+			stack *debug.StacktraceResponse
+		)
+
+		if stack, err = debug.NewDebugClient(conn).Stacktrace(ctx, &debug.StacktraceRequest{}); err != nil {
+			log.Println(au.Red(fmt.Sprint("BEGIN STACKTRACE UNAVAILABLE:", uxterm.PeerString(p))))
+			log.Println(err)
+			log.Println(au.Red(fmt.Sprint("CEASE STACKTRACE UNAVAILABLE:", uxterm.PeerString(p))))
+			return nil
+		}
+
+		log.Println(au.Yellow(fmt.Sprint("BEGIN STACKTRACE:", uxterm.PeerString(p))))
+		log.Println(string(stack.Trace))
+		log.Println(au.Yellow(fmt.Sprint("CEASE STACKTRACE:", uxterm.PeerString(p))))
+
+		return nil
+	}))(c, d)
 
 	return nil
 }
