@@ -12,7 +12,7 @@ type cluster interface {
 }
 
 // New ...
-func New(l *Local, c cluster) Cluster {
+func New(l *agent.Peer, c cluster) Cluster {
 	return Cluster{
 		local:   l,
 		cluster: c,
@@ -22,12 +22,12 @@ func New(l *Local, c cluster) Cluster {
 // Cluster - represents a cluster.
 type Cluster struct {
 	cluster
-	local *Local
+	local *agent.Peer
 }
 
 // Local ...
 func (t Cluster) Local() *agent.Peer {
-	return t.local.Peer
+	return t.local
 }
 
 // Peers ...

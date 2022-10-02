@@ -18,6 +18,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/bw/agentcmd"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/internal/contextx"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/posener/complete"
@@ -48,8 +49,9 @@ func main() {
 		agentconfigdefaults = agent.NewConfig(agent.ConfigOptionDefaultBind(systemip))
 	)
 
-	shellCli.Context, shellCli.Shutdown = context.WithCancel(context.Background())
 	shellCli.Cleanup = &sync.WaitGroup{}
+	shellCli.Context = contextx.WithWaitGroup(context.Background(), shellCli.Cleanup)
+	shellCli.Context, shellCli.Shutdown = context.WithCancel(shellCli.Context)
 
 	log.SetFlags(log.Flags() | log.Lshortfile)
 	go debugx.DumpOnSignal(shellCli.Context, syscall.SIGUSR2)

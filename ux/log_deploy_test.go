@@ -2,13 +2,13 @@ package ux_test
 
 import (
 	"context"
-	"sync"
 
 	. "github.com/onsi/ginkgo/v2"
 
 	. "github.com/onsi/gomega"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/contextx"
 	. "github.com/james-lawrence/bw/ux"
 )
 
@@ -19,9 +19,8 @@ var _ = Describe("Log Deploy", func() {
 			for _, m := range messages {
 				buf <- m
 			}
-			wg := &sync.WaitGroup{}
-			wg.Add(1)
-			Deploy(context.Background(), wg, buf)
+			ctx := contextx.NewWaitGroup(context.Background())
+			Deploy(ctx, buf)
 			Expect(len(buf)).To(Equal(0))
 		},
 		Entry(

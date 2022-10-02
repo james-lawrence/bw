@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/cmd/termui"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
@@ -95,8 +96,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 
 	events := make(chan *agent.Message, 100)
 
-	ctx.Cleanup.Add(1)
-	go ux.Logging(ctx.Context, ctx.Cleanup, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)))
+	termui.NewLogging(ctx.Context, ctx.Shutdown, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)))
 	log.Println("awaiting events")
 	agentutil.WatchClusterEvents(ctx.Context, qd, local.Peer, events)
 
@@ -126,10 +126,7 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
+	local := commandutils.NewClientPeer()
 
 	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
@@ -183,10 +180,7 @@ func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
+	local := commandutils.NewClientPeer()
 
 	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err

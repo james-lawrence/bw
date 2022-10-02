@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sync"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -27,9 +26,7 @@ func OptionFailureDisplay(fd failureDisplay) Option {
 }
 
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message, options ...Option) {
-	defer wg.Done()
-
+func Deploy(ctx context.Context, events chan *agent.Message, options ...Option) {
 	var (
 		s consumer = deploying{
 			cState: cState{
@@ -45,9 +42,7 @@ func Deploy(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message,
 }
 
 // Logging based ux
-func Logging(ctx context.Context, wg *sync.WaitGroup, events chan *agent.Message, options ...Option) {
-	defer wg.Done()
-
+func Logging(ctx context.Context, events chan *agent.Message, options ...Option) {
 	var (
 		s consumer = tail{
 			cState: cState{

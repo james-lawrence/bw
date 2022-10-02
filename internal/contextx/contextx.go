@@ -11,9 +11,13 @@ const (
 	contextKeyWaitgroup keys = iota
 )
 
+func WithWaitGroup(ctx context.Context, wg *sync.WaitGroup) context.Context {
+	return context.WithValue(ctx, contextKeyWaitgroup, wg)
+}
+
 // NewWaitGroup - adds a waitgroup to the context.
 func NewWaitGroup(ctx context.Context) context.Context {
-	return context.WithValue(ctx, contextKeyWaitgroup, &sync.WaitGroup{})
+	return WithWaitGroup(ctx, &sync.WaitGroup{})
 }
 
 // WaitGroup - retrieve the waitgroup from the context.

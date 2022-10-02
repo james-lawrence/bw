@@ -24,19 +24,19 @@ func NewCluster(p *agent.Peer, opts ...clustering.Option) (c cluster.Cluster, er
 	var (
 		cp clustering.Memberlist
 	)
-	local := cluster.NewLocal(p)
+
 	ip := net.ParseIP(p.Ip)
 	opts = append(
 		opts,
 		clustering.OptionNodeID(ip.String()),
 		clustering.OptionBindAddress(ip.String()),
-		clustering.OptionBindPort(int(local.Peer.P2PPort)),
+		clustering.OptionBindPort(int(p.P2PPort)),
 	)
 
 	if cp, err = clustering.NewCluster(opts...); err != nil {
 		return c, err
 	}
 
-	return cluster.New(local, cp), nil
+	return cluster.New(p, cp), nil
 
 }

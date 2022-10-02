@@ -32,7 +32,7 @@ type controlConnection struct {
 	Insecure bool `name:"insecure" help:"disable tls verification"`
 }
 
-func (t controlConnection) connect(local *cluster.Local) (d dialers.Defaults, c clustering.Rendezvous, err error) {
+func (t controlConnection) connect() (d dialers.Defaults, c clustering.Rendezvous, err error) {
 	var (
 		config agent.ConfigClient
 		ss     notary.Signer
@@ -87,15 +87,12 @@ func (t CmdControlRestart) shutdown(filter deployment.Filter) (err error) {
 		c clustering.Rendezvous
 	)
 
-	local := cluster.NewLocal(
-		&agent.Peer{
-			Name: bw.MustGenerateID().String(),
-			Ip:   systemx.HostnameOrLocalhost(),
-		},
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
+	local := &agent.Peer{
+		Name: bw.MustGenerateID().String(),
+		Ip:   systemx.HostnameOrLocalhost(),
+	}
 
-	if d, c, err = t.connect(local); err != nil {
+	if d, c, err = t.connect(); err != nil {
 		return err
 	}
 	cx := cluster.New(local, c)
@@ -129,15 +126,7 @@ func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	local := cluster.NewLocal(
-		&agent.Peer{
-			Name: bw.MustGenerateID().String(),
-			Ip:   systemx.HostnameOrLocalhost(),
-		},
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
-
-	if d, c, err = t.connect(local); err != nil {
+	if d, c, err = t.connect(); err != nil {
 		return err
 	}
 

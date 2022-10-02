@@ -57,16 +57,15 @@ func Cancel(ctx *Context) (err error) {
 	}()
 
 	client = agent.NewDeployConn(conn)
-
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, qd, local, events)
-
-	events <- agent.LogEvent(local, "connected to cluster")
 	go func() {
 		<-ctx.Context.Done()
 		if err = client.Close(); err != nil {
 			log.Println("failed to close client", err)
 		}
 	}()
+
+	termui.NewFromClientConfig(ctx.Context, config, d, local, events)
+	events <- agent.LogEvent(local, "connected to cluster")
 
 	cmd := agent.DeployCommandCancel(bw.DisplayName())
 

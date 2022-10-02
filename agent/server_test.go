@@ -40,7 +40,7 @@ func testClient() harness {
 	peers := clusteringtestutil.NewNodes(5)
 
 	c := cluster.New(
-		cluster.NewLocal(NewPeer(fake.CharactersN(10))),
+		NewPeer(fake.CharactersN(10)),
 		clustering.NewMock(peers[0], peers[1:]...),
 	)
 	s := NewServer(c, ServerOptionAuth(testauth{}))

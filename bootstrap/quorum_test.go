@@ -55,7 +55,7 @@ var _ = Describe("Quorum", func() {
 		})
 		defer testingx.GRPCCleanup(nil, srv)
 
-		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
+		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Succeed())
@@ -76,7 +76,7 @@ var _ = Describe("Quorum", func() {
 		})
 		defer testingx.GRPCCleanup(nil, srv)
 
-		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
+		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(Equal(agentutil.ErrNoDeployments))
@@ -95,7 +95,7 @@ var _ = Describe("Quorum", func() {
 		})
 		defer testingx.GRPCCleanup(nil, srv)
 
-		mc := cluster.New(cluster.NewLocal(p), clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
+		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
 		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
 		Expect(err).To(HaveOccurred())

@@ -85,7 +85,7 @@ func Peering(dctx Context) (_ Context, err error) {
 		return dctx, errors.Wrap(err, "failed to create cluster")
 	}
 
-	dctx.Cluster = _cluster.New(dctx.Local, c)
+	dctx.Cluster = _cluster.New(dctx.Local.Peer, c)
 	dctx.Bootstrapper = c
 	return dctx, err
 }

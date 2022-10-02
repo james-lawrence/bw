@@ -112,7 +112,8 @@ func Into(ctx *Context) error {
 	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
-	termui.New(ctx.Context, ctx.CancelFunc, ctx.WaitGroup, d, local, events)
+
+	termui.NewFromClientConfig(ctx.Context, config, d, local, events)
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
