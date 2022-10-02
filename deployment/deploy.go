@@ -317,11 +317,11 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 	)
 
 	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
-		log.Println("healthcheck", task.Peer.Name, task.Peer.Ip, task.timeout, "initiated")
-		defer log.Println("healthcheck", task.Peer.Name, task.Peer.Ip, task.timeout, "completed")
+		log.Println("healthcheck", task.Peer.Ip, task.timeout, "initiated")
+		defer log.Println("healthcheck", task.Peer.Ip, task.timeout, "completed")
 	}
 
-	ctx, done := context.WithTimeout(ctx, 10*time.Second)
+	ctx, done := context.WithTimeout(ctx, task.timeout)
 	defer done()
 
 	if deploy, err = op.Visit(ctx, task.Peer); err != nil {
@@ -332,6 +332,7 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 	if deploy.Archive != nil {
 		did = bw.RandomID(deploy.Archive.DeploymentID)
 	}
+
 	switch deploy.Stage {
 	case agent.Deploy_Completed:
 		close(task.done)

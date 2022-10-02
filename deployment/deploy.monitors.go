@@ -3,6 +3,7 @@ package deployment
 import (
 	"context"
 	"log"
+	"runtime"
 	"sync"
 	"time"
 
@@ -107,6 +108,8 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 	performcheck := make(chan struct{})
 	outstanding := make([]*pending, 0, 128)
 	tickle := sync.NewCond(&sync.Mutex{})
+	checker := newChecker(ctx, check)
+	defer checker.Close()
 
 	go t.tickler(ctx, tickle, performcheck)
 	for _, tickler := range t.ticklers {
@@ -125,23 +128,19 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 				tickle.Signal()
 				continue
 			}
+
 			outstanding = append(outstanding, task)
 			tickle.Signal()
 		case <-performcheck:
 			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "initiated")
-				defer log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "completed")
 			}
 
-			remaining := make([]*pending, 0, 128)
-			for _, n := range outstanding {
-				if healthcheck(ctx, n, check) == nil {
-					continue
-				}
-				remaining = append(remaining, n)
-			}
+			outstanding = checker.run(ctx, outstanding...)
 
-			outstanding = remaining
+			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "completed")
+			}
 
 			if q == nil && len(outstanding) == 0 {
 				return nil
@@ -150,4 +149,71 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 			return ctx.Err()
 		}
 	}
+}
+
+func newChecker(ctx context.Context, o operation) checker {
+	c := checker{
+		q: make(chan *pending),
+		r: make(chan *pending),
+	}
+
+	for i := 0; i < runtime.NumCPU(); i++ {
+		go c.background(ctx, o)
+	}
+
+	return c
+}
+
+type checker struct {
+	q chan *pending
+	r chan *pending
+}
+
+func (t checker) Close() {
+	close(t.q)
+}
+
+func (t checker) background(ctx context.Context, o operation) {
+	for p := range t.q {
+		if err := healthcheck(ctx, p, o); err == nil {
+			t.r <- nil
+			continue
+		}
+		t.r <- p
+	}
+}
+
+func (t checker) run(ctx context.Context, outstanding ...*pending) (remaining []*pending) {
+	remaining = make([]*pending, 0, len(outstanding))
+	pending := len(outstanding)
+	next, outstanding := pop(outstanding)
+
+	for pending > 0 {
+		select {
+		case <-ctx.Done():
+			return
+		case t.q <- next:
+			if next, outstanding = pop(outstanding); next == nil {
+				t.q = nil
+			}
+		case r := <-t.r:
+			if r != nil {
+				remaining = append(remaining, r)
+			}
+
+			pending--
+		}
+	}
+
+	return remaining
+}
+
+func pop(s []*pending) (fallback *pending, _ []*pending) {
+	if len(s) == 0 {
+		return fallback, s
+	}
+
+	fallback = s[0]
+
+	return fallback, s[1:]
 }
