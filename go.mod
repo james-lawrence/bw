@@ -33,6 +33,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
+	github.com/mattn/go-isatty v0.0.16
 	github.com/miekg/dns v1.1.49
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.1
