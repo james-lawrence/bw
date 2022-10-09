@@ -31,6 +31,7 @@ release() {
 rm -rf src && mkdir -p src
 rm -rf deb
 
+export USER="root"
 export GOBIN="${HOME}/go/bin"
 export CHANGELOG_DATE=$(date +"%a, %d %b %Y %T %z")
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-k'${DEBFULLNAME} <${DEBEMAIL}>' -sa"
