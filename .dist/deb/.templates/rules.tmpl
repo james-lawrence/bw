@@ -22,11 +22,12 @@ override_dh_auto_build:
 	ls -lha $(CURDIR)
 	GOBIN=$(CURDIR)/bin /usr/lib/go-1.18/bin/go env
 	ls -lha $(CURDIR)/src
-	cd src; GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.18/bin/go install -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...; cd ..
+	cd src; GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.18/bin/go install -ldflags="${BW_LDFLAGS}" ./cmd/...; cd ..
 	ls -lha $(CURDIR)/bin
 
 override_dh_auto_test:
 	echo "DH AUTO TEST OVERRIDE"
+	$(CURDIR)/bin/bw version
 
 override_dh_auto_install:
 	echo "DH AUTO INSTALL OVERRIDE"

@@ -31,6 +31,7 @@ release() {
 rm -rf src && mkdir -p src
 rm -rf deb
 
+export GOBIN="${HOME}/go/bin"
 export CHANGELOG_DATE=$(date +"%a, %d %b %Y %T %z")
 export DEBUILD_DPKG_BUILDPACKAGE_OPTS="-k'${DEBFULLNAME} <${DEBEMAIL}>' -sa"
 ARCHIVE=../build/bearded-wookie-source-${BUILD_VERSION}.tar.gz
@@ -39,7 +40,8 @@ cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
 
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/
 
-pushd src; /usr/lib/go-1.18/bin/go install -buildvcs=false cmd/...; popd
+pushd src; /usr/lib/go-1.18/bin/go install ./cmd/...; popd
+~/go/bin/bw version
 
 i=-1
 for distro in "$@"
