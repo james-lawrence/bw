@@ -8,10 +8,10 @@ import (
 	"os"
 	"path"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/atomicx"
 	"github.com/james-lawrence/bw/internal/bytesx"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
@@ -34,7 +34,7 @@ type auth interface {
 func NewService(a auth) *Service {
 	return &Service{
 		auth:      a,
-		profiling: &atomic.Bool{},
+		profiling: &atomicx.Bool{},
 		stoppable: profilex.Noop(),
 		tmpdir:    path.Join(stringsx.DefaultIfBlank(os.Getenv("CACHE_DIR"), os.TempDir()), "profiling"),
 	}
@@ -43,7 +43,7 @@ func NewService(a auth) *Service {
 type Service struct {
 	UnimplementedDebugServer
 	auth      auth
-	profiling *atomic.Bool
+	profiling *atomicx.Bool
 	stoppable profilex.Stoppable
 	tmpdir    string
 }
