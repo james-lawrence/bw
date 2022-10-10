@@ -2,6 +2,7 @@ package contextx
 
 import (
 	"context"
+	"errors"
 	"sync"
 )
 
@@ -38,4 +39,11 @@ func WaitGroupDone(ctx context.Context) {
 	if wg, ok := WaitGroup(ctx); ok {
 		wg.Done()
 	}
+}
+
+func IgnoreDeadlineExceeded(err error) error {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil
+	}
+	return err
 }

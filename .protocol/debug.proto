@@ -7,6 +7,24 @@ option go_package = "github.com/james-lawrence/agent/debug";
 message StacktraceRequest {}
 message StacktraceResponse { bytes trace = 1; }
 
+message ProfileRequest {
+  string id = 1;      // id for the profile.
+  int64 duration = 2; // duration of the profiling.
+}
+
+message ProfileResponse {}
+
+message DownloadRequest { string id = 1; }
+message DownloadResponse { bytes profile = 1; }
+
+message CancelRequest {}
+message CancelResponse {}
+
 service Debug {
   rpc Stacktrace(StacktraceRequest) returns (StacktraceResponse) {}
+  rpc CPU(ProfileRequest) returns (ProfileResponse) {}
+  rpc Memory(ProfileRequest) returns (ProfileResponse) {}
+  rpc Heap(ProfileRequest) returns (ProfileResponse) {}
+  rpc Download(DownloadRequest) returns (DownloadResponse) {}
+  rpc Cancel(CancelRequest) returns (CancelResponse) {}
 }
