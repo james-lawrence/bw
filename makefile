@@ -72,7 +72,7 @@ release: release-check
 		-v $(HOME)/.gnupg:/opt/bw/.dist/cache/.gnupg \
 		-it debian-build:latest
 
-	# git add .dist/RELEASE-NOTES.md && git commit -m "release $(RELEASE)";
+	git add .dist/RELEASE-NOTES.md && git commit -m "release $(RELEASE)";
 
 release-clean:
 	rm -rf .dist/build

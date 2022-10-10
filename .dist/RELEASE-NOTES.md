@@ -1,3 +1,51 @@
+commit 26d67bccb2a68704fcb3fa6176423b73b168c05d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 10 15:54:38 2022 -0400
+
+    add temporary atomicx package for atomic.bool
+
+commit a8811add4bb28d05277aade649ac8c549360049c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 10 15:39:43 2022 -0400
+
+    add profiling debugging endpoints
+
+commit 9d6816b5c9e845768d61b3185b2b36ed85354cbc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 10 15:38:26 2022 -0400
+
+    add profiling dependency
+
+commit 81ccc2c8cb72db9debe5f82c536ba1694a3cab1f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 9 12:56:28 2022 -0400
+
+    include build information in binary
+
+commit 3648f14f31f896a9a647d672d684c1bbe39242a0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 9 12:56:28 2022 -0400
+
+    include build information in binary
+
+commit a48c16f87637acd0be9e4404508d04cb9c9047cd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 9 11:08:06 2022 -0400
+
+    properly emit vcs information
+
+commit b12468d19ca9b303578cfd25f57d1c9d4565f805
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 9 11:07:50 2022 -0400
+
+    update isatty
+
+commit 80650964b44ddbbb4b76914fb0eea513c88f3e58
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 2 14:34:32 2022 -0400
+
+    release 0.1.1664730673-2f14ca3d
+
 commit 2f14ca3dd263d32e9b1f730219f028b37cc31fec
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Oct 2 13:11:13 2022 -0400
