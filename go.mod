@@ -40,6 +40,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1
+	github.com/pkg/profile v1.6.0 // indirect
 	github.com/posener/complete v1.2.3
 	github.com/pterm/pterm v0.12.37
 	github.com/subosito/gotenv v1.2.0
