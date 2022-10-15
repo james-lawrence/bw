@@ -105,6 +105,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 			shell.OptionLogger(dctx.Log),
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
 			shell.OptionDir(dctx.ArchiveRoot),
+			shell.OptionVCSCommit(dctx.Archive.Commit),
 			shell.OptionTempDir(tmpdir),
 			shell.OptionCacheDir(cachedir),
 		),

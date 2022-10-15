@@ -75,6 +75,14 @@ func OptionDir(l string) Option {
 	}
 }
 
+// OptionVCSCommit set vcs commit for the command.
+func OptionVCSCommit(l string) Option {
+	return func(ctx *Context) {
+		ctx.commit = l
+	}
+}
+
+// shell.OptionVCSCommit(dctx.Archive.Commit),
 // OptionTempDir set temp directory created for bw.
 func OptionTempDir(l string) Option {
 	return func(ctx *Context) {
@@ -140,6 +148,7 @@ type Context struct {
 	Domain        string
 	FQDN          string
 	WorkDirectory string
+	commit        string
 	Environ       []string
 	loadenv       []string
 	output        io.Writer
@@ -176,6 +185,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bw.work.directory%", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, "%bw.cache.directory%", t.cachedir, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.id%", t.deploymentID, -1)
+	cmd = strings.Replace(cmd, "%bw.deploy.commit%", t.commit, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
 
 	return cmd
@@ -185,6 +195,7 @@ func (t Context) environmentSubst() []string {
 	return append(
 		t.Environ,
 		fmt.Sprintf("BW_ENVIRONMENT_DEPLOY_ID=%s", t.deploymentID),
+		fmt.Sprintf("BW_ENVIRONMENT_DEPLOY_COMMIT=%s", t.commit),
 		fmt.Sprintf("BW_ENVIRONMENT_HOST=%s", t.Hostname),
 		fmt.Sprintf("BW_ENVIRONMENT_MACHINE_ID=%s", t.MachineID),
 		fmt.Sprintf("BW_ENVIRONMENT_DOMAIN=%s", t.Domain),
