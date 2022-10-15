@@ -191,7 +191,7 @@ func (t *Coordinator) Reset() error {
 }
 
 // Deploy deploy a given archive.
-func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, archive *agent.Archive) (d *agent.Deploy, err error) {
+func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployOptions, archive *agent.Archive) (d *agent.Deploy, err error) {
 	var (
 		ok   bool
 		dctx *DeployContext
@@ -216,7 +216,7 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 		DeployContextOptionDispatcher(t.dispatcher),
 	}
 
-	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, opts, archive, dcopts...); err != nil {
+	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, by, opts, archive, dcopts...); err != nil {
 		agentutil.Dispatch(t.dispatcher, agent.LogError(t.local, err))
 		return t.ds.current, err
 	}
@@ -234,7 +234,7 @@ func (t *Coordinator) Deploy(ctx context.Context, opts *agent.DeployOptions, arc
 	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
 		err = errors.Errorf("already deploying - unknown deployment - %s", t.ds.current.Stage)
 		if t.ds.current.Archive != nil {
-			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Archive.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
+			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
 		}
 
 		dctx.Dispatch(agent.LogError(t.local, err))

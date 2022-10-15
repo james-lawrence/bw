@@ -32,12 +32,12 @@ func Locally(ctx *Context, debug bool) (err error) {
 		return err
 	}
 
-	if err = os.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
 	if _, err := os.Stat(filepath.Join(config.Dir(), bw.AuthKeysFile)); !os.IsNotExist(err) {
-		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.AuthKeysFile)); err != nil {
+		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.Deployment.DataDir, bw.AuthKeysFile)); err != nil {
 			return err
 		}
 	}
@@ -72,7 +72,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = archive.Pack(dst, config.DeployDataDir); err != nil {
+	if err = archive.Pack(dst, config.Deployment.DataDir); err != nil {
 		return errors.Wrap(err, "failed to pack archive")
 	}
 
@@ -92,8 +92,9 @@ func Locally(ctx *Context, debug bool) (err error) {
 		context.Background(),
 		root,
 		local,
+		bw.DisplayName(),
 		&agent.DeployOptions{
-			Timeout: int64(config.DeployTimeout),
+			Timeout: int64(config.Deployment.Timeout),
 		},
 		&agent.Archive{
 			Location: dst.Name(),

@@ -39,7 +39,6 @@ var _ = Describe("Coordinator", func() {
 		g.Expect(err).To(g.Succeed())
 		g.Expect(deploys).To(g.HaveLen(0))
 		a := agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: id,
 			Peer:         p,
 		}
@@ -49,7 +48,12 @@ var _ = Describe("Coordinator", func() {
 			Timeout:        int64(time.Minute),
 		}
 
-		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{Archive: &a, Options: &dopts, Stage: agent.Deploy_Deploying})).To(g.Succeed())
+		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{
+			Initiator: "test user",
+			Archive:   &a,
+			Options:   &dopts,
+			Stage:     agent.Deploy_Deploying,
+		})).To(g.Succeed())
 
 		deploys, err = c.Deployments()
 		g.Expect(err).To(g.Succeed())
@@ -77,13 +81,17 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 		a := agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
 		deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
 		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())
-		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{Archive: &a, Options: &dopts, Stage: s})).To(g.Succeed())
+		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{
+			Initiator: "test user",
+			Archive:   &a,
+			Options:   &dopts,
+			Stage:     s,
+		})).To(g.Succeed())
 		deploys, err = c.Deployments()
 		g.Expect(err).To(g.Succeed())
 		g.Expect(deploys).To(g.HaveLen(1))

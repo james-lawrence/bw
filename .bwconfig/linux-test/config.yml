@@ -1,6 +1,10 @@
 address: bearded-wookie.lan:2000
 discovery: bearded-wookie.lan:2000
-deployDataDir: ".test/.bw"
 concurrency: 2
 servername: "bearded-wookie.lan"
 deployTimeout: 30s
+deployDataDir: ".test/.bw"
+deploy:
+  # dir: ".test/.bw"
+  timeout: 40s
+  treeish: "HEAD"

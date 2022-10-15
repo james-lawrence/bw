@@ -33,8 +33,8 @@ type Client interface {
 	Conn() *grpc.ClientConn
 	Close() error
 	Shutdown(ctx context.Context) error
-	Upload(ctx context.Context, initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
-	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
+	Upload(ctx context.Context, meta *UploadMetadata, src io.Reader) (*Archive, error)
+	RemoteDeploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Deploy(context.Context, *DeployOptions, *Archive) (*Deploy, error)
 	Connect(ctx context.Context) (*ConnectResponse, error)
 	Cancel(context.Context, *CancelRequest) error
@@ -49,8 +49,8 @@ type Client interface {
 // DeployClient - facade interface.
 type DeployClient interface {
 	Close() error
-	Upload(ctx context.Context, initiator string, srcbytes uint64, src io.Reader) (*Archive, error)
-	RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) error
+	Upload(ctx context.Context, meta *UploadMetadata, src io.Reader) (*Archive, error)
+	RemoteDeploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive, peers ...*Peer) error
 	Watch(ctx context.Context, out chan<- *Message) error
 	Logs(context.Context, *Peer, []byte) io.ReadCloser
 	Cancel(context.Context, *CancelRequest) error

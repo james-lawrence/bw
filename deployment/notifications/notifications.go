@@ -15,6 +15,7 @@ const (
 	EnvDeployID        = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID"
 	EnvDeployResult    = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT"
 	EnvDeployInitiator = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR"
+	EnvDeployCommit    = "BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_COMMIT"
 )
 
 // Creator ...
@@ -70,11 +71,9 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 		case EnvDeployResult:
 			return dc.Command.String()
 		case EnvDeployInitiator:
-			if dc.Archive == nil {
-				log.Println("deploy command missing archive, initiator will be blank")
-				return ""
-			}
-			return dc.Archive.GetInitiator()
+			return dc.GetInitiator()
+		case EnvDeployCommit:
+			return dc.Archive.Commit
 		default:
 			return os.Getenv(key)
 		}

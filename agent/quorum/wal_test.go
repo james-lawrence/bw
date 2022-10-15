@@ -87,7 +87,10 @@ func snapshotRestore(w WAL, buff io.ReadWriter, commands ...*agent.Message) erro
 	return nil
 }
 
-var p = agent.NewPeer("abc123")
+var (
+	p       = agent.NewPeer("abc123")
+	archive = &agent.Archive{}
+)
 var _ = DescribeTable(
 	"WAL Snapshot/Restore", func(commands ...*agent.Message) {
 		deployment := newDeployment(nil, nil)
@@ -105,25 +108,25 @@ var _ = DescribeTable(
 	},
 	Entry(
 		"successful deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 	Entry(
 		"failed deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
 	),
 	Entry(
 		"cancelled deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
 	),
 	Entry(
 		"sequential successful deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 	Entry(
 		"sequential cancelled deployment",
@@ -134,19 +137,19 @@ var _ = DescribeTable(
 	),
 	Entry(
 		"sequential failed, cancelled deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 	Entry(
 		"sequential deployment begin",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandRestart()),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 )
 
@@ -170,14 +173,14 @@ var _ = DescribeTable(
 		"successful deployment",
 		agent.NewWALPreamble(),
 		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 	Entry(
 		"sequential deployment begin",
 		agent.NewWALPreamble(),
 		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 	Entry(
 		"sequential deployment begin",
@@ -187,6 +190,6 @@ var _ = DescribeTable(
 		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
 		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
 		agent.NewDeployCommand(p, agent.DeployCommandRestart()),
-		agent.NewDeployCommand(p, agent.DeployCommandDone()),
+		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 )

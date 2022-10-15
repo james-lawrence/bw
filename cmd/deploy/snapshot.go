@@ -25,7 +25,7 @@ func Snapshot(ctx Context, out io.WriteCloser) (err error) {
 
 	log.Println("pid", os.Getpid())
 
-	if err = os.WriteFile(filepath.Join(config.DeployDataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return errors.Wrap(err, "failed to crreate bw.env")
 	}
 
@@ -34,14 +34,14 @@ func Snapshot(ctx Context, out io.WriteCloser) (err error) {
 	}
 
 	if _, err := os.Stat(filepath.Join(config.Dir(), bw.AuthKeysFile)); !os.IsNotExist(err) {
-		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.DeployDataDir, bw.AuthKeysFile)); err != nil {
+		if err = iox.Copy(filepath.Join(config.Dir(), bw.AuthKeysFile), filepath.Join(config.Deployment.DataDir, bw.AuthKeysFile)); err != nil {
 			return err
 		}
 	}
 
 	defer out.Close()
 
-	if err = archive.Pack(out, config.DeployDataDir); err != nil {
+	if err = archive.Pack(out, config.Deployment.DataDir); err != nil {
 		return err
 	}
 

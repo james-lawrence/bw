@@ -45,9 +45,9 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		return err
 	}
 
-	if len(config.DeployPrompt) > 0 {
+	if len(config.Deployment.Prompt) > 0 {
 		_, err := (&promptui.Prompt{
-			Label:     config.DeployPrompt,
+			Label:     config.Deployment.Prompt,
 			IsConfirm: true,
 		}).Run()
 
@@ -120,7 +120,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	archive = located.Archive
 
-	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", archive.Initiator, archive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", bw.DisplayName(), archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 
@@ -134,7 +134,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	peers = deployment.ApplyFilter(ctx.Filter, peers...)
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
-		Timeout:           int64(config.DeployTimeout),
+		Timeout:           int64(config.Deployment.Timeout),
 		IgnoreFailures:    ctx.Lenient,
 		SilenceDeployLogs: ctx.Silent,
 	}
@@ -146,7 +146,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, &dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(ctx.Context, bw.DisplayName(), &dopts, archive, peers...); cause != nil {
 		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 

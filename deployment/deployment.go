@@ -73,12 +73,13 @@ func AwaitDeployResult(dctx *DeployContext) *DeployResult {
 }
 
 // NewDeployContext create a deployment context from the provided settings.
-func NewDeployContext(ctx context.Context, root string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
+func NewDeployContext(ctx context.Context, root string, p *agent.Peer, by string, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	id := bw.RandomID(a.DeploymentID)
 
 	dctx := &DeployContext{
 		Local:         p,
 		ID:            id,
+		Initiator:     by,
 		Root:          root,
 		ArchiveRoot:   root,
 		TempRoot:      root,
@@ -121,7 +122,7 @@ func deployDirs(root string, a *agent.Archive) (bw.RandomID, string, string) {
 
 // NewRemoteDeployContext create new deployment context containing configuration information
 // for a single deploy.
-func NewRemoteDeployContext(ctx context.Context, workdir string, p *agent.Peer, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
+func NewRemoteDeployContext(ctx context.Context, workdir string, p *agent.Peer, by string, dopts *agent.DeployOptions, a *agent.Archive, options ...DeployContextOption) (_did *DeployContext, err error) {
 	var (
 		logger dlog
 	)
@@ -139,7 +140,7 @@ func NewRemoteDeployContext(ctx context.Context, workdir string, p *agent.Peer, 
 		}
 	}
 
-	return NewDeployContext(ctx, root, p, dopts, a, append([]DeployContextOption{
+	return NewDeployContext(ctx, root, p, by, dopts, a, append([]DeployContextOption{
 		DeployContextOptionLog(logger),
 		DeployContextOptionArchiveRoot(archiveDir),
 	}, options...)...)
@@ -151,6 +152,7 @@ type DeployContext struct {
 	completed     chan *DeployResult
 	ID            bw.RandomID
 	disableReset  bool
+	Initiator     string
 	Root          string
 	ArchiveFile   string
 	ArchiveRoot   string

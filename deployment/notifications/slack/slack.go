@@ -58,29 +58,12 @@ func (t Notifier) Notify(dc *agent.DeployCommand) {
 		return
 	}
 
-	if resp, err = http.Post(t.Webhook, "application/json", bytes.NewReader(raw)); err != nil {
+	if resp, err = t.client.Post(t.Webhook, "application/json", bytes.NewReader(raw)); err != nil {
 		log.Println(errors.Wrap(err, "failed to post webhook"))
 		return
 	}
 
 	if resp.StatusCode > 299 {
 		log.Println("webhook request failed with status code", resp.StatusCode)
-	}
-}
-
-func colorFromCommand(c agent.DeployCommand_Command) string {
-	const (
-		ok     = "#8eb573"
-		failed = "#FF0000"
-		warn   = "#00FFFF"
-	)
-
-	switch c {
-	case agent.DeployCommand_Done:
-		return ok
-	case agent.DeployCommand_Cancel:
-		return warn
-	default:
-		return failed
 	}
 }

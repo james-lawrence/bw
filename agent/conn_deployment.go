@@ -54,7 +54,7 @@ func (t DeployConn) Cancel(ctx context.Context, req *CancelRequest) error {
 }
 
 // Upload an archive to be deployed.
-func (t DeployConn) Upload(ctx context.Context, initiator string, total uint64, src io.Reader) (info *Archive, err error) {
+func (t DeployConn) Upload(ctx context.Context, m *UploadMetadata, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Deployments_UploadClient
 		_info  *UploadResponse
@@ -69,10 +69,7 @@ func (t DeployConn) Upload(ctx context.Context, initiator string, total uint64, 
 		Checksum: []byte{},
 		Data:     []byte{},
 		InitialChunkMetadata: &UploadChunk_Metadata{
-			Metadata: &UploadMetadata{
-				Bytes:     total,
-				Initiator: initiator,
-			},
+			Metadata: m,
 		},
 	}
 
@@ -99,13 +96,14 @@ func (t DeployConn) Upload(ctx context.Context, initiator string, total uint64, 
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t DeployConn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
+func (t DeployConn) RemoteDeploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
 	l := rate.NewLimiter(rate.Every(time.Second), 1)
 	rpc := NewDeploymentsClient(t.conn)
 	req := DeployCommandRequest{
-		Archive: a,
-		Options: dopts,
-		Peers:   peers,
+		Initiator: initiator,
+		Archive:   a,
+		Options:   dopts,
+		Peers:     peers,
 	}
 
 	for err = status.Error(codes.Unavailable, ""); grpcx.IsUnavailable(err); l.Wait(ctx) {

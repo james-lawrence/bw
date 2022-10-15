@@ -18,9 +18,14 @@ func New() *Notifier {
 	})
 
 	return &Notifier{
-		dst:     notify,
-		Title:   fmt.Sprintf("Deploy ${%s}", notifications.EnvDeployResult),
-		Message: fmt.Sprintf("${%s}\nBy: ${%s}", notifications.EnvDeployID, notifications.EnvDeployInitiator),
+		dst:   notify,
+		Title: fmt.Sprintf("Deploy ${%s}", notifications.EnvDeployResult),
+		Message: fmt.Sprintf(
+			"${%s}\nCommit: ${%s}\nBy: ${%s}",
+			notifications.EnvDeployID,
+			notifications.EnvDeployCommit,
+			notifications.EnvDeployInitiator,
+		),
 	}
 }
 

@@ -208,7 +208,12 @@ func (t Filesystem) upload() (err error) {
 	}
 	defer conn.Close()
 
-	if dc.Archive, err = agent.NewConn(conn).Upload(context.Background(), dc.Archive.Initiator, uint64(i.Size()), src); err != nil {
+	meta := &agent.UploadMetadata{
+		Bytes:     uint64(i.Size()),
+		Vcscommit: dc.Archive.Commit,
+	}
+
+	if dc.Archive, err = agent.NewConn(conn).Upload(context.Background(), meta, src); err != nil {
 		return err
 	}
 

@@ -7,3 +7,10 @@
 #   channel = "#general"
 #   webhook = "${WEBHOOK_URL}"
 #   message = "${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_INITIATOR} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_ID} - ${BEARDED_WOOKIE_NOTIFICATIONS_DEPLOY_RESULT}"
+
+#[[notifications.sentryio]]
+#  organization  = "${DEPLOYMENT_NOTIFICATION_SENTRYIO_ORGANIZATION}"
+#  authorization = "${DEPLOYMENT_NOTIFICATION_SENTRYIO_AUTHORIZATION}"
+#  environment   = "production"
+#  projects      = ["example-slug"]
+#  (optional) webhook       = "https://sentry.io/api/0/organizations/{organization}/releases/"

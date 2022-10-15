@@ -146,14 +146,40 @@ func deployToArchive(d *Deploy) (a *Archive) {
 	return &Archive{}
 }
 
-// DeployCommandBegin creates a begin deploy command.
-func DeployCommandBegin(by string, a *Archive, opts *DeployOptions) *DeployCommand {
-	return &DeployCommand{
-		Command:   DeployCommand_Begin,
+type doption func(*DeployCommand)
+
+func deployCommand(c DeployCommand_Command, by string, options ...doption) *DeployCommand {
+	cmd := &DeployCommand{
 		Initiator: by,
-		Archive:   a,
-		Options:   opts,
+		Command:   c,
 	}
+
+	for _, opt := range options {
+		opt(cmd)
+	}
+
+	return cmd
+}
+
+func (t *Archive) DeployOption(dc *DeployCommand) {
+	dc.Archive = t
+}
+
+func (t *DeployOptions) DeployOption(dc *DeployCommand) {
+	dc.Options = t
+}
+
+func updateDTS(dc *DeployCommand) {
+	if dc.Archive == nil {
+		return
+	}
+
+	dc.Archive.Dts = time.Now().Unix()
+}
+
+// DeployCommandBegin creates a begin deploy command.
+func DeployCommandBegin(by string, a *Archive, opts *DeployOptions, options ...doption) *DeployCommand {
+	return deployCommand(DeployCommand_Begin, by, append(options, a.DeployOption, opts.DeployOption)...)
 }
 
 // DeployCommandCancel create a cancellation command.
@@ -165,27 +191,18 @@ func DeployCommandCancel(by string) *DeployCommand {
 }
 
 // DeployCommandDone ...
-func DeployCommandDone() *DeployCommand {
-	return &DeployCommand{
-		Command: DeployCommand_Done,
-	}
+func DeployCommandDone(by string, options ...doption) *DeployCommand {
+	return deployCommand(DeployCommand_Done, by, append(options, updateDTS)...)
 }
 
 // DeployCommandFailedQuick ...
-func DeployCommandFailedQuick() *DeployCommand {
-	return &DeployCommand{
-		Command: DeployCommand_Failed,
-	}
+func DeployCommandFailedQuick(options ...doption) *DeployCommand {
+	return DeployCommandFailed("", options...)
 }
 
 // DeployCommandFailed ...
-func DeployCommandFailed(by string, a *Archive, opts *DeployOptions) *DeployCommand {
-	return &DeployCommand{
-		Command:   DeployCommand_Failed,
-		Initiator: by,
-		Archive:   a,
-		Options:   opts,
-	}
+func DeployCommandFailed(by string, options ...doption) *DeployCommand {
+	return deployCommand(DeployCommand_Failed, by, append(options, updateDTS)...)
 }
 
 // DeployCommandRestart delivered when a deploy is automatically restarting.
@@ -210,20 +227,20 @@ func NewDeployCommand(p *Peer, dc *DeployCommand) *Message {
 
 // DeployEvent represents a deploy being triggered.
 func DeployEvent(p *Peer, d *Deploy) *Message {
-	return deployEvent(d.Stage, p, deployToOptions(d), deployToArchive(d), "")
+	return deployEvent(d.Stage, p, d.Initiator, deployToOptions(d), deployToArchive(d), "")
 }
 
-func DeployEventFailed(p *Peer, di *DeployOptions, a *Archive, cause error) *Message {
-	return deployEvent(Deploy_Failed, p, di, a, cause.Error())
+func DeployEventFailed(p *Peer, by string, di *DeployOptions, a *Archive, cause error) *Message {
+	return deployEvent(Deploy_Failed, p, by, di, a, cause.Error())
 }
 
-func deployEvent(t Deploy_Stage, p *Peer, di *DeployOptions, a *Archive, err string) *Message {
+func deployEvent(t Deploy_Stage, p *Peer, by string, di *DeployOptions, a *Archive, err string) *Message {
 	return &Message{
 		Id:    uuid.Must(uuid.NewV4()).String(),
 		Type:  Message_DeployEvent,
 		Peer:  p,
 		Ts:    time.Now().Unix(),
-		Event: &Message_Deploy{Deploy: &Deploy{Stage: t, Options: di, Archive: a, Error: err}},
+		Event: &Message_Deploy{Deploy: &Deploy{Stage: t, Initiator: by, Options: di, Archive: a, Error: err}},
 	}
 }
 

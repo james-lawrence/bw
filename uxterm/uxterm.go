@@ -62,5 +62,5 @@ func DeploymentString(c *agent.DeployCommand) string {
 		return "None"
 	}
 
-	return fmt.Sprintf("%s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Archive.Initiator, c.Command.String())
+	return fmt.Sprintf("%s - %s - %s", bw.RandomID(c.Archive.DeploymentID), c.Initiator, c.Command.String())
 }

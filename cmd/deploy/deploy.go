@@ -26,6 +26,7 @@ import (
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -73,9 +74,9 @@ func Into(ctx *Context) error {
 
 	log.Println("pid", os.Getpid())
 
-	if len(config.DeployPrompt) > 0 {
+	if len(config.Deployment.Prompt) > 0 {
 		_, err := (&promptui.Prompt{
-			Label:     config.DeployPrompt,
+			Label:     config.Deployment.Prompt,
 			IsConfirm: true,
 		}).Run()
 
@@ -168,7 +169,12 @@ func Into(ctx *Context) error {
 			return nil
 		}
 
-		if darchive, err = client.Upload(ctx.Context, bw.DisplayName(), uint64(dstinfo.Size()), dst); err != nil {
+		meta := agent.UploadMetadata{
+			Bytes:     uint64(dstinfo.Size()),
+			Vcscommit: vcsinfo.Commitish(config.WorkDir(), config.Deployment.CommitRef),
+		}
+
+		if darchive, err = client.Upload(ctx.Context, &meta, dst); err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
 			events <- agent.LogEvent(local, "deployment failed")
 			return err
@@ -181,7 +187,7 @@ func Into(ctx *Context) error {
 		return err
 	}
 
-	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", darchive.Initiator, darchive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", bw.DisplayName(), darchive.Location))
 
 	max := ctx.Concurrency
 	if ctx.Concurrency == 0 {
@@ -198,7 +204,7 @@ func Into(ctx *Context) error {
 	peers = deployment.ApplyFilter(ctx.Filter, peers...)
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
-		Timeout:           int64(config.DeployTimeout),
+		Timeout:           int64(config.Deployment.Timeout),
 		IgnoreFailures:    ctx.Lenient,
 		SilenceDeployLogs: ctx.Silent,
 	}
@@ -210,10 +216,10 @@ func Into(ctx *Context) error {
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, &dopts, darchive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(ctx.Context, bw.DisplayName(), &dopts, darchive, peers...); cause != nil {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
-		events <- agent.DeployEventFailed(local, &dopts, darchive, cause)
-		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed("", darchive, &dopts))
+		events <- agent.DeployEventFailed(local, bw.DisplayName(), &dopts, darchive, cause)
+		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(bw.DisplayName(), darchive.DeployOption, dopts.DeployOption))
 	}
 
 	return err

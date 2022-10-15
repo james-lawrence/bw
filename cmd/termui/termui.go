@@ -11,7 +11,7 @@ import (
 )
 
 func NewFromClientConfig(ctx context.Context, c agent.ConfigClient, d dialers.Defaults, local *agent.Peer, events chan *agent.Message) {
-	dctx, ddone := context.WithTimeout(ctx, c.DeployTimeout+time.Minute)
+	dctx, ddone := context.WithTimeout(ctx, c.Deployment.Timeout+time.Minute)
 	New(dctx, ddone, d, local, events)
 }
 

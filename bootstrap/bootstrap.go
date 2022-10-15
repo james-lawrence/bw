@@ -165,7 +165,7 @@ func Bootstrap(ctx context.Context, c agent.Config, coord deployment.Coordinator
 	defer cancel()
 
 	log.Println("bootstrapping", bw.RandomID(latest.Archive.DeploymentID), "with options", spew.Sdump(opts))
-	if _, err = coord.Deploy(deadline, opts, latest.Archive); err != nil {
+	if _, err = coord.Deploy(deadline, latest.Initiator, opts, latest.Archive); err != nil {
 		return errors.WithStack(err)
 	}
 

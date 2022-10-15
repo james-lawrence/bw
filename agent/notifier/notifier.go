@@ -59,9 +59,7 @@ func (t Notifier) Start(ctx context.Context, local, proxy *agent.Peer, d dialer)
 func notifyDeployCommand(n notifications.Notifier, dc *agent.DeployCommand) {
 	switch dc.Command {
 	case agent.DeployCommand_Begin, agent.DeployCommand_Cancel, agent.DeployCommand_Done, agent.DeployCommand_Failed:
-		if dc.Archive != nil {
-			n.Notify(dc)
-		}
+		n.Notify(dc)
 	default:
 	}
 }

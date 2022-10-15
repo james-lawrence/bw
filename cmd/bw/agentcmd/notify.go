@@ -15,6 +15,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/deployment/notifications"
 	"github.com/james-lawrence/bw/deployment/notifications/native"
+	"github.com/james-lawrence/bw/deployment/notifications/sentryio"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
@@ -54,9 +55,10 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	}
 
 	n, err := notifications.DecodeConfig(filepath.Join(filepath.Dir(t.Location), t.Notifications), map[string]notifications.Creator{
-		"default": func() notifications.Notifier { return notifications.New() },
-		"desktop": func() notifications.Notifier { return native.New() },
-		"slack":   func() notifications.Notifier { return slack.New() },
+		"default":  func() notifications.Notifier { return notifications.New() },
+		"desktop":  func() notifications.Notifier { return native.New() },
+		"slack":    func() notifications.Notifier { return slack.New() },
+		"sentryio": func() notifications.Notifier { return sentryio.New() },
 	})
 	if err != nil {
 		return err

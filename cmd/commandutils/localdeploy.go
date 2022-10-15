@@ -16,7 +16,7 @@ import (
 
 // RemoteTasksAvailable determine if we need to run any remote tasks.
 func RemoteTasksAvailable(config agent.ConfigClient) bool {
-	debugx.Println("checking if remote tasks exist", filepath.Join(config.DeployDataDir, deployment.RemoteDirName))
+	debugx.Println("checking if remote tasks exist", filepath.Join(config.Deployment.DataDir, deployment.RemoteDirName))
 	defer debugx.Println("done checking")
 
 	_, err := os.Stat(filepath.Join(config.Deployspace(), deployment.RemoteDirName))
@@ -59,8 +59,9 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		context.Background(),
 		cdir,
 		local,
+		bw.DisplayName(),
 		&agent.DeployOptions{
-			Timeout: int64(config.DeployTimeout),
+			Timeout: int64(config.Deployment.Timeout),
 		},
 		&agent.Archive{},
 		deployment.DeployContextOptionLog(deployment.StdErrLogger("[LOCAL] ")),

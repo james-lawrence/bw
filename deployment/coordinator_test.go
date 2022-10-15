@@ -33,7 +33,6 @@ var _ = Describe("Coordinator", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
 		a := &agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
@@ -44,7 +43,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(context.Background(), dopts, a)
+		_, err = c.Deploy(context.Background(), "test user", dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -68,7 +67,6 @@ var _ = Describe("Coordinator", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
 		a := &agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
@@ -79,7 +77,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(context.Background(), dopts, a)
+		_, err = c.Deploy(context.Background(), "test user", dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -87,12 +85,11 @@ var _ = Describe("Coordinator", func() {
 		Expect(deploys).To(HaveLen(1))
 
 		a2 := &agent.Archive{
-			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		_, err = c.Deploy(context.Background(), dopts, a2)
-		Expect(err).To(MatchError(fmt.Sprintf("%s is already deploying: %s - Deploying", a.Initiator, bw.RandomID(a.DeploymentID).String())))
+		_, err = c.Deploy(context.Background(), "test user 2", dopts, a2)
+		Expect(err).To(MatchError(fmt.Sprintf("test user is already deploying: %s - Deploying", bw.RandomID(a.DeploymentID).String())))
 
 		Eventually(func() []*agent.Deploy {
 			deploys, err := c.Deployments()
@@ -113,7 +110,6 @@ var _ = Describe("Coordinator", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
 		a := &agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
@@ -124,17 +120,16 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(context.Background(), dopts, a)
+		_, err = c.Deploy(context.Background(), "test user", dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		c.Cancel()
 
 		a2 := &agent.Archive{
-			Initiator:    "test user 2",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
-		_, err = c.Deploy(context.Background(), dopts, a2)
+		_, err = c.Deploy(context.Background(), "test user 2", dopts, a2)
 		Expect(err).ToNot(HaveOccurred())
 
 		deploys, err = c.Deployments()
@@ -154,7 +149,6 @@ var _ = Describe("Coordinator", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(deploys).To(HaveLen(0))
 		a := &agent.Archive{
-			Initiator:    "test user",
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
@@ -165,7 +159,7 @@ var _ = Describe("Coordinator", func() {
 			Timeout:           int64(time.Minute),
 		}
 
-		_, err = c.Deploy(context.Background(), dopts, a)
+		_, err = c.Deploy(context.Background(), "test user", dopts, a)
 		Expect(err).ToNot(HaveOccurred())
 
 		c.Cancel()

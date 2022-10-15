@@ -38,7 +38,7 @@ type Proxy struct {
 // The deploy itself is run asychronously as they take awhile, letting callers
 // continue on. But it will error out if there are issues initiating the deploy.
 // such as another deploy is currently running.
-func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archive *agent.Archive, peers ...*agent.Peer) (err error) {
+func (t Proxy) Deploy(dialer dialers.Defaults, by string, dopts *agent.DeployOptions, archive *agent.Archive, peers ...*agent.Peer) (err error) {
 	var (
 		filter deployment.Filter
 	)
@@ -47,11 +47,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 	qd := dialers.NewQuorum(t.c, dialer.Defaults()...)
 	d := agentutil.NewDispatcher(qd)
 
-	cmd := &agent.DeployCommand{
-		Command: agent.DeployCommand_Begin,
-		Options: dopts,
-		Archive: archive,
-	}
+	cmd := agent.DeployCommandBegin(by, archive, dopts)
 
 	if err = d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), cmd)); err != nil {
 		return err
@@ -77,15 +73,15 @@ func (t Proxy) Deploy(dialer dialers.Defaults, dopts *agent.DeployOptions, archi
 
 	// At this point the deploy could take awhile, so we shunt it into the background.
 	go func() {
-		dcmd := agent.DeployCommand{Command: agent.DeployCommand_Failed, Archive: archive, Options: dopts}
+		dcmd := agent.DeployCommandFailed(by, archive.DeployOption, dopts.DeployOption)
 		if _, success := deployment.RunDeploy(t.c.Local(), t.c, d, options...); success {
-			dcmd = agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: dopts}
+			dcmd = agent.DeployCommandDone(by, archive.DeployOption, dopts.DeployOption)
 		}
 
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment complete", spew.Sdump(&dcmd))
 		}
-		logx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), &dcmd)))
+		logx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), dcmd)))
 	}()
 
 	return nil

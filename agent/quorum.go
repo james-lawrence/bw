@@ -8,7 +8,7 @@ import (
 )
 
 type quorum interface {
-	Deploy(opts *DeployOptions, a *Archive, peers ...*Peer) error
+	Deploy(by string, opts *DeployOptions, a *Archive, peers ...*Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
 	History(context.Context) ([]*Message, error)
@@ -63,7 +63,7 @@ func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *Deplo
 		return nil, err
 	}
 
-	if err = t.q.Deploy(req.Options, req.Archive, req.Peers...); grpcx.IsUnavailable(err) {
+	if err = t.q.Deploy(req.Initiator, req.Options, req.Archive, req.Peers...); grpcx.IsUnavailable(err) {
 		return nil, err
 	}
 

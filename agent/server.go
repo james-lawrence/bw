@@ -24,7 +24,7 @@ type connector interface {
 // Coordinator is in charge of coordinating deployments.
 type deployer interface {
 	// Deploy trigger a deploy
-	Deploy(context.Context, *DeployOptions, *Archive) (*Deploy, error)
+	Deploy(context.Context, string, *DeployOptions, *Archive) (*Deploy, error)
 	// Cancel current deploy
 	Cancel()
 	Reset() error
@@ -34,7 +34,7 @@ type deployer interface {
 
 type noopDeployer struct{}
 
-func (t noopDeployer) Deploy(context.Context, *DeployOptions, *Archive) (d *Deploy, err error) {
+func (t noopDeployer) Deploy(context.Context, string, *DeployOptions, *Archive) (d *Deploy, err error) {
 	return &Deploy{}, err
 }
 
@@ -140,7 +140,7 @@ func (t Server) Deploy(ctx context.Context, dreq *DeployRequest) (*DeployRespons
 		return nil, err
 	}
 
-	if d, err = t.Deployer.Deploy(context.Background(), dreq.Options, dreq.Archive); err != nil {
+	if d, err = t.Deployer.Deploy(context.Background(), dreq.Initiator, dreq.Options, dreq.Archive); err != nil {
 		return nil, err
 	}
 

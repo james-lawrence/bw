@@ -11,7 +11,7 @@ message Archive {
   bytes checksum = 4;
   int64 ts = 5;  // unix timestamp marking the time the archive was created.
   int64 dts = 7; // marks the time the archive was deployed.
-  string initiator = 6;
+  string commit = 8;
 }
 
 message PeerMetadata {
@@ -132,6 +132,7 @@ message Deploy {
     Completed = 2;
   }
   Stage stage = 1;
+  string initiator = 5;
   Archive archive = 2;
   DeployOptions options = 4;
   string error = 3;
@@ -139,6 +140,7 @@ message Deploy {
 
 message DeployCommandRequest {
   Archive archive = 1;
+  string initiator = 2;
   DeployOptions options = 5;
   repeated Peer peers = 4;
 }
@@ -148,7 +150,7 @@ message Log { string log = 1; }
 
 message UploadMetadata {
   uint64 bytes = 1;
-  string initiator = 2;
+  string vcscommit = 5;
 }
 
 message UploadChunk {
@@ -213,6 +215,7 @@ message StatusResponse {
 message DeployRequest {
   Archive archive = 1;
   DeployOptions options = 2;
+  string initiator = 3;
 }
 
 message DeployResponse { Deploy deploy = 1; }

@@ -110,8 +110,8 @@ func (t *deployment) getRunningDeploy() *agent.DeployCommand {
 }
 
 // Deploy trigger a deploy.
-func (t *deployment) deploy(d dialers.Defaults, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
-	return t.d.Deploy(d, dopts, a, peers...)
+func (t *deployment) deploy(d dialers.Defaults, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
+	return t.d.Deploy(d, by, dopts, a, peers...)
 }
 
 // Cancel a ongoing deploy.
@@ -139,11 +139,10 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 	}
 
 	return sm.Dispatch(ctx,
-		agent.NewDeployCommand(t.c.Local(), &agent.DeployCommand{
-			Command: agent.DeployCommand_Done,
-			Archive: deploy.Archive,
-			Options: deploy.Options,
-		}),
+		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandDone(
+			deploy.Initiator,
+			deploy.Archive.DeployOption,
+		)),
 	)
 }
 
@@ -178,7 +177,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 			return errors.Wrap(err, "cancellation failure")
 		}
 
-		if err = t.deploy(d, dc.Options, dc.Archive, t.c.Peers()...); err != nil {
+		if err = t.deploy(d, dc.Initiator, dc.Options, dc.Archive, t.c.Peers()...); err != nil {
 			return errors.Wrap(err, "deploy failure")
 		}
 	}

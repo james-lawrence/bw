@@ -11,7 +11,9 @@ import (
 	"github.com/hashicorp/memberlist"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/timex"
 )
 
 // ConfigClientOption options for the client configuration.
@@ -40,7 +42,7 @@ func CCOptionAddress(s string) ConfigClientOption {
 // CCOptionDeployDataDir set the deployment configuration directory for the configuration.
 func CCOptionDeployDataDir(s string) ConfigClientOption {
 	return func(c *ConfigClient) {
-		c.DeployDataDir = s
+		c.Deployment.DataDir = s
 	}
 }
 
@@ -67,12 +69,18 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 	return template
 }
 
+func defaultDeployment() Deployment {
+	return Deployment{
+		Timeout: bw.DefaultDeployTimeout,
+		DataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
+	}
+}
+
 // DefaultConfigClient creates a default client configuration.
 func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 	config := ConfigClient{
-		DeployTimeout: bw.DefaultDeployTimeout,
-		Address:       systemx.HostnameOrLocalhost(),
-		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
+		Deployment: defaultDeployment(),
+		Address:    systemx.HostnameOrLocalhost(),
 	}
 
 	ConfigClientTLS(bw.DefaultEnvironmentName)(&config)
@@ -82,11 +90,11 @@ func DefaultConfigClient(options ...ConfigClientOption) ConfigClient {
 
 // ExampleConfigClient creates an example configuration.
 func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
+	deploy := defaultDeployment()
+	deploy.Prompt = "are you sure you want to deploy? (remove this field to disable the prompt)"
 	config := ConfigClient{
-		Address:       systemx.HostnameOrLocalhost(),
-		DeployDataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
-		DeployPrompt:  "are you sure you want to deploy? (remove this field to disable the prompt)",
-		DeployTimeout: bw.DefaultDeployTimeout,
+		Deployment: deploy,
+		Address:    systemx.HostnameOrLocalhost(),
 	}
 
 	ConfigClientTLS(bw.DefaultEnvironmentName)(&config)
@@ -94,15 +102,23 @@ func ExampleConfigClient(options ...ConfigClientOption) ConfigClient {
 	return NewConfigClient(config, options...)
 }
 
+type Deployment struct {
+	DataDir   string        `yaml:"dir"`
+	Timeout   time.Duration `yaml:"timeout"`
+	Prompt    string        `yaml:"prompt"`  // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
+	CommitRef string        `yaml:"treeish"` // used to populate commit information in the environment
+}
+
 // ConfigClient ...
 type ConfigClient struct {
-	root          string `yaml:"-"` // filepath of the configuration on disk.
-	Address       string // cluster address
-	Concurrency   float64
-	DeployDataDir string        `yaml:"deployDataDir"`
-	DeployTimeout time.Duration `yaml:"deployTimeout"`
-	DeployPrompt  string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
-	Credentials   struct {
+	root                    string `yaml:"-"` // filepath of the configuration on disk.
+	Address                 string // cluster address
+	Concurrency             float64
+	Deployment              Deployment    `yaml:"deploy"`
+	DeprecatedDeployDataDir string        `yaml:"deployDataDir"`
+	DeprecatedDeployTimeout time.Duration `yaml:"deployTimeout"`
+	DeprecatedDeployPrompt  string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
+	Credentials             struct {
 		Mode      string `yaml:"source"`
 		Directory string `yaml:"directory"`
 		Insecure  bool   `yaml:"-"`
@@ -121,6 +137,19 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 
 	t.root = filepath.Dir(path)
 
+	t.Deployment.DataDir = stringsx.DefaultIfBlank(
+		t.DeprecatedDeployDataDir,
+		t.Deployment.DataDir,
+	)
+	t.Deployment.Timeout = timex.DurationOrDefault(
+		t.DeprecatedDeployTimeout,
+		t.Deployment.Timeout,
+	)
+	t.Deployment.Prompt = stringsx.DefaultIfBlank(
+		t.DeprecatedDeployPrompt,
+		t.Deployment.Prompt,
+	)
+
 	return t, nil
 }
 
@@ -130,9 +159,9 @@ func (t ConfigClient) Dir() string {
 }
 
 func (t ConfigClient) Deployspace() string {
-	cdir := t.DeployDataDir
+	cdir := t.Deployment.DataDir
 	if !filepath.IsAbs(cdir) {
-		cdir = filepath.Join(t.WorkDir(), t.DeployDataDir)
+		cdir = filepath.Join(t.WorkDir(), t.Deployment.DataDir)
 	}
 
 	return cdir

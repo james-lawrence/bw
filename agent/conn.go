@@ -102,7 +102,7 @@ func (t Conn) QuorumInfo(ctx context.Context) (z *InfoResponse, err error) {
 }
 
 // Upload ...
-func (t Conn) Upload(ctx context.Context, initiator string, total uint64, src io.Reader) (info *Archive, err error) {
+func (t Conn) Upload(ctx context.Context, meta *UploadMetadata, src io.Reader) (info *Archive, err error) {
 	var (
 		stream Quorum_UploadClient
 		_info  *UploadResponse
@@ -117,10 +117,7 @@ func (t Conn) Upload(ctx context.Context, initiator string, total uint64, src io
 		Checksum: []byte{},
 		Data:     []byte{},
 		InitialChunkMetadata: &UploadChunk_Metadata{
-			Metadata: &UploadMetadata{
-				Bytes:     total,
-				Initiator: initiator,
-			},
+			Metadata: meta,
 		},
 	}
 
@@ -147,12 +144,13 @@ func (t Conn) Upload(ctx context.Context, initiator string, total uint64, src io
 
 // RemoteDeploy deploy using a remote server to coordinate, takes an archive an a list.
 // of servers to deploy to.
-func (t Conn) RemoteDeploy(ctx context.Context, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
+func (t Conn) RemoteDeploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive, peers ...*Peer) (err error) {
 	rpc := NewQuorumClient(t.conn)
 	req := DeployCommandRequest{
-		Archive: a,
-		Options: dopts,
-		Peers:   peers,
+		Initiator: initiator,
+		Archive:   a,
+		Options:   dopts,
+		Peers:     peers,
 	}
 
 	if _, err = rpc.Deploy(ctx, &req); err != nil {
