@@ -142,6 +142,7 @@ func (t *deployment) determineLatestDeploy(ctx context.Context, d dialers.Defaul
 		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandDone(
 			deploy.Initiator,
 			deploy.Archive.DeployOption,
+			deploy.Options.DeployOption,
 		)),
 	)
 }

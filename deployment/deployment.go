@@ -11,11 +11,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/logx"
 )
 
@@ -299,4 +301,18 @@ func (t DeployResult) complete() *agent.Deploy {
 
 type dispatcher interface {
 	Dispatch(context.Context, ...*agent.Message) error
+}
+
+func heartbeat(ctx context.Context, local *agent.Peer, freq rate.Limit, d dispatcher) {
+	var (
+		err error
+	)
+
+	l := rate.NewLimiter(freq, 1)
+
+	for err = l.Wait(ctx); err == nil; err = l.Wait(ctx) {
+		agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local))
+	}
+
+	errorsx.MaybeLog(errors.Wrap(err, "heartbeat ending"))
 }

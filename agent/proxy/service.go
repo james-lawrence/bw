@@ -65,6 +65,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, by string, dopts *agent.DeployOpt
 		deployment.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployment.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
 		deployment.DeployOptionTimeoutGrace(time.Duration(dopts.Timeout)),
+		deployment.DeployOptionHeartbeatFrequency(time.Duration(dopts.Heartbeat)),
 		deployment.DeployOptionMonitor(deployment.NewMonitor(
 			deployment.MonitorTicklerEvent(t.c.Local(), qd),
 			deployment.MonitorTicklerPeriodicAuto(time.Minute),

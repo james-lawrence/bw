@@ -12,7 +12,9 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 )
 
 const deployGracePeriod = time.Minute
@@ -110,6 +112,13 @@ func DeployOptionTimeout(t time.Duration) Option {
 	}
 }
 
+// DeployOptionHeartbeatFrequency frequency at which to emit heartbeat events.
+func DeployOptionHeartbeatFrequency(t time.Duration) Option {
+	return func(d *Deploy) {
+		d.worker.heartbeat = timex.DurationOrDefault(t, 5*time.Second)
+	}
+}
+
 // NewDeploy by default deploys operate in one-at-a-time mode.
 func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
@@ -124,6 +133,7 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 			completed:  new(int64),
 			failed:     new(int64),
 			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
+			heartbeat:  5 * time.Second,
 			queue:      make(chan *pending),
 		},
 		partitioner: bw.ConstantPartitioner(1),
@@ -172,6 +182,7 @@ type worker struct {
 	failed         *int64
 	ignoreFailures bool
 	timeout        time.Duration
+	heartbeat      time.Duration
 	queue          chan *pending
 }
 
@@ -180,7 +191,7 @@ func (t worker) work(ctx context.Context) {
 	for op := range t.c {
 		// Stop deployment when a single node fails.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			agentutil.Dispatch(t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+			agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
 			continue
 		}
 
@@ -248,8 +259,9 @@ type Deploy struct {
 func (t Deploy) Deploy(c cluster) (int64, bool) {
 	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+deployGracePeriod)
 	defer done()
+
 	nodes := ApplyFilter(t.filter, c.Peers()...)
-	agentutil.Dispatch(t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes))))
+	agentutil.Dispatch(ctx, t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
@@ -263,16 +275,18 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
+	go heartbeat(ctx, t.worker.local, rate.Every(t.worker.heartbeat), t.dispatcher)
+
 	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
+			agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
 			return 0, false
 		default:
 		}
 	}
 
-	agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying"))
+	agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying"))
 
 	go func() {
 		for _, peer := range nodes {
@@ -291,7 +305,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	if failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
+			agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
 		default:
 		}
 	}

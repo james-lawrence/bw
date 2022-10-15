@@ -108,6 +108,19 @@ func NewLogHistoryFromMessages(p *Peer, m ...*Message) *Message {
 	return NewLogHistoryMessage(p, NewLogHistoryEvent(m...))
 }
 
+func NewDeployHeartbeat(p *Peer) *Message {
+	return &Message{
+		Id:        uuid.Must(uuid.NewV4()).String(),
+		Type:      Message_DeployHeartbeat,
+		Ephemeral: true,
+		Peer:      p,
+		Ts:        time.Now().Unix(),
+		Event: &Message_Heartbeat{
+			Heartbeat: &DeployHeartbeat{},
+		},
+	}
+}
+
 // PeerEvent ...
 func PeerEvent(p *Peer) *Message {
 	return &Message{

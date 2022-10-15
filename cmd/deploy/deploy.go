@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -26,6 +27,7 @@ import (
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
@@ -37,9 +39,11 @@ type Context struct {
 	Environment string
 	Concurrency int64
 	Filter      deployment.Filter
+	Verbose     bool
 	Insecure    bool
 	Lenient     bool
 	Silent      bool
+	Heartbeat   time.Duration
 	AllowEmpty  bool
 	Canary      bool
 	Debug       bool
@@ -114,7 +118,12 @@ func Into(ctx *Context) error {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
-	termui.NewFromClientConfig(ctx.Context, config, d, local, events)
+	// termui.NewFromClientConfig(ctx.Context, config, d, local, events, )
+	termui.NewFromClientConfig(
+		ctx.Context, config, d, local, events,
+		ux.OptionHeartbeat(ctx.Heartbeat),
+		ux.OptionDebug(ctx.Verbose),
+	)
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
@@ -205,6 +214,7 @@ func Into(ctx *Context) error {
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.Deployment.Timeout),
+		Heartbeat:         int64(ctx.Heartbeat),
 		IgnoreFailures:    ctx.Lenient,
 		SilenceDeployLogs: ctx.Silent,
 	}

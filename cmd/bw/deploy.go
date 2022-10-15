@@ -4,6 +4,7 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/deploy"
@@ -24,6 +25,7 @@ type DeployCluster struct {
 	Debug       bool             `help:"leaves artifacts on the filesystem for debugging"`
 	Lenient     bool             `name:"ignore-failures" help:"ignore failed deploys"`
 	Canary      bool             `name:"canary" help:"deploy to the canary server" default:"false"`
+	Heartbeat   time.Duration    `name:"heartbeat" help:"frequency at which the deploy should emit a heartbeat" default:"10s"`
 	Names       []*regexp.Regexp `name:"name" help:"regex to match names against"`
 	IPs         []net.IP         `name:"ip" help:"match against the provided IP addresses"`
 	Concurrency int64            `name:"concurrency" help:"number of nodes allowed to deploy simultaneously"`
@@ -53,9 +55,11 @@ func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 		Concurrency: t.Concurrency,
 		Insecure:    t.Insecure,
+		Heartbeat:   t.Heartbeat,
 		Lenient:     t.Lenient,
 		Silent:      t.Silent,
 		Canary:      t.Canary,
@@ -90,10 +94,12 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 		Concurrency: t.Concurrency,
 		Insecure:    t.Insecure,
 		Lenient:     t.Lenient,
+		Heartbeat:   t.Heartbeat,
 		Silent:      t.Silent,
 		Canary:      t.Canary,
 		Debug:       t.Debug,
@@ -112,6 +118,7 @@ func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
 		Insecure:    t.Insecure,
 		Environment: t.Environment,
 		Debug:       t.Debug,
@@ -132,6 +139,7 @@ func (t cmdDeploySnapshot) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 	}, t.snapshotOutput)
 }
@@ -146,6 +154,7 @@ func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 		Insecure:    t.Insecure,
 		Debug:       t.Debug,

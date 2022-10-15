@@ -209,7 +209,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
 		soft = logx.MaybeLog(errors.Wrap(soft, "failed to clear workspace directory"))
-		agentutil.Dispatch(t.dispatcher, agent.LogError(t.local, soft))
+		agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft))
 	}
 
 	dcopts := []DeployContextOption{
@@ -217,7 +217,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	}
 
 	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, by, opts, archive, dcopts...); err != nil {
-		agentutil.Dispatch(t.dispatcher, agent.LogError(t.local, err))
+		agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, err))
 		return t.ds.current, err
 	}
 
@@ -281,7 +281,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		agentutil.Dispatch(t.dispatcher, agent.LogEvent(t.local, "cancelled deploy"))
+		agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogEvent(t.local, "cancelled deploy"))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}

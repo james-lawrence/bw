@@ -25,8 +25,8 @@ type dispatcher interface {
 
 // Dispatch messages using the provided dispatcher will log and return the error,
 // if any, that occurs.
-func Dispatch(d dispatcher, m ...*agent.Message) error {
-	return logx.MaybeLog(_dispatch(context.Background(), d, dispatchTimeout, m...))
+func Dispatch(ctx context.Context, d dispatcher, m ...*agent.Message) error {
+	return logx.MaybeLog(_dispatch(ctx, d, dispatchTimeout, m...))
 }
 
 // ReliableDispatch repeatedly attempts to deliver messages using the provided

@@ -94,7 +94,8 @@ func Locally(ctx *Context, debug bool) (err error) {
 		local,
 		bw.DisplayName(),
 		&agent.DeployOptions{
-			Timeout: int64(config.Deployment.Timeout),
+			Timeout:   int64(config.Deployment.Timeout),
+			Heartbeat: int64(ctx.Heartbeat),
 		},
 		&agent.Archive{
 			Location: dst.Name(),

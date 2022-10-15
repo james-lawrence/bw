@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -25,11 +26,24 @@ func OptionFailureDisplay(fd failureDisplay) Option {
 	}
 }
 
+func OptionHeartbeat(d time.Duration) Option {
+	return func(cs *cState) {
+		cs.heartbeat = 3 * d
+	}
+}
+
+func OptionDebug(b bool) Option {
+	return func(cs *cState) {
+		cs.debug = b
+	}
+}
+
 // Deploy monitor a deploy.
 func Deploy(ctx context.Context, events chan *agent.Message, options ...Option) {
 	var (
-		s consumer = deploying{
+		s = deploying{
 			cState: cState{
+				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
@@ -38,14 +52,15 @@ func Deploy(ctx context.Context, events chan *agent.Message, options ...Option) 
 		}
 	)
 
-	run(ctx, events, s)
+	s.run(ctx, events, s)
 }
 
 // Logging based ux
 func Logging(ctx context.Context, events chan *agent.Message, options ...Option) {
 	var (
-		s consumer = tail{
+		s = tail{
 			cState: cState{
+				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
@@ -54,13 +69,20 @@ func Logging(ctx context.Context, events chan *agent.Message, options ...Option)
 		}
 	)
 
-	run(ctx, events, s)
+	s.run(ctx, events, s)
 }
 
-func run(ctx context.Context, events chan *agent.Message, s consumer) {
-	var last *agent.Message
+func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer) {
+	var (
+		last *agent.Message
+	)
+
 	for {
 		select {
+		case <-time.After(t.heartbeat):
+			t.Logger.Println(
+				t.au.Yellow(fmt.Sprintf("no message has been received within the time limit %s", t.heartbeat)),
+			)
 		case m := <-events:
 			switch local := m.Event.(type) {
 			case *agent.Message_History:
@@ -119,6 +141,8 @@ type cState struct {
 	FailureDisplay failureDisplay
 	Logger         *log.Logger
 	au             aurora.Aurora
+	heartbeat      time.Duration
+	debug          bool
 }
 
 func (t cState) merge(options ...Option) cState {
@@ -173,6 +197,10 @@ func (t cState) print(m *agent.Message) {
 				messagePrefix(m),
 				d.Log,
 			)
+		}
+	case agent.Message_DeployHeartbeat:
+		if t.debug {
+			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 		}
 	default:
 		t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)

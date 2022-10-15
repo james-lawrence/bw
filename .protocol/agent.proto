@@ -60,6 +60,8 @@ message ConnectionEvent {
   string description = 2;
 }
 
+message DeployHeartbeat {}
+
 // Represents every message sent between nodes. effectively describes all
 // possible events we may want to act upon.
 message Message {
@@ -75,6 +77,7 @@ message Message {
     PeersFoundEvent = 4;
     PeersCompletedEvent = 5;
     LogHistoryEvent = 6;
+    DeployHeartbeat = 7;
   }
 
   string id = 9;
@@ -97,6 +100,7 @@ message Message {
     NodeEvent membership = 10;
     LogHistoryEvent history = 11;
     ConnectionEvent connection = 12;
+    DeployHeartbeat heartbeat = 13;
   }
 }
 
@@ -109,6 +113,8 @@ message DeployOptions {
   bool ignoreFailures = 4;
   // silence the deploy logging.
   bool silenceDeployLogs = 5;
+  // heartbeat frequency.
+  int64 heartbeat = 6;
 }
 
 message DeployCommand {

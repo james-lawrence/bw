@@ -21,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/ux"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -92,7 +93,11 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	client = agent.NewDeployConn(conn)
 
-	termui.NewFromClientConfig(ctx.Context, config, d, local, events)
+	termui.NewFromClientConfig(
+		ctx.Context, config, d, local, events,
+		ux.OptionHeartbeat(ctx.Heartbeat),
+		ux.OptionDebug(ctx.Verbose),
+	)
 
 	events <- agent.LogEvent(local, "connected to cluster")
 	go func() {
@@ -135,6 +140,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.Deployment.Timeout),
+		Heartbeat:         int64(ctx.Heartbeat),
 		IgnoreFailures:    ctx.Lenient,
 		SilenceDeployLogs: ctx.Silent,
 	}

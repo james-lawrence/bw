@@ -10,18 +10,18 @@ import (
 	"github.com/james-lawrence/bw/ux"
 )
 
-func NewFromClientConfig(ctx context.Context, c agent.ConfigClient, d dialers.Defaults, local *agent.Peer, events chan *agent.Message) {
+func NewFromClientConfig(ctx context.Context, c agent.ConfigClient, d dialers.Defaults, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
 	dctx, ddone := context.WithTimeout(ctx, c.Deployment.Timeout+time.Minute)
-	New(dctx, ddone, d, local, events)
+	New(dctx, ddone, d, local, events, options...)
 }
 
-func New(ctx context.Context, shutdown context.CancelFunc, c dialers.Defaults, local *agent.Peer, events chan *agent.Message) {
+func New(ctx context.Context, shutdown context.CancelFunc, c dialers.Defaults, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
 	contextx.WaitGroupAdd(ctx, 1)
 
 	go func() {
 		defer shutdown()
 		defer contextx.WaitGroupDone(ctx)
-		ux.Deploy(ctx, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, c)))
+		ux.Deploy(ctx, events, append(options, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, c)))...)
 	}()
 }
 
