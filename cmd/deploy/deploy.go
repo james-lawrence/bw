@@ -13,7 +13,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/rendezvous"
@@ -25,7 +24,6 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/iox"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/vcsinfo"
@@ -118,15 +116,13 @@ func Into(ctx *Context) error {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
-	// termui.NewFromClientConfig(ctx.Context, config, d, local, events, )
+	qd := dialers.NewQuorum(c, d.Defaults()...)
+
 	termui.NewFromClientConfig(
-		ctx.Context, config, d, local, events,
+		ctx.Context, config, qd, local, events,
 		ux.OptionHeartbeat(ctx.Heartbeat),
 		ux.OptionDebug(ctx.Verbose),
 	)
-
-	qd := dialers.NewQuorum(c, d.Defaults()...)
-	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
 	if conn, err = qd.DialContext(ctx.Context); err != nil {
 		return errors.Wrap(err, "unable to create a connection")
@@ -134,7 +130,7 @@ func Into(ctx *Context) error {
 
 	go func() {
 		<-ctx.Context.Done()
-		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)

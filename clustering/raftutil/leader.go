@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/debugx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -129,7 +129,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	for _, peer := range peers {
 		if peer.ID == raft.ServerID(local.Name) && allowRemoval {
 			log.Println(local.Name, "- transferring leadership")
-			logx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
+			errorsx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
 			return true
 		}
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/muxer"
 	"google.golang.org/grpc"
 
@@ -363,7 +362,7 @@ func (t *Protocol) connect(c rendezvous) (network raft.Transport, r *raft.Raft, 
 	}
 
 	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, snapshots, network); err != nil {
-		if failure := logx.MaybeLog(errors.Wrap(autocloseTransport(network), "failed to cleanup")); failure != nil {
+		if failure := errorsx.MaybeLog(errors.Wrap(autocloseTransport(network), "failed to cleanup")); failure != nil {
 			panic(err)
 		}
 		return nil, nil, errors.WithStack(err)

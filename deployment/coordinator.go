@@ -21,7 +21,6 @@ import (
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/iox"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/storage"
 )
 
@@ -208,7 +207,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	// without this behaviour the torrent can be removed while nodes are still trying to deploy.
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-		soft = logx.MaybeLog(errors.Wrap(soft, "failed to clear workspace directory"))
+		soft = errorsx.MaybeLog(errors.Wrap(soft, "failed to clear workspace directory"))
 		agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft))
 	}
 
@@ -241,7 +240,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 		return t.ds.current, dctx.Done(err)
 	}
 
-	d = &agent.Deploy{Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
+	d = &agent.Deploy{Initiator: by, Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
@@ -331,7 +330,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx *DeployContext) (err er
 	}
 
 	defer func() {
-		logx.MaybeLog(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
+		errorsx.MaybeLog(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
 	}()
 
 	if _, err = io.Copy(dst, dlreg.New(dctx.Archive.Location).Download(dctx.deadline, dctx.Archive)); err != nil {

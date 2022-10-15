@@ -115,7 +115,7 @@ func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (
 		ss        notary.Signer
 		tlsconfig *tls.Config
 		conn      *grpc.ClientConn
-		d         dialers.Dialer
+		d         dialers.ContextDialer
 		creds     credentials.TransportCredentials
 		quorum    *agent.InfoResponse
 		config    = aconfig.Clone()
@@ -165,7 +165,7 @@ func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (
 		grpc.WithTransportCredentials(creds),
 	)
 
-	if conn, err = d.Dial(); err != nil {
+	if conn, err = d.DialContext(ctx.Context); err != nil {
 		return err
 	}
 

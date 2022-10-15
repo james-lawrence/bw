@@ -21,7 +21,6 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 )
 
 const (
@@ -34,14 +33,6 @@ const (
 	// ErrDifferentDeployment when two deployments have different IDs.
 	ErrDifferentDeployment = errorsx.String("deployments are different")
 )
-
-type dialer interface {
-	Dial(*agent.Peer) (zeroc agent.Client, err error)
-}
-
-type dialer3 interface {
-	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)
-}
 
 type cluster interface {
 	GetN(n int, key []byte) []*memberlist.Node
@@ -138,40 +129,8 @@ func KeepNewestN(n int) Cleaner {
 
 // WatchEvents connects to the event stream of the cluster using the provided
 // peer as a proxy.
-func WatchEvents(ctx context.Context, local *agent.Peer, d dialer3, events chan *agent.Message) {
+func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(10*time.Second), 1)
-	var (
-		err  error
-		conn *grpc.ClientConn
-	)
-
-	for {
-		if conn != nil {
-			logx.MaybeLog(conn.Close())
-		}
-
-		if err = rl.Wait(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
-			continue
-		}
-
-		if conn, err = d.DialContext(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "events dialer failed to connect"))
-			continue
-		}
-
-		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, "connection established")
-		if err = agent.NewConn(conn).Watch(ctx, events); err != nil {
-			log.Println(errors.Wrap(err, "connection lost, reconnecting"))
-			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, "connection lost, reconnecting")
-			continue
-		}
-	}
-}
-
-// WatchClusterEvents pushes events into the provided channel for the given dialer.
-func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *agent.Peer, events chan *agent.Message) {
-	rl := rate.NewLimiter(rate.Every(time.Second), 3)
 	var (
 		err  error
 		conn *grpc.ClientConn
@@ -189,20 +148,12 @@ func WatchClusterEvents(ctx context.Context, d dialers.ContextDialer, local *age
 		}
 
 		if err = rl.Wait(ctx); err != nil {
-			err = errors.Wrap(err, "unable to connect")
-			if envx.Boolean(false, bw.EnvLogsDeploy) {
-				log.Println(err)
-			}
-			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
+			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
 			continue
 		}
 
 		if conn, err = d.DialContext(ctx); err != nil {
-			err = errors.Wrap(err, "unable to connect")
-			if envx.Boolean(false, bw.EnvLogsDeploy) {
-				log.Println(err)
-			}
-			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
+			events <- agent.LogError(local, errors.Wrap(err, "events dialer failed to connect"))
 			continue
 		}
 

@@ -13,7 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/envx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 type clusterx interface {
@@ -82,7 +82,7 @@ func (t Proxy) Deploy(dialer dialers.Defaults, by string, dopts *agent.DeployOpt
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment complete", spew.Sdump(&dcmd))
 		}
-		logx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), dcmd)))
+		errorsx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(t.c.Local(), dcmd)))
 	}()
 
 	return nil

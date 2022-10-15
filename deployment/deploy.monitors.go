@@ -51,7 +51,7 @@ func MonitorTicklerRate(r *rate.Limiter) MonitorTickler {
 func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler {
 	return func(ctx context.Context, tickle *sync.Cond) {
 		events := make(chan *agent.Message, 100)
-		go agentutil.WatchClusterEvents(ctx, d, l, events)
+		go agentutil.WatchEvents(ctx, l, d, events)
 		for {
 			select {
 			case m := <-events:

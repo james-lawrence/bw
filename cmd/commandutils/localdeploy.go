@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/debugx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -20,7 +20,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 	defer debugx.Println("done checking")
 
 	_, err := os.Stat(filepath.Join(config.Deployspace(), deployment.RemoteDirName))
-	logx.MaybeLog(errors.Wrap(err, "stat failed"))
+	errorsx.MaybeLog(errors.Wrap(err, "stat failed"))
 	return err == nil
 }
 

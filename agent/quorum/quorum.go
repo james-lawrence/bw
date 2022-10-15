@@ -19,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering/raftutil"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
@@ -150,12 +151,12 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 
 					// background this task so dispatches work.
 					go func() {
-						logx.MaybeLog(sm.initialize())
+						errorsx.MaybeLog(sm.initialize())
 						logx.Verbose(errors.Wrap(
 							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm),
 							"failed to restart an active deploy",
 						))
-						logx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
+						errorsx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
 					}()
 
 					return sm
@@ -182,7 +183,7 @@ func (t *Quorum) Cancel(ctx context.Context, req *agent.CancelRequest) (err erro
 
 // Deploy ...
 func (t *Quorum) Deploy(by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
-	return logx.MaybeLog(t.deployment.deploy(t.dialer, by, dopts, a, peers...))
+	return errorsx.MaybeLog(t.deployment.deploy(t.dialer, by, dopts, a, peers...))
 }
 
 // Upload ...
@@ -260,7 +261,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 
 	events := make(chan *agent.Message)
 	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
-		return logx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
+		return errorsx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
 	}
 
 	defer l.Close()
@@ -269,12 +270,12 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	for {
 		select {
 		case <-out.Context().Done():
-			return logx.MaybeLog(errors.WithStack(out.Context().Err()))
+			return errorsx.MaybeLog(errors.WithStack(out.Context().Err()))
 		case <-t.lost:
-			return logx.MaybeLog(errors.New("quorum membership lost"))
+			return errorsx.MaybeLog(errors.New("quorum membership lost"))
 		case m := <-events:
 			if err = out.Send(m); err != nil {
-				return logx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
+				return errorsx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
 			}
 		}
 	}

@@ -6,23 +6,26 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/errorsx"
+	"google.golang.org/grpc"
 
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
 
 // EnsureLeader waits for a leader to be established.
-func EnsureLeader(ctx context.Context, d dialer, proxy *agent.Peer) (info *agent.InfoResponse, err error) {
+func EnsureLeader(ctx context.Context, d dialers.DefaultsDialer, proxy *agent.Peer) (info *agent.InfoResponse, err error) {
 	var (
-		qc agent.Client
+		conn *grpc.ClientConn
 	)
 
 	rl := rate.NewLimiter(rate.Every(10*time.Second), 1)
+	pd := dialers.NewProxy(d)
 
 	for {
-		if qc != nil {
-			logx.MaybeLog(errors.Wrap(qc.Close(), "failed to close previous client"))
+		if conn != nil {
+			errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close previous client"))
 		}
 
 		if err = rl.Wait(ctx); err != nil {
@@ -30,12 +33,12 @@ func EnsureLeader(ctx context.Context, d dialer, proxy *agent.Peer) (info *agent
 			continue
 		}
 
-		if qc, err = agent.NewProxyDialer(d).Dial(proxy); err != nil {
+		if conn, err = pd.DialContext(ctx); err != nil {
 			log.Println(errors.Wrap(err, "failed to dial quorum peer"))
 			continue
 		}
 
-		if info, err = qc.QuorumInfo(ctx); err != nil {
+		if info, err = agent.NewConn(conn).QuorumInfo(ctx); err != nil {
 			log.Println(errors.Wrap(err, "failed to retrieve quorum information"))
 			continue
 		}

@@ -21,11 +21,6 @@ type rendezvous interface {
 	GetN(n int, key []byte) []*memberlist.Node
 }
 
-// Dialer the interface for dialing the cluster.
-type Dialer interface {
-	Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error)
-}
-
 // ContextDialer the interface for dialing the cluster.
 type ContextDialer interface {
 	DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error)

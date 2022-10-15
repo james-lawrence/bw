@@ -15,7 +15,6 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 	"google.golang.org/grpc"
 )
 
@@ -109,7 +108,7 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 
 	client = agent.NewDeployConn(conn)
 	s.Logger.Println(s.au.Yellow(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
-	logx.MaybeLog(
+	errorsx.MaybeLog(
 		errorsx.Compact(
 			agentutil.PrintLogs(b, client, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
 			client.Close(),

@@ -13,7 +13,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
@@ -143,7 +143,7 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 			time.Sleep(due)
 
 			if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
-				logx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
+				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
 		}
 	}()

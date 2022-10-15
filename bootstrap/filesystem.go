@@ -17,7 +17,6 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 )
 
 // NewFilesystem consumes a configuration and generates a bootstrap socket
@@ -114,7 +113,7 @@ func (t Filesystem) monitor() {
 			dc := event.DeployCommand
 			if dc.Command == agent.DeployCommand_Done && dc.Archive != nil {
 				go func() {
-					if logx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed")) == nil {
+					if errorsx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed")) == nil {
 						log.Println("clone successful")
 					}
 				}()

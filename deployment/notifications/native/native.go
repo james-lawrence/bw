@@ -6,7 +6,7 @@ import (
 	"github.com/0xAX/notificator"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment/notifications"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +40,7 @@ type Notifier struct {
 func (t Notifier) Notify(dc *agent.DeployCommand) {
 	title := notifications.ExpandEnv(t.Title, dc)
 	msg := notifications.ExpandEnv(t.Message, dc)
-	logx.MaybeLog(errors.Wrap(t.dst.Push(title, msg, "", urgency(dc.Command)), "failed to send notification"))
+	errorsx.MaybeLog(errors.Wrap(t.dst.Push(title, msg, "", urgency(dc.Command)), "failed to send notification"))
 }
 
 func urgency(c agent.DeployCommand_Command) string {

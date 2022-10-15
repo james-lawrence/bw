@@ -8,7 +8,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/debugx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/torrent"
 	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/james-lawrence/torrent/metainfo"
@@ -47,7 +47,7 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 				deployDir := filepath.Join(deploysDir, tf.Path())
 				if _, cause := os.Stat(deployDir); os.IsNotExist(cause) {
 					c.client.Stop(tt.Metadata())
-					logx.MaybeLog(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
+					errorsx.MaybeLog(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
 					dropped = dropped + 1
 				}
 			}

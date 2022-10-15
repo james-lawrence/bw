@@ -22,7 +22,6 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/iox"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
@@ -81,7 +80,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 
 	go func() {
 		<-ctx.Context.Done()
-		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	if quorum, err = agent.NewQuorumClient(conn).Info(ctx.Context, &agent.InfoRequest{}); err != nil {
@@ -92,13 +91,19 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	logx.MaybeLog(err)
+	errorsx.MaybeLog(err)
 
 	events := make(chan *agent.Message, 100)
 
-	termui.NewLogging(ctx.Context, ctx.Shutdown, events, ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)))
+	termui.NewLogging(
+		ctx.Context,
+		ctx.Shutdown,
+		qd,
+		local.Peer,
+		events,
+		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)),
+	)
 	log.Println("awaiting events")
-	agentutil.WatchClusterEvents(ctx.Context, qd, local.Peer, events)
 
 	return nil
 }
@@ -140,7 +145,7 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 
 	go func() {
 		<-ctx.Context.Done()
-		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	cx := cluster.New(local, c)

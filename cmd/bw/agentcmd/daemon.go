@@ -19,7 +19,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/envx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/tlsx"
@@ -289,7 +289,7 @@ func syncAuthorizations(ns notary.Composite) chan *deployment.DeployResult {
 
 	go func() {
 		for dr := range ndr {
-			logx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(ns.Root, bw.AuthKeysFile)))
+			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(ns.Root, bw.AuthKeysFile)))
 		}
 	}()
 

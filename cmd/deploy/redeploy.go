@@ -19,7 +19,6 @@ import (
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/manifoldco/promptui"
@@ -88,13 +87,13 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	go func() {
 		<-ctx.Context.Done()
-		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)
 
 	termui.NewFromClientConfig(
-		ctx.Context, config, d, local, events,
+		ctx.Context, config, qd, local, events,
 		ux.OptionHeartbeat(ctx.Heartbeat),
 		ux.OptionDebug(ctx.Verbose),
 	)
@@ -106,8 +105,6 @@ func Redeploy(ctx *Context, deploymentID string) error {
 			log.Println("failed to close client", err)
 		}
 	}()
-
-	go agentutil.WatchClusterEvents(ctx.Context, qd, local, events)
 
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, qd, agentutil.FilterDeployID(deploymentID)); err != nil {

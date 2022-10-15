@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -29,7 +29,7 @@ func (t Conn) Dispatch(ctx context.Context, messages ...*agent.Message) (err err
 
 	rpc := agent.NewObserverClient(t.conn)
 	if _, err = rpc.Dispatch(ctx, &dispatch); err != nil {
-		return logx.MaybeLog(errors.Wrap(err, "failed to dispatch messages"))
+		return errorsx.MaybeLog(errors.Wrap(err, "failed to dispatch messages"))
 	}
 
 	return nil

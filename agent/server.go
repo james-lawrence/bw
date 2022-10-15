@@ -11,7 +11,6 @@ import (
 	"github.com/james-lawrence/bw/internal/bytesx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/iox"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -121,7 +120,7 @@ func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownRe
 		return nil, err
 	}
 
-	if err := logx.MaybeLog(errors.Wrap(t.Deployer.Reset(), "failed to reset")); err != nil {
+	if err := errorsx.MaybeLog(errors.Wrap(t.Deployer.Reset(), "failed to reset")); err != nil {
 		return nil, err
 	}
 
@@ -208,5 +207,5 @@ func (t Server) Logs(req *LogRequest, out Agent_LogsServer) (err error) {
 		buf.Reset()
 	}
 
-	return logx.MaybeLog(errorsx.Compact(iox.IgnoreEOF(err), logs.Close()))
+	return errorsx.MaybeLog(errorsx.Compact(iox.IgnoreEOF(err), logs.Close()))
 }

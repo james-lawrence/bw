@@ -22,7 +22,6 @@ import (
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/internal/netx"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/internal/tlsx"
@@ -114,13 +113,13 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 			return config, err
 		}
 
-		logx.MaybeLog(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
-		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+		errorsx.MaybeLog(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
+		errorsx.MaybeLog(os.Remove(bw.LocateFirstInDir(
 			config.Credentials.Directory,
 			cc.DefaultTLSCertServer,
 			cc.DefaultTLSCertClient,
 		)))
-		logx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+		errorsx.MaybeLog(os.Remove(bw.LocateFirstInDir(
 			config.Credentials.Directory,
 			cc.DefaultTLSKeyServer,
 			cc.DefaultTLSKeyClient,

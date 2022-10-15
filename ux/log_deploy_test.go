@@ -20,7 +20,7 @@ var _ = Describe("Log Deploy", func() {
 				buf <- m
 			}
 			ctx := contextx.NewWaitGroup(context.Background())
-			Deploy(ctx, buf)
+			Deploy(ctx, nil, buf)
 			Expect(len(buf)).To(Equal(0))
 		},
 		Entry(

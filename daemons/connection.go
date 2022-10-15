@@ -11,7 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent/discovery"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
@@ -69,7 +69,7 @@ func ConnectClientUntilSuccess(
 		default:
 		}
 
-		logx.MaybeLog(errors.Wrap(err, "connection failed"))
+		errorsx.MaybeLog(errors.Wrap(err, "connection failed"))
 
 		time.Sleep(250 * time.Millisecond)
 	}

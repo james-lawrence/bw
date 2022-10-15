@@ -16,7 +16,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/internal/systemx"
 )
 
@@ -44,7 +43,7 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache *Direc
 	}
 
 	// this is necessary to initialize the clients with the correct CAs
-	logx.MaybeLog(d.init())
+	errorsx.MaybeLog(d.init())
 
 	return d
 }
@@ -74,7 +73,7 @@ func (t *Directory) init() (err error) {
 		go t.background()
 	})
 
-	return logx.MaybeLog(errors.Wrap(err, "failed to initialize certificate cache"))
+	return errorsx.MaybeLog(errors.Wrap(err, "failed to initialize certificate cache"))
 }
 
 // GetCertificate for use by tls.Config.
@@ -93,7 +92,7 @@ func (t *Directory) background() {
 	for {
 		select {
 		case <-debounce.C:
-			logx.MaybeLog(t.refresh())
+			errorsx.MaybeLog(t.refresh())
 		case <-t.watcher.Events:
 			debounce.Reset(time.Second)
 		case err := <-t.watcher.Errors:
@@ -114,7 +113,7 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 	t.m.Unlock()
 
 	if cert == nil {
-		return nil, logx.MaybeLog(errors.Errorf("certificate missing in: %s", t.dir))
+		return nil, errorsx.MaybeLog(errors.Errorf("certificate missing in: %s", t.dir))
 	}
 
 	return cert, nil

@@ -10,7 +10,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/cmd/termui"
 	"github.com/james-lawrence/bw/daemons"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -53,7 +53,7 @@ func Cancel(ctx *Context) (err error) {
 
 	go func() {
 		<-ctx.Context.Done()
-		logx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)
@@ -64,7 +64,7 @@ func Cancel(ctx *Context) (err error) {
 		}
 	}()
 
-	termui.NewFromClientConfig(ctx.Context, config, d, local, events)
+	termui.NewFromClientConfig(ctx.Context, config, qd, local, events)
 	events <- agent.LogEvent(local, "connected to cluster")
 
 	cmd := agent.DeployCommandCancel(bw.DisplayName())

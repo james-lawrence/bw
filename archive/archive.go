@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +42,7 @@ func Pack(dst io.Writer, paths ...string) (err error) {
 		}
 	}
 
-	return logx.MaybeLog(errors.Wrap(tw.Flush(), "failed to flush archive"))
+	return errorsx.MaybeLog(errors.Wrap(tw.Flush(), "failed to flush archive"))
 }
 
 // Unpack unpacks the archive from the reader into the root directory.

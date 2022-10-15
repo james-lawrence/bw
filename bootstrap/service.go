@@ -5,7 +5,7 @@ import (
 	"net"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -30,7 +30,7 @@ func Run(ctx context.Context, socket string, o agent.BootstrapServer, options ..
 	go s.Serve(l)
 	go func() {
 		<-ctx.Done()
-		logx.MaybeLog(errors.Wrap(l.Close(), "during bootstrap socket shutdown"))
+		errorsx.MaybeLog(errors.Wrap(l.Close(), "during bootstrap socket shutdown"))
 	}()
 
 	return nil

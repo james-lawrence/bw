@@ -18,7 +18,6 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
 )
 
 type deployer interface {
@@ -177,7 +176,7 @@ func (t DeployContext) timeout() time.Duration {
 
 // Dispatch an event to the cluster
 func (t DeployContext) Dispatch(m ...*agent.Message) error {
-	return logx.MaybeLog(agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...))
+	return errorsx.MaybeLog(agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...))
 }
 
 // Cancel cancel the deploy.
@@ -194,7 +193,7 @@ func (t DeployContext) Cancel(reason error) {
 // Done is responsible for closing out the deployment context.
 func (t DeployContext) Done(result error) error {
 	t.done.Do(func() {
-		logx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
+		errorsx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
 
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment done", t.completed != nil)

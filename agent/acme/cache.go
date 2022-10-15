@@ -5,9 +5,8 @@ import (
 	"crypto/tls"
 
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
-
-	"github.com/james-lawrence/bw/internal/logx"
 )
 
 type resolution interface {
@@ -32,7 +31,7 @@ func (t ALPNCertCache) GetCertificate(_ *tls.ClientHelloInfo) (cert *tls.Certifi
 	)
 
 	if cc, err = t.r.Resolution(context.Background()); err != nil {
-		return nil, logx.MaybeLog(errors.Wrap(err, "failed to retrieve challenge"))
+		return nil, errorsx.MaybeLog(errors.Wrap(err, "failed to retrieve challenge"))
 	}
 
 	return tlsalpn01.ChallengeCert(cc.Domain, cc.Digest)

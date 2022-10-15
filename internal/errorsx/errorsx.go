@@ -18,12 +18,13 @@ func Compact(errs ...error) error {
 	return nil
 }
 
-func MaybeLog(err error) {
+func MaybeLog(err error) error {
 	if err == nil {
-		return
+		return err
 	}
 
 	log.Output(1, fmt.Sprintln(err))
+	return err
 }
 
 func Ignore(err error, ignore ...error) error {

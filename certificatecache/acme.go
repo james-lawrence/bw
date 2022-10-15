@@ -15,7 +15,7 @@ import (
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/pkg/errors"
 
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 )
 
@@ -132,17 +132,17 @@ func (t ACME) Refresh() (err error) {
 
 	log.Println("writing authority certificate", capath)
 	if err = os.WriteFile(capath, authority, 0600); err != nil {
-		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate authority to %s", capath))
+		return errorsx.MaybeLog(errors.Wrapf(err, "failed to write certificate authority to %s", capath))
 	}
 
 	log.Println("writing certificate", certpath)
 	if err = os.WriteFile(certpath, cert, 0600); err != nil {
-		return logx.MaybeLog(errors.Wrapf(err, "failed to write certificate to %s", certpath))
+		return errorsx.MaybeLog(errors.Wrapf(err, "failed to write certificate to %s", certpath))
 	}
 
 	log.Println("writing private key", keypath)
 	if err = os.WriteFile(keypath, key, 0600); err != nil {
-		return logx.MaybeLog(errors.Wrapf(err, "failed to write private key to %s", keypath))
+		return errorsx.MaybeLog(errors.Wrapf(err, "failed to write private key to %s", keypath))
 	}
 	return nil
 }

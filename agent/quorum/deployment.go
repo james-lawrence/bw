@@ -11,7 +11,7 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/debugx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 
 	"github.com/pkg/errors"
 )
@@ -174,7 +174,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 
 		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
 			msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
-			logx.MaybeLog(sm.Dispatch(ctx, msg))
+			errorsx.MaybeLog(sm.Dispatch(ctx, msg))
 			return errors.Wrap(err, "cancellation failure")
 		}
 

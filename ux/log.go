@@ -12,6 +12,7 @@ import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/logrusorgru/aurora"
 )
@@ -39,10 +40,11 @@ func OptionDebug(b bool) Option {
 }
 
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, events chan *agent.Message, options ...Option) {
+func Deploy(ctx context.Context, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
 	var (
 		s = deploying{
 			cState: cState{
+				cached:         cached,
 				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
@@ -56,10 +58,11 @@ func Deploy(ctx context.Context, events chan *agent.Message, options ...Option) 
 }
 
 // Logging based ux
-func Logging(ctx context.Context, events chan *agent.Message, options ...Option) {
+func Logging(ctx context.Context, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
 	var (
 		s = tail{
 			cState: cState{
+				cached:         cached,
 				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
 				FailureDisplay: FailureDisplayNoop{},
@@ -83,6 +86,7 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 			t.Logger.Println(
 				t.au.Yellow(fmt.Sprintf("no message has been received within the time limit %s", t.heartbeat)),
 			)
+			t.cached.Close()
 		case m := <-events:
 			switch local := m.Event.(type) {
 			case *agent.Message_History:
@@ -137,6 +141,7 @@ func consume(c consumer, messages ...*agent.Message) consumer {
 }
 
 type cState struct {
+	cached         *dialers.Cached
 	connection     *agent.ConnectionEvent
 	FailureDisplay failureDisplay
 	Logger         *log.Logger

@@ -21,6 +21,7 @@ var example1 = Context{
 	tmpdir:        "TEMPDIR",
 	cachedir:      "CACHEDIR",
 	timeout:       time.Second,
+	commit:        "d9662c91bf8c4591ae311d853404ae8e",
 }
 
 var _ = g.Describe("Context", func() {
@@ -44,6 +45,7 @@ var _ = g.Describe("Context", func() {
 			example1,
 			"FOO=BAR",
 			"BW_ENVIRONMENT_DEPLOY_ID=00000000-0000-0000-0000-000000000000",
+			"BW_ENVIRONMENT_DEPLOY_COMMIT=d9662c91bf8c4591ae311d853404ae8e",
 			"BW_ENVIRONMENT_HOST=HOSTNAME",
 			"BW_ENVIRONMENT_MACHINE_ID=MACHINEID",
 			"BW_ENVIRONMENT_DOMAIN=DOMAIN",

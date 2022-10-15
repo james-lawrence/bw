@@ -17,7 +17,7 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/dns"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
@@ -40,7 +40,7 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 
 	if metadata.OnGCE() {
 		if t.projectID, err = metadata.ProjectID(); err != nil {
-			logx.MaybeLog(errors.Wrap(err, "failed to retrieve project ID from metadata service"))
+			errorsx.MaybeLog(errors.Wrap(err, "failed to retrieve project ID from metadata service"))
 		}
 	}
 
