@@ -1,3 +1,34 @@
+commit e22483dde0a7e170727f04b74ded0d7d8ddbebf3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 13:02:12 2022 -0400
+
+    implement a heartbeat event for the client side identify issues.
+
+commit cc69a723924c0e7fa722e0d894e5ce24b7b8d2ff
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 11:30:06 2022 -0400
+
+    incorporate vcs commit into the deployment contexts
+
+commit d9134b4d5f3ee4809b10921300d5b3bd8e4484fb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 10:58:21 2022 -0400
+
+    implement start of vcs integrations, add a sentryio releases
+    integration.
+
+commit 14af3531a3876c479d2c3947d67a66b3be5e0f51
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 10:53:36 2022 -0400
+
+    update dependencies
+
+commit f86189961efd2576eda2088df0107380c1a478d4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 10 17:17:52 2022 -0400
+
+    release 0.1.1665431678-26d67bcc
+
 commit 26d67bccb2a68704fcb3fa6176423b73b168c05d
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Oct 10 15:54:38 2022 -0400
