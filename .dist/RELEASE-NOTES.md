@@ -1,3 +1,17 @@
+commit 5690b5f026a15dce9815ac0bc035310892606c17
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 17:36:16 2022 -0400
+
+    refactoring ux
+    
+    want to make the watch recoverable when heartbeats are not received.
+
+commit a15f9f075a93c8a89c53fca98f6340b6d124dab5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 15 13:05:18 2022 -0400
+
+    release 0.1.1665853332-e22483dd
+
 commit e22483dde0a7e170727f04b74ded0d7d8ddbebf3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Oct 15 13:02:12 2022 -0400
