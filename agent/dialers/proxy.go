@@ -35,7 +35,7 @@ func (t Proxy) DialContext(ctx context.Context, options ...grpc.DialOption) (con
 		return conn, err
 	}
 
-	for _, q := range shuffleQuorum(cinfo.Quorum) {
+	for _, q := range agent.Shuffle(cinfo.Quorum) {
 		addr := agent.RPCAddress(q)
 		if conn, err = grpc.DialContext(ctx, addr, t.d.Defaults(options...)...); err != nil {
 			log.Println("failed to dial", addr, err)

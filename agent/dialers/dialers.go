@@ -2,12 +2,10 @@ package dialers
 
 import (
 	"context"
-	"math/rand"
 	"net"
 	"time"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/muxer"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -56,13 +54,6 @@ func DefaultDialerOptions(options ...grpc.DialOption) (results Defaulted) {
 		defaults,
 		options...,
 	)
-}
-
-func shuffleQuorum(q []*agent.Peer) []*agent.Peer {
-	rand.Shuffle(len(q), func(i int, j int) {
-		q[i], q[j] = q[j], q[i]
-	})
-	return q
 }
 
 // WithMuxer dialer to connect using a connection muxer.
