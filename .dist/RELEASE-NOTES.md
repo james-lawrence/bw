@@ -1,3 +1,15 @@
+commit fcefff75ee6642aea53c254feb5fbca70d8905e7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 17 05:52:29 2022 -0400
+
+    suppress notification daemon logs
+
+commit 5071f6c533512079bb1bdfecdd17b66d97bf95a7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 16 15:48:58 2022 -0400
+
+    release 0.1.1665949554-5690b5f0
+
 commit 5690b5f026a15dce9815ac0bc035310892606c17
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Oct 15 17:36:16 2022 -0400
