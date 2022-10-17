@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/deployment/notifications/native"
 	"github.com/james-lawrence/bw/deployment/notifications/sentryio"
 	"github.com/james-lawrence/bw/deployment/notifications/slack"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
@@ -40,7 +41,9 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 		return err
 	}
 
-	log.Println(spew.Sdump(config))
+	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
+		log.Println(spew.Sdump(config))
+	}
 
 	if tlsconfig, err = certificatecache.TLSGenServer(config, tlsx.OptionNoClientCert); err != nil {
 		return err
@@ -64,7 +67,9 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 		return err
 	}
 
-	log.Println(spew.Sdump(n))
+	if envx.Boolean(false, bw.EnvLogsConfiguration, bw.EnvLogsVerbose) {
+		log.Println(spew.Sdump(n))
+	}
 
 	d, err := dialers.DefaultDialer(agent.P2PRawAddress(config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {

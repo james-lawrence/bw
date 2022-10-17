@@ -44,7 +44,7 @@ func defaultClient() *http.Client {
 	}
 }
 
-// Notifier - sends an message to sentry.io.
+// Notifier - creates a release with sentry.io.
 type Notifier struct {
 	Environment   string
 	Name          string

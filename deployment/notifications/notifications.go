@@ -59,6 +59,7 @@ func DecodeConfig(path string, creators map[string]Creator) (n []Notifier, err e
 	if len(n) == 0 {
 		n = append(n, New())
 	}
+
 	return n, nil
 }
 
