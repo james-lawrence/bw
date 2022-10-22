@@ -53,7 +53,6 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		quorum *agent.InfoResponse
 		ss     notary.Signer
 	)
-	defer ctx.Shutdown()
 
 	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return err
@@ -103,7 +102,6 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		events,
 		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)),
 	)
-	log.Println("awaiting events")
 
 	return nil
 }
