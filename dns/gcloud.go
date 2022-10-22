@@ -124,7 +124,7 @@ func (t GoogleCloudDNS) convert(records ...dns.A) []*gdns.ResourceRecordSet {
 	}
 
 	return []*gdns.ResourceRecordSet{
-		&gdns.ResourceRecordSet{
+		{
 			Name:    t.config.FQDN,
 			Type:    dns.TypeToString[dns.TypeA],
 			Ttl:     int64(t.config.TTL),

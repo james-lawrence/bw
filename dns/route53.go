@@ -75,7 +75,7 @@ func (t Route53) Sample(c cluster) (err error) {
 
 	cb := route53.ChangeBatch{
 		Changes: []*route53.Change{
-			&route53.Change{
+			{
 				Action: aws.String(route53.ChangeActionUpsert),
 				ResourceRecordSet: &route53.ResourceRecordSet{
 					Type:            aws.String(route53.RRTypeA),
