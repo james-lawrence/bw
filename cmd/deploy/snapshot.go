@@ -29,7 +29,7 @@ func Snapshot(ctx Context, out io.WriteCloser) (err error) {
 		return errors.Wrap(err, "failed to crreate bw.env")
 	}
 
-	if err = commandutils.RunLocalDirectives(config); err != nil {
+	if _, err = commandutils.RunLocalDirectives(config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 

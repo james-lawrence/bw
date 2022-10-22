@@ -26,7 +26,6 @@ import (
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
-	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -53,17 +52,18 @@ type Context struct {
 // Into deploy into the specified environment.
 func Into(ctx *Context) error {
 	var (
-		err      error
-		dst      *os.File
-		dstinfo  os.FileInfo
-		conn     *grpc.ClientConn
-		d        dialers.Defaults
-		client   agent.DeployClient
-		config   agent.ConfigClient
-		c        clustering.Rendezvous
-		ss       notary.Signer
-		darchive *agent.Archive
-		peers    []*agent.Peer
+		err       error
+		dst       *os.File
+		dstinfo   os.FileInfo
+		conn      *grpc.ClientConn
+		d         dialers.Defaults
+		client    agent.DeployClient
+		config    agent.ConfigClient
+		c         clustering.Rendezvous
+		ss        notary.Signer
+		darchive  *agent.Archive
+		peers     []*agent.Peer
+		commitish string
 	)
 
 	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
@@ -88,7 +88,7 @@ func Into(ctx *Context) error {
 		}
 	}
 
-	if err = commandutils.RunLocalDirectives(config); err != nil {
+	if commitish, err = commandutils.RunLocalDirectives(config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 
@@ -176,7 +176,7 @@ func Into(ctx *Context) error {
 
 		meta := agent.UploadMetadata{
 			Bytes:     uint64(dstinfo.Size()),
-			Vcscommit: vcsinfo.Commitish(config.WorkDir(), config.Deployment.CommitRef),
+			Vcscommit: commitish,
 		}
 
 		if darchive, err = client.Upload(ctx.Context, &meta, dst); err != nil {

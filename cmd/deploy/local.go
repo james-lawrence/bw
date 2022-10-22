@@ -21,11 +21,12 @@ import (
 
 func Locally(ctx *Context, debug bool) (err error) {
 	var (
-		dst    *os.File
-		sctx   shell.Context
-		dctx   *deployment.DeployContext
-		root   string
-		config agent.ConfigClient
+		dst       *os.File
+		sctx      shell.Context
+		dctx      *deployment.DeployContext
+		root      string
+		config    agent.ConfigClient
+		commitish string
 	)
 
 	if config, err = commandutils.ReadConfiguration(ctx.Environment); err != nil {
@@ -42,7 +43,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		}
 	}
 
-	if err = commandutils.RunLocalDirectives(config); err != nil {
+	if commitish, err = commandutils.RunLocalDirectives(config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 
@@ -99,6 +100,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		},
 		&agent.Archive{
 			Location: dst.Name(),
+			Commit:   commitish,
 		},
 		deployment.DeployContextOptionCacheRoot(config.Dir()),
 		deployment.DeployContextOptionDisableReset,

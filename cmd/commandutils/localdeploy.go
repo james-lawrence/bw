@@ -2,6 +2,7 @@ package commandutils
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +27,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 }
 
 // RunLocalDirectives runs local directives, used to build archives prior to deploying.
-func RunLocalDirectives(config agent.ConfigClient) (err error) {
+func RunLocalDirectives(config agent.ConfigClient) (commitish string, err error) {
 	var (
 		sctx    shell.Context
 		dctx    *deployment.DeployContext
@@ -34,25 +36,28 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		root           = config.WorkDir()
 	)
 
+	commitish = vcsinfo.Commitish(config.WorkDir(), config.Deployment.CommitRef)
+	log.Println("vcs.commit", commitish)
+
 	if err = os.WriteFile(filepath.Join(cdir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
-		return err
+		return commitish, err
 	}
 
 	if environ, err = shell.EnvironFromFile(filepath.Join(cdir, bw.EnvFile)); err != nil {
-		dctx.Done(err)
-		return
+		return commitish, err
 	}
 
 	local := NewClientPeer()
 
 	if sctx, err = shell.DefaultContext(); err != nil {
-		return err
+		return commitish, err
 	}
 
 	sctx = shell.NewContext(
 		sctx,
 		shell.OptionEnviron(append(environ, sctx.Environ...)),
 		shell.OptionDir(root),
+		shell.OptionVCSCommit(commitish),
 	)
 
 	dctx, err = deployment.NewDeployContext(
@@ -63,14 +68,16 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 		&agent.DeployOptions{
 			Timeout: int64(config.Deployment.Timeout),
 		},
-		&agent.Archive{},
+		&agent.Archive{
+			Commit: commitish,
+		},
 		deployment.DeployContextOptionLog(deployment.StdErrLogger("[LOCAL] ")),
 		deployment.DeployContextOptionTempRoot(config.Dir()),
 		deployment.DeployContextOptionCacheRoot(config.Dir()),
 		deployment.DeployContextOptionDisableReset,
 	)
 	if err != nil {
-		return errors.Wrap(err, "failed to create deployment context")
+		return commitish, errors.Wrap(err, "failed to create deployment context")
 	}
 
 	deploy := deployment.NewDirective(
@@ -79,5 +86,5 @@ func RunLocalDirectives(config agent.ConfigClient) (err error) {
 	)
 	deploy.Deploy(dctx)
 
-	return deployment.AwaitDeployResult(dctx).Error
+	return commitish, deployment.AwaitDeployResult(dctx).Error
 }
