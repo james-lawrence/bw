@@ -41,7 +41,7 @@ type cluster interface {
 }
 
 type deployer interface {
-	Deploy(dialers.Defaults, string, *agent.DeployOptions, *agent.Archive, ...*agent.Peer) error
+	Deploy(context.Context, dialers.Defaults, string, *agent.DeployOptions, *agent.Archive, ...*agent.Peer) error
 }
 
 // Option option for the quorum rpc.
@@ -182,8 +182,8 @@ func (t *Quorum) Cancel(ctx context.Context, req *agent.CancelRequest) (err erro
 }
 
 // Deploy ...
-func (t *Quorum) Deploy(by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
-	return errorsx.MaybeLog(t.deployment.deploy(t.dialer, by, dopts, a, peers...))
+func (t *Quorum) Deploy(ctx context.Context, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
+	return errorsx.MaybeLog(t.deployment.deploy(ctx, t.dialer, by, dopts, a, peers...))
 }
 
 // Upload ...

@@ -8,7 +8,7 @@ import (
 )
 
 type quorum interface {
-	Deploy(by string, opts *DeployOptions, a *Archive, peers ...*Peer) error
+	Deploy(ctx context.Context, by string, opts *DeployOptions, a *Archive, peers ...*Peer) error
 	Upload(stream Quorum_UploadServer) error
 	Watch(stream Quorum_WatchServer) error
 	History(context.Context) ([]*Message, error)
@@ -55,19 +55,15 @@ func (t Quorum) Info(ctx context.Context, _ *InfoRequest) (_ *InfoResponse, err 
 
 // Deploy ...
 func (t Quorum) Deploy(ctx context.Context, req *DeployCommandRequest) (_ *DeployCommandResult, err error) {
-	var (
-		_zero DeployCommandResult
-	)
-
 	if err := t.auth.Deploy(ctx); err != nil {
 		return nil, err
 	}
 
-	if err = t.q.Deploy(req.Initiator, req.Options, req.Archive, req.Peers...); grpcx.IsUnavailable(err) {
+	if err = t.q.Deploy(ctx, req.Initiator, req.Options, req.Archive, req.Peers...); grpcx.IsUnavailable(err) {
 		return nil, err
 	}
 
-	return &_zero, err
+	return &DeployCommandResult{}, err
 }
 
 // History

@@ -104,10 +104,12 @@ func Into(ctx *Context) error {
 	)
 
 	events <- agent.LogEvent(local, "connecting to cluster")
-	var debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
-	var debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
+	var (
+		debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
+		debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
+	)
 
-	if envx.Boolean(ctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+	if ctx.Debug || ctx.Verbose || envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
 		debugopt1 = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
