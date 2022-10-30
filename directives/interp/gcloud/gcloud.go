@@ -12,70 +12,144 @@ import (
 
 // TargetPoolDetach detach an instance from its target pool.
 func TargetPoolDetach(ctx context.Context) (err error) {
-	var (
-		tpools []string
-	)
-
-	if tpools, err = targetPools(ctx); err != nil {
-		return err
-	}
-
-	for _, uri := range tpools {
-		log.Println("target pool", uri)
-	}
-
-	return nil
+	return modify(ctx, detach)
 }
 
 // TargetPoolAttach attach an instance to its target pool.
 func TargetPoolAttach(ctx context.Context) (err error) {
-	var (
-		tpools []string
-	)
+	return modify(ctx, attach)
+}
 
-	if tpools, err = targetPools(ctx); err != nil {
-		return err
-	}
-
+func detach(ctx context.Context, project string, region string, c *compute.Service, instLink string, tpools ...string) error {
 	for _, uri := range tpools {
-		log.Println("target pool", uri)
+		log.Println("target pool", uri, instLink)
+		op, err := c.TargetPools.RemoveInstance(
+			project,
+			region,
+			gcloudx.PathSuffix(uri, "/"),
+			&compute.TargetPoolsRemoveInstanceRequest{
+				Instances: []*compute.InstanceReference{
+					{Instance: instLink},
+				},
+			},
+		).Context(ctx).Do()
+
+		if err != nil {
+			return err
+		}
+
+		log.Println("op", op.Name, op.Region, op.Status)
+		for {
+			op, err = c.RegionOperations.Wait(project, region, op.Name).Context(ctx).Do()
+			if err != nil {
+				return err
+			}
+
+			log.Println("op", op.Name, op.Region, op.Status)
+			if op.Status == "DONE" {
+				return nil
+			}
+		}
 	}
 
 	return nil
 }
 
-func targetPools(ctx context.Context) (_ []string, err error) {
+func attach(ctx context.Context, project string, region string, c *compute.Service, instLink string, tpools ...string) error {
+	for _, uri := range tpools {
+		log.Println("target pool", uri, instLink)
+		op, err := c.TargetPools.AddInstance(
+			project,
+			region,
+			gcloudx.PathSuffix(uri, "/"),
+			&compute.TargetPoolsAddInstanceRequest{
+				Instances: []*compute.InstanceReference{
+					{Instance: instLink},
+				},
+			},
+		).Context(ctx).Do()
+
+		if err != nil {
+			return err
+		}
+
+		log.Println("op", op.Name, op.Region, op.Status)
+		for {
+			op, err = c.RegionOperations.Wait(project, region, op.Name).Context(ctx).Do()
+			if err != nil {
+				return err
+			}
+			log.Println("op", op.Name, op.Region, op.Status)
+			if op.Status == "DONE" {
+				return nil
+			}
+		}
+	}
+
+	return nil
+}
+
+type op func(ctx context.Context, project string, region string, c *compute.Service, instLink string, tpools ...string) error
+
+func modify(ctx context.Context, op op) (err error) {
 	var (
-		c           *compute.Service
-		project     string
-		zone        string
-		createdBy   string
-		targetPools []string
+		c        *compute.Service
+		instance *compute.Instance
+		id       string
+		project  string
+		region   string
+		zone     string
+		tpools   []string
 	)
 
 	if !metadata.OnGCE() {
-		return targetPools, errors.Errorf("unable to detach from target pool: requires running within a gce environment")
+		return errors.Errorf("unable to detach from target pool: requires running within a gce environment")
 	}
 
 	if project, err = metadata.ProjectID(); err != nil {
-		return targetPools, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
 
 	if zone, err = metadata.Zone(); err != nil {
-		return targetPools, errors.WithStack(err)
+		return errors.WithStack(err)
+	}
+
+	if prefix := gcloudx.ZonalRegion(zone, "-"); prefix == "" {
+		return errors.Errorf("cannot convert zone to region: %s", zone)
+	} else {
+		region = prefix
 	}
 
 	if c, err = compute.NewService(ctx); err != nil {
-		return targetPools, errors.WithStack(err)
+		return errors.WithStack(err)
 	}
+
+	if id, err = metadata.InstanceID(); err != nil {
+		return err
+	}
+
+	if instance, err = c.Instances.Get(project, zone, id).Context(ctx).Do(); err != nil {
+		return err
+	}
+
+	if tpools, err = targetPools(ctx, c, project, zone); err != nil {
+		return err
+	}
+
+	return op(ctx, project, region, c, instance.SelfLink, tpools...)
+}
+
+func targetPools(ctx context.Context, c *compute.Service, project string, zone string) (_ []string, err error) {
+	var (
+		createdBy   string
+		targetPools []string
+	)
 
 	if createdBy, err = gcloudx.InstanceGroupManagerName(); err != nil {
 		return targetPools, err
 	}
 
-	if tmp, cause := igmTargetPools(ctx, c, project, zone, createdBy); cause != nil {
-		err = cause
-	} else {
+	if tmp, cause := igmTargetPools(ctx, c, project, zone, createdBy); cause == nil {
 		err = nil
 		targetPools = append(targetPools, tmp...)
 	}
