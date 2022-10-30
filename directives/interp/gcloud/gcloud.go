@@ -1,3 +1,8 @@
+// Package gcloud utility functionality for deploying in gcp
+// requires:
+// - compute.targetPools.removeInstance
+// - compute.targetPools.addInstance
+// - compute.instances.use
 package gcloud
 
 import (
