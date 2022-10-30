@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/naoina/toml"
@@ -68,6 +69,11 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 	return os.Expand(s, func(key string) string {
 		switch key {
 		case EnvDeployID:
+			if dc.Archive == nil {
+				log.Println("unknown archive", spew.Sdump(dc))
+				return ""
+			}
+
 			return bw.RandomID(dc.Archive.DeploymentID).String()
 		case EnvDeployResult:
 			return dc.Command.String()
