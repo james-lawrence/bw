@@ -71,6 +71,11 @@ func (t Notifier) Notify(dc *agent.DeployCommand) {
 		return // nothing to do if not completed
 	}
 
+	if t.Authorization == "" {
+		log.Println("sentrio is enabled but authorization is set. ignoring.")
+		return
+	}
+
 	n := notification{
 		Version:      bw.RandomID(dc.Archive.DeploymentID).String(),
 		Name:         t.Name,

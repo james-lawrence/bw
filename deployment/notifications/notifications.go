@@ -29,7 +29,7 @@ type Notifier interface {
 // DecodeConfig ...
 func DecodeConfig(path string, creators map[string]Creator) (n []Notifier, err error) {
 	if _, err = os.Stat(path); os.IsNotExist(err) {
-		log.Println("no configuration file found, falling back to default configuration")
+		log.Println("no configuration file found, falling back to default configuration", path)
 		n = append(n, New())
 		return n, nil
 	}
@@ -80,3 +80,7 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 		}
 	})
 }
+
+type noop struct{}
+
+func (t noop) Notify(dc *agent.DeployCommand) {}

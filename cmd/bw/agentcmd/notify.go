@@ -75,6 +75,7 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 	if err != nil {
 		return err
 	}
+
 	dd := dialers.NewProxy(dialers.NewDirect(agent.RPCAddress(config.Peer()), d.Defaults()...))
 
 	notifier.New(n...).Start(ctx.Context, agent.NewPeer("local"), config.Peer(), dd)
