@@ -1,3 +1,27 @@
+commit 5982ecdd24978eba27241dd39eafd8adbd3c2cec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 30 11:34:58 2022 -0400
+
+    handle nil archives
+
+commit 565d77322a4de6f96354d425cb31bba813359394
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 30 10:25:44 2022 -0400
+
+    notification debugging improvements
+
+commit 71fec989b391dbbe3aa932e97dccd9884488e43a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 30 09:37:39 2022 -0400
+
+    add documentation on permissions requirements.
+
+commit 58b19518481d5223fff55f635ca53955ea8dda41
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 30 09:34:45 2022 -0400
+
+    release 0.1.1667136390-26b63c9c
+
 commit 26b63c9cb8ff12ed8d6e3828411b87fd174ae2b3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Oct 29 21:16:44 2022 -0400
