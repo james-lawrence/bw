@@ -1,3 +1,45 @@
+commit 26b63c9cb8ff12ed8d6e3828411b87fd174ae2b3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Oct 29 21:16:44 2022 -0400
+
+    actually remove instances from the target pool
+
+commit 390d5efaa62e1d2241319c8f58e53d4d0dcbf06b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 24 07:52:33 2022 -0400
+
+    wire context through the deploy command
+
+commit 534f58fd5137d71269706c660334725a4d1412d6
+Author: James Lawrence <james.lawrence@dianthuscommerce.com>
+Date:   Sat Oct 22 08:37:08 2022 -0400
+
+    add vcs commitish to local directives
+
+commit 51a4070023229bb548c5384c418c4d706dd4a07b
+Author: James Lawrence <james.lawrence@dianthuscommerce.com>
+Date:   Sat Oct 22 08:13:18 2022 -0400
+
+    fix node watch
+
+commit ca42d9c2dae0920c3440f0bcfd155dba44e692df
+Author: James Lawrence <james.lawrence@dianthuscommerce.com>
+Date:   Sat Oct 22 07:56:39 2022 -0400
+
+    linting fixes
+
+commit 2e6b1adf76c0905556865ff4050e1fd5c68982bc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 17 06:02:32 2022 -0400
+
+    remove duplicated code
+
+commit d606b792ae83dc998b7cd88c0999b6bec47cee22
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Oct 17 05:59:54 2022 -0400
+
+    release 0.1.1666000349-fcefff75
+
 commit fcefff75ee6642aea53c254feb5fbca70d8905e7
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Mon Oct 17 05:52:29 2022 -0400
