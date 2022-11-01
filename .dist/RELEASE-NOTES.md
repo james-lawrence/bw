@@ -1,3 +1,15 @@
+commit a52046f02c1523980f99b0be3f4f8baff43a362e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 14:42:43 2022 -0400
+
+    debug notification
+
+commit 50065c6625efc74d156be4684f124967147f406f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 14:40:58 2022 -0400
+
+    release 0.1.1667327881-91ec93c6
+
 commit 91ec93c6530c940439c9f8cb47ff8c223350db59
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Nov 1 14:38:01 2022 -0400
