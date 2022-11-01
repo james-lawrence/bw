@@ -7,8 +7,8 @@ Requires=bearded-wookie-agent.service
 Type=simple
 Restart=always
 Slice=bearded-wookie.slice
-ConfigurationDirectory=%N
-CacheDirectory=%N
+ConfigurationDirectory=bearded-wookie
+CacheDirectory=bearded-wookie
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 ExecStart=/usr/bin/bw notify
 
