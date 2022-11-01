@@ -1,3 +1,15 @@
+commit 91ec93c6530c940439c9f8cb47ff8c223350db59
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 14:38:01 2022 -0400
+
+    default to using the commit sha as the version
+
+commit cc83ac31803d2c98d6674fd7555a25791b97b162
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Oct 30 11:44:38 2022 -0400
+
+    release 0.1.1667144098-5982ecdd
+
 commit 5982ecdd24978eba27241dd39eafd8adbd3c2cec
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Oct 30 11:34:58 2022 -0400
