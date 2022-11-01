@@ -1,3 +1,15 @@
+commit 35424858406a27e14a3082e133480e251b4766c7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 15:02:56 2022 -0400
+
+    git commit resolution improvements
+
+commit 8805cb12e842701eb8479d5f7b96f3a1fc7efd10
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 14:45:18 2022 -0400
+
+    release 0.1.1667328163-a52046f0
+
 commit a52046f02c1523980f99b0be3f4f8baff43a362e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Nov 1 14:42:43 2022 -0400
