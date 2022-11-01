@@ -59,6 +59,7 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 
 	n, err := notifications.DecodeConfig(filepath.Join(filepath.Dir(t.Location), t.Notifications), map[string]notifications.Creator{
 		"default":  func() notifications.Notifier { return notifications.New() },
+		"debug":    func() notifications.Notifier { return notifications.Debug() },
 		"desktop":  func() notifications.Notifier { return native.New() },
 		"slack":    func() notifications.Notifier { return slack.New() },
 		"sentryio": func() notifications.Notifier { return sentryio.New() },

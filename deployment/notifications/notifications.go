@@ -87,6 +87,12 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 	})
 }
 
-type noop struct{}
+func Debug() Notifier {
+	return debug{}
+}
 
-func (t noop) Notify(dc *agent.DeployCommand) {}
+type debug struct{}
+
+func (t debug) Notify(dc *agent.DeployCommand) {
+	log.Println(spew.Sdump(dc))
+}
