@@ -88,7 +88,7 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 }
 
 func Debug() Notifier {
-	return debug{}
+	return &debug{}
 }
 
 type debug struct{}
