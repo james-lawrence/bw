@@ -9,9 +9,9 @@ import (
 
 func Commitish(dir, treeish string) string {
 	var (
-		err error
-		r   *git.Repository
-		ref *plumbing.Reference
+		err  error
+		r    *git.Repository
+		hash *plumbing.Hash
 	)
 
 	if r, err = git.PlainOpen(dir); err != nil {
@@ -19,10 +19,10 @@ func Commitish(dir, treeish string) string {
 		return ""
 	}
 
-	if ref, err = r.Reference(plumbing.ReferenceName(treeish), true); err != nil {
+	if hash, err = r.ResolveRevision(plumbing.Revision(treeish)); err != nil {
 		log.Println("unable to resolve git reference - commit will be empty", dir, treeish, err)
 		return ""
 	}
 
-	return ref.Hash().String()
+	return hash.String()
 }

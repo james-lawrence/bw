@@ -37,7 +37,7 @@ func RunLocalDirectives(config agent.ConfigClient) (commitish string, err error)
 	)
 
 	commitish = vcsinfo.Commitish(config.WorkDir(), config.Deployment.CommitRef)
-	log.Println("vcs.commit", commitish)
+	log.Println("vcs.commit", config.Deployment.CommitRef, "->", commitish)
 
 	if err = os.WriteFile(filepath.Join(cdir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return commitish, err
