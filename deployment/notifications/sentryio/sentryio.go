@@ -18,6 +18,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 )
 
@@ -77,7 +78,7 @@ func (t Notifier) Notify(dc *agent.DeployCommand) {
 	}
 
 	n := notification{
-		Version:      bw.RandomID(dc.Archive.DeploymentID).String(),
+		Version:      stringsx.DefaultIfBlank(dc.Archive.Commit, bw.RandomID(dc.Archive.DeploymentID).String()),
 		Name:         t.Name,
 		URL:          t.URL,
 		Projects:     t.Projects,
