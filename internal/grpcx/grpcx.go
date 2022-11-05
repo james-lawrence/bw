@@ -3,13 +3,13 @@ package grpcx
 import (
 	"context"
 	"crypto/tls"
-	"errors"
 	"log"
 	"net"
 	"sync"
 	"time"
 
 	"github.com/akutz/memconn"
+	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -120,7 +120,7 @@ func Retry(op func() error, retry ...codes.Code) (err error) {
 }
 
 func IsCode(err error, check ...codes.Code) bool {
-	if s, ok := status.FromError(err); ok {
+	if s, ok := status.FromError(errors.Cause(err)); ok {
 		for _, c := range check {
 			if s.Code() == c {
 				return true
