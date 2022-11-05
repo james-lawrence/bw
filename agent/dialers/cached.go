@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 )
 
 func NewCached(d DefaultsDialer) *Cached {
@@ -39,7 +40,11 @@ func (t *Cached) DialContext(ctx context.Context, options ...grpc.DialOption) (c
 	t.m.RUnlock()
 
 	if c != nil {
-		return c, nil
+		if c.GetState() != connectivity.Shutdown {
+			return c, nil
+		} else {
+			c.Close()
+		}
 	}
 
 	t.m.Lock()
