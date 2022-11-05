@@ -20,7 +20,7 @@ func (t peer) deadleadership(p *raft.Raft) bool {
 	// however that function doesn't actually return accurate values. it updates every time a protocol message
 	// is sent, including candidate promotions. thereby not accurately representing the last contact time with
 	// the leadership.
-	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.lastContact, t.protocol.lastContactGrace)
+	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.lastContact, time.Since(t.lastContact), ">", t.protocol.lastContactGrace)
 	if leader == "" && t.lastContact.Add(t.protocol.lastContactGrace).Before(time.Now()) {
 		log.Println("leader is missing and grace period has passed, resetting this peer", t.protocol.lastContactGrace)
 		return true

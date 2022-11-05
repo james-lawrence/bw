@@ -21,7 +21,7 @@ type passive struct {
 	sgroup   *sync.WaitGroup
 }
 
-func (t passive) unstable() delayedTransition {
+func (t passive) unstable() conditionTransition {
 	b := backoff.New(
 		backoff.Exponential(time.Second),
 		backoff.Jitter(0.25),
@@ -30,10 +30,7 @@ func (t passive) unstable() delayedTransition {
 
 	dup := t
 	atomic.AddUint64(&dup.failures, 1)
-	return delayedTransition{
-		next:     dup,
-		Duration: b.Backoff(int(dup.failures)),
-	}
+	return delayed(t, t.protocol.ClusterChange, b.Backoff(int(dup.failures)))
 }
 
 func (t passive) stable() conditionTransition {

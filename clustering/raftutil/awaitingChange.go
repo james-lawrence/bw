@@ -1,28 +1,30 @@
 package raftutil
 
 import (
+	"context"
 	"sync"
 	"time"
 )
 
 type conditionTransition struct {
-	next state
-	cond *sync.Cond
+	timeout time.Duration
+	next    state
+	cond    *sync.Cond
 }
 
 func (t conditionTransition) Update(c rendezvous) state {
-	// xx := time.NewTimer(t.Duration)
-	// done := make(chan struct{})
-	// defer close(done)
-	// defer xx.Stop()
-	// go func() {
-	// 	select {
-	// 	case <-done:
-	// 		return
-	// 	case <-xx.C:
-	// 		t.cond.Broadcast()
-	// 	}
-	// }()
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+
+	if t.timeout > 0 {
+		go func() {
+			select {
+			case <-time.After(t.timeout):
+				t.cond.Broadcast()
+			case <-ctx.Done():
+			}
+		}()
+	}
 
 	t.cond.L.Lock()
 	t.cond.Wait()
@@ -31,12 +33,10 @@ func (t conditionTransition) Update(c rendezvous) state {
 	return t.next
 }
 
-type delayedTransition struct {
-	next state
-	time.Duration
-}
-
-func (t delayedTransition) Update(c rendezvous) state {
-	time.Sleep(t.Duration)
-	return t.next
+func delayed(next state, cond *sync.Cond, t time.Duration) conditionTransition {
+	return conditionTransition{
+		timeout: t,
+		next:    next,
+		cond:    cond,
+	}
 }

@@ -20,10 +20,7 @@ type leader struct {
 
 func (t leader) Update(c rendezvous) state {
 	var (
-		maintainState state = delayedTransition{
-			next:     t,
-			Duration: t.protocol.PassiveCheckin,
-		}
+		maintainState state = delayed(t, t.protocol.ClusterChange, t.protocol.PassiveCheckin)
 	)
 
 	log.Printf("leader update invoked: %p - %s\n", t.r, t.protocol.PassiveCheckin)
@@ -32,18 +29,13 @@ func (t leader) Update(c rendezvous) state {
 		if t.cleanupPeers(t.protocol.LocalNode, agent.QuorumNodes(c)...) {
 			refresh := time.Second
 			log.Println("peers unstable, will refresh in", refresh)
-			return delayedTransition{
-				next:     t,
-				Duration: refresh,
-			}
+			return delayed(t, t.protocol.ClusterChange, refresh)
 		}
 
 		return maintainState
 	default:
 		log.Println("lost leadership: demote to peer")
-		return peer{
-			stateMeta: t.stateMeta,
-		}.Update(c)
+		return peer(t).Update(c)
 	}
 }
 
