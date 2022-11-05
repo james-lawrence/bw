@@ -5,6 +5,7 @@ package agentutil
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -157,7 +158,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 			continue
 		}
 
-		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, "connection established")
+		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))
 		if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
 			select {
 			case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):
@@ -169,7 +170,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 		}
 
 		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
-			err = errors.Wrap(err, "connection lost, reconnecting")
+			err = errors.Wrapf(err, "connection lost %s", conn.Target())
 			if envx.Boolean(false, bw.EnvLogsDeploy) {
 				log.Println(err)
 			}
