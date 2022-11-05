@@ -4,6 +4,7 @@ package quorum
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"hash"
 	"io"
 	"log"
@@ -12,7 +13,9 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
@@ -327,6 +330,6 @@ func (t *Quorum) quorumOnly() (p stateMachine, err error) {
 	default:
 		log.Printf("broadcasting cluster change due invalid quorum to tickle raft overlay: %T - %s\n", p, state)
 		t.disconnect()
-		return p, errors.Errorf("must be run on a member of quorum: %s", state)
+		return p, status.Error(codes.Unavailable, fmt.Sprintf("must be run on a member of quorum: %s", state))
 	}
 }
