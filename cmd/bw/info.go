@@ -5,7 +5,9 @@ import (
 	"crypto/tls"
 	"io"
 	"log"
+	"math"
 	"os"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
@@ -101,6 +103,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		local.Peer,
 		events,
 		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)),
+		ux.OptionHeartbeat(time.Duration(math.MaxInt64)),
 	)
 
 	return nil
