@@ -30,7 +30,7 @@ func (t passive) unstable() conditionTransition {
 
 	dup := t
 	atomic.AddUint64(&dup.failures, 1)
-	return delayed(t, t.protocol.ClusterChange, b.Backoff(int(dup.failures)))
+	return delayed(dup, dup.protocol.ClusterChange, b.Backoff(int(dup.failures)))
 }
 
 func (t passive) stable() conditionTransition {
