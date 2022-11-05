@@ -86,6 +86,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 		m:                     &sync.Mutex{},
 		c:                     c,
 		lost:                  make(chan struct{}),
+		disconnected:          make(chan struct{}),
 		history:               history,
 	}
 
@@ -99,16 +100,17 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
-	deployment *deployment
-	wal        *WAL
-	sm         stateMachine
-	uploads    storage.UploadProtocol
-	m          *sync.Mutex
-	c          cluster
-	dialer     dialers.Defaults
-	lost       chan struct{}
-	rp         raftutil.Protocol
-	history    History
+	deployment   *deployment
+	wal          *WAL
+	sm           stateMachine
+	uploads      storage.UploadProtocol
+	m            *sync.Mutex
+	c            cluster
+	dialer       dialers.Defaults
+	lost         chan struct{}
+	disconnected chan struct{}
+	rp           raftutil.Protocol
+	history      History
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -136,8 +138,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			switch o.Raft.State() {
 			case raft.Shutdown:
 				log.Println("shutting down watchers", o.Raft.State())
-				close(t.lost)
-				t.lost = make(chan struct{})
+				t.lostquorum()
 			}
 		case raft.LeaderObservation:
 			log.Println("leadership observation", o.Raft.State())
@@ -255,6 +256,9 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		l net.Listener
 	)
 
+	disconnected := t.disconnected
+	lost := t.lost
+
 	if _, err = t.quorumOnly(); err != nil {
 		return errors.Wrap(err, "watch")
 	}
@@ -271,7 +275,9 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		select {
 		case <-out.Context().Done():
 			return errorsx.MaybeLog(errors.WithStack(out.Context().Err()))
-		case <-t.lost:
+		case <-disconnected:
+			return errorsx.MaybeLog(errors.New("disconnected"))
+		case <-lost:
 			return errorsx.MaybeLog(errors.New("quorum membership lost"))
 		case m := <-events:
 			if err = out.Send(m); err != nil {
@@ -298,6 +304,21 @@ func (t *Quorum) proxy() stateMachine {
 	return t.sm
 }
 
+func (t *Quorum) lostquorum() {
+	t.m.Lock()
+	defer t.m.Unlock()
+	close(t.lost)
+	t.lost = make(chan struct{})
+}
+
+func (t *Quorum) disconnect() {
+	t.m.Lock()
+	defer t.m.Unlock()
+	close(t.disconnected)
+	t.disconnected = make(chan struct{})
+	t.rp.ClusterChange.Broadcast()
+}
+
 func (t *Quorum) quorumOnly() (p stateMachine, err error) {
 	p = t.proxy()
 	switch state := p.State(); state {
@@ -305,7 +326,7 @@ func (t *Quorum) quorumOnly() (p stateMachine, err error) {
 		return p, nil
 	default:
 		log.Printf("broadcasting cluster change due invalid quorum to tickle raft overlay: %T - %s\n", p, state)
-		t.rp.ClusterChange.Broadcast()
+		t.disconnect()
 		return p, errors.Errorf("must be run on a member of quorum: %s", state)
 	}
 }
