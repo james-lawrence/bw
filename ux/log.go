@@ -189,11 +189,13 @@ func (t cState) print(m *agent.Message) {
 			}
 
 			t.Logger.Printf(
-				"%s - INFO - %s -> %s\n",
+				"%s - INFO - %s -> %s %s\n",
 				messagePrefix(m),
 				t.connection.State,
 				local.Connection.State,
+				local.Connection.Description,
 			)
+
 			t.connection.State = local.Connection.State
 		default:
 			d := m.GetLog()
