@@ -125,11 +125,13 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 		}),
 		raftutil.ProtocolOptionObservers(
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
-				switch o.Data.(type) {
+				switch d := o.Data.(type) {
 				case raft.LeaderObservation, raft.RaftState:
 					return true
 				case raft.RequestVoteRequest:
-					t.rp.ClusterChange.Broadcast()
+					if d.Term > 10 {
+						t.rp.ClusterChange.Broadcast()
+					}
 					return false
 				default:
 					return false
