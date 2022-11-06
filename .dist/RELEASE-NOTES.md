@@ -1,3 +1,92 @@
+commit 6d8eab8a478da5a3c121c6761334d17b14c694b7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 20:00:13 2022 -0400
+
+    update todo notes
+
+commit 3fa664828415c859765049e82ea727a2c1999c54
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:57:00 2022 -0400
+
+    increase watch heartbeat to inf.
+    
+    we shouldn't need to rely on the heartbeats for watch to work correctly.
+
+commit 991f49baa3515619e0ba779e8d40cca36edb13bc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:56:48 2022 -0400
+
+    fix passive unstable checkin
+
+commit 109e485264bc018fbeb88f9eaeb96342dc92d9c8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:09:43 2022 -0400
+
+    leader node should consider cluster events when in the stable state.
+    
+    previously would always wait for the passive checkin period before
+    updating its state. now it'll update when cluster event occurs or
+    when the passive checkin has expired.
+
+commit 4f5ad25d94593f29d3ed460fada36864b5038b82
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:09:06 2022 -0400
+
+    update test config
+
+commit bcb01e6483228fb48fa76dbb33c491aac7e1efe4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:08:43 2022 -0400
+
+    unwrap errors before checking grpc code.
+
+commit 98fd0fcd48a3c25057709391561825c053e9cd07
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:08:19 2022 -0400
+
+    add target information to connection event description.
+
+commit dc1aa7271fccb83ad86573e5c6a567b67eb69eda
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:07:50 2022 -0400
+
+    return unavailable when node is expected to be a member of quorum but
+    isnt
+
+commit 536a6a6566c1960da19d2f0e837474c62073119b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:07:06 2022 -0400
+
+    do not return shutdown grpc connections from cache.
+
+commit ab105062a9af33134da1315a45879ff4da9be835
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 19:06:13 2022 -0400
+
+    add description to connection log output
+
+commit 9c2d969d74fc6179db773f71d259e06e41c1a8a3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 17:39:28 2022 -0400
+
+    improve watcher disconnection logic
+    
+    attempts to ensure that when quorum membership is lost watchers
+    are disconnected. current thinking is that the channel was swapping
+    transparently.
+
+commit 62b4dc1134400e672901fab811773a6fa3564efc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 16:24:48 2022 -0400
+
+    adjust cache and config directory for notifications
+
+commit b7f18e43b69c36e5b8ea765b3fb128314b117e10
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Nov 1 15:32:00 2022 -0400
+
+    release 0.1.1667330733-fbc6bba5
+
 commit fbc6bba51d396d7f5b2d68b773d8f07358416cc8
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Nov 1 15:25:33 2022 -0400
