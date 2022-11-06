@@ -1,4 +1,6 @@
-deployDataDir: ".test/linux-development"
-deployTimeout: "20m"
+deploy:
+  dir: ".test/linux-development"
+  timeout: 20m
+  treeish: "HEAD"
 environment: |
   WORKING_DIR=${PWD}
