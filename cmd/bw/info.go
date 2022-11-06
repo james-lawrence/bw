@@ -64,10 +64,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	local := cluster.NewLocal(
-		commandutils.NewClientPeer(),
-		cluster.LocalOptionCapability(cluster.NewBitField(cluster.Passive)),
-	)
+	local := commandutils.NewClientPeer()
 
 	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
@@ -100,9 +97,9 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		ctx.Context,
 		ctx.Shutdown,
 		qd,
-		local.Peer,
+		local,
 		events,
-		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local.Peer, qd)),
+		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, qd)),
 		ux.OptionHeartbeat(time.Duration(math.MaxInt64)),
 	)
 

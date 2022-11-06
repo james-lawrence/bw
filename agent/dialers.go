@@ -54,8 +54,8 @@ func DeploymentNode(c rendez, key []byte) []*memberlist.Node {
 	return rendezvous.MaxN(1, key, QuorumNodes(c))
 }
 
-// SynchronizationPeers based on the provided k generate the peers to synchronize with
-func SynchronizationPeers(k []byte, c rendez) []*Peer {
+// RendezvousPeers based on the provided k generate the peers.
+func RendezvousPeers(k []byte, c rendez) []*Peer {
 	return Shuffle(NodesToPeers(c.GetN(2*QuorumDefault, k)...))
 }
 

@@ -31,7 +31,7 @@ func (t Rendezvous) DialContext(ctx context.Context, options ...grpc.DialOption)
 	err = errors.New("unable to connect")
 	opts := append(t.defaults, options...)
 
-	for _, p := range agent.NodesToPeers(agent.DeploymentNode(t.c, t.key)...) {
+	for _, p := range agent.RendezvousPeers(t.key, t.c) {
 		if c, err = grpc.DialContext(ctx, agent.RPCAddress(p), opts...); err == nil {
 			return c, err
 		}

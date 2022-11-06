@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/notary"
 )
 
@@ -100,8 +101,7 @@ func (t Deployment) Deploy(ctx context.Context, req *agent.DeployCommandRequest)
 	}
 
 	if cc, err = t.conn(ctx); err != nil {
-		log.Println("proxy connection failed", err)
-		return resp, status.Error(codes.Unavailable, "proxy connection error")
+		return resp, errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
 	}
 	defer cc.Close()
 
@@ -119,8 +119,7 @@ func (t Deployment) Cancel(ctx context.Context, req *agent.CancelRequest) (resp 
 	}
 
 	if cc, err = t.conn(ctx); err != nil {
-		log.Println("proxy connection failed", err)
-		return resp, status.Error(codes.Unavailable, "proxy connection error")
+		return resp, errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
 	}
 	defer cc.Close()
 
@@ -138,24 +137,29 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	if cc, err = t.conn(out.Context()); err != nil {
-		log.Println("proxy connection failed", err)
-		return status.Error(codes.Unavailable, "proxy connection error")
-	}
-	defer cc.Close()
+	watch := func(out agent.Deployments_WatchServer) (err error) {
+		if cc, err = t.conn(out.Context()); err != nil {
+			return errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
+		}
+		defer cc.Close()
 
-	if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
-		log.Println("watch quorum client failed", err)
-		return err
-	}
-
-	for msg, err := w.Recv(); err == nil; msg, err = w.Recv() {
-		if err = out.Send(msg); err != nil {
+		if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
+			log.Println("watch quorum client failed", err)
 			return err
 		}
+
+		for msg, err := w.Recv(); err == nil; msg, err = w.Recv() {
+			if err = out.Send(msg); err != nil {
+				return err
+			}
+		}
+
+		return errorsx.Compact(errors.WithStack(err), w.CloseSend())
 	}
 
-	return errorsx.Compact(errors.WithStack(err), w.CloseSend())
+	return grpcx.Retry(func() error {
+		return watch(out)
+	}, codes.Unavailable)
 }
 
 // Dispatch messages to the state machine.
@@ -169,8 +173,9 @@ func (t Deployment) Dispatch(ctx context.Context, req *agent.DispatchRequest) (r
 	}
 
 	if cc, err = t.conn(ctx); err != nil {
-		log.Println("proxy connection failed", err)
-		return resp, status.Error(codes.Unavailable, "proxy connection error")
+		return resp, errorsx.MaybeLog(
+			status.Error(codes.Unavailable, "proxy connection error"),
+		)
 	}
 	defer cc.Close()
 
@@ -189,12 +194,14 @@ func (t Deployment) Logs(req *agent.LogRequest, out agent.Deployments_LogsServer
 	}
 
 	if req.Peer == nil {
-		return status.Error(codes.FailedPrecondition, "peer to retrieve logs from required")
+		return status.Error(
+			codes.FailedPrecondition,
+			"peer to retrieve logs from required",
+		)
 	}
 
 	if cc, err = t.direct(out.Context(), req.Peer); err != nil {
-		log.Println("proxy connection failed", err)
-		return status.Error(codes.Unavailable, "proxy connection error")
+		return errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
 	}
 	defer cc.Close()
 

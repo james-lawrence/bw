@@ -114,7 +114,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	)
 
 	go backoff.Attempt(s, func(previous int) int {
-		for _, p := range agent.SynchronizationPeers(dctx.P2PPublicKey, dctx.Cluster) {
+		for _, p := range agent.RendezvousPeers(dctx.P2PPublicKey, dctx.Cluster) {
 			// Notary Subscriptions to node events. syncs authorization between agents
 			req, err := notary.NewSyncRequest(b)
 			if err != nil {
