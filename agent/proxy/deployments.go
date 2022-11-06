@@ -13,7 +13,6 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/notary"
 )
 
@@ -137,29 +136,23 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 		return status.Error(codes.PermissionDenied, "invalid credentials")
 	}
 
-	watch := func(out agent.Deployments_WatchServer) (err error) {
-		if cc, err = t.conn(out.Context()); err != nil {
-			return errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
-		}
-		defer cc.Close()
+	if cc, err = t.conn(out.Context()); err != nil {
+		return errorsx.MaybeLog(status.Error(codes.Unavailable, "proxy connection error"))
+	}
+	defer cc.Close()
 
-		if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
-			log.Println("watch quorum client failed", err)
-			return err
-		}
-
-		for msg, err := w.Recv(); err == nil; msg, err = w.Recv() {
-			if err = out.Send(msg); err != nil {
-				return err
-			}
-		}
-
-		return errorsx.Compact(errors.WithStack(err), w.CloseSend())
+	if w, err = agent.NewQuorumClient(cc).Watch(out.Context(), req); err != nil {
+		log.Println("watch quorum client failed", err)
+		return err
 	}
 
-	return grpcx.Retry(func() error {
-		return watch(out)
-	}, codes.Unavailable)
+	for msg, err := w.Recv(); err == nil; msg, err = w.Recv() {
+		if err = out.Send(msg); err != nil {
+			return err
+		}
+	}
+
+	return errorsx.Compact(errors.WithStack(err), w.CloseSend())
 }
 
 // Dispatch messages to the state machine.
