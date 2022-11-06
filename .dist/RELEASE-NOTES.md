@@ -1,3 +1,15 @@
+commit 8a06a3eac94f55e147a6dedc84feeddca2a510d3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 20:17:27 2022 -0400
+
+    cleanup client logs
+
+commit 77cad41c99bb78261e1807e650a43d05b648b75a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 20:03:08 2022 -0400
+
+    release 0.1.1667692813-6d8eab8a
+
 commit 6d8eab8a478da5a3c121c6761334d17b14c694b7
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Nov 5 20:00:13 2022 -0400
