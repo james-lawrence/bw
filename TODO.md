@@ -1,3 +1,7 @@
+### reliability
+- improve restart command to be reliable when restart nodes; atm it can nuke the node its proxying through immediately.
+- improve quorum message listeners reliability. I believe watchers get assigned to incorrect nodes and persist even when the node drops out of quorum.
+
 ### implement wasm work
 - implement bw/interp/awselb
 - - Restart(ctx context.Context, do func(context.Context) error) (err error)
