@@ -16,12 +16,14 @@ import (
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 )
 
 const (
@@ -159,22 +161,29 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 		}
 
 		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))
-		if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
-			select {
-			case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):
-			case <-ctx.Done():
-				events <- agent.LogError(local, errors.Wrap(ctx.Err(), "unable to replay history"))
+		err = grpcx.Retry(func() error {
+			if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
+				select {
+				case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):
+				case <-ctx.Done():
+					events <- agent.LogError(local, errors.Wrap(ctx.Err(), "unable to replay history"))
+				}
+				return nil
+			} else {
+				return err
 			}
-		} else {
-			log.Println("unable to replay history", err)
+		}, codes.Unavailable)
+		if err != nil {
+			events <- agent.LogError(local, err)
 		}
 
 		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
-			err = errors.Wrapf(err, "connection lost %s", conn.Target())
+			msg := fmt.Sprintf("connection lost %s", conn.Target())
+			err = errors.Wrap(err, msg)
 			if envx.Boolean(false, bw.EnvLogsDeploy) {
 				log.Println(err)
 			}
-			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, err.Error())
+			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, msg)
 			continue
 		}
 	}
