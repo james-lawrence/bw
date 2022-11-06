@@ -128,6 +128,9 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 				switch o.Data.(type) {
 				case raft.LeaderObservation, raft.RaftState:
 					return true
+				case raft.RequestVoteRequest:
+					t.rp.ClusterChange.Broadcast()
+					return false
 				default:
 					return false
 				}
