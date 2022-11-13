@@ -1,3 +1,46 @@
+commit babb8dcac0dc38b6c079b028988d7302cb48140b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 13 11:35:04 2022 -0500
+
+    move leadership transfer outside of raft clustering
+
+commit 1a3adca86a2988ebb5b128ded80455e8268a2b45
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 6 10:25:08 2022 -0500
+
+    tickle quorum update when vote requests are repeatedly seen
+
+commit 44933d8869c3b81fe7d6a59989c156aee80e863f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 6 07:26:51 2022 -0500
+
+    tickle cluster when vote requests arrive they indicate instability
+
+commit 0233c857ce3d5a987d1a562f30bfd15d56017d68
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 6 07:24:14 2022 -0500
+
+    remove transparent reconnect for watch, not ready until history added to
+    proxy
+
+commit 35276c326adbe53f51efabae4f286503d71755d6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 6 07:21:40 2022 -0500
+
+    update test configurations
+
+commit db34036c95bb51ef5c61284b73959dc08b30da9f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 6 07:18:55 2022 -0500
+
+    minor cleanups
+
+commit 8f14fbb04cbeb1430d8e6de42237325057090e8c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Nov 5 20:24:16 2022 -0400
+
+    release 0.1.1667693847-8a06a3ea
+
 commit 8a06a3eac94f55e147a6dedc84feeddca2a510d3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Nov 5 20:17:27 2022 -0400
