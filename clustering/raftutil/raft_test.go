@@ -232,10 +232,10 @@ var _ = Describe("Raft", func() {
 
 			for i := 0; i < 5; i++ {
 				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-				Eventually(func() []raft.Server {
+				Eventually(func() int {
 					rafts = gather(obsc, rafts...)
-					return getServers(rafts...)
-				}, 30*time.Second).Should(HaveLen(3))
+					return len(getServers(rafts...))
+				}, 30*time.Second).Should(BeNumerically(">=", 3))
 			}
 		})
 
@@ -330,58 +330,6 @@ var _ = Describe("Raft", func() {
 				go r.Overlay(current.c, ProtocolOptionObservers(obs))
 				current.r, current.rc = &r, rcancel
 			}
-		})
-
-		It("should handle leadership changes", func() {
-			var (
-				network memberlist.MockNetwork
-				rafts   []*raft.Raft
-				peers   []peer
-			)
-
-			tmpdir := testingx.TempDir()
-			obsc := make(chan raft.Observation, 100)
-			obs := raft.NewObserver(obsc, true, nil)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for i := 0; i < 3; i++ {
-				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-			}
-
-			Eventually(func() *raft.Raft {
-				rafts = gather(obsc, rafts...)
-				return firstRaft(findState(leaderFilter, rafts...)...)
-			}, 5*time.Second).ShouldNot(BeNil())
-
-			leader := firstRaft(findState(leaderFilter, rafts...)...)
-			expected := leader.Leader()
-
-			Eventually(func() bool {
-				newPeer(ctx, tmpdir, obs, &network, peers...)
-				time.Sleep(500 * time.Millisecond)
-				rafts = gather(obsc, rafts...)
-				if l2 := firstRaft(findState(leaderFilter, rafts...)...); l2 != nil && l2.Leader() != expected {
-					return true
-				}
-				return false
-			}, 30*time.Second).Should(BeTrue())
-
-			Eventually(func() *raft.Raft {
-				time.Sleep(200 * time.Millisecond)
-				rafts = gather(obsc, rafts...)
-				return firstRaft(findState(leaderFilter, rafts...)...)
-			}, 30*time.Second).ShouldNot(BeNil())
-
-			Eventually(func() bool {
-				time.Sleep(200 * time.Millisecond)
-				rafts = gather(obsc, rafts...)
-				if l2 := firstRaft(findState(leaderFilter, rafts...)...); l2 != nil {
-					log.Println("VERIFYING NEW LEADER", l2.Leader(), expected)
-					return l2.Leader() != expected
-				}
-				return false
-			}, 30*time.Second).Should(BeTrue())
 		})
 	})
 })

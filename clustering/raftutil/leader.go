@@ -10,8 +10,6 @@ import (
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/debugx"
-	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/pkg/errors"
 )
 
 type leader struct {
@@ -69,7 +67,7 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
 	for _, peer := range candidates {
-		if rs, err = nodeToserver(peer); err != nil {
+		if rs, err = NodeToServer(peer); err != nil {
 			log.Println("failed to lookup peer", err)
 			return true
 		}
@@ -111,19 +109,6 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		}
 
 		return true
-	}
-
-	if len(peers) > 1 {
-		log.Println(local.Name, "preventing leadership transfer too many peers being changed")
-		return true
-	}
-
-	for _, peer := range peers {
-		if peer.ID == raft.ServerID(local.Name) && allowRemoval {
-			log.Println(local.Name, "- transferring leadership")
-			errorsx.MaybeLog(errors.Wrap(t.r.LeadershipTransfer().Error(), "failed to transfer leadership"))
-			return true
-		}
 	}
 
 	debugx.Println(local.Name, "cluster stable", unstable)

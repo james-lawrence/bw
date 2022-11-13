@@ -46,7 +46,7 @@ func (t peer) Update(c rendezvous) state {
 		return leader(t).Update(c)
 	default:
 		debugx.Println("peer current state", s)
-		if t.protocol.maybeLeave(c) || t.deadleadership(t.r) {
+		if t.protocol.MaybeLeave(c) || t.deadleadership(t.r) {
 			return leave(t.stateMeta)
 		}
 

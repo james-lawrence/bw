@@ -470,10 +470,10 @@ func leave(sm stateMeta) state {
 	}
 }
 
-// maybeLeave - uses the provided cluster and raft protocol to determine
+// MaybeLeave - uses the provided cluster and raft protocol to determine
 // if it should leave the raft protocol group.
 // returns true if it left the raft protocol.
-func (t Protocol) maybeLeave(c rendezvous) bool {
+func (t Protocol) MaybeLeave(c rendezvous) bool {
 	if t.isMember(c) {
 		return false
 	}
@@ -497,7 +497,7 @@ func configuration(c rendezvous) (conf raft.Configuration) {
 
 	log.Println("potential quorum peers", len(q))
 	for _, peer := range q {
-		if rs, err = nodeToserver(peer); err != nil {
+		if rs, err = NodeToServer(peer); err != nil {
 			log.Println("ignoring peer, unable to compute address", peer.String(), err)
 			continue
 		}
@@ -520,7 +520,7 @@ func isPossiblePeer(local *memberlist.Node, peers ...*memberlist.Node) bool {
 	return false
 }
 
-func nodeToserver(n *memberlist.Node) (_zero raft.Server, err error) {
+func NodeToServer(n *memberlist.Node) (_zero raft.Server, err error) {
 	var (
 		p *agent.Peer
 	)

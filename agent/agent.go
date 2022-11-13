@@ -56,12 +56,6 @@ type DeployClient interface {
 	Cancel(context.Context, *CancelRequest) error
 }
 
-type cluster interface {
-	Local() *Peer
-	Peers() []*Peer
-	Quorum() []*Peer
-}
-
 // Uploader ...
 type Uploader interface {
 	Upload(io.Reader) (hash.Hash, error)
@@ -70,8 +64,8 @@ type Uploader interface {
 
 // DetectQuorum detects a peer based on the compare function.
 // from the set of quorum nodes.
-func DetectQuorum(c cluster, compare func(*Peer) bool) *Peer {
-	for _, n := range c.Quorum() {
+func DetectQuorum(c rendez, compare func(*Peer) bool) *Peer {
+	for _, n := range NodesToPeers(LargeQuorum(c)...) {
 		if compare(n) {
 			return n
 		}

@@ -69,12 +69,15 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 	deployment := newDeployment(d, c)
 	obs := NewObserver(cd)
 	history := NewHistory()
+	leadershipTransfer := NewLeadershipTransfer(c, rp)
+
 	wal := NewWAL(
 		NewTranscoder(
 			deployment,
 			codec,
 			obs,
 			history,
+			leadershipTransfer,
 		),
 	)
 
@@ -91,6 +94,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 		lost:                  make(chan struct{}),
 		disconnected:          make(chan struct{}),
 		history:               history,
+		leadershipTransfer:    leadershipTransfer,
 	}
 
 	for _, opt := range options {
@@ -103,17 +107,18 @@ func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder
 // Quorum implements quorum functionality.
 type Quorum struct {
 	agent.ConnectableDispatcher
-	deployment   *deployment
-	wal          *WAL
-	sm           stateMachine
-	uploads      storage.UploadProtocol
-	m            *sync.Mutex
-	c            cluster
-	dialer       dialers.Defaults
-	lost         chan struct{}
-	disconnected chan struct{}
-	rp           raftutil.Protocol
-	history      History
+	deployment         *deployment
+	wal                *WAL
+	sm                 stateMachine
+	uploads            storage.UploadProtocol
+	m                  *sync.Mutex
+	c                  cluster
+	dialer             dialers.Defaults
+	lost               chan struct{}
+	disconnected       chan struct{}
+	rp                 raftutil.Protocol
+	history            History
+	leadershipTransfer *LeadershipTransfer
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -124,6 +129,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			return t.wal
 		}),
 		raftutil.ProtocolOptionObservers(
+			t.leadershipTransfer.NewRaftObserver(),
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
 				switch d := o.Data.(type) {
 				case raft.LeaderObservation, raft.RaftState:
