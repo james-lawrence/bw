@@ -1,3 +1,34 @@
+commit 857b2969833dced01dd987deeb1d6f47d6f013cc
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 20 18:15:58 2022 -0500
+
+    gracefully handle departing nodes
+
+commit 9ec6afb569d14ad84d9e9b8ab60b79b932910b83
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 20 17:14:53 2022 -0500
+
+    cleanup failed to deploy messages
+
+commit 042d0d53ffe5e9a6dc45344fd6a5f20b87583914
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 20 17:14:30 2022 -0500
+
+    move deployment to only run on leader; makes restarts more consistent
+
+commit 89432daa50a9a9c741bf722722c4e6122a5f2b3d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 13 11:56:49 2022 -0500
+
+    move credential sync to post deploy reducing the frequency of the
+    occurences
+
+commit 1eb3aa272c157bf5539a9d5ddf0770880a17c8c5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 13 11:37:42 2022 -0500
+
+    release 0.1.1668357304-babb8dca
+
 commit babb8dcac0dc38b6c079b028988d7302cb48140b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Nov 13 11:35:04 2022 -0500
