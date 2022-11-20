@@ -215,26 +215,26 @@ func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
 	task := newPending(peer, t.timeout)
 	perform := func(deadline context.Context) error {
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
-			log.Println("deploy to", peer.Name, "initiated")
-			defer log.Println("deploy to", peer.Name, "completed")
+			log.Println("deploy to", peer.Ip, "initiated")
+			defer log.Println("deploy to", peer.Ip, "completed")
 		}
 
 		if _, err := t.deploy.Visit(deadline, peer); err != nil {
-			return errors.Wrapf(err, "failed to deploy to: %s", peer.Name)
+			return errors.Wrapf(err, "failed to deploy to: %s", peer.Ip)
 		}
 
 		// send the task to be monitored.
 		select {
 		case t.queue <- task:
 		case <-deadline.Done():
-			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Name)
+			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Ip)
 		}
 
 		select {
 		case <-deadline.Done():
-			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Name)
+			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Ip)
 		case cause := <-task.done:
-			return errors.Wrapf(cause, "failed to deploy to: %s", peer.Name)
+			return errors.Wrapf(cause, "failed to deploy to: %s", peer.Ip)
 		}
 	}
 
