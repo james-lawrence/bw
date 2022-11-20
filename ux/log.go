@@ -161,51 +161,60 @@ func (t cState) merge(options ...Option) cState {
 }
 
 func (t cState) print(m *agent.Message) {
-	switch m.Type {
-	case agent.Message_PeerEvent:
-	case agent.Message_DeployCommandEvent:
-		t.printDeployCommand(m)
-	case agent.Message_PeersCompletedEvent:
-		// Do nothing.
-	case agent.Message_PeersFoundEvent:
+	switch evt := m.Event.(type) {
+	case *agent.Message_Int:
+		switch m.Type {
+		case agent.Message_PeersCompletedEvent:
+			// Do nothing.
+		case agent.Message_PeersFoundEvent:
+			t.Logger.Printf(
+				"%s - INFO - located %d peers\n",
+				messagePrefix(m),
+				m.GetInt(),
+			)
+		default:
+			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
+		}
+	case *agent.Message_Log:
 		t.Logger.Printf(
-			"%s - INFO - located %d peers\n",
+			"%s - INFO - %s\n",
 			messagePrefix(m),
-			m.GetInt(),
+			evt.Log.Log,
 		)
-	case agent.Message_DeployEvent:
-		d := m.GetDeploy()
+	case *agent.Message_DeployCommand:
+		t.printDeployCommand(m)
+	case *agent.Message_Deploy:
 		t.Logger.Printf(
 			"%s - %s %s\n",
 			messagePrefix(m),
-			d.Stage,
-			bw.RandomID(d.Archive.DeploymentID),
+			evt.Deploy.Stage,
+			bw.RandomID(evt.Deploy.Archive.DeploymentID),
 		)
-	case agent.Message_LogEvent:
-		switch local := m.Event.(type) {
-		case *agent.Message_Connection:
-			if t.connection.State == local.Connection.State {
-				return
-			}
-
-			t.Logger.Printf(
-				"%s - INFO - %s -> %s %s\n",
-				messagePrefix(m),
-				t.connection.State,
-				local.Connection.State,
-				local.Connection.Description,
-			)
-
-			t.connection.State = local.Connection.State
-		default:
-			d := m.GetLog()
-			t.Logger.Printf(
-				"%s - INFO - %s\n",
-				messagePrefix(m),
-				d.Log,
-			)
+	case *agent.Message_Membership:
+		t.Logger.Println(
+			t.au.Yellow(
+				fmt.Sprintf("%s - INFO - %s",
+					messagePrefix(m),
+					evt.Membership,
+				),
+			),
+		)
+	case *agent.Message_History:
+	case *agent.Message_Connection:
+		if t.connection.State == evt.Connection.State {
+			return
 		}
-	case agent.Message_DeployHeartbeat:
+
+		t.Logger.Printf(
+			"%s - INFO - %s -> %s %s\n",
+			messagePrefix(m),
+			t.connection.State,
+			evt.Connection.State,
+			evt.Connection.Description,
+		)
+
+		t.connection.State = evt.Connection.State
+	case *agent.Message_Heartbeat:
 		if t.debug {
 			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 		}

@@ -26,7 +26,7 @@ func NewMonitor(ticklers ...MonitorTickler) Monitor {
 	}
 }
 
-type MonitorTickler func(ctx context.Context, tickle *sync.Cond)
+type MonitorTickler func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer)
 
 func MonitorTicklerPeriodic(d time.Duration) MonitorTickler {
 	return MonitorTicklerRate(rate.NewLimiter(rate.Every(d), 1))
@@ -37,7 +37,7 @@ func MonitorTicklerPeriodicAuto(d time.Duration) MonitorTickler {
 }
 
 func MonitorTicklerRate(r *rate.Limiter) MonitorTickler {
-	return func(ctx context.Context, tickle *sync.Cond) {
+	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
 		defer tickle.Signal()
 		for err := r.Wait(ctx); err == nil; err = r.Wait(ctx) {
 			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
@@ -49,7 +49,7 @@ func MonitorTicklerRate(r *rate.Limiter) MonitorTickler {
 }
 
 func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler {
-	return func(ctx context.Context, tickle *sync.Cond) {
+	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
 		events := make(chan *agent.Message, 100)
 		go agentutil.WatchEvents(ctx, l, d, events)
 		for {
@@ -64,6 +64,10 @@ func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler 
 						}
 						tickle.Signal()
 					default:
+					}
+				case *agent.Message_Membership:
+					if evt.Membership == agent.Message_Departed {
+						departed <- m.Peer
 					}
 				default:
 				}
@@ -105,6 +109,9 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 		log.Println("event monitoring initiated")
 		defer log.Println("event monitoring completed")
 	}
+
+	departed := make(map[string]*agent.Peer, 128)
+	departedchan := make(chan *agent.Peer)
 	performcheck := make(chan struct{})
 	outstanding := make([]*pending, 0, 128)
 	tickle := sync.NewCond(&sync.Mutex{})
@@ -113,11 +120,11 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 
 	go t.tickler(ctx, tickle, performcheck)
 	for _, tickler := range t.ticklers {
-		go tickler(ctx, tickle)
+		go tickler(ctx, tickle, departedchan)
 	}
 
 	for _, tickler := range additional {
-		go tickler(ctx, tickle)
+		go tickler(ctx, tickle, departedchan)
 	}
 
 	for {
@@ -131,12 +138,15 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 
 			outstanding = append(outstanding, task)
 			tickle.Signal()
+		case p := <-departedchan:
+			departed[p.Name] = p
 		case <-performcheck:
 			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "initiated")
 			}
 
 			outstanding = checker.run(ctx, outstanding...)
+			outstanding = dropDeparted(departed, outstanding...)
 
 			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "completed")
@@ -149,6 +159,25 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 			return ctx.Err()
 		}
 	}
+}
+
+func dropDeparted(departed map[string]*agent.Peer, outstanding ...*pending) (remaining []*pending) {
+	if len(departed) == 0 {
+		return outstanding
+	}
+
+	remaining = make([]*pending, 0, len(outstanding))
+	for _, o := range outstanding {
+		if _, ok := departed[o.Name]; ok {
+			log.Println("dropping", o.Ip, "node departed")
+			close(o.done)
+			continue
+		}
+
+		remaining = append(remaining, o)
+	}
+
+	return remaining
 }
 
 func newChecker(ctx context.Context, o operation) checker {
