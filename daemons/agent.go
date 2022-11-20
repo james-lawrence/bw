@@ -67,7 +67,6 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	q := quorum.New(
 		observersmem,
 		dctx.Cluster,
-		proxy.NewProxy(dctx.Cluster),
 		quorum.NewTranscoder(
 			quorum.Logging{},
 		),

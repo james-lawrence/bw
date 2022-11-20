@@ -94,21 +94,10 @@ func connect(local *raft.InmemTransport, peers ...*raft.InmemTransport) {
 	}
 }
 
-func awaitLeader(protocols ...*raft.Raft) *raft.Raft {
+func findFirstState(s raft.RaftState, protocols ...*raft.Raft) *raft.Raft {
 	for {
 		for _, p := range protocols {
-			if p.State() == raft.Leader {
-				return p
-			}
-		}
-		runtime.Gosched()
-	}
-}
-
-func awaitFollower(protocols ...*raft.Raft) *raft.Raft {
-	for {
-		for _, p := range protocols {
-			if p.State() == raft.Follower {
+			if p.State() == s {
 				return p
 			}
 		}
@@ -131,7 +120,7 @@ var _ = Describe("StateMachine", func() {
 		protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
 		log.Println("awaiting leader")
-		leader := awaitLeader(protocols...)
+		leader := findFirstState(raft.Leader, protocols...)
 		log.Println("leader elected")
 		lp := agent.NewPeer("node")
 		sm := NewMachine(
@@ -152,7 +141,7 @@ var _ = Describe("StateMachine", func() {
 			protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
 			Expect(err).To(Succeed())
 
-			leader := awaitLeader(protocols...)
+			leader := findFirstState(raft.Leader, protocols...)
 			sm := NewMachine(
 				agent.NewPeer("node"),
 				leader,
@@ -232,7 +221,7 @@ var _ = Describe("StateMachine", func() {
 
 		protocols, _, err := newCluster(NewTranscoder(Discard{Cause: errors.New("boom")}), "server1", "server2", "server3")
 		Expect(err).ToNot(HaveOccurred())
-		leader := awaitLeader(protocols...)
+		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(
 			agent.NewPeer("node"),
 			leader,
@@ -260,7 +249,7 @@ var _ = Describe("StateMachine", func() {
 		ob := NewObserver(obsmem)
 		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
 		Expect(err).ToNot(HaveOccurred())
-		leader := awaitLeader(protocols...)
+		leader := findFirstState(raft.Leader, protocols...)
 
 		sm := NewMachine(
 			agent.NewPeer("node"),

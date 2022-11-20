@@ -12,6 +12,9 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/pkg/errors"
 )
@@ -21,17 +24,15 @@ const (
 	deploying
 )
 
-func newDeployment(d deployer, c cluster) *deployment {
+func newDeployment(c cluster) *deployment {
 	return &deployment{
 		m: &sync.RWMutex{},
-		d: d,
 		c: c,
 	}
 }
 
 type deployment struct {
 	c                    cluster
-	d                    deployer
 	deploying            int32                // is a deploy process in progress.
 	runningDeploy        *agent.DeployCommand // currently active deployment.
 	lastSuccessfulDeploy *agent.DeployCommand // used for bootstrapping and recovering when a deploy proxy fails.
@@ -110,8 +111,20 @@ func (t *deployment) getRunningDeploy() *agent.DeployCommand {
 }
 
 // Deploy trigger a deploy.
-func (t *deployment) deploy(ctx context.Context, d dialers.Defaults, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
-	return t.d.Deploy(ctx, d, by, dopts, a, peers...)
+func (t *deployment) deploy(ctx context.Context, dialer dialers.Defaults, by string, dopts *agent.DeployOptions, archive *agent.Archive, peers ...*agent.Peer) (err error) {
+	var (
+		conn *grpc.ClientConn
+	)
+
+	qd := dialers.NewQuorum(t.c, dialer.Defaults()...)
+	if conn, err = qd.DialContext(ctx, dialer.Defaults()...); err != nil {
+		return err
+	}
+
+	return grpcx.Retry(func() error {
+		return agent.NewConn(conn).RemoteDeploy(ctx, by, dopts, archive, peers...)
+	}, codes.Unavailable)
+
 }
 
 // Cancel a ongoing deploy.
@@ -152,35 +165,37 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 		dc *agent.DeployCommand
 	)
 
-	if dc = t.getRunningDeploy(); dc != nil && dc.Options != nil && dc.Archive != nil {
-		err = sm.Dispatch(
-			ctx,
-			agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
-		)
+	if dc = t.getRunningDeploy(); dc == nil || dc.Options == nil || dc.Archive == nil {
+		return nil
+	}
 
-		if err != nil {
-			return errors.Wrap(err, "unable to write restart events due to leadership change")
-		}
+	err = sm.Dispatch(
+		ctx,
+		agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
+	)
 
-		err = sm.Dispatch(
-			ctx,
-			agent.LogEvent(t.c.Local(), "restarting deploy"),
-			agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
-			agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
-		)
-		if err != nil {
-			return errors.Wrap(err, "restart command failure")
-		}
+	if err != nil {
+		return errors.Wrap(err, "unable to write restart events due to leadership change")
+	}
 
-		if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
-			msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
-			errorsx.MaybeLog(sm.Dispatch(ctx, msg))
-			return errors.Wrap(err, "cancellation failure")
-		}
+	err = sm.Dispatch(
+		ctx,
+		agent.LogEvent(t.c.Local(), "restarting deploy"),
+		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
+		agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
+	)
+	if err != nil {
+		return errors.Wrap(err, "restart command failure")
+	}
 
-		if err = t.deploy(ctx, d, dc.Initiator, dc.Options, dc.Archive, t.c.Peers()...); err != nil {
-			return errors.Wrap(err, "deploy failure")
-		}
+	if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
+		msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
+		errorsx.MaybeLog(sm.Dispatch(ctx, msg))
+		return errors.Wrap(err, "cancellation failure")
+	}
+
+	if err = t.deploy(ctx, d, dc.Initiator, dc.Options, dc.Archive); err != nil {
+		return errors.Wrap(err, "deploy failure")
 	}
 
 	return nil

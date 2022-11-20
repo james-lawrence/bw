@@ -32,6 +32,7 @@ type stateMachine interface {
 	State() raft.RaftState
 	Leader() *agent.Peer
 	Dispatch(context.Context, ...*agent.Message) error
+	Deploy(ctx context.Context, c cluster, dialer dialers.Defaults, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) error
 }
 
 type cluster interface {
@@ -41,10 +42,6 @@ type cluster interface {
 	Local() *agent.Peer
 	Quorum() []*agent.Peer
 	Peers() []*agent.Peer
-}
-
-type deployer interface {
-	Deploy(context.Context, dialers.Defaults, string, *agent.DeployOptions, *agent.Archive, ...*agent.Peer) error
 }
 
 // Option option for the quorum rpc.
@@ -65,8 +62,8 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 }
 
 // New new quorum instance based on the options.
-func New(cd agent.ConnectableDispatcher, c cluster, d deployer, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
-	deployment := newDeployment(d, c)
+func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
+	deployment := newDeployment(c)
 	obs := NewObserver(cd)
 	history := NewHistory()
 	leadershipTransfer := NewLeadershipTransfer(c, rp)
@@ -130,6 +127,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 		}),
 		raftutil.ProtocolOptionObservers(
 			t.leadershipTransfer.NewRaftObserver(),
+			// t.deployer.NewRaftObserver(),
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
 				switch d := o.Data.(type) {
 				case raft.LeaderObservation, raft.RaftState:
@@ -165,14 +163,14 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					)
 
 					// background this task so dispatches work.
-					go func() {
+					go func(ctx context.Context) {
 						errorsx.MaybeLog(sm.initialize())
 						logx.Verbose(errors.Wrap(
-							t.deployment.restartActiveDeploy(context.Background(), t.dialer, sm),
+							t.deployment.restartActiveDeploy(ctx, t.dialer, sm),
 							"failed to restart an active deploy",
 						))
-						errorsx.MaybeLog(t.deployment.determineLatestDeploy(context.Background(), t.dialer, sm))
-					}()
+						errorsx.MaybeLog(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
+					}(context.Background())
 
 					return sm
 				}()
@@ -198,7 +196,7 @@ func (t *Quorum) Cancel(ctx context.Context, req *agent.CancelRequest) (err erro
 
 // Deploy ...
 func (t *Quorum) Deploy(ctx context.Context, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
-	return errorsx.MaybeLog(t.deployment.deploy(ctx, t.dialer, by, dopts, a, peers...))
+	return t.proxy().Deploy(ctx, t.c, t.dialer, by, dopts, a, peers...)
 }
 
 // Upload ...

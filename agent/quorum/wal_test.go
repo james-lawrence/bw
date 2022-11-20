@@ -93,7 +93,7 @@ var (
 )
 var _ = DescribeTable(
 	"WAL Snapshot/Restore", func(commands ...*agent.Message) {
-		deployment := newDeployment(nil, nil)
+		deployment := newDeployment(nil)
 		mobs, err := observers.NewMemory()
 		Expect(err).To(Succeed())
 		obs := NewObserver(mobs)
@@ -155,7 +155,7 @@ var _ = DescribeTable(
 
 var _ = DescribeTable(
 	"WAL Restore", func(commands ...proto.Message) {
-		deployment := newDeployment(nil, nil)
+		deployment := newDeployment(nil)
 		mobs, err := observers.NewMemory()
 		Expect(err).To(Succeed())
 		obs := NewObserver(mobs)

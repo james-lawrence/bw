@@ -62,6 +62,23 @@ func (t *ProxyMachine) DialLeader(d dialers.Defaults) (c *grpc.ClientConn, err e
 	return dialers.NewDirect(agent.RPCAddress(leader)).DialContext(context.Background(), d.Defaults()...)
 }
 
+func (t *ProxyMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Defaults, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
+	var (
+		conn *grpc.ClientConn
+	)
+
+	if conn, err = t.DialLeader(t.dialer); err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	if _, err = agent.NewQuorumClient(conn).Deploy(ctx, &agent.DeployCommandRequest{Initiator: by, Options: dopts, Archive: a, Peers: peers}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Dispatch a message to the WAL.
 func (t *ProxyMachine) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
 	return t.writeWAL(ctx, m...)

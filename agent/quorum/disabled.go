@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 )
 
 // DisabledMachine implements the machine api but errors out or
@@ -24,5 +25,9 @@ func (t DisabledMachine) State() raft.RaftState {
 
 // Dispatch a message to the WAL.
 func (t DisabledMachine) Dispatch(_ context.Context, m ...*agent.Message) (err error) {
+	return status.Error(codes.Unavailable, agent.ErrDisabledMachine.Error())
+}
+
+func (t DisabledMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Defaults, by string, dopts *agent.DeployOptions, a *agent.Archive, peers ...*agent.Peer) (err error) {
 	return status.Error(codes.Unavailable, agent.ErrDisabledMachine.Error())
 }
