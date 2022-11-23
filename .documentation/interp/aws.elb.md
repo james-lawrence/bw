@@ -1,7 +1,5 @@
 ### AWS ELB v2 API Examples
 
-#### shell to restart a systemd service
-
 ```golang
 package main
 

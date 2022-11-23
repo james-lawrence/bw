@@ -11,9 +11,7 @@ import (
 	"github.com/hashicorp/memberlist"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/systemx"
-	"github.com/james-lawrence/bw/internal/timex"
 )
 
 // ConfigClientOption options for the client configuration.
@@ -111,14 +109,11 @@ type Deployment struct {
 
 // ConfigClient ...
 type ConfigClient struct {
-	root                    string `yaml:"-"` // filepath of the configuration on disk.
-	Address                 string // cluster address
-	Concurrency             float64
-	Deployment              Deployment    `yaml:"deploy"`
-	DeprecatedDeployDataDir string        `yaml:"deployDataDir"`
-	DeprecatedDeployTimeout time.Duration `yaml:"deployTimeout"`
-	DeprecatedDeployPrompt  string        `yaml:"deployPrompt"` // used to prompt before a deploy is started, useful for deploying to sensitive systems like production.
-	Credentials             struct {
+	root        string `yaml:"-"` // filepath of the configuration on disk.
+	Address     string // cluster address
+	Concurrency float64
+	Deployment  Deployment `yaml:"deploy"`
+	Credentials struct {
 		Mode      string `yaml:"source"`
 		Directory string `yaml:"directory"`
 		Insecure  bool   `yaml:"-"`
@@ -136,19 +131,6 @@ func (t ConfigClient) LoadConfig(path string) (ConfigClient, error) {
 	}
 
 	t.root = filepath.Dir(path)
-
-	t.Deployment.DataDir = stringsx.DefaultIfBlank(
-		t.DeprecatedDeployDataDir,
-		t.Deployment.DataDir,
-	)
-	t.Deployment.Timeout = timex.DurationOrDefault(
-		t.DeprecatedDeployTimeout,
-		t.Deployment.Timeout,
-	)
-	t.Deployment.Prompt = stringsx.DefaultIfBlank(
-		t.DeprecatedDeployPrompt,
-		t.Deployment.Prompt,
-	)
 
 	return t, nil
 }
