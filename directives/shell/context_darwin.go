@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
