@@ -24,6 +24,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -35,6 +36,7 @@ type Exec struct {
 	Lenient bool
 	Timeout time.Duration
 	Environ string
+	WorkDir string   `yaml:"directory"`
 	LoadEnv []string `yaml:"loadenv"`
 }
 
@@ -61,7 +63,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	cmd.Env = env
 	cmd.Stderr = sctx.output
 	cmd.Stdout = sctx.output
-	cmd.Dir = sctx.dir
+	cmd.Dir = stringsx.DefaultIfBlank(t.WorkDir, sctx.dir)
 
 	return t.lenient(sctx, cmd.Run())
 }

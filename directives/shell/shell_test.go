@@ -19,6 +19,7 @@ var _ = ginkgo.Describe("Shell", func() {
 - command: "echo %H %h %m"
   lenient: true
   timeout: 10m
+  directory: /tmp
   environ: |
     FOO=BAR
     BIZZ=${BAZZ}
@@ -36,6 +37,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				Command: "echo %H %h %m",
 				Lenient: true,
 				Timeout: 10 * time.Minute,
+				WorkDir: "/tmp",
 				Environ: "FOO=BAR\nBIZZ=${BAZZ}\n",
 			},
 		),
