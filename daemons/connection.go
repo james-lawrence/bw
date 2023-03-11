@@ -3,6 +3,7 @@ package daemons
 import (
 	"context"
 	"crypto/tls"
+	"log"
 	"time"
 
 	"github.com/james-lawrence/bw"
@@ -106,6 +107,7 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 
 	c = clustering.NewCached(func(ctx context.Context) clustering.Rendezvous {
 		if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
+			log.Println("snapshot failed", err)
 			return clustering.NewStatic()
 		}
 

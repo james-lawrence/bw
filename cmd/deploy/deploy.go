@@ -126,9 +126,9 @@ func Into(ctx *Context) error {
 		ux.OptionDebug(ctx.Verbose),
 	)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
-		return errors.Wrap(err, "unable to create a connection")
-	}
+	conn = grpcx.UntilSuccess(ctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
+		return qd.DialContext(ictx)
+	})
 
 	go func() {
 		<-ctx.Context.Done()

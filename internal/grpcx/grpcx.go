@@ -131,6 +131,22 @@ func IsCode(err error, check ...codes.Code) bool {
 	return false
 }
 
+func UntilSuccess(ctx context.Context, c func(context.Context) (*grpc.ClientConn, error)) (conn *grpc.ClientConn) {
+	var (
+		err error
+	)
+	l := rate.NewLimiter(rate.Every(time.Second), 1)
+	for {
+		if conn, err = c(ctx); err == nil {
+			return conn
+		}
+
+		log.Println(errors.Wrap(err, "connection attempt failed"))
+
+		l.Wait(ctx)
+	}
+}
+
 // IsNotFound check if the error is a grpc not found status error.
 func IsNotFound(err error) bool {
 	if s, ok := status.FromError(err); ok {
