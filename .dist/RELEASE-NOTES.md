@@ -1,3 +1,57 @@
+commit 2ad25dc6c36bc7fd85b0a028beb3d23845320d02
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Thu Feb 23 08:47:44 2023 +0000
+
+    Bump golang.org/x/text from 0.3.7 to 0.3.8
+    
+    Bumps [golang.org/x/text](https://github.com/golang/text) from 0.3.7 to 0.3.8.
+    - [Release notes](https://github.com/golang/text/releases)
+    - [Commits](https://github.com/golang/text/compare/v0.3.7...v0.3.8)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: golang.org/x/text
+      dependency-type: indirect
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit 36aa30c329ad5c1bbdef2f731f1dcc02a10df132
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 11 14:17:16 2023 -0500
+
+    automatic connection retry
+
+commit 554ec84d0477601fa9455059303e6fe9c71ef218
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 11 12:12:43 2023 -0500
+
+    client changes
+
+commit 6e66df3a6ec4035246870be955ad3c6e1b88f12e
+Author: James Lawrence <james.lawrence@dianthuscommerce.com>
+Date:   Thu Dec 22 06:31:17 2022 -0500
+
+    add directory option to shell
+
+commit b628e4901e53fea066b75dd2b09c409c1051d52a
+Author: James Lawrence <james.lawrence@dianthuscommerce.com>
+Date:   Wed Dec 21 12:12:45 2022 -0500
+
+    fix darwin
+
+commit bcfe80e147018af457411e60d6ed511df59ba910
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 23 09:24:56 2022 -0500
+
+    documentation improvements
+
+commit 16a945a5f81df57b9a75f7579be68fea0069d32d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 20 18:23:44 2022 -0500
+
+    release 0.1.1668986171-857b2969
+
 commit 857b2969833dced01dd987deeb1d6f47d6f013cc
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sun Nov 20 18:15:58 2022 -0500
