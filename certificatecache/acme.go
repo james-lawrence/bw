@@ -28,7 +28,7 @@ import (
 // 5 per hour. so we'll rate limit to 13 minutes by default.
 func DefaultACMEConfig() ACMEConfig {
 	return ACMEConfig{
-		Rate:  13 * time.Minute,
+		Rate:  15 * time.Minute,
 		CAURL: lego.LEDirectoryProduction,
 		Challenges: challenges{
 			ALPN: true,

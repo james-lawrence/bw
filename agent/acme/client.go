@@ -52,8 +52,7 @@ type Challenger struct {
 // Challenge initiate a challenge.
 func (t Challenger) Challenge(ctx context.Context, csr []byte) (key, cert, authority []byte, err error) {
 	bo := backoff.New(
-		backoff.Exponential(time.Second),
-		backoff.Maximum(time.Minute),
+		backoff.Constant(15*time.Minute),
 		backoff.Jitter(0.25),
 	)
 
