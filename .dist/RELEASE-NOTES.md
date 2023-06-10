@@ -1,3 +1,33 @@
+commit 66a281478cc77e8eb1752fe4a3b257a0255ce358
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jun 9 23:14:37 2023 -0400
+
+    improve restart functionality and directory resolution
+
+commit cfab29abe17b52d58a8cbd0ca8fa7f55f593451e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 11 14:47:22 2023 -0500
+
+    release 0.1.1678562297-2ad25dc6
+
+commit 9c46c43c955bf19dafffb7a37867b6f785b664f0
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Sat Mar 11 19:19:47 2023 +0000
+
+    Bump golang.org/x/net from 0.0.0-20221014081412-f15817d10f9b to 0.7.0
+    
+    Bumps [golang.org/x/net](https://github.com/golang/net) from 0.0.0-20221014081412-f15817d10f9b to 0.7.0.
+    - [Release notes](https://github.com/golang/net/releases)
+    - [Commits](https://github.com/golang/net/commits/v0.7.0)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: golang.org/x/net
+      dependency-type: indirect
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
 commit 2ad25dc6c36bc7fd85b0a028beb3d23845320d02
 Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 Date:   Thu Feb 23 08:47:44 2023 +0000
