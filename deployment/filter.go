@@ -47,6 +47,12 @@ func (t FilterFunc) Match(i *agent.Peer) bool {
 	return t(i)
 }
 
+func Not(fn Filter) Filter {
+	return FilterFunc(func(p *agent.Peer) bool {
+		return !fn.Match(p)
+	})
+}
+
 // Implement the FilterFunc interface
 func always(*agent.Peer) bool {
 	return true

@@ -125,11 +125,11 @@ type CmdControlRestart struct {
 	Enabled bool `name:"force" help:"must be specified in order for the command to actual be sent" default:"false"`
 }
 
-func (t CmdControlRestart) Run() error {
-	return t.shutdown(deployment.Or(t.filters()...))
+func (t CmdControlRestart) Run(ctx *cmdopts.Global) error {
+	return t.shutdown(ctx.Context, deployment.Or(t.filters()...))
 }
 
-func (t CmdControlRestart) shutdown(filter deployment.Filter) (err error) {
+func (t CmdControlRestart) shutdown(ctx context.Context, filter deployment.Filter) (err error) {
 	var (
 		d dialers.Defaults
 		c clustering.Rendezvous
@@ -143,7 +143,17 @@ func (t CmdControlRestart) shutdown(filter deployment.Filter) (err error) {
 	if d, c, err = t.connect(); err != nil {
 		return err
 	}
+
 	cx := cluster.New(local, c)
+	// derp := c.Get(rendezvous.Auto())
+
+	// log.Println("DERP DERP", derp.Name, derp.Addr.String())
+
+	// // filter out the node we're connecting too
+	// filter = deployment.And(
+	// 	deployment.Not(deployment.IP(derp.Addr)),
+	// 	filter,
+	// )
 
 	peers := agentutil.PeerSet(deployment.ApplyFilter(filter, cx.Peers()...))
 	if !t.Enabled {
@@ -154,7 +164,15 @@ func (t CmdControlRestart) shutdown(filter deployment.Filter) (err error) {
 		return nil
 	}
 
-	return agentutil.Shutdown(peers, d)
+	return agentutil.Shutdown(ctx, peers, d)
+
+	// d = dialers.NewDirect(derp.Address(), d.Defaults()...)
+
+	// if err = agentutil.Shutdown(ctx, peers, d); err != nil {
+	// 	return err
+	// }
+
+	// return agentutil.Shutdown(agentutil.PeerSet(agent.NodesToPeers(derp)), d)
 }
 
 type CmdControlQuorum struct {

@@ -12,7 +12,7 @@ import (
 )
 
 // DefaultContext creates the context for the current machine.
-func DefaultContext() (ctx Context, err error) {
+func DefaultContext(options ...Option) (ctx Context, err error) {
 	var (
 		dir      string
 		hostname string
@@ -36,7 +36,7 @@ func DefaultContext() (ctx Context, err error) {
 		return ctx, err
 	}
 
-	return Context{
+	return NewContext(Context{
 		deploymentID:  "",
 		WorkDirectory: dir,
 		Shell:         os.Getenv("SHELL"),
@@ -48,7 +48,7 @@ func DefaultContext() (ctx Context, err error) {
 		Environ:       os.Environ(),
 		timeout:       5 * time.Minute,
 		output:        io.Discard,
-	}, nil
+	}, options...), nil
 }
 
 // Option context option.
@@ -68,7 +68,7 @@ func OptionEnviron(l []string) Option {
 	}
 }
 
-// OptionDir set working directory for the command
+// OptionDir set archive directory for the command
 func OptionDir(l string) Option {
 	return func(ctx *Context) {
 		ctx.dir = l
@@ -79,6 +79,13 @@ func OptionDir(l string) Option {
 func OptionVCSCommit(l string) Option {
 	return func(ctx *Context) {
 		ctx.commit = l
+	}
+}
+
+// OptionWorkDir set work directory
+func OptionWorkDir(l string) Option {
+	return func(ctx *Context) {
+		ctx.WorkDirectory = l
 	}
 }
 
