@@ -1,7 +1,6 @@
 package deploy
 
 import (
-	"context"
 	"io"
 	"log"
 	"os"
@@ -30,10 +29,10 @@ func Locally(ctx *Context, debug bool) (err error) {
 	)
 
 	if config, err = commandutils.ReadConfiguration(ctx.Environment); err != nil {
-		return err
+		return errors.Wrap(err, "unable to read configuration")
 	}
 
-	if err = os.WriteFile(filepath.Join(config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(config.WorkDir(), config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return err
 	}
 
@@ -43,7 +42,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		}
 	}
 
-	if commitish, err = commandutils.RunLocalDirectives(config); err != nil {
+	if commitish, err = commandutils.RunLocalDirectives(ctx.Context, config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 
@@ -73,7 +72,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 
-	if err = archive.Pack(dst, config.Deployment.DataDir); err != nil {
+	if err = archive.Pack(dst, filepath.Join(config.WorkDir(), config.Deployment.DataDir)); err != nil {
 		return errors.Wrap(err, "failed to pack archive")
 	}
 
@@ -90,7 +89,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 	}
 
 	dctx, err = deployment.NewRemoteDeployContext(
-		context.Background(),
+		ctx.Context,
 		root,
 		local,
 		bw.DisplayName(),

@@ -1,6 +1,7 @@
 package commandutils
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -36,7 +37,7 @@ func LogCause(err error) error {
 	} else if errors.As(err, &sErr) {
 		log.Println(aurora.NewAurora(true).Red("ERROR"), err)
 	} else {
-		log.Printf("%T - [%+v]\n", err, err)
+		log.Output(2, fmt.Sprintf("%T - [%+v]\n", err, err))
 	}
 
 	return err

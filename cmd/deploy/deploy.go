@@ -88,7 +88,7 @@ func Into(ctx *Context) error {
 		}
 	}
 
-	if commitish, err = commandutils.RunLocalDirectives(config); err != nil {
+	if commitish, err = commandutils.RunLocalDirectives(ctx.Context, config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 

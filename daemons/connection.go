@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 // ConnectOption - options for connecting to the cluster.
@@ -106,7 +108,15 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 	}
 
 	c = clustering.NewCached(func(ctx context.Context) clustering.Rendezvous {
-		if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
+		err = grpcx.Retry(func() error {
+			if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
+				return err
+			}
+
+			return nil
+		}, codes.Unavailable)
+
+		if err != nil {
 			log.Println("snapshot failed", err)
 			return clustering.NewStatic()
 		}

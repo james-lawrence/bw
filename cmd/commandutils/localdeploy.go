@@ -27,7 +27,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 }
 
 // RunLocalDirectives runs local directives, used to build archives prior to deploying.
-func RunLocalDirectives(config agent.ConfigClient) (commitish string, err error) {
+func RunLocalDirectives(ctx context.Context, config agent.ConfigClient) (commitish string, err error) {
 	var (
 		sctx    shell.Context
 		dctx    *deployment.DeployContext
@@ -57,11 +57,12 @@ func RunLocalDirectives(config agent.ConfigClient) (commitish string, err error)
 		sctx,
 		shell.OptionEnviron(append(environ, sctx.Environ...)),
 		shell.OptionDir(root),
+		shell.OptionWorkDir(root),
 		shell.OptionVCSCommit(commitish),
 	)
 
 	dctx, err = deployment.NewDeployContext(
-		context.Background(),
+		ctx,
 		cdir,
 		local,
 		bw.DisplayName(),
@@ -76,6 +77,7 @@ func RunLocalDirectives(config agent.ConfigClient) (commitish string, err error)
 		deployment.DeployContextOptionCacheRoot(config.Dir()),
 		deployment.DeployContextOptionDisableReset,
 	)
+
 	if err != nil {
 		return commitish, errors.Wrap(err, "failed to create deployment context")
 	}
