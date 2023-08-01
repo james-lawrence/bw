@@ -1,3 +1,27 @@
+commit 9dbc420869a2ecf0135a55200f199cebbf13b668
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Aug 1 06:24:05 2023 -0400
+
+    switch to podman
+
+commit 40358b078f4fbaf905aea789ece2fe44b3b5001e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Aug 1 06:21:51 2023 -0400
+
+    switch to podman
+
+commit 51004b3384568914bd2baa61abceec930ed550e1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Aug 1 05:59:48 2023 -0400
+
+    increase timeouts
+
+commit f695af0074d239b74465abc242b477b018317cbe
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 10 00:17:55 2023 -0400
+
+    release 0.1.1686370142-66a28147
+
 commit 66a281478cc77e8eb1752fe4a3b257a0255ce358
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jun 9 23:14:37 2023 -0400
