@@ -6,7 +6,7 @@ BW_VERSION ?= 0.1.$(shell git show -s --format=%ct $(COMMIT))
 LDFLAGS ?= ""
 
 release-dev-setup:
-	sudo docker build -t debian-build -f .dist/deb/Dockerfile .
+	podman build --arch=amd64 -t debian-build -f .dist/deb/Dockerfile .
 
 generate:
 	go generate ./...
@@ -59,7 +59,7 @@ release: release-check
 		RELEASE-NOTES.md \
 		-C build/bearded-wookie-source-$(RELEASE) .
 
-	docker run \
+	podman run \
 		--user $(shell id -u):$(shell id -g) \
 		-e BUILD_VERSION=$(RELEASE) \
 		-e BW_VERSION=$(BW_VERSION) \
