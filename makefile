@@ -58,9 +58,8 @@ release: release-check
 		-czf .dist/build/bearded-wookie-source-$(RELEASE).tar.gz \
 		RELEASE-NOTES.md \
 		-C build/bearded-wookie-source-$(RELEASE) .
-
+	# --user $(shell id -u):$(shell id -g) \
 	podman run \
-		--user $(shell id -u):$(shell id -g) \
 		-e BUILD_VERSION=$(RELEASE) \
 		-e BW_VERSION=$(BW_VERSION) \
 		-e BW_LDFLAGS=$(LDFLAGS) \
