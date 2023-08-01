@@ -44,7 +44,8 @@ func DefaultDialerOptions(options ...grpc.DialOption) (results Defaulted) {
 
 	defaults := []grpc.DialOption{
 		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: boff,
+			Backoff:           boff,
+			MinConnectTimeout: 20 * time.Second,
 		}),
 		// grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter),
 		// grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter),

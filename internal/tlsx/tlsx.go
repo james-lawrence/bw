@@ -373,7 +373,7 @@ func NewDialer(c *tls.Config, options ...Option) *Dialer {
 	return &Dialer{
 		Config: MustClone(c, options...),
 		NetDialer: &net.Dialer{
-			Timeout: 5 * time.Second,
+			Timeout: 30 * time.Second,
 		},
 	}
 }
