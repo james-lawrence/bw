@@ -63,7 +63,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	cmd.Env = env
 	cmd.Stderr = sctx.output
 	cmd.Stdout = sctx.output
-	cmd.Dir = stringsx.DefaultIfBlank(t.WorkDir, sctx.dir)
+	cmd.Dir = stringsx.DefaultIfBlank(sctx.variableSubst(t.WorkDir), sctx.dir)
 
 	return t.lenient(sctx, cmd.Run())
 }
