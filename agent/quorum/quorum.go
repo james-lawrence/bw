@@ -277,7 +277,9 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 
 	events := make(chan *agent.Message)
 	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
-		return errorsx.MaybeLog(errors.Wrap(err, "failed to connect to dispatcher"))
+		cause := errors.Wrap(err, "failed to connect to dispatcher")
+		errorsx.MaybeLog(cause)
+		return cause
 	}
 
 	defer l.Close()
@@ -286,14 +288,22 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	for {
 		select {
 		case <-out.Context().Done():
-			return errorsx.MaybeLog(errors.WithStack(out.Context().Err()))
+			cause := errors.WithStack(out.Context().Err())
+			errorsx.MaybeLog(cause)
+			return cause
 		case <-disconnected:
-			return errorsx.MaybeLog(errors.New("disconnected"))
+			cause := errors.New("disconnected")
+			errorsx.MaybeLog(cause)
+			return cause
 		case <-lost:
-			return errorsx.MaybeLog(errors.New("quorum membership lost"))
+			cause := errors.New("quorum membership lost")
+			errorsx.MaybeLog(cause)
+			return cause
 		case m := <-events:
 			if err = out.Send(m); err != nil {
-				return errorsx.MaybeLog(errors.Wrap(err, "failed to deliver message"))
+				cause := errors.Wrap(err, "failed to deliver message")
+				errorsx.MaybeLog(cause)
+				return cause
 			}
 		}
 	}

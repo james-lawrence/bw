@@ -1,6 +1,9 @@
 package deployment
 
-import "github.com/james-lawrence/bw/agent"
+import (
+	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/errorsx"
+)
 
 // NewNopCoordinator Builds a coordinator that uses a fake deployer.
 func NewNopCoordinator(result error, p *agent.Peer, options ...CoordinatorOption) Coordinator {
@@ -12,5 +15,5 @@ type nop struct {
 }
 
 func (t nop) Deploy(dctx *DeployContext) {
-	dctx.Done(t.result)
+	errorsx.MaybeLog(dctx.Done(t.result))
 }

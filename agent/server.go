@@ -120,7 +120,7 @@ func (t Server) Shutdown(ctx context.Context, req *ShutdownRequest) (*ShutdownRe
 		return nil, err
 	}
 
-	if err := errorsx.MaybeLog(errors.Wrap(t.Deployer.Reset(), "failed to reset")); err != nil {
+	if err := errors.Wrap(t.Deployer.Reset(), "failed to reset"); err != nil {
 		return nil, err
 	}
 
@@ -207,5 +207,5 @@ func (t Server) Logs(req *LogRequest, out Agent_LogsServer) (err error) {
 		buf.Reset()
 	}
 
-	return errorsx.MaybeLog(errorsx.Compact(iox.IgnoreEOF(err), logs.Close()))
+	return errorsx.Compact(iox.IgnoreEOF(err), logs.Close())
 }

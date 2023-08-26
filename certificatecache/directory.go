@@ -73,7 +73,9 @@ func (t *Directory) init() (err error) {
 		go t.background()
 	})
 
-	return errorsx.MaybeLog(errors.Wrap(err, "failed to initialize certificate cache"))
+	err = errors.Wrap(err, "failed to initialize certificate cache")
+	errorsx.MaybeLog(err)
+	return err
 }
 
 // GetCertificate for use by tls.Config.
@@ -113,7 +115,9 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 	t.m.Unlock()
 
 	if cert == nil {
-		return nil, errorsx.MaybeLog(errors.Errorf("certificate missing in: %s", t.dir))
+		err = errors.Errorf("certificate missing in: %s", t.dir)
+		errorsx.MaybeLog(err)
+		return nil, err
 	}
 
 	return cert, nil

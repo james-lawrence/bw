@@ -113,8 +113,10 @@ func (t Filesystem) monitor() {
 			dc := event.DeployCommand
 			if dc.Command == agent.DeployCommand_Done && dc.Archive != nil {
 				go func() {
-					if errorsx.MaybeLog(errors.Wrap(t.clone(dc), "clone failed")) == nil {
+					if cause := errors.Wrap(t.clone(dc), "clone failed"); cause == nil {
 						log.Println("clone successful")
+					} else {
+						log.Println(cause)
 					}
 				}()
 			}

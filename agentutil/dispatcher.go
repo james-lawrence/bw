@@ -26,7 +26,7 @@ type dispatcher interface {
 // Dispatch messages using the provided dispatcher will log and return the error,
 // if any, that occurs.
 func Dispatch(ctx context.Context, d dispatcher, m ...*agent.Message) error {
-	return errorsx.MaybeLog(_dispatch(ctx, d, dispatchTimeout, m...))
+	return _dispatch(ctx, d, dispatchTimeout, m...)
 }
 
 // ReliableDispatch repeatedly attempts to deliver messages using the provided
@@ -105,7 +105,7 @@ func (t *Dispatcher) Dispatch(ctx context.Context, m ...*agent.Message) (err err
 		return err
 	}
 
-	return errorsx.MaybeLog(t.dropClient(c, c.Dispatch(ctx, m...)))
+	return t.dropClient(c, c.Dispatch(ctx, m...))
 }
 
 func (t *Dispatcher) getClient(ctx context.Context) (c agent.Client, err error) {

@@ -176,7 +176,7 @@ func (t DeployContext) timeout() time.Duration {
 
 // Dispatch an event to the cluster
 func (t DeployContext) Dispatch(m ...*agent.Message) error {
-	return errorsx.MaybeLog(agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...))
+	return agentutil.ReliableDispatch(t.deadline, t.dispatcher, m...)
 }
 
 // Cancel cancel the deploy.
@@ -186,7 +186,7 @@ func (t DeployContext) Cancel(reason error) {
 		return
 	}
 
-	t.Dispatch(agent.LogError(t.Local, errors.Wrap(reason, "cancelled deploy")))
+	errorsx.MaybeLog(t.Dispatch(agent.LogError(t.Local, errors.Wrap(reason, "cancelled deploy"))))
 	t.cancel()
 }
 
@@ -272,7 +272,7 @@ func (t DeployResult) deployComplete() *agent.Deploy {
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
-	t.Dispatch(agent.DeployEvent(t.Local, d))
+	errorsx.MaybeLog(t.Dispatch(agent.DeployEvent(t.Local, d)))
 	return d
 }
 
@@ -283,9 +283,11 @@ func (t DeployResult) deployFailed(err error) *agent.Deploy {
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
-	t.Dispatch(
-		agent.LogError(t.Local, err),
-		agent.DeployEvent(t.Local, d),
+	errorsx.MaybeLog(
+		t.Dispatch(
+			agent.LogError(t.Local, err),
+			agent.DeployEvent(t.Local, d),
+		),
 	)
 	return d
 }
@@ -310,7 +312,7 @@ func heartbeat(ctx context.Context, local *agent.Peer, freq rate.Limit, d dispat
 	l := rate.NewLimiter(freq, 1)
 
 	for err = l.Wait(ctx); err == nil; err = l.Wait(ctx) {
-		agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local))
+		errorsx.MaybeLog(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
 	}
 
 	errorsx.MaybeLog(errors.Wrap(err, "heartbeat ending"))

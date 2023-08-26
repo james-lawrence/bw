@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 // NewDummyCoordinator Builds a coordinator that uses a fake deployer.
@@ -28,10 +29,10 @@ func (t dummy) Deploy(dctx *DeployContext) {
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second
 		select {
 		case <-time.After(completedDuration):
-			dctx.Done(nil)
+			errorsx.MaybeLog(dctx.Done(nil))
 		case <-time.After(failedDuration):
 			log.Println("failed deployment due to timeout", failedDuration)
-			dctx.Done(timeout{Duration: failedDuration})
+			errorsx.MaybeLog(dctx.Done(timeout{Duration: failedDuration}))
 		}
 	}()
 }

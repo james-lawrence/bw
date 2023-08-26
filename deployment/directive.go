@@ -75,21 +75,21 @@ func (t Directive) deploy(dctx *DeployContext) {
 	)
 
 	if environ, err = shell.EnvironFromFile(filepath.Join(dctx.ArchiveRoot, bw.EnvFile)); err != nil {
-		dctx.Done(err)
+		errorsx.MaybeLog(dctx.Done(err))
 		return
 	}
 
 	if tmpdir, err = mkdirTemp(dctx.TempRoot, ".bw-tmp-*"); err != nil {
-		dctx.Done(err)
+		errorsx.MaybeLog(dctx.Done(err))
 		return
 	}
 	done := func(cause error) {
-		dctx.Done(errorsx.Compact(err, os.RemoveAll(tmpdir)))
+		errorsx.MaybeLog(dctx.Done(errorsx.Compact(err, os.RemoveAll(tmpdir))))
 	}
 
 	cachedir = filepath.Join(dctx.CacheRoot, bw.DirCache)
 	if err = os.MkdirAll(cachedir, 0750); err != nil {
-		dctx.Done(err)
+		errorsx.MaybeLog(dctx.Done(err))
 		return
 	}
 
@@ -134,7 +134,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 	dctx.Log.Println("---------------------- DURATION", dctx.timeout(), "----------------------")
 	root := filepath.Join(dctx.ArchiveRoot, t.directory)
 	if loaded, err = directives.Load(dctx.Log, root, loaders...); err != nil {
-		dctx.Dispatch()
+		errorsx.MaybeLog(dctx.Dispatch())
 		done(errors.Wrapf(err, "failed to load directives"))
 		return
 	}

@@ -191,7 +191,7 @@ func (t worker) work(ctx context.Context) {
 	for op := range t.c {
 		// Stop deployment when a single node fails.
 		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1)))
+			errorsx.MaybeLog(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 			continue
 		}
 
@@ -261,7 +261,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	defer done()
 
 	nodes := ApplyFilter(t.filter, c.Peers()...)
-	agentutil.Dispatch(ctx, t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes))))
+	errorsx.MaybeLog(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes)))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
 	for i := 0; i < concurrency; i++ {
@@ -280,17 +280,23 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"))
+			errorsx.MaybeLog(
+				agentutil.Dispatch(
+					ctx,
+					t.dispatcher,
+					agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"),
+				),
+			)
 			return 0, false
 		default:
 		}
 	}
 
-	agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying"))
+	errorsx.MaybeLog(agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying")))
 
 	go func() {
 		for _, peer := range nodes {
-			t.worker.DeployTo(ctx, peer)
+			errorsx.MaybeLog(t.worker.DeployTo(ctx, peer))
 		}
 
 		close(t.c)
@@ -305,7 +311,9 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	if failure != nil {
 		switch errors.Cause(failure).(type) {
 		case errorsx.Timeout:
-			agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete"))
+			errorsx.MaybeLog(
+				agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete")),
+			)
 		default:
 		}
 	}

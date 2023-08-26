@@ -1,5 +1,7 @@
 package deployment
 
+import "github.com/james-lawrence/bw/internal/errorsx"
+
 // Cached represents a deployment that is simply a caching server.
 // it doesn't actually deploy the code, but can act as a source for downloading.
 type Cached struct{}
@@ -10,5 +12,5 @@ func (t Cached) Deploy(dctx *DeployContext) {
 }
 
 func (t Cached) deploy(dctx *DeployContext) {
-	dctx.Done(nil)
+	errorsx.MaybeLog(dctx.Done(nil))
 }
