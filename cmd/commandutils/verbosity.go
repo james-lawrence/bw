@@ -37,8 +37,11 @@ func LogCause(err error) error {
 	} else if errors.As(err, &sErr) {
 		log.Println(aurora.NewAurora(true).Red("ERROR"), err)
 	} else {
-		log.Println("DERP")
-		_ = log.Output(2, fmt.Sprintf("%T - [%+v]\n", err, err))
+		if envx.Boolean(false, bw.EnvLogsVerbose) {
+			_ = log.Output(2, fmt.Sprintf("%T - [%+v]\n", err, err))
+		} else {
+			_ = log.Output(2, fmt.Sprintf("%T - [%v]\n", err, err))
+		}
 	}
 
 	return err
@@ -46,8 +49,6 @@ func LogCause(err error) error {
 
 func LogEnv(verbosity int) {
 	switch verbosity {
-	case 4:
-		os.Setenv(bw.EnvLogsVerbose, "1")
 	case 3:
 		os.Setenv(bw.EnvLogsGRPC, "1")
 		os.Setenv(bw.EnvLogsGossip, "1")
