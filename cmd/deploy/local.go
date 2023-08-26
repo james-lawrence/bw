@@ -59,7 +59,14 @@ func Locally(ctx *Context, debug bool) (err error) {
 	if debug {
 		log.Printf("building directory '%s' will remain after exit\n", root)
 		defer func() {
-			err = errorsx.Compact(err, errorsx.Notification(errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Yellow("WARN"), root)))
+			errorsx.MaybeLog(
+				errorsx.Compact(
+					err,
+					errorsx.Notification(
+						errors.Errorf("%s build directory '%s' being left on disk", aurora.NewAurora(true).Yellow("WARN"), root),
+					),
+				),
+			)
 		}()
 	} else {
 		defer os.RemoveAll(root)
