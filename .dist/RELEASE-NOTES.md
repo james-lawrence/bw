@@ -1,3 +1,21 @@
+commit 24fa05f3f3624c4bc978ed32b8d17ac7785f7115
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:33:56 2023 -0400
+
+    logging cleanup
+
+commit f2ffa8d0c88e8cabe0c5202f9cd5f31ea6aa7506
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:32:01 2023 -0400
+
+    remove debugging logs
+
+commit 864cff792836dc46bce5c36b7bb933f5cfe738ac
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:20:42 2023 -0400
+
+    release 0.1.1693048692-7952a28a
+
 commit 7952a28ade61672033415363be244207eb3ca03b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Aug 26 07:18:12 2023 -0400
