@@ -70,7 +70,7 @@ func NewConfigClient(template ConfigClient, options ...ConfigClientOption) Confi
 func defaultDeployment() Deployment {
 	return Deployment{
 		Timeout: bw.DefaultDeployTimeout,
-		DataDir: bw.LocateDeployspace(bw.DefaultDeployspaceDir),
+		DataDir: bw.DefaultDeployspaceDir,
 	}
 }
 
