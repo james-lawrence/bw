@@ -33,8 +33,6 @@ func Locally(ctx *Context, debug bool) (err error) {
 	}
 
 	if err = os.WriteFile(filepath.Join(config.WorkDir(), config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
-		log.Println("DERP 0", config.WorkDir())
-		log.Println("DERP 1", config.Deployment.DataDir)
 		return errors.WithStack(err)
 	}
 
