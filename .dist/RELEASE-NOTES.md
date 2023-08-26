@@ -1,3 +1,33 @@
+commit 7952a28ade61672033415363be244207eb3ca03b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:18:12 2023 -0400
+
+    log improvements
+
+commit 485772239842584fbbcae11b1309f5ab79f37dd6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:14:41 2023 -0400
+
+    fix local deploys with default environment
+
+commit d22f5f216198e7829ae80702eafe164a69a55033
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:11:02 2023 -0400
+
+    update maybelog
+
+commit 9da6aede47ec0690df1929ac73305474497758bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Aug 23 09:31:05 2023 -0400
+
+    add varsubst to shell work directory
+
+commit 72bb8aabd8a6df547c037388a784a9e36370bd69
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Aug 1 10:54:59 2023 -0400
+
+    release 0.1.1690885791-9dbc4208
+
 commit 9dbc420869a2ecf0135a55200f199cebbf13b668
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Aug 1 06:24:05 2023 -0400
