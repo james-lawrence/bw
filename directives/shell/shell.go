@@ -55,9 +55,14 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	}
 
 	env = append(env, Environ(os.Expand(t.Environ, Subst(env)))...)
+	for i, k := range env {
+		env[i] = sctx.variableSubst(k)
+	}
+
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
 		log.Println("shell environment\n", strings.Join(env, "\n"))
 	}
+
 	command := sctx.variableSubst(t.Command)
 	cmd := exec.CommandContext(deadline, sctx.Shell, "-c", command)
 	cmd.Env = env

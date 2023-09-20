@@ -36,6 +36,7 @@ var _ = ginkgo.Describe("Shell", func() {
   environ: |
     FOO=BAR
     BIZZ=${BAZZ}
+    CIN="%bw.work.directory%"
 `
 	ginkgo.DescribeTable("ParseYAML",
 		func(example string, expected ...Exec) {
@@ -64,7 +65,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				Lenient: true,
 				Timeout: 10 * time.Minute,
 				WorkDir: "%bw.work.directory%/hello",
-				Environ: "FOO=BAR\nBIZZ=${BAZZ}\n",
+				Environ: "FOO=BAR\nBIZZ=${BAZZ}\nCIN=\"%bw.work.directory%\"\n",
 			},
 		),
 	)
