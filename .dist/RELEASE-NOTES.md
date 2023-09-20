@@ -1,3 +1,15 @@
+commit bd1d7c7a89fe6fa6bff0ecb4e28ac409ae8f0f14
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Sep 20 09:23:04 2023 -0400
+
+    add variable substitutions to environment
+
+commit 707c720f70f27e306c8085d8ae62bd1ddcece5b4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Aug 26 07:39:05 2023 -0400
+
+    release 0.1.1693049636-24fa05f3
+
 commit 24fa05f3f3624c4bc978ed32b8d17ac7785f7115
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Aug 26 07:33:56 2023 -0400
