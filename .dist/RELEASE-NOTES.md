@@ -1,3 +1,15 @@
+commit 4219cc2e6f031883221e725ddb2dd89e38221bea
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 3 12:38:07 2023 -0400
+
+    add retries to the shell
+
+commit 151f482e09b5d0ee68cc551cb0d2f05252a6e416
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Sep 20 09:25:36 2023 -0400
+
+    release 0.1.1695216184-bd1d7c7a
+
 commit bd1d7c7a89fe6fa6bff0ecb4e28ac409ae8f0f14
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Sep 20 09:23:04 2023 -0400
