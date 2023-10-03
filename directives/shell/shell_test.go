@@ -19,6 +19,7 @@ var _ = ginkgo.Describe("Shell", func() {
 - command: "echo %H %h %m"
   lenient: true
   timeout: 10m
+  retries: 10
   directory: /tmp
   environ: |
     FOO=BAR
@@ -32,6 +33,7 @@ var _ = ginkgo.Describe("Shell", func() {
 - command: "echo %H %h %m"
   lenient: true
   timeout: 10m
+  retries: -1
   directory: "%bw.work.directory%/hello"
   environ: |
     FOO=BAR
@@ -51,6 +53,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				Command: "echo %H %h %m",
 				Lenient: true,
 				Timeout: 10 * time.Minute,
+				Retries: 10,
 				WorkDir: "/tmp",
 				Environ: "FOO=BAR\nBIZZ=${BAZZ}\n",
 			},
@@ -64,6 +67,7 @@ var _ = ginkgo.Describe("Shell", func() {
 				Command: "echo %H %h %m",
 				Lenient: true,
 				Timeout: 10 * time.Minute,
+				Retries: -1,
 				WorkDir: "%bw.work.directory%/hello",
 				Environ: "FOO=BAR\nBIZZ=${BAZZ}\nCIN=\"%bw.work.directory%\"\n",
 			},

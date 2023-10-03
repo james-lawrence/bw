@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"strings"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
@@ -34,6 +36,7 @@ import (
 type Exec struct {
 	Command string
 	Lenient bool
+	Retries int16
 	Timeout time.Duration
 	Environ string
 	WorkDir string   `yaml:"directory"`
@@ -70,13 +73,34 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	cmd.Stdout = sctx.output
 	cmd.Dir = stringsx.DefaultIfBlank(sctx.variableSubst(t.WorkDir), sctx.dir)
 
-	return t.lenient(sctx, cmd.Run())
+	return t.retry(func() error { return t.lenient(sctx, cmd.Run()) })
 }
 
 func (t Exec) lenient(ctx Context, err error) error {
 	if (t.Lenient || ctx.lenient) && err != nil {
 		fmt.Fprintln(ctx.output, "command failed, ignoring", t.Command, err)
 		return nil
+	}
+
+	return err
+}
+
+func (t Exec) retry(do func() error) (err error) {
+	retries := t.Retries
+	switch retries {
+	case 0:
+		retries = 1
+	case -1:
+		retries = math.MaxInt16
+	}
+
+	for i := int16(0); i < retries; i++ {
+		if cause := do(); cause == nil {
+			return nil
+		} else {
+			err = errorsx.Compact(err, cause)
+		}
+
 	}
 
 	return err
