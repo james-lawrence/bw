@@ -1,3 +1,21 @@
+commit 19d661880e5b9199af9ae02e09c9812bf72fc5cf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 3 12:58:21 2023 -0400
+
+    update output for retries
+
+commit 8c22ef5fec49ee7f9971f9a412e33203d38e4e50
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 3 12:54:24 2023 -0400
+
+    improve retry logging
+
+commit 9a5cf5282304d5b16dd7129973da5b0aa195601c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 3 12:40:57 2023 -0400
+
+    release 0.1.1696351087-4219cc2e
+
 commit 4219cc2e6f031883221e725ddb2dd89e38221bea
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Oct 3 12:38:07 2023 -0400
