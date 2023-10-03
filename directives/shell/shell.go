@@ -73,7 +73,7 @@ func (t Exec) execute(ctx context.Context, sctx Context) error {
 	cmd.Stdout = sctx.output
 	cmd.Dir = stringsx.DefaultIfBlank(sctx.variableSubst(t.WorkDir), sctx.dir)
 
-	return t.retry(func() error { return t.lenient(sctx, cmd.Run()) })
+	return t.retry(sctx, func() error { return t.lenient(sctx, cmd.Run()) })
 }
 
 func (t Exec) lenient(ctx Context, err error) error {
@@ -85,7 +85,7 @@ func (t Exec) lenient(ctx Context, err error) error {
 	return err
 }
 
-func (t Exec) retry(do func() error) (err error) {
+func (t Exec) retry(ctx Context, do func() error) (err error) {
 	retries := t.Retries
 	switch retries {
 	case 1:
@@ -105,7 +105,9 @@ func (t Exec) retry(do func() error) (err error) {
 
 	}
 
-	return errors.Wrapf(err, "failed after %d attempts", retries)
+	fmt.Fprintln(ctx.output, "command failed after", retries, "attempts", t.Command, err)
+
+	return err
 }
 
 // Execute ...
