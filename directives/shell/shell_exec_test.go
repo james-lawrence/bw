@@ -45,6 +45,7 @@ var _ = ginkgo.Describe("Shell", func() {
 			ginkgo.Entry("complex command", ctx1, nil, "BAZ\n", Exec{Command: "echo ${FOO} | sed 's/BAR/BAZ/'", Timeout: 1 * time.Second}),
 			ginkgo.Entry("allow failures", ctx1, nil, "command failed, ignoring false %m exit status 1\n", Exec{Command: "false %m", Lenient: true, Timeout: 1 * time.Second}),
 			ginkgo.Entry("additional environment variables per command", ctx1, nil, "HELLO BAR", Exec{Command: "printf \"HELLO ${BAZZ}\"", Timeout: 1 * time.Second, Environ: "BAZZ=${FOO}"}),
+			ginkgo.Entry("retries", ctx1, errors.New("failed after 5 attempts: signal: killed"), "", Exec{Command: "sleep 0.01", Timeout: 2 * time.Millisecond, Retries: 5}),
 		)
 	})
 })

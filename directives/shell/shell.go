@@ -88,8 +88,10 @@ func (t Exec) lenient(ctx Context, err error) error {
 func (t Exec) retry(do func() error) (err error) {
 	retries := t.Retries
 	switch retries {
+	case 1:
+		return do()
 	case 0:
-		retries = 1
+		return do()
 	case -1:
 		retries = math.MaxInt16
 	}
@@ -103,7 +105,7 @@ func (t Exec) retry(do func() error) (err error) {
 
 	}
 
-	return err
+	return errors.Wrapf(err, "failed after %d attempts", retries)
 }
 
 // Execute ...
