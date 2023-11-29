@@ -5,8 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
+	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 
@@ -15,6 +19,7 @@ import (
 
 type cmdEnv struct {
 	Create cmdEnvCreate `cmd:"" help:"initialize an environment"`
+	Users  cmdEnvUsers  `cmd:"" help:"list the users and their permissions in the environments bw.auth.keys file"`
 }
 
 type cmdEnvCreate struct {
@@ -63,4 +68,43 @@ func (t *cmdEnvCreate) Run(ctx *cmdopts.Global) (err error) {
 	}
 
 	return nil
+}
+
+type cmdEnvUsers struct {
+	cmdopts.BeardedWookieEnv
+}
+
+func (t *cmdEnvUsers) Run(ctx *cmdopts.Global) (err error) {
+	var (
+		n      notary.Composite
+		config agent.ConfigClient
+	)
+
+	if config, err = commandutils.ReadConfiguration(t.Environment); err != nil {
+		return err
+	}
+
+	if n, err = notary.NewFromFile(config.Dir(), bw.AuthKeysFile); err != nil {
+		return err
+	}
+	b := bloom.NewWithEstimates(1000, 0.0001)
+
+	out := make(chan *notary.Grant, 200)
+	errc := make(chan error)
+	go func() {
+		select {
+		case errc <- n.Sync(ctx.Context, b, out):
+		case <-ctx.Context.Done():
+			errc <- ctx.Context.Err()
+		}
+	}()
+
+	for {
+		select {
+		case g := <-out:
+			log.Println(g.Fingerprint, spew.Sdump(g.Permission))
+		case err := <-errc:
+			return err
+		}
+	}
 }

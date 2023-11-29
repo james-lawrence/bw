@@ -5,6 +5,7 @@ package certificatecache
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -209,7 +210,11 @@ func expiredCert(path string) (expiration time.Time, err error) {
 	}
 
 	if cert, err = tlsx.DecodePEMCertificate(data); err != nil {
-		return expiration, err
+		return expiration, errors.Wrapf(err, "decoding certificate failed: %s", path)
+	}
+
+	if cert == nil {
+		return expiration, fmt.Errorf("decoding certificate failed: %s", path)
 	}
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {

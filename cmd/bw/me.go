@@ -8,6 +8,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/notary"
 )
 
@@ -56,6 +57,7 @@ func (t cmdMePub) Run(ctx *cmdopts.Global) (err error) {
 
 type cmdMeInit struct {
 	cmdopts.BeardedWookieEnv
+	Name string `help:"name to assign to the comment"`
 }
 
 func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
@@ -65,7 +67,7 @@ func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 		encoded     []byte
 	)
 
-	if _, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	if _, err = notary.NewAutoSigner(stringsx.DefaultIfBlank(t.Name, bw.DisplayName())); err != nil {
 		return err
 	}
 
