@@ -5,6 +5,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 WORKDIR /opt/bw/.dist/deb
 
 RUN apt-get update
-RUN apt-get -y install dput devscripts dh-make dput golang-1.18
+RUN apt-get -y install dput devscripts dh-make dput golang-1.18 pinentry-tty
 
 CMD /bin/bash build.sh jammy
