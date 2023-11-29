@@ -1,3 +1,33 @@
+commit 37a13dc8d02341610c881af3e14b3d5f6860da31
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 29 15:59:12 2023 -0500
+
+    update pinentry
+
+commit b98ae153ea35e1f9934d6f991f0105056d8c3223
+Author: James Lawrence <james@novacloud.ai>
+Date:   Wed Nov 29 15:42:15 2023 +0000
+
+    move debug
+
+commit 5fd63548dbc05ebac21922f364e77362a4b1c323
+Author: James Lawrence <james@novacloud.ai>
+Date:   Wed Nov 29 15:39:10 2023 +0000
+
+    add notary debug for local environments
+
+commit 1c3a933c0cc17b34f58a6d73718a1a503a9e23af
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 29 10:20:57 2023 -0500
+
+    add utility function to environments to print grants
+
+commit 47f5fb040499a2d95e8d17fa3b3e076400e5b515
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Oct 3 14:27:01 2023 -0400
+
+    release 0.1.1696352301-19d66188
+
 commit 19d661880e5b9199af9ae02e09c9812bf72fc5cf
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Oct 3 12:58:21 2023 -0400
