@@ -115,8 +115,9 @@ func genKey(root, fingerprint string) string {
 	return filepath.Join(root, bw.DirAuthorizations, fingerprint)
 }
 
-func loadAuthorizedKeys(s storage, path string) (err error) {
+func LoadAuthorizedKeys(s storage, path string) (err error) {
 	var (
+		i       int
 		encoded []byte
 	)
 
@@ -129,7 +130,7 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 		return err
 	}
 
-	for len(encoded) != 0 {
+	for i = 0; len(encoded) != 0; i++ {
 		var (
 			key ssh.PublicKey
 		)
@@ -152,6 +153,8 @@ func loadAuthorizedKeys(s storage, path string) (err error) {
 			continue
 		}
 	}
+
+	log.Println("loaded", i, "grants from", path)
 
 	return nil
 }

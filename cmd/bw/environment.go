@@ -76,7 +76,7 @@ type cmdEnvUsers struct {
 
 func (t *cmdEnvUsers) Run(ctx *cmdopts.Global) (err error) {
 	var (
-		n      notary.Composite
+		n      = notary.NewMem()
 		config agent.ConfigClient
 	)
 
@@ -84,7 +84,7 @@ func (t *cmdEnvUsers) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if n, err = notary.NewFromFile(config.Dir(), bw.AuthKeysFile); err != nil {
+	if err = notary.LoadAuthorizedKeys(n, filepath.Join(config.Dir(), bw.AuthKeysFile)); err != nil {
 		return err
 	}
 	b := bloom.NewWithEstimates(1000, 0.0001)
