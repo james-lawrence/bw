@@ -1,8 +1,20 @@
-commit 37a13dc8d02341610c881af3e14b3d5f6860da31
+commit cd9155b47ae62ea7b68f826a2a85a7f7773f5c7f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 29 16:05:50 2023 -0500
+
+    release 0.1.1701291552-37a13dc8
+
+commit 0fa947653b43baf94a980e6a5cc511a6b815f35e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Nov 29 15:59:12 2023 -0500
 
     update pinentry
+
+commit 9f66ae858ec6e8dd3f8ad31e788237e7ab39c8f9
+Author: James Lawrence <james@novacloud.ai>
+Date:   Wed Nov 29 16:05:28 2023 +0000
+
+    prevent early termination in notary inspection
 
 commit b98ae153ea35e1f9934d6f991f0105056d8c3223
 Author: James Lawrence <james@novacloud.ai>
