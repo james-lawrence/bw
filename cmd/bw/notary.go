@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -18,6 +19,7 @@ import (
 // used to inspect permissions
 type cmdNotary struct {
 	Search cmdNotarySearch `cmd:"" help:"search users"`
+	Print  cmdNotaryPrint  `cmd:"" help:"list the fingerprints and their permissions in a file"`
 }
 
 type cmdNotarySearch struct {
@@ -61,4 +63,38 @@ func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
 	}
 
 	return err
+}
+
+type cmdNotaryPrint struct {
+	Path string `help:"path of the file to inspect"`
+}
+
+func (t *cmdNotaryPrint) Run(ctx *cmdopts.Global) (err error) {
+	var (
+		n = notary.NewMem()
+	)
+
+	if err = notary.LoadAuthorizedKeys(n, t.Path); err != nil {
+		return err
+	}
+	b := bloom.NewWithEstimates(1000, 0.0001)
+
+	out := make(chan *notary.Grant, 200)
+	errc := make(chan error)
+	go func() {
+		select {
+		case errc <- n.Sync(ctx.Context, b, out):
+		case <-ctx.Context.Done():
+			errc <- ctx.Context.Err()
+		}
+	}()
+
+	for {
+		select {
+		case g := <-out:
+			log.Println(g.Fingerprint, spew.Sdump(g.Permission))
+		case err := <-errc:
+			return err
+		}
+	}
 }
