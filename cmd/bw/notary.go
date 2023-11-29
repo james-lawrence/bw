@@ -79,7 +79,7 @@ func (t *cmdNotaryPrint) Run(ctx *cmdopts.Global) (err error) {
 	}
 	b := bloom.NewWithEstimates(1000, 0.0001)
 
-	out := make(chan *notary.Grant, 200)
+	out := make(chan *notary.Grant)
 	errc := make(chan error)
 	go func() {
 		select {
