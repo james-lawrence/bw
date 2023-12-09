@@ -49,3 +49,9 @@ stream {
 ```
 ### useful command for verifying certificates during testing.
 openssl s_client -verify_return_error -CAfile ~/.cache/bearded-wookie/agent1/tls/tlsserver.bootstrap.cert -connect bearded-wookie.lan:2000
+
+
+###
+- add --quorum flag to filters.
+- 2023/12/06 21:53:00 main.go:98: *errors.withStack - [failed to retrieve info: rpc error: code = Unavailable desc = connection error: desc = "transport: Error while dialing muxer.DialContext failed: bw.agent tcp://10.129.0.97:2000: handshake failed: proxy request failed: ClientError"]
+- failed to initiated deploy: rpc error: code = Unavailable desc = error reading from server: EOF
