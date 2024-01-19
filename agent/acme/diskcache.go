@@ -166,7 +166,7 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 		opts := []dns01.ChallengeOption{}
 		if nameserver := envx.String("", bw.EnvAgentACMEDNSChallengeNameServer); strings.TrimSpace(nameserver) != "" {
 			log.Println("detected custom dns name server setting", nameserver)
-			dns01.AddRecursiveNameservers([]string{nameserver})
+			opts = append(opts, dns01.AddRecursiveNameservers([]string{nameserver}))
 		}
 
 		if err = client.Challenge.SetDNS01Provider(p, opts...); err != nil {
