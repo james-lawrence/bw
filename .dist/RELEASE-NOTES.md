@@ -1,3 +1,15 @@
+commit db45225011c879639c0fa4ec91776960e6598f6b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 19 12:04:28 2024 -0500
+
+    actually add the dns option to the array of options
+
+commit e22feb33478497619e67d6ea5ef3983de43d5d50
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 19 11:02:46 2024 -0500
+
+    release 0.1.1705679016-df317eee
+
 commit df317eeebb2f95767996bff7d86bcf031ca9c8f4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jan 19 10:43:36 2024 -0500
