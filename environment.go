@@ -21,4 +21,5 @@ const (
 	EnvAgentClusterEnableDNS             = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_DNS"                    // enable dns peer detection
 	EnvAgentClusterP2PDiscoveryPort      = "BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT"           // override the p2p discovery port
 	EnvAgentSelfSignedExpiration         = "BEARDED_WOOKIE_AGENT_BOOTSTRAP_SELF_SIGNED_EXPIRATION"     // environment variable to adjust the expiration period for the self signed bootstrap certificate.
+	EnvAgentACMEDNSChallengeNameServer   = "BEARDED_WOOKIE_AGENT_ACME_DNS_CHALLENGE_NAMESERVER"        // provide a nameserver override for DNS challeges.
 )

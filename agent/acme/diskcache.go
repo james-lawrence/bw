@@ -21,6 +21,7 @@ import (
 	"github.com/go-acme/lego/v4/certcrypto"
 	"github.com/go-acme/lego/v4/certificate"
 	"github.com/go-acme/lego/v4/challenge"
+	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/lego"
 	"github.com/go-acme/lego/v4/providers/dns/gcloud"
 	"github.com/go-acme/lego/v4/providers/dns/route53"
@@ -28,6 +29,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/protox"
 	"github.com/james-lawrence/bw/internal/rsax"
@@ -161,7 +163,13 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 			return resp, status.Error(codes.Internal, "acme setup dns failure")
 		}
 
-		if err = client.Challenge.SetDNS01Provider(p); err != nil {
+		opts := []dns01.ChallengeOption{}
+		if nameserver := envx.String("", bw.EnvAgentACMEDNSChallengeNameServer); strings.TrimSpace(nameserver) != "" {
+			log.Println("detected custom dns name server setting", nameserver)
+			dns01.AddRecursiveNameservers([]string{nameserver})
+		}
+
+		if err = client.Challenge.SetDNS01Provider(p, opts...); err != nil {
 			log.Println("lego provider failure", err)
 			return resp, status.Error(codes.Internal, "acme setup dns failure")
 		}
