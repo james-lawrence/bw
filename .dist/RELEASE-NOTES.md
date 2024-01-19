@@ -1,3 +1,21 @@
+commit df317eeebb2f95767996bff7d86bcf031ca9c8f4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 19 10:43:36 2024 -0500
+
+    add ability to specificy a dns name server
+
+commit d231bcdf4585b6b18f6afbe296eb758b207410ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 9 13:56:58 2023 -0500
+
+    todo updates
+
+commit 69261b030668147d9ab634ae5b286db50a0efa52
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Nov 29 16:09:02 2023 -0500
+
+    release 0.1.1701291987-cd9155b4
+
 commit cd9155b47ae62ea7b68f826a2a85a7f7773f5c7f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Nov 29 16:05:50 2023 -0500
