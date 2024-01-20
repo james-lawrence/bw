@@ -26,7 +26,7 @@ func DefaultIfBlank(s, defaultValue string) string {
 }
 
 func Empty(s string) bool {
-	return strings.TrimSpace(s) != ""
+	return strings.TrimSpace(s) == ""
 }
 
 // First get the first value from the array.
