@@ -8,6 +8,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/stringsx"
 )
 
 func Commitish(dir, treeish string) string {
@@ -43,10 +44,14 @@ func CurrentUserDisplay(dir string) string {
 		return bw.DisplayName()
 	}
 
-	if c, err = r.Config(); err != nil {
+	if c, err = r.ConfigScoped(config.GlobalScope); err != nil {
 		log.Println("unable to load configuration for git repository - using system default", dir, err)
 		return bw.DisplayName()
 	}
 
-	return fmt.Sprintf("%s <%s>", c.User.Name, c.User.Email)
+	if stringsx.Empty(c.User.Email) {
+		return stringsx.DefaultIfBlank(c.User.Name, bw.DisplayName())
+	}
+
+	return fmt.Sprintf("%s <%s>", stringsx.DefaultIfBlank(c.User.Name, bw.DisplayName()), c.User.Email)
 }

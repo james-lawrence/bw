@@ -25,6 +25,10 @@ func DefaultIfBlank(s, defaultValue string) string {
 	return defaultValue
 }
 
+func Empty(s string) bool {
+	return strings.TrimSpace(s) != ""
+}
+
 // First get the first value from the array.
 func First(values ...string) string {
 	if len(values) == 0 {
