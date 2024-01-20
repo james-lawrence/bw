@@ -1,10 +1,13 @@
 package vcsinfo
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/james-lawrence/bw"
 )
 
 func Commitish(dir, treeish string) string {
@@ -25,4 +28,25 @@ func Commitish(dir, treeish string) string {
 	}
 
 	return hash.String()
+}
+
+// returns the username and email as a string
+func CurrentUserDisplay(dir string) string {
+	var (
+		err error
+		r   *git.Repository
+		c   *config.Config
+	)
+
+	if r, err = git.PlainOpen(dir); err != nil {
+		log.Println("unable to detect git repository - using system default", dir, err)
+		return bw.DisplayName()
+	}
+
+	if c, err = r.Config(); err != nil {
+		log.Println("unable to load configuration for git repository - using system default", dir, err)
+		return bw.DisplayName()
+	}
+
+	return fmt.Sprintf("%s <%s>", c.User.Name, c.User.Email)
 }

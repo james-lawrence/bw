@@ -36,6 +36,7 @@ func RunLocalDirectives(ctx context.Context, config agent.ConfigClient) (commiti
 		root           = config.WorkDir()
 	)
 
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
 	commitish = vcsinfo.Commitish(config.WorkDir(), config.Deployment.CommitRef)
 	log.Println("vcs.commit", config.Deployment.CommitRef, "->", commitish)
 
@@ -65,7 +66,7 @@ func RunLocalDirectives(ctx context.Context, config agent.ConfigClient) (commiti
 		ctx,
 		cdir,
 		local,
-		bw.DisplayName(),
+		displayname,
 		&agent.DeployOptions{
 			Timeout: int64(config.Deployment.Timeout),
 		},

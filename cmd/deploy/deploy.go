@@ -26,6 +26,7 @@ import (
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -66,12 +67,14 @@ func Into(ctx *Context) error {
 		commitish string
 	)
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
-		return errors.Wrap(err, "unable to setup authorization")
-	}
-
 	if config, err = commandutils.LoadConfiguration(ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
 		return errors.Wrap(err, "unable to load configuration")
+	}
+
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
+		return errors.Wrap(err, "unable to setup authorization")
 	}
 
 	log.Println("pid", os.Getpid())
@@ -194,7 +197,7 @@ func Into(ctx *Context) error {
 		return err
 	}
 
-	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", bw.DisplayName(), darchive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", displayname, darchive.Location))
 
 	max := ctx.Concurrency
 	if ctx.Concurrency == 0 {
@@ -224,10 +227,10 @@ func Into(ctx *Context) error {
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, bw.DisplayName(), &dopts, darchive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(ctx.Context, displayname, &dopts, darchive, peers...); cause != nil {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
-		events <- agent.DeployEventFailed(local, bw.DisplayName(), &dopts, darchive, cause)
-		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(bw.DisplayName(), darchive.DeployOption, dopts.DeployOption))
+		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)
+		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(displayname, darchive.DeployOption, dopts.DeployOption))
 	}
 
 	return err

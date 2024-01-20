@@ -10,6 +10,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/vcsinfo"
 )
 
 // used to configure the user's environment.
@@ -67,11 +68,13 @@ func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 		encoded     []byte
 	)
 
-	if _, err = notary.NewAutoSigner(stringsx.DefaultIfBlank(t.Name, bw.DisplayName())); err != nil {
+	if config, err = commandutils.ReadConfiguration(t.Environment); err != nil {
 		return err
 	}
 
-	if config, err = commandutils.ReadConfiguration(t.Environment); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if _, err = notary.NewAutoSigner(stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
 		return err
 	}
 

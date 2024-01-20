@@ -29,6 +29,7 @@ import (
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/uxterm"
+	"github.com/james-lawrence/bw/vcsinfo"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -60,7 +61,9 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 
@@ -125,7 +128,9 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 
@@ -179,7 +184,9 @@ func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 

@@ -5,7 +5,6 @@ import (
 
 	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering"
@@ -13,6 +12,7 @@ import (
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"google.golang.org/grpc"
 )
 
@@ -42,7 +42,9 @@ func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 

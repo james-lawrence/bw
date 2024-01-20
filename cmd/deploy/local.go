@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/iox"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/logrusorgru/aurora"
 	"github.com/pkg/errors"
 )
@@ -31,6 +32,8 @@ func Locally(ctx *Context, debug bool) (err error) {
 	if config, err = commandutils.ReadConfiguration(ctx.Environment); err != nil {
 		return errors.Wrap(err, "unable to read configuration")
 	}
+
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
 
 	if err = os.WriteFile(filepath.Join(config.WorkDir(), config.Deployment.DataDir, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
 		return errors.WithStack(err)
@@ -99,7 +102,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 		ctx.Context,
 		root,
 		local,
-		bw.DisplayName(),
+		displayname,
 		&agent.DeployOptions{
 			Timeout:   int64(config.Deployment.Timeout),
 			Heartbeat: int64(ctx.Heartbeat),

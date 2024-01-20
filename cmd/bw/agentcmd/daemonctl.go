@@ -30,6 +30,7 @@ import (
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/uxterm"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/logrusorgru/aurora"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -62,7 +63,7 @@ func (t controlConnection) connect() (d dialers.Defaults, c clustering.Rendezvou
 		return d, c, err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	if ss, err = notary.NewAutoSigner(vcsinfo.CurrentUserDisplay(config.WorkDir())); err != nil {
 		return d, c, err
 	}
 

@@ -3,7 +3,6 @@ package deploy
 import (
 	"log"
 
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering"
@@ -12,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 )
@@ -32,7 +32,9 @@ func Cancel(ctx *Context) (err error) {
 		return err
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 
@@ -67,7 +69,7 @@ func Cancel(ctx *Context) (err error) {
 	termui.NewFromClientConfig(ctx.Context, config, qd, local, events)
 	events <- agent.LogEvent(local, "connected to cluster")
 
-	cmd := agent.DeployCommandCancel(bw.DisplayName())
+	cmd := agent.DeployCommandCancel(displayname)
 
 	if err = client.Cancel(ctx.Context, &agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
 		return err

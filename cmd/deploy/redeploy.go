@@ -21,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
+	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/manifoldco/promptui"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -45,6 +46,8 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		return err
 	}
 
+	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
+
 	if len(config.Deployment.Prompt) > 0 {
 		_, err := (&promptui.Prompt{
 			Label:     config.Deployment.Prompt,
@@ -57,7 +60,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 		}
 	}
 
-	if ss, err = notary.NewAutoSigner(bw.DisplayName()); err != nil {
+	if ss, err = notary.NewAutoSigner(displayname); err != nil {
 		return err
 	}
 
@@ -122,7 +125,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 
 	archive = located.Archive
 
-	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", bw.DisplayName(), archive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", displayname, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 
@@ -149,7 +152,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, bw.DisplayName(), &dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(ctx.Context, displayname, &dopts, archive, peers...); cause != nil {
 		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 
