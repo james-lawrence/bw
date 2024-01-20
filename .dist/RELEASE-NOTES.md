@@ -1,3 +1,74 @@
+commit a4da0176760e6de8c5f019893262c57247ec6b5e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:45:58 2024 -0500
+
+    update minimum golang version
+
+commit c99e7781e54032bfc25ff1bb7f681b0e0127b8c5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:44:30 2024 -0500
+
+    fix blank check
+
+commit fc1077c3b6afaa1d6efa9689c747a747b37c179e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:42:52 2024 -0500
+
+    ensure vcsinfo does not return empty info
+
+commit fdb3c57bb481baf8862a5c7e0e63f0d211d421ed
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:38:19 2024 -0500
+
+    use vcs information for user name falling back to the os.
+
+commit c4dcfab38aad5dced7d7de7003d18a06b6b452c9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:20:49 2024 -0500
+
+    unhide notary cli
+
+commit d3e289627e4bd75271edc152643d99744c385dc3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:19:38 2024 -0500
+
+    update golang to 1.20
+
+commit 4f00b12477fa957e8aac15afd874297585b730f2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:19:23 2024 -0500
+
+    retry deploy on unavailable errors
+
+commit 1113134e4badbd56a23f0d527bb0ea1c03e2dd79
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:08:43 2024 -0500
+
+    update dependencies
+
+commit 734c4702bf3f6e589e9c9413d9f31b71a4a894bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:03:23 2024 -0500
+
+    synchronize notary permissions sooner
+    
+    this helps ensure we have all permissions even before we bootstrap the
+    server.
+
+commit ad565286e1aa43b0601d01b830177e9a946b3458
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 09:55:39 2024 -0500
+
+    improve acme dns challenge configuration for dns.
+    
+    allow specifying the dns nameservers in the configuration.
+
+commit b5950a9fee22356ecb56807b9e987a78e36ee6f4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Jan 19 12:10:42 2024 -0500
+
+    release 0.1.1705683868-db452250
+
 commit db45225011c879639c0fa4ec91776960e6598f6b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Fri Jan 19 12:04:28 2024 -0500
