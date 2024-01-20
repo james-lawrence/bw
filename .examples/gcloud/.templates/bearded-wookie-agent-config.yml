@@ -14,6 +14,9 @@ clusterTokens:
 # only an email is required, bearded wookie only supports DNS and ALPN strategies.
 acme:
   challenges:
+    nameservers: [ # Optional: specify nameservers to use for dns challenge. generally not needed.
+      dns.google,
+    ]
     dns: false
     alpn: true
   email: "${acme_email}"

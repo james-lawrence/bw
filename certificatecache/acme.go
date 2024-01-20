@@ -37,8 +37,9 @@ func DefaultACMEConfig() ACMEConfig {
 }
 
 type challenges struct {
-	DNS  bool
-	ALPN bool
+	NameServers []string `yaml:"nameservers"` // nameservers for dns challenge
+	DNS         bool
+	ALPN        bool
 }
 
 // ACMEConfig configuration for ACME credentials

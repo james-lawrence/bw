@@ -8,6 +8,7 @@ import (
 	context "context"
 	"crypto/x509"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -18,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/notary"
 )
@@ -41,6 +43,10 @@ func ReadConfig(c agent.Config, path string) (svc DiskCache, err error) {
 
 	if err = bw.ExpandAndDecodeFile(path, cc); err != nil {
 		return svc, err
+	}
+
+	if nameserver := envx.String("", bw.EnvAgentACMEDNSChallengeNameServer); strings.TrimSpace(nameserver) != "" {
+		cc.ACME.Challenges.NameServers = append(cc.ACME.Challenges.NameServers, nameserver)
 	}
 
 	a := account{ACMEConfig: cc.ACME, Config: c}

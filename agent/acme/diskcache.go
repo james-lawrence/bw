@@ -29,7 +29,6 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/certificatecache"
-	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/protox"
 	"github.com/james-lawrence/bw/internal/rsax"
@@ -164,9 +163,11 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 		}
 
 		opts := []dns01.ChallengeOption{}
-		if nameserver := envx.String("", bw.EnvAgentACMEDNSChallengeNameServer); strings.TrimSpace(nameserver) != "" {
-			log.Println("detected custom dns name server setting", nameserver)
-			opts = append(opts, dns01.AddRecursiveNameservers([]string{nameserver}))
+		nameservers := t.ac.Challenges.NameServers
+
+		if len(nameservers) > 0 {
+			log.Println("detected custom dns name servers setting", nameservers)
+			opts = append(opts, dns01.AddRecursiveNameservers(nameservers))
 		}
 
 		if err = client.Challenge.SetDNS01Provider(p, opts...); err != nil {
