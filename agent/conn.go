@@ -8,9 +8,11 @@ import (
 	"io"
 
 	"google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
 
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/iox"
 	"github.com/pkg/errors"
 )
@@ -168,8 +170,15 @@ func (t Conn) Deploy(ctx context.Context, options *DeployOptions, archive *Archi
 
 	rpc := NewAgentClient(t.conn)
 
-	if ar, err = rpc.Deploy(ctx, &DeployRequest{Options: options, Archive: archive}); err != nil {
-		return d, errors.Wrap(err, "failed to initiated deploy")
+	err = grpcx.Retry(func() error {
+		if ar, err = rpc.Deploy(ctx, &DeployRequest{Options: options, Archive: archive}); err != nil {
+			return errors.Wrap(err, "failed to initiated deploy")
+		}
+
+		return nil
+	}, codes.Unavailable)
+	if err != nil {
+		return nil, err
 	}
 
 	if ar.Deploy == nil {
