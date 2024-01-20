@@ -1,14 +1,12 @@
 package agentcmd
 
 import (
-	"context"
 	"crypto/tls"
 	"log"
 	"net"
 	"path/filepath"
 	"time"
 
-	"github.com/bits-and-blooms/bloom/v3"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/acme"
@@ -235,6 +233,9 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return errors.Wrap(err, "failed to initialize peering service")
 	}
 
+	// attempt notary synchronize before bootstrapping.
+	daemons.SyncAuthorizations(dctx)
+
 	if dctx, err = daemons.Quorum(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize quorum service")
 	}
@@ -258,7 +259,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 
 	go deployment.ResultBus(
 		dctx.Results,
-		syncAuthorizations(dctx, ns),
+		syncAuthorizationsPostDeploy(dctx),
 		clearTorrents(tc),
 	)
 
@@ -284,50 +285,15 @@ func clearTorrents(c storage.TorrentConfig) chan *deployment.DeployResult {
 	return tdr
 }
 
-func syncAuthorizations(dctx daemons.Context, ns notary.Composite) chan *deployment.DeployResult {
+func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployResult {
 	var (
 		ndr = make(chan *deployment.DeployResult)
-		// sync credentials between servers
-		b = bloom.NewWithEstimates(1000, 0.0001)
 	)
 
 	go func() {
 		for dr := range ndr {
-			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(ns.Root, bw.AuthKeysFile)))
-
-			for _, p := range agent.RendezvousPeers(dctx.P2PPublicKey, dctx.Cluster) {
-				// Notary Subscriptions to node events. syncs authorization between agents
-				req, err := notary.NewSyncRequest(b)
-				if err != nil {
-					log.Println("unable generate request", err)
-					continue
-				}
-
-				d := dialers.NewDirect(agent.RPCAddress(p), dctx.Dialer.Defaults()...)
-				ctx, done := context.WithTimeout(context.Background(), 5*time.Minute)
-				conn, err := d.DialContext(ctx)
-				done()
-				if err != nil {
-					log.Println("unable to connect", err)
-					continue
-				}
-
-				client := notary.NewSyncClient(conn)
-				stream, err := client.Stream(context.Background(), req)
-				if err != nil {
-					log.Println("unable to stream", err)
-					continue
-				}
-
-				log.Println("syncing credentials initiated", agent.RPCAddress(p))
-				err = notary.Sync(stream, b, dctx.NotaryStorage)
-				if err != nil {
-					log.Println("syncing credentials failed", err)
-					continue
-				} else {
-					log.Println("syncing credentials completed", agent.RPCAddress(p))
-				}
-			}
+			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(dctx.NotaryStorage.Root, bw.AuthKeysFile)))
+			daemons.SyncAuthorizations(dctx)
 		}
 	}()
 

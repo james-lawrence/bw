@@ -2,8 +2,10 @@ package notary
 
 import (
 	"context"
+	"log"
 
 	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
@@ -39,10 +41,36 @@ func (t Composite) Lookup(fingerprint string) (g *Grant, err error) {
 	return g, err
 }
 
-// SyncRequest generates a bloom filter representing the current state of the notary system.
-func (t Composite) SyncRequest(ctx context.Context, b *bloom.BloomFilter) (err error) {
-	// TODO: implement populating the bloom filter.
-	return err
+// Bloomfilter generates a bloom filter representing the current state of the notary system.
+func (t Composite) Bloomfilter(ctx context.Context) (b *bloom.BloomFilter, err error) {
+	var (
+		c    chan *Grant = make(chan *Grant)
+		errc chan error  = make(chan error, 1)
+	)
+
+	log.Println("generating bloomfilter initiated")
+	defer log.Println("generating bloomfilter completed")
+
+	b = bloom.NewWithEstimates(1000, 0.0001)
+
+	go func() {
+		defer close(c)
+		if err = t.Sync(ctx, b, c); err != nil {
+			errc <- err
+		}
+	}()
+
+	for g := range c {
+		debugx.Println("bloomfilter adding", g.Fingerprint)
+		b.AddString(g.Fingerprint)
+	}
+
+	select {
+	case err = <-errc:
+		return b, err
+	default:
+		return b, nil
+	}
 }
 
 // Sync find grants not in the bloom filter and insert them into the channel.

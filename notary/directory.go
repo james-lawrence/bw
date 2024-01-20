@@ -65,6 +65,9 @@ func (t Directory) Lookup(fingerprint string) (g *Grant, err error) {
 }
 
 func (t Directory) Sync(ctx context.Context, b Bloomy, c chan *Grant) error {
+	log.Println("syncing directory", t.root, "initiated")
+	defer log.Println("syncing directory", t.root, "completed")
+
 	t.m.RLock()
 	defer t.m.RUnlock()
 	return filepath.Walk(t.root, func(path string, d os.FileInfo, err error) error {

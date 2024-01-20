@@ -41,7 +41,9 @@ they can add the key using the command "bw notary insert %s"`, path, path)
 
 // Format override standard error formatting.
 func (t ErrUnauthorizedKey) Format(s fmt.State, verb rune) {
-	io.WriteString(s, t.Error())
+	if _, err := io.WriteString(s, t.Error()); err != nil {
+		log.Println("unable to format unauthorized error, ignored", err)
+	}
 }
 
 type keyGen func() ([]byte, error)

@@ -24,7 +24,7 @@ var _ = Describe("newAutoSignerPath", func() {
 
 	It("should fail when unable to write to disk", func() {
 		tmp := testingx.TempDir()
-		os.Chmod(tmp, 0400)
+		Expect(os.Chmod(tmp, 0400)).To(Succeed())
 		_, err := newAutoSignerPath(
 			filepath.Join(tmp, bw.DefaultNotaryKey),
 			"",
