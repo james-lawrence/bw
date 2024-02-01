@@ -226,7 +226,7 @@ func Into(ctx *Context) error {
 		return cause
 	}
 
-	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: concurrency(%d), deployID(%s)", max, bw.RandomID(darchive.DeploymentID)))
+	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: by(%s) concurrency(%d), deployID(%s)", displayname, max, bw.RandomID(darchive.DeploymentID)))
 	if cause := client.RemoteDeploy(ctx.Context, displayname, &dopts, darchive, peers...); cause != nil {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
 		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)

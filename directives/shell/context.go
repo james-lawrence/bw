@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/james-lawrence/bw"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +27,6 @@ func DefaultContext(options ...Option) (ctx Context, err error) {
 	if u, err = user.Current(); err != nil {
 		return ctx, errors.Wrap(err, "failed to lookup current user")
 	}
-	u.Username = bw.DisplayName()
 
 	if hostname, err = os.Hostname(); err != nil {
 		return ctx, errors.Wrap(err, "failed to lookup hostname")
@@ -136,6 +134,13 @@ func OptionTimeout(d time.Duration) Option {
 func OptionDeployID(id string) Option {
 	return func(ctx *Context) {
 		ctx.deploymentID = id
+	}
+}
+
+// OptionDeployID the id of the current deployment
+func OptionDeployerDisplayName(name string) Option {
+	return func(ctx *Context) {
+		ctx.User.Username = name
 	}
 }
 
