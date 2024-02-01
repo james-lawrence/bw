@@ -1,3 +1,15 @@
+commit 06460c4a396a2e2d22a8ae7539c92f0f7c283d2a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 11:25:58 2024 -0500
+
+    attempt to fix launchpad
+
+commit 1e1dce55d51002fa5e9e5581b6feda83d555ecb0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 10:56:31 2024 -0500
+
+    release 0.1.1706802822-fa330398
+
 commit fa330398f136730c9ce94861821c1d7110d49943
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Feb 1 10:53:42 2024 -0500
