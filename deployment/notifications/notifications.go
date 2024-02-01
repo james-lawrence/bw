@@ -73,7 +73,6 @@ func ExpandEnv(s string, dc *agent.DeployCommand) string {
 				log.Println("unknown archive", spew.Sdump(dc))
 				return ""
 			}
-
 			return bw.RandomID(dc.Archive.DeploymentID).String()
 		case EnvDeployResult:
 			return dc.Command.String()
