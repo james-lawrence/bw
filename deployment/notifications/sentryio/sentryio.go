@@ -73,7 +73,7 @@ func (t Notifier) Notify(dc *agent.DeployCommand) {
 	}
 
 	if t.Authorization == "" {
-		log.Println("sentrio is enabled but authorization is set. ignoring.")
+		log.Println("sentryio is enabled but authorization is set. ignoring.")
 		return
 	}
 
