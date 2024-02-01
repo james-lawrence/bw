@@ -1,3 +1,33 @@
+commit fa330398f136730c9ce94861821c1d7110d49943
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 10:53:42 2024 -0500
+
+    fix log typo
+
+commit cb4ab02c8c4ab86ca43ac8aa2806b5785429e234
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 10:48:46 2024 -0500
+
+    fix typo in log
+
+commit d54cbbd1fe5bfa5d5fd24ebf5bdb2eb242f29f78
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 10:28:11 2024 -0500
+
+    add deployer to log statement
+
+commit a1cabedf0a7a325284923c255ffcfae28d5bf892
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 10:24:23 2024 -0500
+
+    fix user name for deploys
+
+commit bb9df4c324a183781fe8ef6430997b889193d473
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 20 11:58:10 2024 -0500
+
+    release 0.1.1705769222-a4da0176
+
 commit a4da0176760e6de8c5f019893262c57247ec6b5e
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 20 11:45:58 2024 -0500
