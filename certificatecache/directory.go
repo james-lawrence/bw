@@ -149,7 +149,7 @@ func (t *Directory) refresh() (err error) {
 		cert              tls.Certificate
 	)
 
-	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSBootstrapCert)
+	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
@@ -165,9 +165,8 @@ func (t *Directory) refresh() (err error) {
 
 	t.cachedCert = &cert
 
-	bootstrapcert := bw.LocateFirstInDir(t.dir, DefaultTLSBootstrapCert)
-	if systemx.FileExists(bootstrapcert) {
-		if err = LoadCert(t.pool, bootstrapcert); err != nil {
+	if systemx.FileExists(certpath) {
+		if err = LoadCert(t.pool, certpath); err != nil {
 			return err
 		}
 	}

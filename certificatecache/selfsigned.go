@@ -55,7 +55,7 @@ func (t selfsigned) Refresh() (err error) {
 		log.Println("creating self signed certificate", tlsx.PrintEncoded(cert))
 	}
 
-	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSBootstrapCert), cert); err != nil {
+	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSCertServer), cert); err != nil {
 		return err
 	}
 
