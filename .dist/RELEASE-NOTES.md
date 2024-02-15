@@ -1,3 +1,21 @@
+commit 6ef3803f4189f65b76efcb8c0b353979e0f93782
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 15 16:53:34 2024 -0500
+
+    fix bootstrap certificate logic
+
+commit cb1b9290ccba597155205215481c252ed1c9be4a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 13:14:59 2024 -0500
+
+    remove extraneous logging statement
+
+commit b830ed22586e7cb65459d3146bd54fe09f8a5f46
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 1 11:28:42 2024 -0500
+
+    release 0.1.1706804758-06460c4a
+
 commit 06460c4a396a2e2d22a8ae7539c92f0f7c283d2a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Feb 1 11:25:58 2024 -0500
