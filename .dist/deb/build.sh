@@ -41,7 +41,7 @@ cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
 
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/
 
-pushd src; /usr/lib/go-1.20/bin/go install  -buildvcs=false ./cmd/...; popd
+pushd src; /usr/lib/go-1.21/bin/go install  -buildvcs=false ./cmd/...; popd
 ~/go/bin/bw version
 
 i=-1
