@@ -4,7 +4,8 @@ var (
 	// ThemeDefault is the default theme used by PTerm.
 	// If this variable is overwritten, the new value is used as default theme.
 	ThemeDefault = Theme{
-		PrimaryStyle:            Style{FgCyan},
+		DefaultText:             Style{FgDefault, BgDefault},
+		PrimaryStyle:            Style{FgLightCyan},
 		SecondaryStyle:          Style{FgLightMagenta},
 		HighlightStyle:          Style{Bold, FgYellow},
 		InfoMessageStyle:        Style{FgLightCyan},
@@ -29,6 +30,9 @@ var (
 		TableStyle:              Style{FgDefault},
 		TableHeaderStyle:        Style{FgLightCyan},
 		TableSeparatorStyle:     Style{FgGray},
+		HeatmapStyle:            Style{FgDefault},
+		HeatmapHeaderStyle:      Style{FgLightCyan},
+		HeatmapSeparatorStyle:   Style{FgDefault},
 		SectionStyle:            Style{Bold, FgYellow},
 		BulletListTextStyle:     Style{FgDefault},
 		BulletListBulletStyle:   Style{FgGray},
@@ -42,6 +46,10 @@ var (
 		BarLabelStyle:           Style{FgLightCyan},
 		BarStyle:                Style{FgCyan},
 		TimerStyle:              Style{FgGray},
+		Checkmark: Checkmark{
+			Checked:   Green("✓"),
+			Unchecked: Red("✗"),
+		},
 	}
 )
 
@@ -49,6 +57,7 @@ var (
 // Theme contains every Style used in PTerm. You can create own themes for your application or use one
 // of the existing themes.
 type Theme struct {
+	DefaultText             Style
 	PrimaryStyle            Style
 	SecondaryStyle          Style
 	HighlightStyle          Style
@@ -75,6 +84,9 @@ type Theme struct {
 	TableStyle              Style
 	TableHeaderStyle        Style
 	TableSeparatorStyle     Style
+	HeatmapStyle            Style
+	HeatmapHeaderStyle      Style
+	HeatmapSeparatorStyle   Style
 	SectionStyle            Style
 	BulletListTextStyle     Style
 	BulletListBulletStyle   Style
@@ -87,6 +99,7 @@ type Theme struct {
 	BoxTextStyle            Style
 	BarLabelStyle           Style
 	BarStyle                Style
+	Checkmark               Checkmark
 }
 
 // WithPrimaryStyle returns a new theme with overridden value.

@@ -2,7 +2,9 @@ Bloom filters
 -------------
 [![Test](https://github.com/bits-and-blooms/bloom/actions/workflows/test.yml/badge.svg)](https://github.com/bits-and-blooms/bloom/actions/workflows/test.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bits-and-blooms/bloom)](https://goreportcard.com/report/github.com/bits-and-blooms/bloom)
-[![Go Reference](https://pkg.go.dev/badge/github.com/bits-and-blooms/bloom.svg)](https://pkg.go.dev/github.com/bits-and-blooms/bloom)
+[![Go Reference](https://pkg.go.dev/badge/github.com/bits-and-blooms/bloom.svg)](https://pkg.go.dev/github.com/bits-and-blooms/bloom/v3)
+
+This library is used by popular systems such as [Milvus](https://github.com/milvus-io/milvus) and [beego](https://github.com/beego/Beego).
 
 A Bloom filter is a concise/compressed representation of a set, where the main
 requirement is to make membership queries; _i.e._, whether an item is a
@@ -47,14 +49,79 @@ For numerical data, we recommend that you look into the encoding/binary library.
     filter.Add(n1)
 ```
 
-Discussion here: [Bloom filter](https://groups.google.com/d/topic/golang-nuts/6MktecKi1bE/discussion)
+Godoc documentation:  https://pkg.go.dev/github.com/bits-and-blooms/bloom/v3 
 
-Godoc documentation: https://pkg.go.dev/github.com/bits-and-blooms/bloom
 
 ## Installation
 
 ```bash
 go get -u github.com/bits-and-blooms/bloom/v3
+```
+
+## Verifying the False Positive Rate
+
+
+Sometimes, the actual false positive rate may differ (slightly) from the
+theoretical false positive rate. We have a function to estimate the false positive rate of a
+Bloom filter with _m_ bits and _k_ hashing functions for a set of size _n_:
+
+```Go
+    if bloom.EstimateFalsePositiveRate(20*n, 5, n) > 0.001 ...
+```
+
+You can use it to validate the computed m, k parameters:
+
+```Go
+    m, k := bloom.EstimateParameters(n, fp)
+    ActualfpRate := bloom.EstimateFalsePositiveRate(m, k, n)
+```
+
+or
+
+```Go
+    f := bloom.NewWithEstimates(n, fp)
+    ActualfpRate := bloom.EstimateFalsePositiveRate(f.m, f.k, n)
+```
+
+You would expect `ActualfpRate` to be close to the desired false-positive rate `fp` in these cases.
+
+The `EstimateFalsePositiveRate` function creates a temporary Bloom filter. It is
+also relatively expensive and only meant for validation.
+
+## Serialization
+
+You can read and write the Bloom filters as follows:
+
+
+```Go
+	f := New(1000, 4)
+	var buf bytes.Buffer
+	bytesWritten, err := f.WriteTo(&buf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	var g BloomFilter
+	bytesRead, err := g.ReadFrom(&buf)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if bytesRead != bytesWritten {
+		t.Errorf("read unexpected number of bytes %d != %d", bytesRead, bytesWritten)
+	}
+```
+
+*Performance tip*: 
+When reading and writing to a file or a network connection, you may get better performance by 
+wrapping your streams with `bufio` instances.
+
+E.g., 
+```Go
+	f, err := os.Create("myfile")
+	w := bufio.NewWriter(f)
+```
+```Go
+	f, err := os.Open("myfile")
+	r := bufio.NewReader(f)
 ```
 
 ## Contributing
@@ -79,7 +146,7 @@ make qa
 
 A Bloom filter has two parameters: _m_, the number of bits used in storage, and _k_, the number of hashing functions on elements of the set. (The actual hashing functions are important, too, but this is not a parameter for this implementation). A Bloom filter is backed by a [BitSet](https://github.com/bits-and-blooms/bitset); a key is represented in the filter by setting the bits at each value of the  hashing functions (modulo _m_). Set membership is done by _testing_ whether the bits at each value of the hashing functions (again, modulo _m_) are set. If so, the item is in the set. If the item is actually in the set, a Bloom filter will never fail (the true positive rate is 1.0); but it is susceptible to false positives. The art is to choose _k_ and _m_ correctly.
 
-In this implementation, the hashing functions used is [murmurhash](https://github.com/spaolacci/murmur3), a non-cryptographic hashing function.
+In this implementation, the hashing functions used is [murmurhash](github.com/twmb/murmur3), a non-cryptographic hashing function.
 
 
 Given the particular hashing scheme, it's best to be empirical about this. Note

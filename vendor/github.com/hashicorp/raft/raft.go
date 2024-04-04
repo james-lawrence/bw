@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package raft
 
 import (
@@ -5,7 +8,6 @@ import (
 	"container/list"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"sync/atomic"
 	"time"
 
@@ -214,7 +216,7 @@ func (r *Raft) runFollower() {
 
 			// Check if we have had a successful contact
 			lastContact := r.LastContact()
-			if time.Now().Sub(lastContact) < hbTimeout {
+			if time.Since(lastContact) < hbTimeout {
 				continue
 			}
 
@@ -279,7 +281,8 @@ func (r *Raft) liveBootstrap(configuration Configuration) error {
 
 // runCandidate runs the main loop while in the candidate state.
 func (r *Raft) runCandidate() {
-	r.logger.Info("entering candidate state", "node", r, "term", r.getCurrentTerm()+1)
+	term := r.getCurrentTerm() + 1
+	r.logger.Info("entering candidate state", "node", r, "term", term)
 	metrics.IncrCounter([]string{"raft", "state", "candidate"}, 1)
 
 	// Start vote for us, and set a timeout
@@ -290,7 +293,7 @@ func (r *Raft) runCandidate() {
 	// which will make other servers vote even though they have a leader already.
 	// It is important to reset that flag, because this priviledge could be abused
 	// otherwise.
-	defer func() { r.candidateFromLeadershipTransfer = false }()
+	defer func() { r.candidateFromLeadershipTransfer.Store(false) }()
 
 	electionTimeout := r.config().ElectionTimeout
 	electionTimer := randomTimeout(electionTimeout)
@@ -298,7 +301,7 @@ func (r *Raft) runCandidate() {
 	// Tally the votes, need a simple majority
 	grantedVotes := 0
 	votesNeeded := r.quorumSize()
-	r.logger.Debug("votes", "needed", votesNeeded)
+	r.logger.Debug("calculated votes needed", "needed", votesNeeded, "term", term)
 
 	for r.getState() == Candidate {
 		r.mainThreadSaturation.sleeping()
@@ -312,7 +315,7 @@ func (r *Raft) runCandidate() {
 			r.mainThreadSaturation.working()
 			// Check if the term is greater than ours, bail
 			if vote.Term > r.getCurrentTerm() {
-				r.logger.Debug("newer term discovered, fallback to follower")
+				r.logger.Debug("newer term discovered, fallback to follower", "term", vote.Term)
 				r.setState(Follower)
 				r.setCurrentTerm(vote.Term)
 				return
@@ -326,7 +329,7 @@ func (r *Raft) runCandidate() {
 
 			// Check if we've become the leader
 			if grantedVotes >= votesNeeded {
-				r.logger.Info("election won", "tally", grantedVotes)
+				r.logger.Info("election won", "term", vote.Term, "tally", grantedVotes)
 				r.setState(Leader)
 				r.setLeader(r.localAddr, r.localID)
 				return
@@ -431,6 +434,11 @@ func (r *Raft) runLeader() {
 		select {
 		case notify <- true:
 		case <-r.shutdownCh:
+			// make sure push to the notify channel ( if given )
+			select {
+			case notify <- true:
+			default:
+			}
 		}
 	}
 
@@ -684,8 +692,21 @@ func (r *Raft) leaderLoop() {
 				case err := <-doneCh:
 					if err != nil {
 						r.logger.Debug(err.Error())
+						future.respond(err)
+					} else {
+						// Wait for up to ElectionTimeout before flagging the
+						// leadership transfer as done and unblocking applies in
+						// the leaderLoop.
+						select {
+						case <-time.After(r.config().ElectionTimeout):
+							err := fmt.Errorf("leadership transfer timeout")
+							r.logger.Debug(err.Error())
+							future.respond(err)
+						case <-leftLeaderLoop:
+							r.logger.Debug("lost leadership during transfer (expected)")
+							future.respond(nil)
+						}
 					}
-					future.respond(err)
 				}
 			}()
 
@@ -732,7 +753,7 @@ func (r *Raft) leaderLoop() {
 
 			start := time.Now()
 			var groupReady []*list.Element
-			var groupFutures = make(map[uint64]*logFuture)
+			groupFutures := make(map[uint64]*logFuture)
 			var lastIdxInGroup uint64
 
 			// Pull all inflight logs that are committed off the queue.
@@ -781,7 +802,6 @@ func (r *Raft) leaderLoop() {
 			if v.quorumSize == 0 {
 				// Just dispatched, start the verification
 				r.verifyLeader(v)
-
 			} else if v.votes < v.quorumSize {
 				// Early return, means there must be a new leader
 				r.logger.Warn("new leader elected, stepping down")
@@ -1118,7 +1138,14 @@ func (r *Raft) restoreUserSnapshot(meta *SnapshotMeta, reader io.Reader) error {
 	r.setLastApplied(lastIndex)
 	r.setLastSnapshot(lastIndex, term)
 
-	r.logger.Info("restored user snapshot", "index", latestIndex)
+	// Remove old logs if r.logs is a MonotonicLogStore. Log any errors and continue.
+	if logs, ok := r.logs.(MonotonicLogStore); ok && logs.IsMonotonic() {
+		if err := r.removeOldLogs(); err != nil {
+			r.logger.Error("failed to remove old logs", "error", err)
+		}
+	}
+
+	r.logger.Info("restored user snapshot", "index", lastIndex)
 	return nil
 }
 
@@ -1381,7 +1408,7 @@ func (r *Raft) appendEntries(rpc RPC, a *AppendEntriesRequest) {
 
 	// Increase the term if we see a newer one, also transition to follower
 	// if we ever get an appendEntries call
-	if a.Term > r.getCurrentTerm() || (r.getState() != Follower && !r.candidateFromLeadershipTransfer) {
+	if a.Term > r.getCurrentTerm() || (r.getState() != Follower && !r.candidateFromLeadershipTransfer.Load()) {
 		// Ensure transition to follower
 		r.setState(Follower)
 		r.setCurrentTerm(a.Term)
@@ -1401,7 +1428,6 @@ func (r *Raft) appendEntries(rpc RPC, a *AppendEntriesRequest) {
 		var prevLogTerm uint64
 		if a.PrevLogEntry == lastIdx {
 			prevLogTerm = lastTerm
-
 		} else {
 			var prevLog Log
 			if err := r.logs.GetLog(a.PrevLogEntry, &prevLog); err != nil {
@@ -1500,7 +1526,6 @@ func (r *Raft) appendEntries(rpc RPC, a *AppendEntriesRequest) {
 	// Everything went well, set success
 	resp.Success = true
 	r.setLastContact()
-	return
 }
 
 // processConfigurationLogEntry takes a log entry and updates the latest
@@ -1565,8 +1590,8 @@ func (r *Raft) requestVote(rpc RPC, req *RequestVoteRequest) {
 		candidateID := ServerID(req.ID)
 		// if the Servers list is empty that mean the cluster is very likely trying to bootstrap,
 		// Grant the vote
-		if len(r.configurations.latest.Servers) > 0 && !hasVote(r.configurations.latest, candidateID) {
-			r.logger.Warn("rejecting vote request since node is not a voter",
+		if len(r.configurations.latest.Servers) > 0 && !inConfiguration(r.configurations.latest, candidateID) {
+			r.logger.Warn("rejecting vote request since node is not in configuration",
 				"from", candidate)
 			return
 		}
@@ -1593,6 +1618,18 @@ func (r *Raft) requestVote(rpc RPC, req *RequestVoteRequest) {
 		resp.Term = req.Term
 	}
 
+	// if we get a request for vote from a nonVoter  and the request term is higher,
+	// step down and update term, but reject the vote request
+	// This could happen when a node, previously voter, is converted to non-voter
+	// The reason we need to step in is to permit to the cluster to make progress in such a scenario
+	// More details about that in https://github.com/hashicorp/raft/pull/526
+	if len(req.ID) > 0 {
+		candidateID := ServerID(req.ID)
+		if len(r.configurations.latest.Servers) > 0 && !hasVote(r.configurations.latest, candidateID) {
+			r.logger.Warn("rejecting vote request since node is not a voter", "from", candidate)
+			return
+		}
+	}
 	// Check if we have voted yet
 	lastVoteTerm, err := r.stable.GetUint64(keyLastVoteTerm)
 	if err != nil && err.Error() != "not found" {
@@ -1608,7 +1645,7 @@ func (r *Raft) requestVote(rpc RPC, req *RequestVoteRequest) {
 	// Check if we've voted in this election before
 	if lastVoteTerm == req.Term && lastVoteCandBytes != nil {
 		r.logger.Info("duplicate requestVote for same term", "term", req.Term)
-		if bytes.Compare(lastVoteCandBytes, candidateBytes) == 0 {
+		if bytes.Equal(lastVoteCandBytes, candidateBytes) {
 			r.logger.Warn("duplicate requestVote from", "candidate", candidate)
 			resp.Granted = true
 		}
@@ -1641,7 +1678,6 @@ func (r *Raft) requestVote(rpc RPC, req *RequestVoteRequest) {
 
 	resp.Granted = true
 	r.setLastContact()
-	return
 }
 
 // installSnapshot is invoked when we get a InstallSnapshot RPC call.
@@ -1657,7 +1693,7 @@ func (r *Raft) installSnapshot(rpc RPC, req *InstallSnapshotRequest) {
 	}
 	var rpcErr error
 	defer func() {
-		io.Copy(ioutil.Discard, rpc.Reader) // ensure we always consume all the snapshot data from the stream [see issue #212]
+		_, _ = io.Copy(io.Discard, rpc.Reader) // ensure we always consume all the snapshot data from the stream [see issue #212]
 		rpc.Respond(resp, rpcErr)
 	}()
 
@@ -1774,15 +1810,19 @@ func (r *Raft) installSnapshot(rpc RPC, req *InstallSnapshotRequest) {
 	r.setLatestConfiguration(reqConfiguration, reqConfigurationIndex)
 	r.setCommittedConfiguration(reqConfiguration, reqConfigurationIndex)
 
-	// Compact logs, continue even if this fails
-	if err := r.compactLogs(req.LastLogIndex); err != nil {
+	// Clear old logs if r.logs is a MonotonicLogStore. Otherwise compact the
+	// logs. In both cases, log any errors and continue.
+	if mlogs, ok := r.logs.(MonotonicLogStore); ok && mlogs.IsMonotonic() {
+		if err := r.removeOldLogs(); err != nil {
+			r.logger.Error("failed to reset logs", "error", err)
+		}
+	} else if err := r.compactLogs(req.LastLogIndex); err != nil {
 		r.logger.Error("failed to compact logs", "error", err)
 	}
 
 	r.logger.Info("Installed remote snapshot")
 	resp.Success = true
 	r.setLastContact()
-	return
 }
 
 // setLastContact is used to set the last contact time to now
@@ -1817,7 +1857,7 @@ func (r *Raft) electSelf() <-chan *voteResult {
 		Candidate:          r.trans.EncodePeer(r.localID, r.localAddr),
 		LastLogIndex:       lastIdx,
 		LastLogTerm:        lastTerm,
-		LeadershipTransfer: r.candidateFromLeadershipTransfer,
+		LeadershipTransfer: r.candidateFromLeadershipTransfer.Load(),
 	}
 
 	// Construct a function to ask for a vote
@@ -1829,7 +1869,8 @@ func (r *Raft) electSelf() <-chan *voteResult {
 			if err != nil {
 				r.logger.Error("failed to make requestVote RPC",
 					"target", peer,
-					"error", err)
+					"error", err,
+					"term", req.Term)
 				resp.Term = req.Term
 				resp.Granted = false
 			}
@@ -1841,6 +1882,7 @@ func (r *Raft) electSelf() <-chan *voteResult {
 	for _, server := range r.configurations.latest.Servers {
 		if server.Suffrage == Voter {
 			if server.ID == r.localID {
+				r.logger.Debug("voting for self", "term", req.Term, "id", r.localID)
 				// Persist a vote for ourselves
 				if err := r.persistVote(req.Term, req.RPCHeader.Addr); err != nil {
 					r.logger.Error("failed to persist vote", "error", err)
@@ -1856,6 +1898,7 @@ func (r *Raft) electSelf() <-chan *voteResult {
 					voterID: r.localID,
 				}
 			} else {
+				r.logger.Debug("asking for vote", "term", req.Term, "from", server.ID, "address", server.Address)
 				askPeer(server)
 			}
 		}
@@ -1947,7 +1990,7 @@ func (r *Raft) initiateLeadershipTransfer(id *ServerID, address *ServerAddress) 
 func (r *Raft) timeoutNow(rpc RPC, req *TimeoutNowRequest) {
 	r.setLeader("", "")
 	r.setState(Candidate)
-	r.candidateFromLeadershipTransfer = true
+	r.candidateFromLeadershipTransfer.Store(true)
 	rpc.Respond(&TimeoutNowResponse{}, nil)
 }
 

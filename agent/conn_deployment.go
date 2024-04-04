@@ -8,8 +8,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/anacrolix/stm/rate"
 	"github.com/pkg/errors"
+	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

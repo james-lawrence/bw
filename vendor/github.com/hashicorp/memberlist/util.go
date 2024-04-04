@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package memberlist
 
 import (
@@ -13,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/go-msgpack/codec"
+	"github.com/hashicorp/go-msgpack/v2/codec"
 	"github.com/sean-/seed"
 )
 
@@ -42,10 +45,14 @@ func decode(buf []byte, out interface{}) error {
 }
 
 // Encode writes an encoded object to a new bytes buffer
-func encode(msgType messageType, in interface{}) (*bytes.Buffer, error) {
+func encode(msgType messageType, in interface{}, msgpackUseNewTimeFormat bool) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	buf.WriteByte(uint8(msgType))
-	hd := codec.MsgpackHandle{}
+	hd := codec.MsgpackHandle{
+		BasicHandle: codec.BasicHandle{
+			TimeNotBuiltin: !msgpackUseNewTimeFormat,
+		},
+	}
 	enc := codec.NewEncoder(buf, &hd)
 	err := enc.Encode(in)
 	return buf, err
@@ -152,6 +159,23 @@ OUTER:
 	return kNodes
 }
 
+// makeCompoundMessages takes a list of messages and packs
+// them into one or multiple messages based on the limitations
+// of compound messages (255 messages each).
+func makeCompoundMessages(msgs [][]byte) []*bytes.Buffer {
+	const maxMsgs = 255
+	bufs := make([]*bytes.Buffer, 0, (len(msgs)+(maxMsgs-1))/maxMsgs)
+
+	for ; len(msgs) > maxMsgs; msgs = msgs[maxMsgs:] {
+		bufs = append(bufs, makeCompoundMessage(msgs[:maxMsgs]))
+	}
+	if len(msgs) > 0 {
+		bufs = append(bufs, makeCompoundMessage(msgs))
+	}
+
+	return bufs
+}
+
 // makeCompoundMessage takes a list of messages and generates
 // a single compound message containing all of them
 func makeCompoundMessage(msgs [][]byte) *bytes.Buffer {
@@ -218,7 +242,7 @@ func decodeCompoundMessage(buf []byte) (trunc int, parts [][]byte, err error) {
 
 // compressPayload takes an opaque input buffer, compresses it
 // and wraps it in a compress{} message that is encoded.
-func compressPayload(inp []byte) (*bytes.Buffer, error) {
+func compressPayload(inp []byte, msgpackUseNewTimeFormat bool) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	compressor := lzw.NewWriter(&buf, lzw.LSB, lzwLitWidth)
 
@@ -237,7 +261,7 @@ func compressPayload(inp []byte) (*bytes.Buffer, error) {
 		Algo: lzwAlgo,
 		Buf:  buf.Bytes(),
 	}
-	return encode(compressMsg, &c)
+	return encode(compressMsg, &c, msgpackUseNewTimeFormat)
 }
 
 // decompressPayload is used to unpack an encoded compress{}

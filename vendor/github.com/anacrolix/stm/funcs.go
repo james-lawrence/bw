@@ -1,20 +1,16 @@
 package stm
 
 import (
-	"math/rand"
-	"reflect"
 	"runtime/pprof"
 	"sync"
-	"time"
 )
 
 var (
 	txPool = sync.Pool{New: func() interface{} {
 		expvars.Add("new txs", 1)
 		tx := &Tx{
-			reads:    make(map[*Var]VarValue),
-			writes:   make(map[*Var]interface{}),
-			watching: make(map[*Var]struct{}),
+			reads:  make(map[*Var]uint64),
+			writes: make(map[*Var]interface{}),
 		}
 		tx.cond.L = &tx.mu
 		return tx
@@ -22,10 +18,7 @@ var (
 	failedCommitsProfile *pprof.Profile
 )
 
-const (
-	profileFailedCommits = false
-	sleepBetweenRetries  = false
-)
+const profileFailedCommits = false
 
 func init() {
 	if profileFailedCommits {
@@ -34,20 +27,13 @@ func init() {
 }
 
 func newTx() *Tx {
-	tx := txPool.Get().(*Tx)
-	tx.tries = 0
-	tx.completed = false
-	return tx
+	return txPool.Get().(*Tx)
 }
 
 func WouldBlock(fn Operation) (block bool) {
 	tx := newTx()
 	tx.reset()
 	_, block = catchRetry(fn, tx)
-	if len(tx.watching) != 0 {
-		panic("shouldn't have installed any watchers")
-	}
-	tx.recycle()
 	return
 }
 
@@ -57,24 +43,8 @@ func Atomically(op Operation) interface{} {
 	// run the transaction
 	tx := newTx()
 retry:
-	tx.tries++
 	tx.reset()
-	if sleepBetweenRetries {
-		shift := int64(tx.tries - 1)
-		const maxShift = 30
-		if shift > maxShift {
-			shift = maxShift
-		}
-		ns := int64(1) << shift
-		d := time.Duration(rand.Int63n(ns))
-		if d > 100*time.Microsecond {
-			tx.updateWatchers()
-			time.Sleep(time.Duration(ns))
-		}
-	}
-	tx.mu.Lock()
 	ret, retry := catchRetry(op, tx)
-	tx.mu.Unlock()
 	if retry {
 		expvars.Add("retries", 1)
 		// wait for one of the variables we read to change before retrying
@@ -83,7 +53,7 @@ retry:
 	}
 	// verify the read log
 	tx.lockAllVars()
-	if tx.inputsChanged() {
+	if !tx.verify() {
 		tx.unlock()
 		expvars.Add("failed commits", 1)
 		if profileFailedCommits {
@@ -93,10 +63,6 @@ retry:
 	}
 	// commit the write log and broadcast that variables have changed
 	tx.commit()
-	tx.mu.Lock()
-	tx.completed = true
-	tx.cond.Broadcast()
-	tx.mu.Unlock()
 	tx.unlock()
 	expvars.Add("commits", 1)
 	tx.recycle()
@@ -105,7 +71,7 @@ retry:
 
 // AtomicGet is a helper function that atomically reads a value.
 func AtomicGet(v *Var) interface{} {
-	return v.value.Load().(VarValue).Get()
+	return v.loadState().val
 }
 
 // AtomicSet is a helper function that atomically writes a value.
@@ -162,16 +128,4 @@ func VoidOperation(f func(*Tx)) Operation {
 		f(tx)
 		return nil
 	}
-}
-
-func AtomicModify(v *Var, f interface{}) {
-	r := reflect.ValueOf(f)
-	Atomically(VoidOperation(func(tx *Tx) {
-		cur := reflect.ValueOf(tx.Get(v))
-		out := r.Call([]reflect.Value{cur})
-		if lenOut := len(out); lenOut != 1 {
-			panic(lenOut)
-		}
-		tx.Set(v, out[0].Interface())
-	}))
 }

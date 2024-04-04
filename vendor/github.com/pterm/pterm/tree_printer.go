@@ -1,6 +1,7 @@
 package pterm
 
 import (
+	"io"
 	"strings"
 )
 
@@ -43,6 +44,7 @@ type TreePrinter struct {
 	VerticalString       string
 	RightDownLeftString  string
 	Indent               int
+	Writer               io.Writer
 }
 
 // WithTreeStyle returns a new list with a specific tree style.
@@ -97,10 +99,16 @@ func (p TreePrinter) WithIndent(indent int) *TreePrinter {
 	return &p
 }
 
+// WithWriter sets the Writer.
+func (p TreePrinter) WithWriter(writer io.Writer) *TreePrinter {
+	p.Writer = writer
+	return &p
+}
+
 // Render prints the list to the terminal.
 func (p TreePrinter) Render() error {
 	s, _ := p.Srender()
-	Println(s)
+	Fprintln(p.Writer, s)
 
 	return nil
 }
@@ -114,7 +122,12 @@ func (p TreePrinter) Srender() (string, error) {
 		p.TextStyle = NewStyle()
 	}
 
-	return walkOverTree(p.Root.Children, p, ""), nil
+	var result string
+	if p.Root.Text != "" {
+		result += p.TextStyle.Sprint(p.Root.Text) + "\n"
+	}
+	result += walkOverTree(p.Root.Children, p, "")
+	return result, nil
 }
 
 // walkOverTree is a recursive function,
@@ -144,42 +157,4 @@ func walkOverTree(list []TreeNode, p TreePrinter, prefix string) string {
 		}
 	}
 	return ret
-}
-
-// NewTreeFromLeveledList converts a TreeItems list to a TreeNode and returns it.
-func NewTreeFromLeveledList(leveledListItems LeveledList) TreeNode {
-	if len(leveledListItems) == 0 {
-		return TreeNode{}
-	}
-
-	root := &TreeNode{
-		Children: []TreeNode{},
-		Text:     leveledListItems[0].Text,
-	}
-
-	for i, record := range leveledListItems {
-		last := root
-
-		if record.Level < 0 {
-			record.Level = 0
-			leveledListItems[i].Level = 0
-		}
-
-		if len(leveledListItems)-1 != i {
-			if leveledListItems[i+1].Level-1 > record.Level {
-				leveledListItems[i+1].Level = record.Level + 1
-			}
-		}
-
-		for i := 0; i < record.Level; i++ {
-			lastIndex := len(last.Children) - 1
-			last = &last.Children[lastIndex]
-		}
-		last.Children = append(last.Children, TreeNode{
-			Children: []TreeNode{},
-			Text:     record.Text,
-		})
-	}
-
-	return *root
 }

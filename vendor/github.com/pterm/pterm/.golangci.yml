@@ -28,7 +28,6 @@ linters:
     - gosec
     - govet
     - ineffassign
-    - interfacer
     - unconvert
     - gosimple
     - godox
@@ -88,5 +87,9 @@ issues:
     - linters:
         - gocritic
       text: "unnecessaryDefer:"
+    - linters:
+        - gocritic
+      text: "preferDecodeRune:"
 service:
   golangci-lint-version: 1.31.x # use the fixed version to not introduce new linters unexpectedly
+

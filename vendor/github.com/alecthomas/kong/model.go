@@ -54,6 +54,7 @@ type Node struct {
 	Tag         *Tag
 	Aliases     []string
 	Passthrough bool // Set to true to stop flag parsing when encountered.
+	Active      bool // Denotes the node is part of an active branch in the CLI.
 
 	Argument *Value // Populated when Type is ArgumentNode.
 }
@@ -98,6 +99,7 @@ func (n *Node) AllFlags(hide bool) (out [][]*Flag) {
 	group := []*Flag{}
 	for _, flag := range n.Flags {
 		if !hide || !flag.Hidden {
+			flag.Active = true
 			group = append(group, flag)
 		}
 	}
@@ -159,6 +161,16 @@ func (n *Node) Summary() string {
 		summary += " " + strings.Join(args, " ") + strings.Repeat("]", optional)
 	} else if len(n.Children) > 0 {
 		summary += " <command>"
+	}
+	allFlags := n.Flags
+	if n.Parent != nil {
+		allFlags = append(allFlags, n.Parent.Flags...)
+	}
+	for _, flag := range allFlags {
+		if !flag.Required {
+			summary += " [flags]"
+			break
+		}
 	}
 	return summary
 }
@@ -243,6 +255,7 @@ type Value struct {
 	Format       string // Formatting directive, if applicable.
 	Position     int    // Position (for positional arguments).
 	Passthrough  bool   // Set to true to stop flag parsing when encountered.
+	Active       bool   // Denotes the value is part of an active branch in the CLI.
 }
 
 // EnumMap returns a map of the enums in this value.
@@ -315,6 +328,9 @@ func (v *Value) IsMap() bool {
 
 // IsBool returns true if the underlying value is a boolean.
 func (v *Value) IsBool() bool {
+	if m, ok := v.Mapper.(BoolMapperExt); ok && m.IsBoolFromValue(v.Target) {
+		return true
+	}
 	if m, ok := v.Mapper.(BoolMapper); ok && m.IsBool() {
 		return true
 	}
@@ -360,14 +376,17 @@ func (v *Value) ApplyDefault() error {
 // Does not include resolvers.
 func (v *Value) Reset() error {
 	v.Target.Set(reflect.Zero(v.Target.Type()))
-	if v.Tag.Env != "" {
-		envar := os.Getenv(v.Tag.Env)
-		if envar != "" {
-			err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: envar}), v.Target)
-			if err != nil {
-				return fmt.Errorf("%s (from envar %s=%q)", err, v.Tag.Env, envar)
+	if len(v.Tag.Envs) != 0 {
+		for _, env := range v.Tag.Envs {
+			envar, ok := os.LookupEnv(env)
+			// Parse the first non-empty ENV in the list
+			if ok {
+				err := v.Parse(ScanFromTokens(Token{Type: FlagValueToken, Value: envar}), v.Target)
+				if err != nil {
+					return fmt.Errorf("%s (from envar %s=%q)", err, env, envar)
+				}
+				return nil
 			}
-			return nil
 		}
 	}
 	if v.HasDefault {
@@ -387,7 +406,8 @@ type Flag struct {
 	Group       *Group // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
 	Xor         []string
 	PlaceHolder string
-	Env         string
+	Envs        []string
+	Aliases     []string
 	Short       rune
 	Hidden      bool
 	Negated     bool
@@ -481,6 +501,9 @@ func reflectValueIsZero(v reflect.Value) bool {
 	default:
 		// This should never happens, but will act as a safeguard for
 		// later, as a default value doesn't makes sense here.
-		panic(&reflect.ValueError{"reflect.Value.IsZero", v.Kind()})
+		panic(&reflect.ValueError{
+			Method: "reflect.Value.IsZero",
+			Kind:   v.Kind(),
+		})
 	}
 }

@@ -2,6 +2,7 @@ package pterm
 
 import (
 	"fmt"
+	"io"
 	"runtime"
 	"strings"
 
@@ -90,6 +91,7 @@ type PrefixPrinter struct {
 	Fatal            bool
 	ShowLineNumber   bool
 	LineNumberOffset int
+	Writer           io.Writer
 	// If Debugger is true, the printer will only print if PrintDebugMessages is set to true.
 	// You can change PrintDebugMessages with EnableDebugMessages and DisableDebugMessages, or by setting the variable itself.
 	Debugger bool
@@ -144,6 +146,12 @@ func (p PrefixPrinter) WithLineNumberOffset(offset int) *PrefixPrinter {
 	return &p
 }
 
+// WithWriter sets the custom Writer.
+func (p PrefixPrinter) WithWriter(writer io.Writer) *PrefixPrinter {
+	p.Writer = writer
+	return &p
+}
+
 // Sprint formats using the default formats for its operands and returns the resulting string.
 // Spaces are added between operands when neither is a string.
 func (p *PrefixPrinter) Sprint(a ...interface{}) string {
@@ -191,9 +199,8 @@ func (p *PrefixPrinter) Sprint(a ...interface{}) string {
 		}
 	}
 
-	_, fileName, line, _ := runtime.Caller(3 + p.LineNumberOffset)
-
 	if p.ShowLineNumber {
+		_, fileName, line, _ := runtime.Caller(3 + p.LineNumberOffset)
 		ret += FgGray.Sprint("\n└ " + fmt.Sprintf("(%s:%d)\n", fileName, line))
 		newLine = false
 	}
@@ -240,7 +247,9 @@ func (p *PrefixPrinter) Print(a ...interface{}) *TextPrinter {
 	if p.Debugger && !PrintDebugMessages {
 		return &tp
 	}
-	Print(p.Sprint(a...))
+	p.LineNumberOffset--
+	Fprint(p.Writer, p.Sprint(a...))
+	p.LineNumberOffset++
 	checkFatal(p)
 	return &tp
 }
@@ -253,7 +262,7 @@ func (p *PrefixPrinter) Println(a ...interface{}) *TextPrinter {
 	if p.Debugger && !PrintDebugMessages {
 		return &tp
 	}
-	Print(p.Sprintln(a...))
+	Fprint(p.Writer, p.Sprintln(a...))
 	checkFatal(p)
 	return &tp
 }
@@ -265,7 +274,7 @@ func (p *PrefixPrinter) Printf(format string, a ...interface{}) *TextPrinter {
 	if p.Debugger && !PrintDebugMessages {
 		return &tp
 	}
-	Print(p.Sprintf(format, a...))
+	Fprint(p.Writer, p.Sprintf(format, a...))
 	checkFatal(p)
 	return &tp
 }
@@ -278,7 +287,9 @@ func (p *PrefixPrinter) Printfln(format string, a ...interface{}) *TextPrinter {
 	if p.Debugger && !PrintDebugMessages {
 		return &tp
 	}
-	Print(p.Sprintfln(format, a...))
+	p.LineNumberOffset++
+	Fprint(p.Writer, p.Sprintfln(format, a...))
+	p.LineNumberOffset--
 	checkFatal(p)
 	return &tp
 }

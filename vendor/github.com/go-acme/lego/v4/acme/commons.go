@@ -38,6 +38,7 @@ const (
 
 // Directory the ACME directory object.
 // - https://www.rfc-editor.org/rfc/rfc8555.html#section-7.1.1
+// - https://datatracker.ietf.org/doc/draft-ietf-acme-ari/
 type Directory struct {
 	NewNonceURL   string `json:"newNonce"`
 	NewAccountURL string `json:"newAccount"`
@@ -46,6 +47,7 @@ type Directory struct {
 	RevokeCertURL string `json:"revokeCert"`
 	KeyChangeURL  string `json:"keyChange"`
 	Meta          Meta   `json:"meta"`
+	RenewalInfo   string `json:"renewalInfo"`
 }
 
 // Meta the ACME meta object (related to Directory).
@@ -69,12 +71,12 @@ type Meta struct {
 
 	// externalAccountRequired (optional, boolean):
 	// If this field is present and set to "true",
-	// then the CA requires that all new- account requests include an "externalAccountBinding" field
+	// then the CA requires that all new-account requests include an "externalAccountBinding" field
 	// associating the new account with an external account.
 	ExternalAccountRequired bool `json:"externalAccountRequired"`
 }
 
-// ExtendedAccount a extended Account.
+// ExtendedAccount an extended Account.
 type ExtendedAccount struct {
 	Account
 	// Contains the value of the response header `Location`
@@ -89,7 +91,7 @@ type Account struct {
 	// The status of this account.
 	// Possible values are: "valid", "deactivated", and "revoked".
 	// The value "deactivated" should be used to indicate client-initiated deactivation
-	// whereas "revoked" should be used to indicate server- initiated deactivation. (See Section 7.1.6)
+	// whereas "revoked" should be used to indicate server-initiated deactivation. (See Section 7.1.6)
 	Status string `json:"status,omitempty"`
 
 	// contact (optional, array of string):
@@ -179,6 +181,12 @@ type Order struct {
 	// certificate (optional, string):
 	// A URL for the certificate that has been issued in response to this order
 	Certificate string `json:"certificate,omitempty"`
+
+	// replaces (optional, string):
+	// replaces (string, optional): A string uniquely identifying a
+	// previously-issued certificate which this order is intended to replace.
+	// - https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-5
+	Replaces string `json:"replaces,omitempty"`
 }
 
 // Authorization the ACME authorization object.
@@ -305,4 +313,37 @@ type RevokeCertMessage struct {
 type RawCertificate struct {
 	Cert   []byte
 	Issuer []byte
+}
+
+// Window is a window of time.
+type Window struct {
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+// RenewalInfoResponse is the response to GET requests made the renewalInfo endpoint.
+// - (4.1. Getting Renewal Information) https://datatracker.ietf.org/doc/draft-ietf-acme-ari/
+type RenewalInfoResponse struct {
+	// SuggestedWindow contains two fields, start and end,
+	// whose values are timestamps which bound the window of time in which the CA recommends renewing the certificate.
+	SuggestedWindow Window `json:"suggestedWindow"`
+	//	ExplanationURL is an optional URL pointing to a page which may explain why the suggested renewal window is what it is.
+	//	For example, it may be a page explaining the CA's dynamic load-balancing strategy,
+	//	or a page documenting which certificates are affected by a mass revocation event.
+	//	Callers SHOULD provide this URL to their operator, if present.
+	ExplanationURL string `json:"explanationURL"`
+}
+
+// RenewalInfoUpdateRequest is the JWS payload for POST requests made to the renewalInfo endpoint.
+// - (4.2. RenewalInfo Objects) https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-4.2
+type RenewalInfoUpdateRequest struct {
+	// CertID is a composite string in the format: base64url(AKI) || '.' || base64url(Serial), where AKI is the
+	// certificate's authority key identifier and Serial is the certificate's serial number. For details, see:
+	// https://datatracker.ietf.org/doc/html/draft-ietf-acme-ari-03#section-4.1
+	CertID string `json:"certID"`
+	// Replaced is required and indicates whether or not the client considers the certificate to have been replaced.
+	// A certificate is considered replaced when its revocation would not disrupt any ongoing services,
+	// for instance because it has been renewed and the new certificate is in use, or because it is no longer in use.
+	// Clients SHOULD NOT send a request where this value is false.
+	Replaced bool `json:"replaced"`
 }

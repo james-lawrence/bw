@@ -212,38 +212,43 @@ func (c Color) Printfln(format string, a ...interface{}) *TextPrinter {
 // PrintOnError prints every error which is not nil.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p Color) PrintOnError(a ...interface{}) *TextPrinter {
+func (c Color) PrintOnError(a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {
-				p.Println(err)
+				c.Println(err)
 			}
 		}
 	}
 
-	tp := TextPrinter(p)
+	tp := TextPrinter(c)
 	return &tp
 }
 
 // PrintOnErrorf wraps every error which is not nil and prints it.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p Color) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
+func (c Color) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {
-				p.Println(fmt.Errorf(format, err))
+				c.Println(fmt.Errorf(format, err))
 			}
 		}
 	}
 
-	tp := TextPrinter(p)
+	tp := TextPrinter(c)
 	return &tp
 }
 
 // String converts the color to a string. eg "35".
 func (c Color) String() string {
 	return fmt.Sprintf("%d", c)
+}
+
+// ToStyle converts the color to a style.
+func (c Color) ToStyle() *Style {
+	return &Style{c}
 }
 
 // Style is a collection of colors.
@@ -266,6 +271,23 @@ func (s Style) Add(styles ...Style) Style {
 
 	for _, st := range styles {
 		ret = append(ret, st...)
+	}
+
+	return ret
+}
+
+// RemoveColor removes the given colors from the Style.
+func (s Style) RemoveColor(colors ...Color) Style {
+	ret := s
+
+	for _, c := range colors {
+		// remove via index
+		for i := 0; i < len(ret); i++ {
+			if ret[i] == c {
+				ret = append(ret[:i], ret[i+1:]...)
+				i--
+			}
+		}
 	}
 
 	return ret

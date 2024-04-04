@@ -1,28 +1,9 @@
 package pterm
 
 import (
+	"io"
 	"strings"
-
-	"github.com/pterm/pterm/internal"
 )
-
-// NewBulletListFromStrings returns a BulletListPrinter with Text using the NewTreeListItemFromString method.
-func NewBulletListFromStrings(s []string, padding string) BulletListPrinter {
-	var lis []BulletListItem
-	for _, line := range s {
-		lis = append(lis, NewBulletListItemFromString(line, padding))
-	}
-	return *DefaultBulletList.WithItems(lis)
-}
-
-// NewBulletListItemFromString returns a BulletListItem with a Text. The padding is counted in the Text to define the Level of the ListItem.
-func NewBulletListItemFromString(text string, padding string) BulletListItem {
-	s, l := internal.RemoveAndCountPrefix(text, padding)
-	return BulletListItem{
-		Level: l,
-		Text:  s,
-	}
-}
 
 // BulletListItem is able to render a ListItem.
 type BulletListItem struct {
@@ -63,11 +44,6 @@ func (p BulletListItem) WithBulletStyle(style *Style) *BulletListItem {
 	return &p
 }
 
-// NewBulletListFromString returns a BulletListPrinter with Text using the NewTreeListItemFromString method, splitting after return (\n).
-func NewBulletListFromString(s string, padding string) BulletListPrinter {
-	return NewBulletListFromStrings(strings.Split(s, "\n"), padding)
-}
-
 // DefaultBulletList contains standards, which can be used to print a BulletListPrinter.
 var DefaultBulletList = BulletListPrinter{
 	Bullet:      "•",
@@ -81,6 +57,7 @@ type BulletListPrinter struct {
 	TextStyle   *Style
 	Bullet      string
 	BulletStyle *Style
+	Writer      io.Writer
 }
 
 // WithItems returns a new list with specific Items.
@@ -107,10 +84,16 @@ func (l BulletListPrinter) WithBulletStyle(style *Style) *BulletListPrinter {
 	return &l
 }
 
+// WithWriter sets the custom Writer.
+func (l BulletListPrinter) WithWriter(writer io.Writer) *BulletListPrinter {
+	l.Writer = writer
+	return &l
+}
+
 // Render prints the list to the terminal.
 func (l BulletListPrinter) Render() error {
 	s, _ := l.Srender()
-	Println(s)
+	Fprintln(l.Writer, s)
 
 	return nil
 }
@@ -133,10 +116,18 @@ func (l BulletListPrinter) Srender() (string, error) {
 				item.BulletStyle = l.BulletStyle
 			}
 		}
-		if item.Bullet == "" {
-			ret += strings.Repeat(" ", item.Level) + item.BulletStyle.Sprint(l.Bullet) + " " + item.TextStyle.Sprint(item.Text) + "\n"
-		} else {
-			ret += strings.Repeat(" ", item.Level) + item.BulletStyle.Sprint(item.Bullet) + " " + item.TextStyle.Sprint(item.Text) + "\n"
+
+		split := strings.Split(item.Text, "\n")
+		for i, line := range split {
+			if i == 0 {
+				if item.Bullet == "" {
+					ret += strings.Repeat(" ", item.Level) + item.BulletStyle.Sprint(l.Bullet) + " " + item.TextStyle.Sprint(line) + "\n"
+				} else {
+					ret += strings.Repeat(" ", item.Level) + item.BulletStyle.Sprint(item.Bullet) + " " + item.TextStyle.Sprint(line) + "\n"
+				}
+			} else {
+				ret += strings.Repeat(" ", item.Level) + strings.Repeat(" ", len(item.Bullet)) + "  " + item.TextStyle.Sprint(line) + "\n"
+			}
 		}
 	}
 	return ret, nil
