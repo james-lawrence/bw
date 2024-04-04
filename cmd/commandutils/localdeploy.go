@@ -59,6 +59,7 @@ func RunLocalDirectives(ctx context.Context, config agent.ConfigClient) (commiti
 		shell.OptionEnviron(append(environ, sctx.Environ...)),
 		shell.OptionDir(root),
 		shell.OptionWorkDir(root),
+		shell.OptionBWConfigDir(config.Dir()),
 		shell.OptionVCSCommit(commitish),
 	)
 

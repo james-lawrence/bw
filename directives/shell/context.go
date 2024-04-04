@@ -97,10 +97,18 @@ func OptionTempDir(l string) Option {
 	}
 }
 
-// OptionCacheDir set temp directory created for bw.
+// OptionCacheDir set cache directory created for bw.
 func OptionCacheDir(l string) Option {
 	return func(ctx *Context) {
 		ctx.cachedir = l
+	}
+}
+
+// OptionBWConfigDir set the directory where the bw configuration is located.
+// only available locally.
+func OptionBWConfigDir(l string) Option {
+	return func(ctx *Context) {
+		ctx.bwconfigdir = l
 	}
 }
 
@@ -170,6 +178,7 @@ type Context struct {
 	dir           string
 	tmpdir        string
 	cachedir      string
+	bwconfigdir   string
 	timeout       time.Duration
 	lenient       bool
 }
@@ -198,6 +207,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, "%bw.work.directory%", t.WorkDirectory, -1)
 	cmd = strings.Replace(cmd, "%bw.cache.directory%", t.cachedir, -1)
+	cmd = strings.Replace(cmd, "%bw.config.directory%", t.bwconfigdir, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.id%", t.deploymentID, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.commit%", t.commit, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
@@ -222,6 +232,7 @@ func (t Context) environmentSubst() []string {
 		fmt.Sprintf("BW_ENVIRONMENT_WORK_DIRECTORY=%s", t.WorkDirectory),
 		fmt.Sprintf("BW_ENVIRONMENT_TEMP_DIRECTORY=%s", t.tmpdir),
 		fmt.Sprintf("BW_ENVIRONMENT_CACHE_DIRECTORY=%s", t.cachedir),
+		fmt.Sprintf("BW_ENVIRONMENT_CONFIG_DIRECTORY=%s", t.bwconfigdir),
 	)
 }
 
