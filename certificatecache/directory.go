@@ -19,7 +19,7 @@ import (
 	"github.com/james-lawrence/bw/internal/systemx"
 )
 
-func mustWatcher(dir string) *fsnotify.Watcher {
+func mustWatcher() *fsnotify.Watcher {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		panic(err)
@@ -30,7 +30,7 @@ func mustWatcher(dir string) *fsnotify.Watcher {
 
 // NewDirectory maintains a certificate config by watching a directory.
 func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache *Directory) {
-	w := mustWatcher(dir)
+	w := mustWatcher()
 	d := &Directory{
 		serverName: serverName,
 		caFile:     ca,
