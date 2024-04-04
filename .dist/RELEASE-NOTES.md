@@ -1,3 +1,57 @@
+commit a5be2092aa45f7ce454c8008c8450a190b8f913b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 11:00:44 2024 -0400
+
+    update golang to 1.21
+
+commit 5ab7eb9c74c476065de8fbacdae779c60af6e5f2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 10:56:56 2024 -0400
+
+    cleanup unused variable
+
+commit de0addd0628b71ca0edd24cf34ed9ac348c878c0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 10:52:20 2024 -0400
+
+    update dependencies
+
+commit 3c3f19c8eef21e9198da091699cda6e8f0a0eb95
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 08:42:12 2024 -0400
+
+    fix up some linting issues.
+
+commit ff4cc037410f6291599b3f82b2ccb452226794e9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 08:41:48 2024 -0400
+
+    fix improper error handling for the done callback
+
+commit 48d023a24ad41f85a083f67e6392c4b93a255747
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 08:40:41 2024 -0400
+
+    add config directory to environment
+
+commit e84442b6b2112164fb3902d1fabbafa558fee611
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Mar 26 11:35:05 2024 -0400
+
+    improve tmpfiles.d
+
+commit d1f006ba81479f278908dae343a6d73fa891f017
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Mar 26 11:20:58 2024 -0400
+
+    remove test artifacts
+
+commit fb780099e8683dd57b477b1a21927eb8e68beeb5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Feb 15 17:07:12 2024 -0500
+
+    release 0.1.1708034014-6ef3803f
+
 commit 6ef3803f4189f65b76efcb8c0b353979e0f93782
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Feb 15 16:53:34 2024 -0500
