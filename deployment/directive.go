@@ -84,7 +84,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 		return
 	}
 	done := func(cause error) {
-		errorsx.MaybeLog(dctx.Done(errorsx.Compact(err, os.RemoveAll(tmpdir))))
+		errorsx.MaybeLog(dctx.Done(errorsx.Compact(cause, os.RemoveAll(tmpdir))))
 	}
 
 	cachedir = filepath.Join(dctx.CacheRoot, bw.DirCache)
