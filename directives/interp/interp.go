@@ -98,7 +98,7 @@ func (t Compiler) Execute(ctx context.Context, name string, r io.Reader) (err er
 }
 
 func eval(ctx context.Context, i *interp.Interpreter, src string) (err error) {
-	if _, err = i.Eval(src); err != nil {
+	if _, err = i.EvalWithContext(ctx, src); err != nil {
 		return err
 	}
 
