@@ -18,7 +18,7 @@ func Shutdown(ctx context.Context, c peers, d dialers.Defaults) error {
 
 		// retry when unavailable because we're literally shooting nodes in the head.
 		// as a result the node we're proxied through is going to be nuked at some point.
-		return grpcx.Retry(func() error {
+		return grpcx.Retry(ctx, func() error {
 			if cause := c.Shutdown(ctx); cause != nil {
 				return cause
 			}

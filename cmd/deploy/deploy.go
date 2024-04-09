@@ -172,7 +172,7 @@ func Into(ctx *Context) error {
 	}
 
 	events <- agent.LogEvent(local, "archive upload initiated")
-	err = grpcx.Retry(func() error {
+	err = grpcx.Retry(ctx.Context, func() error {
 		if _, err = dst.Seek(0, io.SeekStart); err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
 			events <- agent.LogEvent(local, "deployment failed")

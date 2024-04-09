@@ -161,7 +161,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 		}
 
 		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))
-		err = grpcx.Retry(func() error {
+		err = grpcx.Retry(ctx, func() error {
 			if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
 				select {
 				case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):

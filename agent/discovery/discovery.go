@@ -93,7 +93,7 @@ func CheckCredentials(ctx context.Context, address string, path string, d dialer
 	}
 	defer cc.Close()
 
-	return grpcx.Retry(func() error {
+	return grpcx.Retry(ctx, func() error {
 		_, err := NewAuthorityClient(cc).Check(ctx, &CheckRequest{Fingerprint: fingerprint})
 		return err
 	}, codes.Unavailable)

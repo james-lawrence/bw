@@ -67,7 +67,7 @@ func (t controlConnection) connect(ctx context.Context) (d dialers.Defaults, c c
 		return d, c, err
 	}
 
-	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(ctx, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return d, c, err
 	}
 
@@ -297,7 +297,7 @@ func (t CmdControlProfile) Do(gctx *cmdopts.Global, op func(debug.DebugClient, *
 			return nil
 		}
 
-		err = grpcx.Retry(func() (err error) {
+		err = grpcx.Retry(gctx.Context, func() (err error) {
 			var (
 				profile *debug.DownloadResponse
 			)

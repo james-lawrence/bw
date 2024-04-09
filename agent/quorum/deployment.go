@@ -121,7 +121,7 @@ func (t *deployment) deploy(ctx context.Context, dialer dialers.Defaults, by str
 		return err
 	}
 
-	return grpcx.Retry(func() error {
+	return grpcx.Retry(ctx, func() error {
 		return agent.NewConn(conn).RemoteDeploy(ctx, by, dopts, archive, peers...)
 	}, codes.Unavailable)
 

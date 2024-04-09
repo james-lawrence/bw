@@ -108,7 +108,7 @@ func LoadConfiguration(ctx context.Context, environment string, options ...agent
 		cc.DefaultTLSCertClient,
 	)
 
-	if err = discovery.CheckCredentials(ctx, config.Address, certpath, d); err != nil {
+	if err = discovery.CheckCredentials(ctx, config.Address, certpath, d); err != nil && !grpcx.IsUnimplemented(err) {
 		if !grpcx.IsNotFound(err) {
 			return config, errors.Wrap(err, "failed to check credentials")
 		}

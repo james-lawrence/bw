@@ -50,8 +50,8 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
-	return connect(config, ss, options...)
+func Connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
+	return connect(ctx, config, ss, options...)
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
@@ -62,7 +62,7 @@ func ConnectClientUntilSuccess(
 	options ...grpc.DialOption,
 ) (d dialers.Direct, c clustering.Rendezvous, err error) {
 	for i := 0; ; i++ {
-		if d, c, err = connect(config, ss, options...); err == nil {
+		if d, c, err = connect(ctx, config, ss, options...); err == nil {
 			return d, c, err
 		}
 
@@ -79,7 +79,7 @@ func ConnectClientUntilSuccess(
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
+func connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
 	var (
 		dd        dialers.Defaults
 		nodes     []*memberlist.Node
@@ -108,7 +108,7 @@ func connect(config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOp
 	}
 
 	c = clustering.NewCached(func(ctx context.Context) clustering.Rendezvous {
-		err = grpcx.Retry(func() error {
+		err = grpcx.Retry(ctx, func() error {
 			if nodes, err = discovery.Snapshot(agent.URIDiscovery(config.Address), dd.Defaults()...); err != nil {
 				return err
 			}

@@ -170,7 +170,7 @@ func (t Conn) Deploy(ctx context.Context, options *DeployOptions, archive *Archi
 
 	rpc := NewAgentClient(t.conn)
 
-	err = grpcx.Retry(func() error {
+	err = grpcx.Retry(ctx, func() error {
 		if ar, err = rpc.Deploy(ctx, &DeployRequest{Options: options, Archive: archive}); err != nil {
 			return errors.Wrap(err, "failed to initiated deploy")
 		}

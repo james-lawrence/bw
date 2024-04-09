@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/akutz/memconn"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
@@ -108,14 +109,15 @@ func IsUnavailable(err error) bool {
 }
 
 // Retry the given function if error matches a grpc code.
-func Retry(op func() error, retry ...codes.Code) (err error) {
+func Retry(ctx context.Context, op func() error, retry ...codes.Code) (err error) {
 	l := rate.NewLimiter(rate.Every(time.Second), 1)
 	for {
 		if err = op(); !IsCode(err, retry...) {
 			return err
 		}
 
-		l.Wait(context.Background())
+		log.Println("attempting grpc retry", err)
+		errorsx.MaybeLog(errors.Wrap(l.Wait(context.Background()), "wait failure"))
 	}
 }
 
