@@ -51,7 +51,7 @@ type Context struct {
 }
 
 // Into deploy into the specified environment.
-func Into(ctx *Context) error {
+func Into(gctx *Context) error {
 	var (
 		err       error
 		dst       *os.File
@@ -67,7 +67,7 @@ func Into(ctx *Context) error {
 		commitish string
 	)
 
-	if config, err = commandutils.LoadConfiguration(ctx.Context, ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, gctx.Environment, agent.CCOptionInsecure(gctx.Insecure)); err != nil {
 		return errors.Wrap(err, "unable to load configuration")
 	}
 
@@ -91,7 +91,7 @@ func Into(ctx *Context) error {
 		}
 	}
 
-	if commitish, err = commandutils.RunLocalDirectives(ctx.Context, config); err != nil {
+	if commitish, err = commandutils.RunLocalDirectives(gctx.Context, config); err != nil {
 		return errors.Wrap(err, "failed to run local directives")
 	}
 
@@ -112,29 +112,29 @@ func Into(ctx *Context) error {
 		debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
 	)
 
-	if ctx.Debug || ctx.Verbose || envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+	if gctx.Debug || gctx.Verbose || envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
 		debugopt1 = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	termui.NewFromClientConfig(
-		ctx.Context, config, qd, local, events,
-		ux.OptionHeartbeat(ctx.Heartbeat),
-		ux.OptionDebug(ctx.Verbose),
+		gctx.Context, config, qd, local, events,
+		ux.OptionHeartbeat(gctx.Heartbeat),
+		ux.OptionDebug(gctx.Verbose),
 	)
 
-	conn = grpcx.UntilSuccess(ctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
+	conn = grpcx.UntilSuccess(gctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
 		return qd.DialContext(ictx)
 	})
 
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
@@ -172,7 +172,7 @@ func Into(ctx *Context) error {
 	}
 
 	events <- agent.LogEvent(local, "archive upload initiated")
-	err = grpcx.Retry(ctx.Context, func() error {
+	err = grpcx.Retry(gctx.Context, func() error {
 		if _, err = dst.Seek(0, io.SeekStart); err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
 			events <- agent.LogEvent(local, "deployment failed")
@@ -184,7 +184,7 @@ func Into(ctx *Context) error {
 			Vcscommit: commitish,
 		}
 
-		if darchive, err = client.Upload(ctx.Context, &meta, dst); err != nil {
+		if darchive, err = client.Upload(gctx.Context, &meta, dst); err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
 			events <- agent.LogEvent(local, "deployment failed")
 			return err
@@ -199,35 +199,35 @@ func Into(ctx *Context) error {
 
 	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", displayname, darchive.Location))
 
-	max := ctx.Concurrency
-	if ctx.Concurrency == 0 {
+	max := gctx.Concurrency
+	if gctx.Concurrency == 0 {
 		max = int64(config.Partitioner().Partition(len(c.Members())))
 	}
 
 	// only consider the canary node.
-	if ctx.Canary {
+	if gctx.Canary {
 		peers = agent.NodesToPeers(c.Get(rendezvous.Auto()))
 	} else {
 		peers = agent.NodesToPeers(c.Members()...)
 	}
 
-	peers = deployment.ApplyFilter(ctx.Filter, peers...)
+	peers = deployment.ApplyFilter(gctx.Filter, peers...)
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.Deployment.Timeout),
-		Heartbeat:         int64(ctx.Heartbeat),
-		IgnoreFailures:    ctx.Lenient,
-		SilenceDeployLogs: ctx.Silent,
+		Heartbeat:         int64(gctx.Heartbeat),
+		IgnoreFailures:    gctx.Lenient,
+		SilenceDeployLogs: gctx.Silent,
 	}
 
-	if len(peers) == 0 && !ctx.AllowEmpty {
+	if len(peers) == 0 && !gctx.AllowEmpty {
 		cause := errorsx.String("deployment failed, filter did not match any servers")
 		events <- agent.LogError(local, cause)
 		return cause
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("deploy initiated: by(%s) concurrency(%d), deployID(%s)", displayname, max, bw.RandomID(darchive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, displayname, &dopts, darchive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, darchive, peers...); cause != nil {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
 		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)
 		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(displayname, darchive.DeployOption, dopts.DeployOption))
