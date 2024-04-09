@@ -48,7 +48,7 @@ func (t cmdNotarySearch) Run(gctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 

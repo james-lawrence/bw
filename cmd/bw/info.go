@@ -69,7 +69,7 @@ func (t cmdInfoWatch) Run(gctx *cmdopts.Global) (err error) {
 
 	local := commandutils.NewClientPeer()
 
-	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (t cmdInfoNodes) Run(gctx *cmdopts.Global) (err error) {
 
 	local := commandutils.NewClientPeer()
 
-	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
@@ -192,7 +192,7 @@ func (t cmdInfoLogs) Run(gctx *cmdopts.Global) (err error) {
 
 	local := commandutils.NewClientPeer()
 
-	if d, c, err = daemons.Connect(config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.Connect(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
