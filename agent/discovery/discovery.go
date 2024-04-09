@@ -8,9 +8,11 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/systemx"
 )
 
@@ -72,7 +74,7 @@ func Snapshot(address string, options ...grpc.DialOption) (nodes []*memberlist.N
 }
 
 // CheckCredentials against discovery
-func CheckCredentials(address string, path string, d dialers.Defaults) (err error) {
+func CheckCredentials(ctx context.Context, address string, path string, d dialers.Defaults) (err error) {
 	var (
 		cc *grpc.ClientConn
 	)
@@ -86,11 +88,13 @@ func CheckCredentials(address string, path string, d dialers.Defaults) (err erro
 		return errors.New("failed to generate fingerprint")
 	}
 
-	if cc, err = dialers.NewDirect(agent.URIAgent(address)).Dial(d.Defaults()...); err != nil {
-		return err
+	if cc, err = dialers.NewDirect(agent.URIAgent(address)).DialContext(ctx, d.Defaults()...); err != nil {
+		return errors.Wrap(err, "unable to dial credentials check")
 	}
 	defer cc.Close()
 
-	_, err = NewAuthorityClient(cc).Check(context.Background(), &CheckRequest{Fingerprint: fingerprint})
-	return err
+	return grpcx.Retry(func() error {
+		_, err := NewAuthorityClient(cc).Check(ctx, &CheckRequest{Fingerprint: fingerprint})
+		return err
+	}, codes.Unavailable)
 }

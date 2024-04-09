@@ -66,7 +66,7 @@ func LoadAgentConfig(path string, proto agent.Config) (c agent.Config, err error
 }
 
 // LoadConfiguration loads the configuration for the given environment.
-func LoadConfiguration(environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
+func LoadConfiguration(ctx context.Context, environment string, options ...agent.ConfigClientOption) (config agent.ConfigClient, err error) {
 	var (
 		d         dialers.Defaults
 		tlsconfig *tls.Config
@@ -108,9 +108,9 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		cc.DefaultTLSCertClient,
 	)
 
-	if err = discovery.CheckCredentials(config.Address, certpath, d); err != nil && !grpcx.IsUnimplemented(err) {
+	if err = discovery.CheckCredentials(ctx, config.Address, certpath, d); err != nil {
 		if !grpcx.IsNotFound(err) {
-			return config, err
+			return config, errors.Wrap(err, "failed to check credentials")
 		}
 
 		errorsx.MaybeLog(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
@@ -149,7 +149,7 @@ func LoadConfiguration(environment string, options ...agent.ConfigClientOption) 
 		log.Println("configuration", spew.Sdump(config))
 	}
 
-	return config, err
+	return config, nil
 }
 
 // ReadConfiguration reads the configuration for the given environment.

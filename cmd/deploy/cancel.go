@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func Cancel(ctx *Context) (err error) {
+func Cancel(gctx *Context) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		client agent.DeployClient
@@ -26,9 +26,9 @@ func Cancel(ctx *Context) (err error) {
 		ss     notary.Signer
 	)
 
-	defer ctx.CancelFunc()
+	defer gctx.CancelFunc()
 
-	if config, err = commandutils.LoadConfiguration(ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, gctx.Environment, agent.CCOptionInsecure(gctx.Insecure)); err != nil {
 		return err
 	}
 
@@ -43,35 +43,35 @@ func Cancel(ctx *Context) (err error) {
 	local := commandutils.NewClientPeer()
 
 	events <- agent.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
+	if conn, err = qd.DialContext(gctx.Context); err != nil {
 		return err
 	}
 
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		if err = client.Close(); err != nil {
 			log.Println("failed to close client", err)
 		}
 	}()
 
-	termui.NewFromClientConfig(ctx.Context, config, qd, local, events)
+	termui.NewFromClientConfig(gctx.Context, config, qd, local, events)
 	events <- agent.LogEvent(local, "connected to cluster")
 
 	cmd := agent.DeployCommandCancel(displayname)
 
-	if err = client.Cancel(ctx.Context, &agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
+	if err = client.Cancel(gctx.Context, &agent.CancelRequest{Initiator: cmd.Initiator}); err != nil {
 		return err
 	}
 

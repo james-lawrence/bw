@@ -27,7 +27,7 @@ type cmdNotarySearch struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
+func (t cmdNotarySearch) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		d      dialers.Direct
 		config agent.ConfigClient
@@ -36,9 +36,9 @@ func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
 		s      notary.Notary_SearchClient
 		page   *notary.SearchResponse
 	)
-	defer ctx.Shutdown()
+	defer gctx.Shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return err
 	}
 
@@ -54,7 +54,7 @@ func (t cmdNotarySearch) Run(ctx *cmdopts.Global) (err error) {
 
 	client := notary.NewClient(dialers.NewQuorum(c, d.Defaults()...))
 
-	if s, err = client.Search(ctx.Context, &notary.SearchRequest{}); err != nil {
+	if s, err = client.Search(gctx.Context, &notary.SearchRequest{}); err != nil {
 		return err
 	}
 

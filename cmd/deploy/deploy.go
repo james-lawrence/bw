@@ -67,7 +67,7 @@ func Into(ctx *Context) error {
 		commitish string
 	)
 
-	if config, err = commandutils.LoadConfiguration(ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(ctx.Context, ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
 		return errors.Wrap(err, "unable to load configuration")
 	}
 

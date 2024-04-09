@@ -53,13 +53,13 @@ type controlConnection struct {
 	Insecure bool             `name:"insecure" help:"disable tls verification"`
 }
 
-func (t controlConnection) connect() (d dialers.Defaults, c clustering.Rendezvous, err error) {
+func (t controlConnection) connect(ctx context.Context) (d dialers.Defaults, c clustering.Rendezvous, err error) {
 	var (
 		config agent.ConfigClient
 		ss     notary.Signer
 	)
 
-	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(ctx, t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return d, c, err
 	}
 
@@ -141,7 +141,7 @@ func (t CmdControlRestart) shutdown(ctx context.Context, filter deployment.Filte
 		Ip:   systemx.HostnameOrLocalhost(),
 	}
 
-	if d, c, err = t.connect(); err != nil {
+	if d, c, err = t.connect(ctx); err != nil {
 		return err
 	}
 
@@ -163,7 +163,7 @@ type CmdControlQuorum struct {
 	controlConnection
 }
 
-func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
+func (t CmdControlQuorum) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		d      dialers.Defaults
@@ -171,7 +171,7 @@ func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 		quorum *agent.InfoResponse
 	)
 
-	if d, c, err = t.connect(); err != nil {
+	if d, c, err = t.connect(gctx.Context); err != nil {
 		return err
 	}
 
@@ -179,7 +179,7 @@ func (t CmdControlQuorum) Run(ctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if quorum, err = agent.NewQuorumClient(conn).Info(ctx.Context, &agent.InfoRequest{}); err != nil {
+	if quorum, err = agent.NewQuorumClient(conn).Info(gctx.Context, &agent.InfoRequest{}); err != nil {
 		return err
 	}
 
@@ -194,18 +194,18 @@ type CmdControlStacktrace struct {
 	controlConnection
 }
 
-func (t CmdControlStacktrace) Run(ctx *cmdopts.Global) (err error) {
+func (t CmdControlStacktrace) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		d  dialers.Defaults
 		c  clustering.Rendezvous
 		au = aurora.NewAurora(true)
 	)
 
-	if d, c, err = t.connect(); err != nil {
+	if d, c, err = t.connect(gctx.Context); err != nil {
 		return err
 	}
 
-	err = operations.New(ctx.Context, operations.Fn(func(ctx context.Context, p *agent.Peer, conn grpc.ClientConnInterface) error {
+	err = operations.New(gctx.Context, operations.Fn(func(ctx context.Context, p *agent.Peer, conn grpc.ClientConnInterface) error {
 		var (
 			stack *debug.StacktraceResponse
 		)
@@ -265,18 +265,18 @@ type CmdControlProfile struct {
 	controlConnection
 }
 
-func (t CmdControlProfile) Do(ctx *cmdopts.Global, op func(debug.DebugClient, *debug.ProfileRequest) error) (err error) {
+func (t CmdControlProfile) Do(gctx *cmdopts.Global, op func(debug.DebugClient, *debug.ProfileRequest) error) (err error) {
 	var (
 		d  dialers.Defaults
 		c  clustering.Rendezvous
 		au = aurora.NewAurora(true)
 	)
 
-	if d, c, err = t.connect(); err != nil {
+	if d, c, err = t.connect(gctx.Context); err != nil {
 		return err
 	}
 
-	return operations.New(ctx.Context, operations.Fn(func(ctx context.Context, p *agent.Peer, conn grpc.ClientConnInterface) error {
+	return operations.New(gctx.Context, operations.Fn(func(ctx context.Context, p *agent.Peer, conn grpc.ClientConnInterface) error {
 		client := debug.NewDebugClient(conn)
 		id := uuid.Must(uuid.NewV4())
 

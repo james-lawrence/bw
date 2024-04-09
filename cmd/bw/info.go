@@ -47,7 +47,7 @@ type cmdInfoWatch struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
+func (t cmdInfoWatch) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.Rendezvous
@@ -57,7 +57,7 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 		ss     notary.Signer
 	)
 
-	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return err
 	}
 
@@ -75,16 +75,16 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
+	if conn, err = qd.DialContext(gctx.Context); err != nil {
 		return err
 	}
 
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
-	if quorum, err = agent.NewQuorumClient(conn).Info(ctx.Context, &agent.InfoRequest{}); err != nil {
+	if quorum, err = agent.NewQuorumClient(conn).Info(gctx.Context, &agent.InfoRequest{}); err != nil {
 		return err
 	}
 
@@ -97,8 +97,8 @@ func (t cmdInfoWatch) Run(ctx *cmdopts.Global) (err error) {
 	events := make(chan *agent.Message, 100)
 
 	termui.NewLogging(
-		ctx.Context,
-		ctx.Shutdown,
+		gctx.Context,
+		gctx.Shutdown,
 		qd,
 		local,
 		events,
@@ -114,7 +114,7 @@ type cmdInfoNodes struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
+func (t cmdInfoNodes) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		conn   *grpc.ClientConn
 		c      clustering.Rendezvous
@@ -122,9 +122,9 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 		config agent.ConfigClient
 		ss     notary.Signer
 	)
-	defer ctx.Shutdown()
+	defer gctx.Shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return err
 	}
 
@@ -142,17 +142,17 @@ func (t cmdInfoNodes) Run(ctx *cmdopts.Global) (err error) {
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
+	if conn, err = qd.DialContext(gctx.Context); err != nil {
 		return err
 	}
 
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	cx := cluster.New(local, c)
-	return agentutil.NewClusterOperation(ctx.Context, agentutil.Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
+	return agentutil.NewClusterOperation(gctx.Context, agentutil.Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
 		var (
 			info *agent.StatusResponse
 		)
@@ -170,7 +170,7 @@ type cmdInfoLogs struct {
 	Insecure bool `help:"skip tls verification"`
 }
 
-func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
+func (t cmdInfoLogs) Run(gctx *cmdopts.Global) (err error) {
 	var (
 		c      clustering.Rendezvous
 		d      dialers.Defaults
@@ -178,9 +178,9 @@ func (t cmdInfoLogs) Run(ctx *cmdopts.Global) (err error) {
 		latest *agent.Deploy
 		ss     notary.Signer
 	)
-	defer ctx.Shutdown()
+	defer gctx.Shutdown()
 
-	if config, err = commandutils.LoadConfiguration(t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, t.Environment, agent.CCOptionInsecure(t.Insecure)); err != nil {
 		return err
 	}
 

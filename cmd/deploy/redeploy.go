@@ -27,7 +27,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func Redeploy(ctx *Context, deploymentID string) error {
+func Redeploy(gctx *Context, deploymentID string) error {
 	var (
 		err     error
 		conn    *grpc.ClientConn
@@ -42,7 +42,7 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	)
 
 	log.Println("pid", os.Getpid())
-	if config, err = commandutils.LoadConfiguration(ctx.Environment, agent.CCOptionInsecure(ctx.Insecure)); err != nil {
+	if config, err = commandutils.LoadConfiguration(gctx.Context, gctx.Environment, agent.CCOptionInsecure(gctx.Insecure)); err != nil {
 		return err
 	}
 
@@ -72,38 +72,38 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	var debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
 	var debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
 
-	if envx.Boolean(ctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
+	if envx.Boolean(gctx.Debug, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
 		debugopt1 = grpc.WithUnaryInterceptor(grpcx.DebugClientIntercepter)
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
 	events <- agent.LogEvent(local, "connecting to cluster")
-	if d, c, err = daemons.ConnectClientUntilSuccess(ctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
+	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
-	if conn, err = qd.DialContext(ctx.Context); err != nil {
+	if conn, err = qd.DialContext(gctx.Context); err != nil {
 		return err
 	}
 
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)
 
 	termui.NewFromClientConfig(
-		ctx.Context, config, qd, local, events,
-		ux.OptionHeartbeat(ctx.Heartbeat),
-		ux.OptionDebug(ctx.Verbose),
+		gctx.Context, config, qd, local, events,
+		ux.OptionHeartbeat(gctx.Heartbeat),
+		ux.OptionDebug(gctx.Verbose),
 	)
 
 	events <- agent.LogEvent(local, "connected to cluster")
 	go func() {
-		<-ctx.Context.Done()
+		<-gctx.Context.Done()
 		if err = client.Close(); err != nil {
 			log.Println("failed to close client", err)
 		}
@@ -130,29 +130,29 @@ func Redeploy(ctx *Context, deploymentID string) error {
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 
 	// only consider the canary node.
-	if ctx.Canary {
+	if gctx.Canary {
 		peers = agent.NodesToPeers(cx.Get(rendezvous.Auto()))
 	} else {
 		peers = cx.Peers()
 	}
 
-	peers = deployment.ApplyFilter(ctx.Filter, peers...)
+	peers = deployment.ApplyFilter(gctx.Filter, peers...)
 	dopts := agent.DeployOptions{
 		Concurrency:       max,
 		Timeout:           int64(config.Deployment.Timeout),
-		Heartbeat:         int64(ctx.Heartbeat),
-		IgnoreFailures:    ctx.Lenient,
-		SilenceDeployLogs: ctx.Silent,
+		Heartbeat:         int64(gctx.Heartbeat),
+		IgnoreFailures:    gctx.Lenient,
+		SilenceDeployLogs: gctx.Silent,
 	}
 
-	if len(peers) == 0 && !ctx.AllowEmpty {
+	if len(peers) == 0 && !gctx.AllowEmpty {
 		cause := errorsx.String("deployment failed, filter did not match any servers")
 		events <- agent.LogError(local, cause)
 		return cause
 	}
 
 	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(ctx.Context, displayname, &dopts, archive, peers...); cause != nil {
+	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, archive, peers...); cause != nil {
 		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 
