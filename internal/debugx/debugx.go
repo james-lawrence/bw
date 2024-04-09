@@ -18,6 +18,27 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	logger = log.New(io.Discard, "DEBUG", log.Flags())
+)
+
+// SetOutput sets the output destination for the debug logger.
+func SetOutput(w io.Writer) {
+	logger.SetOutput(w)
+}
+
+// Flags returns the output flags for the debug logger.
+// The flag bits are [Ldate], [Ltime], and so on.
+func Flags() int {
+	return logger.Flags()
+}
+
+// SetFlags sets the output flags for the debug logger.
+// The flag bits are [Ldate], [Ltime], and so on.
+func SetFlags(flag int) {
+	logger.SetFlags(flag)
+}
+
 func genDst() (path string, dst io.WriteCloser) {
 	var (
 		err error

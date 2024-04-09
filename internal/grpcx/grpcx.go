@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/akutz/memconn"
+	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
@@ -116,7 +117,7 @@ func Retry(ctx context.Context, op func() error, retry ...codes.Code) (err error
 			return err
 		}
 
-		log.Println("attempting grpc retry", err)
+		debugx.Println("attempting grpc retry", err)
 		errorsx.MaybeLog(errors.Wrap(l.Wait(context.Background()), "wait failure"))
 	}
 }

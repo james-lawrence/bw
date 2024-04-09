@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/logrusorgru/aurora"
@@ -56,6 +57,8 @@ func LogEnv(verbosity int) {
 		fallthrough
 	case 2:
 		os.Setenv(bw.EnvLogsVerbose, "1")
+		debugx.SetOutput(os.Stderr)
+		debugx.SetFlags(log.Flags())
 		fallthrough
 	case 1:
 		os.Setenv(bw.EnvLogsConfiguration, "1")
