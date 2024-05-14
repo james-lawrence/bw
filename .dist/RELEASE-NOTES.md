@@ -1,3 +1,21 @@
+commit 1607553409d5acd5f95ac8397fd086dc61932911
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 18:51:08 2024 -0400
+
+    print golang version
+
+commit fb278595ae9218b2821c2670ad207468d0a767c9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 18:43:47 2024 -0400
+
+    fixing build due to change on launchpad
+
+commit 7cafa3daa5b103108285364d526b15f7b385cebe
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 18:13:05 2024 -0400
+
+    release 0.1.1715724451-18031a4e
+
 commit 18031a4ebcd5770e04586b3bcf0f0d199a02305c
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 18:07:31 2024 -0400
