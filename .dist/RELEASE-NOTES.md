@@ -1,3 +1,15 @@
+commit fe48c1071cd1ae6d22dd0091126278a7701599f8
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:53:54 2024 -0400
+
+    more adjustments to golang build
+
+commit 1aeaa338508b49f79a71c4032cd00e68ad25034e
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:47:31 2024 -0400
+
+    release 0.1.1715730238-9b12c932
+
 commit 9b12c932433608f75b6857c903704e2c5be144d3
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 19:43:58 2024 -0400
