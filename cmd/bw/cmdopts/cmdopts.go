@@ -35,7 +35,7 @@ type Global struct {
 	Cleanup   *sync.WaitGroup    `kong:"-"`
 }
 
-func (t Global) BeforeApply() error {
+func (t Global) AfterApply() error {
 	commandutils.LogEnv(t.Verbosity)
 	return nil
 }
