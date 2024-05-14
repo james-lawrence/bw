@@ -20,10 +20,10 @@ override_dh_auto_build:
 	echo "$(CURDIR)"
 	mkdir $(CURDIR)/bin
 	mkdir $(CURDIR)/gocache
+	mkdir $(CURDIR)/gomodcache
 	ls -lha $(CURDIR)
-	ls -lha $(CURDIR)/src
 
-	GOCACHE=$(CURDIR)/gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.21/bin/go install -C ./src -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...; cd ..
+	GOMODCACHE=$(CURDIR)/gomodcache GOCACHE=$(CURDIR)/gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.21/bin/go install -C ./src -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...;
 	ls -lha $(CURDIR)/bin
 
 override_dh_auto_test:
