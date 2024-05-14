@@ -1,3 +1,51 @@
+commit 18031a4ebcd5770e04586b3bcf0f0d199a02305c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 18:07:31 2024 -0400
+
+    add filesystem bootstrap enabled log message
+
+commit d517c4f1efb0dc15ee36d740cc4a37b5c6d04db5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 16:10:25 2024 -0400
+
+    fix logging verbosity
+
+commit d4b50ac3a01db60e20c14a8ad5e7e71942033742
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Apr 9 11:20:36 2024 -0400
+
+    rename global context
+
+commit 16aa7b66298c7c5baa907b7c48f716efb8e31359
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Apr 9 09:09:10 2024 -0400
+
+    add io weight and enable accounting for bearded-wookie slices
+
+commit 3564e06ae1b144ef77807f76ba1638e35aa1069f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Apr 9 08:34:41 2024 -0400
+
+    add context to grpc retries
+
+commit 5d0d2a8dcd035be55f77f899e3ff91cdba996a9b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Apr 9 08:34:41 2024 -0400
+
+    add context to grpc retries
+
+commit b0425d8404a417de2e28ebbaea8e1dabf20078f4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Apr 9 08:07:49 2024 -0400
+
+    improve credentials check to deal with transient errors better
+
+commit 575d300e895d2c69e44c89125ebf891f4f84f35d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Apr 4 11:09:45 2024 -0400
+
+    release 0.1.1712243163-a5be2092
+
 commit a5be2092aa45f7ce454c8008c8450a190b8f913b
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Apr 4 11:00:44 2024 -0400
