@@ -1,3 +1,15 @@
+commit 6645e8a0bc9e91f49bccc9bc1515b1514803c3b6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:34:26 2024 -0400
+
+    fix build
+
+commit 9eb0f736c2870e07d435daa5512523a9a44ffa91
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:23:54 2024 -0400
+
+    release 0.1.1715728806-a57f62a7
+
 commit a57f62a7eb5f672c1bdc3912df1a56560547cbbf
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 19:20:06 2024 -0400
