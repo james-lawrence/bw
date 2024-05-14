@@ -1,3 +1,15 @@
+commit 9b12c932433608f75b6857c903704e2c5be144d3
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:43:58 2024 -0400
+
+    set go mod cache environment variable
+
+commit dfa3ce5f255bbf2096bff0bd820b1a5166859173
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:37:37 2024 -0400
+
+    release 0.1.1715729666-6645e8a0
+
 commit 6645e8a0bc9e91f49bccc9bc1515b1514803c3b6
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 19:34:26 2024 -0400
