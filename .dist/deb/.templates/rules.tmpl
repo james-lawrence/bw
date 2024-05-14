@@ -18,13 +18,14 @@ DH_VERBOSE = 1
 override_dh_auto_build:
 	echo "DH AUTO BUILD OVERRIDE"
 	echo "$(CURDIR)"
-	mkdir $(CURDIR)/bin $(CURDIR)/.gocache
+	mkdir $(CURDIR)/bin
+	mkdir $(CURDIR)/gocache
+	ls -lha $(CURDIR)
+	ls -lha $(CURDIR)/src
+
 	which go
 	go version
-	ls -lha $(CURDIR)
-	GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.21/bin/go env
-	ls -lha $(CURDIR)/src
-	cd src; GOCACHE=$(CURDIR)/.gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.22/bin/go install -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...; cd ..
+	GOCACHE=$(CURDIR)/gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.22/bin/go install -C ./src -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...; cd ..
 	ls -lha $(CURDIR)/bin
 
 override_dh_auto_test:
