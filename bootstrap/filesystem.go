@@ -65,6 +65,8 @@ func (t Filesystem) Bind(ctx context.Context, socket string, options ...grpc.Ser
 		return err
 	}
 
+	log.Println("filesystem bootstrap: enabled", t.a.Bootstrap.ArchiveDirectory)
+
 	return Run(ctx, socket, t, options...)
 }
 
