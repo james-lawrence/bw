@@ -1,3 +1,21 @@
+commit 58681e62ffcc26fa6412f92dde038d910c443f00
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 20:10:03 2024 -0400
+
+    fixing golang 1.22
+
+commit 3722c286dbfb55331f091558611b494158cbc2f5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 20:08:47 2024 -0400
+
+    update to golang 1.22
+
+commit b637f568e9fcbfa960e3d81ae15451e4324c0e92
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 19:57:23 2024 -0400
+
+    release 0.1.1715730834-fe48c107
+
 commit fe48c1071cd1ae6d22dd0091126278a7701599f8
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 19:53:54 2024 -0400
