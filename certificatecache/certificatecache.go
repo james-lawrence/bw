@@ -36,6 +36,8 @@ const (
 	DefaultTLSKeyServer = "tlsserver.key"
 	// DefaultTLSCertServer used to bootstrap the servers
 	DefaultTLSCertServer = "tlsserver.cert"
+	// DefaultTLSSelfSignedCertServer used to bootstrap the servers
+	DefaultTLSSelfSignedCertServer = "tlsserver.self.signed.cert"
 	// DefaultDirTLSAuthority ...
 	DefaultDirTLSAuthority = "authorities"
 	// DefaultACMEKey default filename for the acme protocol account key.
@@ -75,6 +77,7 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
+	log.Println("tls credentials mode", mode)
 	switch mode {
 	case ModeDisabled:
 		return RefreshAutomatic(dir, Noop{})
@@ -134,7 +137,7 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 
 	go func() {
 		for {
-			if envx.Boolean(false, bw.EnvLogsVerbose) {
+			if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
 				log.Println("next refresh", due)
 			}
 			time.Sleep(due)

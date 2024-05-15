@@ -92,6 +92,16 @@ func DefaultClock() clock {
 	return stdlibclock{}
 }
 
+type constantclock time.Time
+
+func (t constantclock) Now() time.Time {
+	return time.Time(t)
+}
+
+func FixedClock(t time.Time) clock {
+	return constantclock(t)
+}
+
 // X509TemplateRand generate a template using the provided random source.
 // the clock is allowed to be nil.
 func X509TemplateRand(r io.Reader, d time.Duration, c clock, options ...X509Option) (template x509.Certificate, err error) {
@@ -121,7 +131,7 @@ func X509TemplateRand(r io.Reader, d time.Duration, c clock, options ...X509Opti
 	}
 
 	// ensure there is always a valid window.
-	X509OptionTimeWindow(stdlibclock{}, d)(&template)
+	X509OptionTimeWindow(c, d)(&template)
 
 	for _, opt := range options {
 		opt(&template)

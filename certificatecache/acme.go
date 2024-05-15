@@ -88,6 +88,9 @@ func (t ACME) Refresh() (err error) {
 		priv      *rsa.PrivateKey
 	)
 
+	log.Println("acme refresh initiated")
+	defer log.Println("acme refresh completed")
+
 	if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
 		return err
 	}
