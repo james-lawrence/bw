@@ -55,6 +55,8 @@ func getfallback(c agent.Config, options ...grpc.DialOption) (latest *agent.Depl
 			return nil
 		default:
 
+			log.Println("querying", path, "for latest deployment")
+
 			if latest, err = Latest(context.Background(), path, options...); err == nil {
 				return done
 			}
