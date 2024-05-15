@@ -10,6 +10,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/md5x"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/tlsx"
 )
@@ -34,7 +35,7 @@ func (t selfsigned) Refresh() (err error) {
 		template x509.Certificate
 	)
 
-	log.Println("refreshing self signed certificate", t.credentialsDir)
+	log.Println("refreshing self signed certificate", t.credentialsDir, md5x.Digest(t.seed))
 	subject := tlsx.X509OptionSubject(pkix.Name{
 		CommonName: t.domain,
 	})
@@ -52,6 +53,7 @@ func (t selfsigned) Refresh() (err error) {
 	}
 
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
+		log.Println("self-signed certificate template", tlsx.PrintX509(&template))
 		log.Println("creating self signed certificate", tlsx.PrintEncoded(cert))
 	}
 

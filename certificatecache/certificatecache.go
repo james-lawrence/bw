@@ -21,8 +21,6 @@ import (
 )
 
 const (
-	// DefaultTLSKeyCA default name for the certificate authority key.
-	DefaultTLSKeyCA = "tlsca.key"
 	// DefaultTLSCertCA default name for the certificate authority certificate.
 	DefaultTLSCertCA = "tlsca.cert"
 	// DefaultTLSGeneratedCAProto name of the protobuffer encoded CA cert, fingerprint file.
