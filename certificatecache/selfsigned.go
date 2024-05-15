@@ -17,7 +17,7 @@ import (
 
 // minimumExpiration is used to force a certificate refresh of self signed certificates.
 func minimumExpiration() time.Duration {
-	return envx.Duration(24*time.Hour, bw.EnvAgentSelfSignedExpiration)
+	return envx.Duration(26*time.Hour, bw.EnvAgentSelfSignedExpiration)
 }
 
 // generates a self signed certificate iff the current certificate is missing or
@@ -44,7 +44,11 @@ func (t selfsigned) Refresh() (err error) {
 		return err
 	}
 
-	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain), tlsx.X509OptionCA()); err != nil {
+	// IMPORTANT: to ensure the same self signed certificates are generated we
+	// fix the time window to today. ideally we'd be shifting the time window based on the seed.
+	ts := time.Now().Truncate(24 * time.Hour)
+
+	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.FixedClock(ts), subject, tlsx.X509OptionHosts(t.domain), tlsx.X509OptionCA()); err != nil {
 		return err
 	}
 
@@ -53,11 +57,10 @@ func (t selfsigned) Refresh() (err error) {
 	}
 
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-		log.Println("self-signed certificate template", tlsx.PrintX509(&template))
 		log.Println("creating self signed certificate", tlsx.PrintEncoded(cert))
 	}
 
-	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSCertServer), cert); err != nil {
+	if err = tlsx.WriteCertificateFile(filepath.Join(t.credentialsDir, DefaultTLSSelfSignedCertServer), cert); err != nil {
 		return err
 	}
 

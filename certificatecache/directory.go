@@ -30,6 +30,7 @@ func mustWatcher() *fsnotify.Watcher {
 
 // NewDirectory maintains a certificate config by watching a directory.
 func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache *Directory) {
+	log.Println("NewDirectory cert cache", serverName, dir, ca)
 	w := mustWatcher()
 	d := &Directory{
 		serverName: serverName,
@@ -149,7 +150,7 @@ func (t *Directory) refresh() (err error) {
 		cert              tls.Certificate
 	)
 
-	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer)
+	certpath = bw.LocateFirstInDir(t.dir, DefaultTLSCertServer, DefaultTLSSelfSignedCertServer)
 	keypath = bw.LocateFirstInDir(t.dir, DefaultTLSKeyServer)
 
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
@@ -169,12 +170,16 @@ func (t *Directory) refresh() (err error) {
 		if err = LoadCert(t.pool, certpath); err != nil {
 			return err
 		}
+	} else {
+		log.Println("missing server certificate", certpath)
 	}
 
 	if systemx.FileExists(t.caFile) {
 		if err = LoadCert(t.pool, t.caFile); err != nil {
 			return err
 		}
+	} else {
+		log.Println("custom certificate authority unspecified", t.caFile)
 	}
 
 	// refresh the pool

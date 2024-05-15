@@ -228,6 +228,9 @@ func (t Resolver) Resolution(ctx context.Context) (c *Challenge, err error) {
 		req  = &ResolutionRequest{}
 	)
 
+	log.Println("resolving acme challenge initiated")
+	defer log.Println("resolving acme challenge completed")
+
 	// here we select a node based on the a disciminator. that node is responsible
 	// for managing the acme account key, registration, etc.
 	if p, err = agent.NodeToPeer(t.rendezvous.Get([]byte(discriminator))); err != nil {
