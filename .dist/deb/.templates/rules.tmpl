@@ -21,9 +21,11 @@ override_dh_auto_build:
 	mkdir $(CURDIR)/bin
 	mkdir $(CURDIR)/gocache
 	mkdir $(CURDIR)/gomodcache
-	ls -lha $(CURDIR)
 
-	GOWORK="off" GOPROXY="direct" GOMODCACHE=$(CURDIR)/gomodcache GOCACHE=$(CURDIR)/gocache GOBIN=$(CURDIR)/bin /usr/lib/go-1.22/bin/go build -C ./src  -mod=vendor -buildvcs=false -ldflags="${BW_LDFLAGS}" ./cmd/...;
+	GOWORK="off" GOPROXY="direct" GOMODCACHE="$(CURDIR)/gomodcache" GOCACHE="$(CURDIR)/gocache" GOBIN="$(CURDIR)/bin" /usr/lib/go-1.22/bin/go version
+	GOWORK="off" GOPROXY="direct" GOMODCACHE="$(CURDIR)/gomodcache" GOCACHE="$(CURDIR)/gocache" GOBIN="$(CURDIR)/bin" /usr/lib/go-1.22/bin/go env
+	ls -lha ./src
+	GOWORK="off" GOPROXY="direct" GOMODCACHE="$(CURDIR)/gomodcache" GOCACHE="$(CURDIR)/gocache" /usr/lib/go-1.22/bin/go build -C ./src -mod=vendor -buildvcs=false -ldflags="${BW_LDFLAGS}" -o "$(CURDIR)/bin" ./cmd/...
 	ls -lha $(CURDIR)/bin
 
 override_dh_auto_test:
