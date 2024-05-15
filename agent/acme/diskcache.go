@@ -77,6 +77,9 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 	}
 	defer atomic.CompareAndSwapInt64(t.m, 1, 0)
 
+	log.Println("challenge initiated")
+	defer log.Println("challenge completed")
+
 	// fast track if we have have a cached version
 	if template, err = x509.ParseCertificateRequest(req.CSR); err != nil {
 		log.Println("invalid certificate", err)
