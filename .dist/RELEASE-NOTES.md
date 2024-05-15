@@ -1,3 +1,27 @@
+commit 3b9c7c2d5d74b3d16e8bf3e2ed47f60e4b6d3d5f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 17:10:37 2024 -0400
+
+    more logging
+
+commit b4271f7588480eabb734a5c276aecba4fa19cbdd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 17:08:12 2024 -0400
+
+    make it easier to debug self signed issues
+
+commit 65c4487364e758d7fd52b6de466b7323fbb7f6db
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 16:53:49 2024 -0400
+
+    cleanup dead configuration
+
+commit 1dc8297541e22e62b25e759a59cb0c28d29bef76
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue May 14 21:18:26 2024 -0400
+
+    release 0.1.1715735122-13550d64
+
 commit 13550d64df31c7b9af7629a130dad7eb7216cb03
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue May 14 21:05:22 2024 -0400
