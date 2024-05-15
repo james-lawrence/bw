@@ -19,7 +19,7 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 		pool *x509.CertPool
 	)
 
-	if err = os.MkdirAll(c.CredentialsDir, 0700); err != nil {
+	if err = os.MkdirAll(c.Credentials.Directory, 0700); err != nil {
 		return creds, errors.WithStack(err)
 	}
 
@@ -29,7 +29,7 @@ func TLSGenServer(c agent.Config, options ...tlsx.Option) (creds *tls.Config, er
 
 	m := NewDirectory(
 		c.ServerName,
-		c.CredentialsDir,
+		c.Credentials.Directory,
 		c.CA,
 		pool,
 	)

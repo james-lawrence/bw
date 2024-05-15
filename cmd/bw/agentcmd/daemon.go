@@ -105,7 +105,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	}
 
 	// temporary certificate to allow bootstrapping a real certificate.
-	if err = certificatecache.AutomaticTLSAgent(ring.GetPrimaryKey(), config.ServerName, config.CredentialsDir); err != nil {
+	if err = certificatecache.AutomaticTLSAgent(ring.GetPrimaryKey(), config.ServerName, config.Credentials.Directory); err != nil {
 		return err
 	}
 

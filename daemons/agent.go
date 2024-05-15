@@ -83,7 +83,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 
 	notary.New(
 		dctx.Config.ServerName,
-		certificatecache.NewAuthorityCache(dctx.Config.Name, dctx.Config.CredentialsDir),
+		certificatecache.NewAuthorityCache(dctx.Config.Name, dctx.Config.Credentials.Directory),
 		dctx.NotaryStorage,
 	).Bind(server)
 

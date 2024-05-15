@@ -254,8 +254,6 @@ type Config struct {
 	ClusterTokens     []string `yaml:"clusterTokens"`
 	ServerName        string
 	CA                string `yaml:"ca"`
-	CredentialsMode   string `yaml:"credentialsSource"` // deprecated
-	CredentialsDir    string `yaml:"credentialsDir"`    // deprecated
 	Credentials       struct {
 		Mode      string `yaml:"source"`
 		Directory string `yaml:"directory"`
@@ -275,16 +273,13 @@ func (t Config) Sanitize() Config {
 
 // EnsureDefaults values after configuration load
 func (t Config) EnsureDefaults() Config {
-	if t.CredentialsDir == "" {
-		t.CredentialsDir = filepath.Join(t.Root, bw.DefaultDirAgentCredentials)
-	}
 
 	if t.Credentials.Directory == "" {
 		t.Credentials.Directory = filepath.Join(t.Root, bw.DefaultDirAgentCredentials)
 	}
 
 	if t.CA == "" {
-		t.CA = filepath.Join(t.CredentialsDir, bw.DefaultTLSCertCA)
+		t.CA = filepath.Join(t.Credentials.Directory, bw.DefaultTLSCertCA)
 	}
 
 	if t.P2PAdvertised == nil {

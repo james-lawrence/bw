@@ -31,7 +31,7 @@ func Discovery(dctx Context) (err error) {
 
 	// used to validate client certificates.
 	discovery.NewAuthority(
-		certificatecache.CAKeyPath(dctx.Config.CredentialsDir, certificatecache.DefaultTLSGeneratedCAProto),
+		certificatecache.CAKeyPath(dctx.Config.Credentials.Directory, certificatecache.DefaultTLSGeneratedCAProto),
 	).Bind(server)
 
 	log.Printf("discovery: %T %s", dctx.Listener, dctx.Listener.Addr().String())
