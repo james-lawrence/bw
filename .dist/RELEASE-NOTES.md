@@ -1,3 +1,28 @@
+commit e1066ed575c57016da01ac6120e181404c604700
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 18:38:15 2024 -0400
+
+    fixing self signed certificate issues
+    
+    - our self signed certificates were not identical (clock validations
+      differed), this resulted in the upgrade from golang causing the
+    tls verify logic to fail.
+    - we also were not immediately fetching acme. instead we waited 6h.
+    adding the self signed certificate to its own file instead of
+    overloading the tlsserver.cert file resolved this.
+
+commit 48cb79001b740faa28d4ee15bb94e2d46c17acf4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 18:21:38 2024 -0400
+
+    bootstrap logging
+
+commit a9d50cbba405ec855a5c3a70b5a25dad97bd92d5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 17:16:49 2024 -0400
+
+    release 0.1.1715807437-3b9c7c2d
+
 commit 3b9c7c2d5d74b3d16e8bf3e2ed47f60e4b6d3d5f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed May 15 17:10:37 2024 -0400
