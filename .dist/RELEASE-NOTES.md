@@ -1,3 +1,18 @@
+commit b3df73e4f02218ff3dfd3d2b57b7c4f969916395
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 8 15:18:45 2024 -0400
+
+    adjust the acme challenge delay to cap at 15s +/- 15%.
+    
+    the disk cache on the actual node that talks to the acme endpoints has
+    the timeout to prevent the api rate limits.
+
+commit 59d726ee9b5c3b066fab69e248c0fbd57b24769f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed May 15 20:29:22 2024 -0400
+
+    release 0.1.1715818863-e1066ed5
+
 commit e1066ed575c57016da01ac6120e181404c604700
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed May 15 18:38:15 2024 -0400
