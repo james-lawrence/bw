@@ -61,8 +61,14 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 
 	peers := config.Configuration().Servers
 	unmodifiedPeers := config.Configuration().Servers
+
 	voterCount := voterCount(peers)
-	allowRemoval := voterCount >= 3
+	// TODO: temporarily allowing removals at all times.
+	// we're hitting deadlocks where we can't remove a peer that rejoined.
+	// due to this logic.
+	// allowRemoval := voterCount >= 3
+	_ = voterCount
+	allowRemoval := true
 
 	// we bail out when we fail to add peers because we don't want to remove peers
 	// if we failed to add the new peers to the leadership
