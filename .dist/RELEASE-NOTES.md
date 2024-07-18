@@ -1,3 +1,15 @@
+commit 2bc0d64e80ba204ab2c71382aa438cecd6cc9814
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 18 08:41:26 2024 -0400
+
+    allow peer removal always to diagnose a deadlock state.
+
+commit c204522040464121bf49dac7ed1b640a7e167a4b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jun 8 15:27:41 2024 -0400
+
+    release 0.1.1717874325-b3df73e4
+
 commit b3df73e4f02218ff3dfd3d2b57b7c4f969916395
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jun 8 15:18:45 2024 -0400
