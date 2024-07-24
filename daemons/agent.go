@@ -1,7 +1,6 @@
 package daemons
 
 import (
-	"log"
 	"net"
 
 	"github.com/hashicorp/raft"
@@ -65,7 +64,6 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		agent.ServerOptionShutdown(dctx.Shutdown),
 	).Bind(server)
 
-	log.Println("DERP DERP", len(dctx.Cluster.Members()))
 	q := quorum.New(
 		observersmem,
 		dctx.Cluster,
