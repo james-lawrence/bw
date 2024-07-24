@@ -1,3 +1,69 @@
+commit 8dad5648a355577eb6afaabf27815ff4f5bf1fef
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 24 07:40:29 2024 -0400
+
+    remove debug logging
+
+commit 066ceaf4a5f84fdaccad354feb4a6c76150d0534
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 24 07:21:23 2024 -0400
+
+    update service and install presets
+
+commit 0d740dc2b78e1230c5d21e5ffa34446e3feded9f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 24 06:46:25 2024 -0400
+
+    debugging cluster issue
+
+commit 1f6ded29edbce690692d85f9cf6edccbb31dadfd
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Wed Jul 24 10:39:46 2024 +0000
+
+    Bump github.com/gorilla/schema from 1.3.0 to 1.4.1
+    
+    Bumps [github.com/gorilla/schema](https://github.com/gorilla/schema) from 1.3.0 to 1.4.1.
+    - [Release notes](https://github.com/gorilla/schema/releases)
+    - [Commits](https://github.com/gorilla/schema/compare/v1.3.0...v1.4.1)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: github.com/gorilla/schema
+      dependency-type: direct:production
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit 2f5d73e0c24f8c90d4d882b8bea6b269edc37e65
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Wed Jul 24 10:39:39 2024 +0000
+
+    Bump github.com/hashicorp/go-retryablehttp from 0.7.5 to 0.7.7
+    
+    Bumps [github.com/hashicorp/go-retryablehttp](https://github.com/hashicorp/go-retryablehttp) from 0.7.5 to 0.7.7.
+    - [Changelog](https://github.com/hashicorp/go-retryablehttp/blob/main/CHANGELOG.md)
+    - [Commits](https://github.com/hashicorp/go-retryablehttp/compare/v0.7.5...v0.7.7)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: github.com/hashicorp/go-retryablehttp
+      dependency-type: indirect
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit 1f0d7d0db59ddbfa649e084a6e4d689da83144b4
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 24 06:37:57 2024 -0400
+
+    update sources range
+
+commit b4df4429e214e4c18fb246c261b6ba0f4d942b61
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jul 18 08:47:40 2024 -0400
+
+    release 0.1.1721306620-2bc0d64e
+
 commit 2bc0d64e80ba204ab2c71382aa438cecd6cc9814
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jul 18 08:41:26 2024 -0400
