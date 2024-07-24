@@ -1,9 +1,9 @@
 [Unit]
-Description=deprecated use bearded-wookie-agent.service instead
+Description=bearded-wookie agent runs the daemon to install the packages locally
 # available environment variables.
 Documentation=https://github.com/james-lawrence/bw/blob/master/environment.go
 After=network.target
-Conflicts=bearded-wookie-coordinator.service bearded-wookie-agent.service
+Conflicts=bearded-wookie-coordinator.service bearded-wookie.service
 
 [Service]
 Type=simple

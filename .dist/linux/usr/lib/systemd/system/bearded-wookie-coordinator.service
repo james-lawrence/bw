@@ -3,7 +3,7 @@ Description=bearded-wookie coordinator agent, used to upload, deploy to other se
 # available environment variables.
 Documentation=https://github.com/james-lawrence/bw/blob/master/environment.go
 After=network.target
-Conflicts=bearded-wookie.service
+Conflicts=bearded-wookie.service bearded-wookie-agent.service
 
 [Service]
 Type=simple
@@ -18,5 +18,4 @@ Environment=SHELL=/bin/bash
 ExecStart=/usr/bin/bw agent coordinator
 
 [Install]
-Alias=bearded-wookie-agent.service
 WantedBy=default.target
