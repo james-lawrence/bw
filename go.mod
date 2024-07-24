@@ -19,7 +19,7 @@ require (
 	github.com/go-git/go-git/v5 v5.12.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gorilla/mux v1.8.1
-	github.com/gorilla/schema v1.3.0
+	github.com/gorilla/schema v1.4.1
 	github.com/gorilla/websocket v1.5.1
 	github.com/grantae/certinfo v0.0.0-20170412194111-59d56a35515b
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
