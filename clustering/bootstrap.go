@@ -205,6 +205,8 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 		// attempting to join the cluster.
 		joined = max(joined, len(c.Members()))
 
+		log.Println("DERP DERP", c.Members())
+
 		log.Println("joined", joined, "peers")
 
 		if b.JoinStrategy(joined) {
