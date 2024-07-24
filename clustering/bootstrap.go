@@ -117,7 +117,7 @@ func (t bootstrap) retrieve(ctx context.Context, s Source) (peers []string, err 
 }
 
 func (t bootstrap) collect(ctx context.Context, sources ...Source) (peers []string, err error) {
-	for _, s := range t.Peering {
+	for _, s := range sources {
 		log.Printf("%T: locating peers\n", s)
 		localpeers, localerr := t.retrieve(ctx, s)
 		if localerr != nil {
