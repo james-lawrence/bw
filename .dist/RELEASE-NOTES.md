@@ -1,3 +1,15 @@
+commit 200158dddd87be81ff3974a9b0136eb24c9b791a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Aug 7 11:13:56 2024 -0400
+
+    refresh the certificates 30 days in advance
+
+commit 91bbbb0dca34abacfb2d726574f64f10d98d74fa
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jul 24 07:50:45 2024 -0400
+
+    release 0.1.1721821229-8dad5648
+
 commit 8dad5648a355577eb6afaabf27815ff4f5bf1fef
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jul 24 07:40:29 2024 -0400
