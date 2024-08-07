@@ -126,12 +126,15 @@ func (t Noop) Refresh() error {
 // error is returned if something goes wrong prior to starting the goroutine.
 // once the goroutine is started it will return nil.
 func RefreshAutomatic(dir string, r refresher) (err error) {
+	// offset the time into the future to refresh the certificate well in advance
+	// of the actual expiration. lets encrypt wants 30 days.
+	const futureoffset = 31 * 24 * time.Hour
 	var (
 		due time.Duration
 	)
 	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertClient, DefaultTLSCertServer)
 
-	if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
+	if due, err = RefreshExpired(certpath, time.Now().Add(futureoffset), r); err != nil {
 		return err
 	}
 
@@ -142,7 +145,7 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 			}
 			time.Sleep(due)
 
-			if due, err = RefreshExpired(certpath, time.Now(), r); err != nil {
+			if due, err = RefreshExpired(certpath, time.Now().Add(futureoffset), r); err != nil {
 				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
 		}
