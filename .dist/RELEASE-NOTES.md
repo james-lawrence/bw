@@ -1,3 +1,15 @@
+commit 2116cf31727efc8aaf26a322fd15d275c59e05ce
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 21:08:11 2024 -0500
+
+    add oracular to list of distributions
+
+commit 4019d23d3fefa64f7d3e22ec66762a67adbb11e7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 21:07:54 2024 -0500
+
+    release 0.1.1733622645-1c8f343e
+
 commit 1c8f343e623a99332d1b1d5b10751ee130dc1054
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 7 20:50:45 2024 -0500
