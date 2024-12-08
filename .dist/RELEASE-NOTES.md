@@ -1,3 +1,15 @@
+commit 1c8f343e623a99332d1b1d5b10751ee130dc1054
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Dec 7 20:50:45 2024 -0500
+
+    fix the infinite refresh
+
+commit b5383a2cc175fc0803e371cd45f3241ab97b49a1
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Aug 7 11:24:34 2024 -0400
+
+    release 0.1.1723043636-200158dd
+
 commit 200158dddd87be81ff3974a9b0136eb24c9b791a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Aug 7 11:13:56 2024 -0400
