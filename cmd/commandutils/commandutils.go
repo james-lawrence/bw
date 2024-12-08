@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	raftboltdb "github.com/hashicorp/raft-boltdb"
@@ -131,6 +132,7 @@ func LoadConfiguration(ctx context.Context, environment string, options ...agent
 		config.Credentials.Directory,
 		config.Credentials.Mode,
 		path,
+		4*time.Hour,
 		cc.NewRefreshClient(
 			config.Credentials.Directory,
 			config.Credentials.Insecure,

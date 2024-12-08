@@ -76,11 +76,11 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
-func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
+func FromConfig(dir, mode, configfile string, futureoffset time.Duration, fallback refresher) (err error) {
 	log.Println("tls credentials mode", mode)
 	switch mode {
 	case ModeDisabled:
-		return RefreshAutomatic(dir, Noop{})
+		return RefreshAutomatic(dir, futureoffset, Noop{})
 	case ModeVault:
 		v := Vault{
 			DefaultTokenFile: VaultDefaultTokenPath(),
@@ -99,13 +99,13 @@ func FromConfig(dir, mode, configfile string, fallback refresher) (err error) {
 			return errors.New("vault PKI path cannot be blank, please set VaultPKIPath in the configuration")
 		}
 
-		return RefreshAutomatic(dir, v)
+		return RefreshAutomatic(dir, futureoffset, v)
 	default:
 		if err = bw.ExpandAndDecodeFile(configfile, fallback); err != nil {
 			return err
 		}
 
-		return RefreshAutomatic(dir, fallback)
+		return RefreshAutomatic(dir, futureoffset, fallback)
 	}
 }
 
@@ -125,16 +125,13 @@ func (t Noop) Refresh() error {
 // RefreshAutomatic will automatically refresh credentials in the background.
 // error is returned if something goes wrong prior to starting the goroutine.
 // once the goroutine is started it will return nil.
-func RefreshAutomatic(dir string, r refresher) (err error) {
-	// offset the time into the future to refresh the certificate well in advance
-	// of the actual expiration. lets encrypt wants 30 days.
-	const futureoffset = 31 * 24 * time.Hour
+func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err error) {
 	var (
 		due time.Duration
 	)
-	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertClient, DefaultTLSCertServer)
+	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
 
-	if due, err = RefreshExpired(certpath, time.Now().Add(futureoffset), r); err != nil {
+	if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 		return err
 	}
 
@@ -145,23 +142,13 @@ func RefreshAutomatic(dir string, r refresher) (err error) {
 			}
 			time.Sleep(due)
 
-			if due, err = RefreshExpired(certpath, time.Now().Add(futureoffset), r); err != nil {
+			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
 		}
 	}()
 
 	return nil
-}
-
-// RefreshNow will refresh the credentials immediately
-func RefreshNow(dir string, r refresher) (err error) {
-	// first ensure directory exists.
-	if err = os.MkdirAll(dir, 0700); err != nil {
-		return errors.WithStack(err)
-	}
-
-	return r.Refresh()
 }
 
 // RefreshExpired refreshes certificates if the certificate at the provided path
