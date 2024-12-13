@@ -1,3 +1,26 @@
+commit 54e98a3583fdea89044025baf599081e79657d46
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Wed Dec 11 23:51:15 2024 +0000
+
+    Bump golang.org/x/crypto from 0.21.0 to 0.31.0
+    
+    Bumps [golang.org/x/crypto](https://github.com/golang/crypto) from 0.21.0 to 0.31.0.
+    - [Commits](https://github.com/golang/crypto/compare/v0.21.0...v0.31.0)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: golang.org/x/crypto
+      dependency-type: direct:production
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit ae14197c5022580fbe4a73f80cad1a6df92f46de
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 12 19:26:08 2024 -0500
+
+    release 0.1.1733623980-2ecac08d
+
 commit 2ecac08d8959366a748a5b43c59fed34b97456c4
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Dec 7 21:13:00 2024 -0500
