@@ -145,9 +145,6 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
-
-			// no reason to refresh more frequently than 30s, even when we have an expired certificate.
-			due = timex.DurationMax(30*time.Second, due)
 		}
 	}()
 
@@ -181,6 +178,8 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (due time.Duratio
 
 	// check once a day, unless the expiration / 4 is sooner.
 	due = timex.DurationMin(24*time.Hour, expiration.Sub(t)/4)
+	// no reason to refresh more frequently than 30s, even when we have an expired certificate.
+	due = timex.DurationMax(30*time.Second, due)
 
 	if t.Equal(expiration) || t.After(expiration) {
 		return due, r.Refresh()
@@ -209,7 +208,7 @@ func expiredCert(path string) (expiration time.Time, err error) {
 		return expiration, fmt.Errorf("decoding certificate failed: %s", path)
 	}
 
-	if envx.Boolean(false, bw.EnvLogsVerbose) {
+	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
 		log.Println("cert:", path)
 		log.Println("cert expires at", cert.NotAfter)
 		log.Println("cert not valid before", cert.NotBefore)
