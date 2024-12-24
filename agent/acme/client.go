@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -186,6 +187,9 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 		}
 
 		if cached, cause = retrieve(ctx, p); cause == nil {
+			if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err == nil {
+				log.Println("cached certificate received expiration", cert.NotAfter)
+			}
 			return cached, nil
 		}
 
@@ -198,6 +202,7 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 	default:
 		log.Println("unable to locate certificate from quoruom", err)
 	}
+
 	return nil, status.Error(codes.NotFound, "cached certificate not found")
 }
 
