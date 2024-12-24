@@ -33,6 +33,8 @@ import (
 	"github.com/james-lawrence/bw/internal/protox"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/timex"
+	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 	codes "google.golang.org/grpc/codes"
@@ -89,7 +91,22 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 	// Lets encrypt has rate limits on certificates generated per domain per month.
 	// lets cache the generated certificates if possible.
 	if resp, err = t.cached(template); err == nil {
-		return resp, nil
+		checkexpiration := func() error {
+			if cert, err := tlsx.DecodePEMCertificate(resp.Certificate); err == nil {
+				minimum, ts := timex.DurationFromMillisecond(req.CacheMinimumExpiration), time.Until(cert.NotAfter)
+				if ts < minimum {
+					return fmt.Errorf("ignoring cached certificate, expires too soon: %v", cert.NotAfter)
+				}
+
+				log.Println("cached certificate received expiration", cert.NotAfter, ts, "<", minimum)
+			}
+
+			return nil
+		}
+
+		if err = checkexpiration(); err == nil {
+			return resp, err
+		}
 	}
 
 	// let's encrypt has pretty heavy rate limits in production.
