@@ -189,6 +189,8 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 		if cached, cause = retrieve(ctx, p); cause == nil {
 			if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err == nil {
 				log.Println("cached certificate received expiration", cert.NotAfter)
+			} else {
+				log.Println("unable to decode cached certificate received", err)
 			}
 			return cached, nil
 		}
