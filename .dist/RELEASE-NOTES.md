@@ -1,3 +1,15 @@
+commit 6cde059ed8a4a1e5aad1a0acfa8f96c55e1536bb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 14:31:38 2024 -0500
+
+    revert toolchain change
+
+commit 671c5416f0ad9f2172383efb1ddce8c081d40225
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 12:42:18 2024 -0500
+
+    release 0.1.1735060862-baf2fcda
+
 commit baf2fcda71a7e8991e01afd79562350778046fbb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 24 12:21:02 2024 -0500
