@@ -8,7 +8,13 @@ message Challenge {
   string token = 3;
 }
 
-message CertificateRequest { bytes CSR = 1; }
+message CertificateRequest {
+  bytes CSR = 1;
+  // minimum duration that cached
+  // certificates must be valid for in
+  // order to be acceptable.
+  uint64 cacheMinimumExpiration = 2;
+}
 
 message CertificateResponse {
   bytes certificate = 1;

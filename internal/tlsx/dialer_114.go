@@ -1,4 +1,5 @@
-// +build go1.14, !go1.15
+//go:build (go1.14 && ignore) || !go1.15
+// +build go1.14,ignore !go1.15
 
 package tlsx
 

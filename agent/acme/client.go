@@ -189,11 +189,12 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 		if cached, cause = retrieve(ctx, p); cause == nil {
 			ts := time.Now().Add(30 * 24 * time.Hour)
 			if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err == nil {
+				log.Println("certificate expires in", time.Until(cert.NotAfter), time.Until(cert.NotAfter), "<", time.Duration(req.CacheMinimumExpiration), 30*24*time.Hour)
 				if cert.NotAfter.Before(ts) {
-					log.Println("certificate is expiring in 30 days ignore cache")
-				} else {
-					log.Println("cached certificate received expiration", cert.NotAfter, "<", ts, cert.NotAfter.Before(ts))
+					return nil, status.Error(codes.NotFound, "certificate is expiring in 30 days ignore cache")
 				}
+
+				log.Println("cached certificate received expiration", cert.NotAfter, "<", ts, cert.NotAfter.Before(ts))
 			} else {
 				log.Println("unable to decode cached certificate received", err)
 			}
