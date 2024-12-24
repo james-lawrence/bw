@@ -145,6 +145,9 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
 			}
+
+			// no reason to refresh more frequently than 30s, even when we have an expired certificate.
+			due = timex.DurationMax(30*time.Second, due)
 		}
 	}()
 
