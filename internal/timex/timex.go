@@ -52,6 +52,10 @@ func DurationMin(ds ...time.Duration) (d time.Duration) {
 	return d
 }
 
+func DurationFromMillisecond[T int64 | uint64](ms T) time.Duration {
+	return time.Duration(ms) * time.Millisecond
+}
+
 // SafeReset stops and drains the timer (if necessary) and then resets.
 func SafeReset(t *time.Timer, d time.Duration) {
 	if !t.Stop() {

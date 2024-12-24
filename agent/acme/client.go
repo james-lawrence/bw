@@ -13,6 +13,7 @@ import (
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -192,9 +193,10 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 		if cached, cause = retrieve(ctx, p); cause == nil {
 			ts := time.Now().Add(30 * 24 * time.Hour)
 			if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err == nil {
-				log.Println("certificate expires in", time.Until(cert.NotAfter), time.Until(cert.NotAfter), "<", time.Duration(req.CacheMinimumExpiration), 30*24*time.Hour)
+
+				log.Println("certificate expires in", time.Until(cert.NotAfter), time.Until(cert.NotAfter), "<", timex.DurationFromMillisecond(req.CacheMinimumExpiration), 30*24*time.Hour)
 				if cert.NotAfter.Before(ts) {
-					log.Println("ignoring cached certificate, expires too soon", cert.NotAfter, time.Duration(req.CacheMinimumExpiration))
+					log.Println("ignoring cached certificate, expires too soon", cert.NotAfter, timex.DurationFromMillisecond(req.CacheMinimumExpiration))
 					continue
 					// return nil, status.Error(codes.NotFound, "certificate is expiring in 30 days ignore cache")
 				}
