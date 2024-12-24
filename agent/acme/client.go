@@ -163,8 +163,8 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 		address := agent.AutocertAddress(p)
 
 		if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-			log.Println("certificate request to", address, "initiated")
-			defer log.Println("certificate request to", address, "completed")
+			log.Println("cached certificate request to", address, "initiated")
+			defer log.Println("cached certificate request to", address, "completed")
 		}
 
 		if conn, err = dialers.NewDirect(address).DialContext(ctx, t.dialer.Defaults()...); err != nil {
