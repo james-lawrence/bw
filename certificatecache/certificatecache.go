@@ -182,7 +182,7 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	due = timex.DurationMax(minFrequency, due)
 	refreshNeeded := t.Equal(expiration) || t.After(expiration)
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-		log.Println("certificate refresh check", t, "<=", expiration, "->", refreshNeeded)
+		log.Println("certificate refresh check", expiration, "<=", t, "->", refreshNeeded)
 	}
 
 	if refreshNeeded {
