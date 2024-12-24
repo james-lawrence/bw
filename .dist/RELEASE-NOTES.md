@@ -1,3 +1,57 @@
+commit baf2fcda71a7e8991e01afd79562350778046fbb
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 12:21:02 2024 -0500
+
+    disk cache expiration
+
+commit 4c95e4dbcb251bfefd2e256a759cb4bca9039514
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 12:10:26 2024 -0500
+
+    conversion of duration.
+
+commit de63e9fd8b93c5ebcf06f60e41916f8b3be19c9f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 12:05:49 2024 -0500
+
+    minimum lifetime for cached certificates
+
+commit 0cfe68fabe43b862f2a0b79e1846a3a5b2389261
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:57:35 2024 -0500
+
+    cache expiration field
+
+commit 98dd7212f21d77595b8413b6ed9ba8281d0fc493
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:50:46 2024 -0500
+
+    debug
+
+commit b6a744d47c726ca2cdad3ec22030f003a43a52a9
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:48:49 2024 -0500
+
+    debug logging
+
+commit cb97bfac85b8ed6d25d1847bb55aff6cde3e7c22
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:44:11 2024 -0500
+
+    update certificate logging
+
+commit f3a648f99c2abe5b1115d07612013a12b16fc166
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:40:45 2024 -0500
+
+    ignore soon to expire certificates
+
+commit 131ad337f57db7c601a1a0a348c12b19376d8f02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:32:28 2024 -0500
+
+    release 0.1.1735057109-36432662
+
 commit 364326626e25dacf73cf182b1efdf805ac78eb26
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 24 11:18:29 2024 -0500
