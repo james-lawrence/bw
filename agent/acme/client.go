@@ -31,12 +31,13 @@ func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defau
 		d.Defaults()...,
 	)
 	return Challenger{
-		local:      p,
-		rendezvous: r,
-		dialer:     d,
-		qd:         qdialer,
-		dispatcher: agentutil.NewDispatcher(qdialer),
-		cache:      cache,
+		local:                p,
+		rendezvous:           r,
+		dialer:               d,
+		qd:                   qdialer,
+		dispatcher:           agentutil.NewDispatcher(qdialer),
+		cache:                cache,
+		minimumCacheDuration: envx.Duration(30*24*time.Hour, bw.EnvAgentCachedTLSCertificateMinimum),
 	}
 }
 
@@ -44,10 +45,11 @@ func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defau
 type Challenger struct {
 	local *agent.Peer
 	rendezvous
-	dialer     dialers.Defaults
-	qd         dialers.Quorum
-	dispatcher agent.Dispatcher
-	cache      DiskCache
+	dialer               dialers.Defaults
+	qd                   dialers.Quorum
+	dispatcher           agent.Dispatcher
+	cache                DiskCache
+	minimumCacheDuration time.Duration
 }
 
 // Challenge initiate a challenge.
@@ -60,7 +62,8 @@ func (t Challenger) Challenge(ctx context.Context, csr []byte) (key, cert, autho
 	for i := 0; ; i++ {
 		var (
 			req = &CertificateRequest{
-				CSR: csr,
+				CSR:                    csr,
+				CacheMinimumExpiration: uint64(t.minimumCacheDuration.Milliseconds()),
 			}
 			resp *CertificateResponse
 		)
@@ -191,7 +194,9 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 			if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err == nil {
 				log.Println("certificate expires in", time.Until(cert.NotAfter), time.Until(cert.NotAfter), "<", time.Duration(req.CacheMinimumExpiration), 30*24*time.Hour)
 				if cert.NotAfter.Before(ts) {
-					return nil, status.Error(codes.NotFound, "certificate is expiring in 30 days ignore cache")
+					log.Println("ignoring cached certificate, expires too soon", cert.NotAfter, time.Duration(req.CacheMinimumExpiration))
+					continue
+					// return nil, status.Error(codes.NotFound, "certificate is expiring in 30 days ignore cache")
 				}
 
 				log.Println("cached certificate received expiration", cert.NotAfter, "<", ts, cert.NotAfter.Before(ts))
