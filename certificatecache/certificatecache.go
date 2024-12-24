@@ -180,12 +180,12 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	due = timex.DurationMin(24*time.Hour, expiration.Sub(t)/4)
 	// no reason to refresh more frequently than 30s, even when we have an expired certificate.
 	due = timex.DurationMax(minFrequency, due)
-
+	refreshNeeded := t.Equal(expiration) || t.After(expiration)
 	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-		log.Println("certificate refresh check", t, "<", expiration)
+		log.Println("certificate refresh check", t, "<=", expiration, "->", refreshNeeded)
 	}
 
-	if t.Equal(expiration) || t.After(expiration) {
+	if refreshNeeded {
 		return due, r.Refresh()
 	}
 
