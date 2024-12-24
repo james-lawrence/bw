@@ -1,3 +1,57 @@
+commit 364326626e25dacf73cf182b1efdf805ac78eb26
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:18:29 2024 -0500
+
+    update dependencies
+
+commit 8679b70d613f289b6df94f32b8dbf35f4ea6455b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:09:54 2024 -0500
+
+    debug
+
+commit e7bc7e89c23109824b4348ae8e36de52d1f0fca6
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:07:50 2024 -0500
+
+    debug
+
+commit a5e9ffa13a91b82b17cda34ae46ab0c2671fba6b
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 11:03:21 2024 -0500
+
+    rework min frequency
+
+commit 8f91c23c38d9ecc9424aec99ce91fee905f883db
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 10:59:29 2024 -0500
+
+    more debugging
+
+commit 7090f765c0aef2ddeec0a8871ff5c505113b5059
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 10:52:25 2024 -0500
+
+    debugging cached certificate path
+
+commit 5008b0f1eef71384f27b47bddc90e68559fed845
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 10:49:06 2024 -0500
+
+    debugging cache certificates
+
+commit 680c0be2358441dd247f84b8041da8904f5d543a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 10:44:16 2024 -0500
+
+    add a minimum sleep to certificate process
+
+commit 056a383d7d4c64f664414c950e7d96ca315b8d2a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Dec 12 23:25:18 2024 -0500
+
+    release 0.1.1734062778-54e98a35
+
 commit 54e98a3583fdea89044025baf599081e79657d46
 Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 Date:   Wed Dec 11 23:51:15 2024 +0000
