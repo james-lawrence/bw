@@ -583,7 +583,7 @@ github.com/hashicorp/hcl/json/token
 # github.com/hashicorp/memberlist v0.5.1
 ## explicit; go 1.20
 github.com/hashicorp/memberlist
-# github.com/hashicorp/raft v1.7.1
+# github.com/hashicorp/raft v1.6.1
 ## explicit; go 1.20
 github.com/hashicorp/raft
 # github.com/hashicorp/raft-boltdb v0.0.0-20241202213821-f9dd2ba30efd

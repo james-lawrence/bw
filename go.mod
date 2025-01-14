@@ -25,7 +25,7 @@ require (
 	github.com/gutengo/fil v0.0.0-20150411104140-6109b2e0b5cf
 	github.com/hashicorp/go-sockaddr v1.0.7
 	github.com/hashicorp/memberlist v0.5.1
-	github.com/hashicorp/raft v1.7.1
+	github.com/hashicorp/raft v1.6.1
 	github.com/hashicorp/raft-boltdb v0.0.0-20241202213821-f9dd2ba30efd
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0

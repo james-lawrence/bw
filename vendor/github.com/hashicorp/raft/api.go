@@ -213,10 +213,6 @@ type Raft struct {
 
 	// mainThreadSaturation measures the saturation of the main raft goroutine.
 	mainThreadSaturation *saturationMetric
-
-	// preVoteDisabled control if the pre-vote feature is activated,
-	// prevote feature is disabled if set to true.
-	preVoteDisabled bool
 }
 
 // BootstrapCluster initializes a server's storage with the given cluster
@@ -535,7 +531,6 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		applyCh = make(chan *logFuture, conf.MaxAppendEntries)
 	}
 
-	_, transportSupportPreVote := trans.(WithPreVote)
 	// Create Raft struct.
 	r := &Raft{
 		protocolVersion:       protocolVersion,
@@ -565,10 +560,6 @@ func NewRaft(conf *Config, fsm FSM, logs LogStore, stable StableStore, snaps Sna
 		leaderNotifyCh:        make(chan struct{}, 1),
 		followerNotifyCh:      make(chan struct{}, 1),
 		mainThreadSaturation:  newSaturationMetric([]string{"raft", "thread", "main", "saturation"}, 1*time.Second),
-		preVoteDisabled:       conf.PreVoteDisabled || !transportSupportPreVote,
-	}
-	if !transportSupportPreVote && !conf.PreVoteDisabled {
-		r.logger.Warn("pre-vote is disabled because it is not supported by the Transport")
 	}
 
 	r.conf.Store(*conf)
