@@ -120,6 +120,7 @@ type Quorum struct {
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(events chan raft.Observation) {
+	log.Println("CLUSTER", t.c.Peers())
 	go t.rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {

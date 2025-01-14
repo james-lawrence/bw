@@ -201,11 +201,13 @@ func Bootstrap(ctx context.Context, c Joiner, options ...BootstrapOption) (err e
 			log.Printf("reduced to %d peers: %s\n", len(peers), spew.Sdump(peers))
 		}
 
+		log.Println("joined", joined, "peers", c.Members())
+
 		// if members > 1, then another node discovered us while we were
 		// attempting to join the cluster.
 		joined = max(joined, len(c.Members()))
 
-		log.Println("joined", joined, "peers")
+		log.Println("joined", joined, "peers", c.Members())
 
 		if b.JoinStrategy(joined) {
 			return nil
