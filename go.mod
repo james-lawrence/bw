@@ -2,7 +2,7 @@ module github.com/james-lawrence/bw
 
 go 1.22.0
 
-toolchain go1.23.4
+toolchain go1.22.2
 
 require (
 	cloud.google.com/go/compute/metadata v0.6.0
