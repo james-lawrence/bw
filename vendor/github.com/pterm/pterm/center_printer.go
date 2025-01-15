@@ -36,25 +36,25 @@ func (p CenterPrinter) WithWriter(writer io.Writer) *CenterPrinter {
 
 // Sprint formats using the default formats for its operands and returns the resulting string.
 // Spaces are added between operands when neither is a string.
-func (p CenterPrinter) Sprint(a ...any) string {
+func (p CenterPrinter) Sprint(a ...interface{}) string {
 	if RawOutput {
 		return Sprint(a...)
 	}
 
 	lines := strings.Split(Sprint(a...), "\n")
 
-	var ret strings.Builder
+	var ret string
 
 	if p.CenterEachLineSeparately {
 		for _, line := range lines {
 			margin := (GetTerminalWidth() - runewidth.StringWidth(RemoveColorFromString(line))) / 2
-			if margin >= 1 {
-				ret.WriteString(strings.Repeat(" ", margin))
+			if margin < 1 {
+				ret += line + "\n"
+			} else {
+				ret += strings.Repeat(" ", margin) + line + "\n"
 			}
-			ret.WriteString(line)
-			ret.WriteByte('\n')
 		}
-		return ret.String()
+		return ret
 	}
 
 	var maxLineWidth int
@@ -70,43 +70,40 @@ func (p CenterPrinter) Sprint(a ...any) string {
 
 	if indent/2 < 1 {
 		for _, line := range lines {
-			ret.WriteString(line)
-			ret.WriteByte('\n')
+			ret += line + "\n"
 		}
 
-		return ret.String()
+		return ret
 	}
 
 	for _, line := range lines {
-		ret.WriteString(strings.Repeat(" ", indent/2))
-		ret.WriteString(line)
-		ret.WriteByte('\n')
+		ret += strings.Repeat(" ", indent/2) + line + "\n"
 	}
 
-	return ret.String()
+	return ret
 }
 
 // Sprintln formats using the default formats for its operands and returns the resulting string.
 // Spaces are always added between operands and a newline is appended.
-func (p CenterPrinter) Sprintln(a ...any) string {
+func (p CenterPrinter) Sprintln(a ...interface{}) string {
 	return p.Sprint(Sprintln(a...))
 }
 
 // Sprintf formats according to a format specifier and returns the resulting string.
-func (p CenterPrinter) Sprintf(format string, a ...any) string {
+func (p CenterPrinter) Sprintf(format string, a ...interface{}) string {
 	return p.Sprint(Sprintf(format, a...))
 }
 
 // Sprintfln formats according to a format specifier and returns the resulting string.
 // Spaces are always added between operands and a newline is appended.
-func (p CenterPrinter) Sprintfln(format string, a ...any) string {
+func (p CenterPrinter) Sprintfln(format string, a ...interface{}) string {
 	return p.Sprintf(format, a...) + "\n"
 }
 
 // Print formats using the default formats for its operands and writes to standard output.
 // Spaces are added between operands when neither is a string.
 // It returns the number of bytes written and any write error encountered.
-func (p CenterPrinter) Print(a ...any) *TextPrinter {
+func (p CenterPrinter) Print(a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprint(a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -115,7 +112,7 @@ func (p CenterPrinter) Print(a ...any) *TextPrinter {
 // Println formats using the default formats for its operands and writes to standard output.
 // Spaces are always added between operands and a newline is appended.
 // It returns the number of bytes written and any write error encountered.
-func (p CenterPrinter) Println(a ...any) *TextPrinter {
+func (p CenterPrinter) Println(a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintln(a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -123,7 +120,7 @@ func (p CenterPrinter) Println(a ...any) *TextPrinter {
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
-func (p CenterPrinter) Printf(format string, a ...any) *TextPrinter {
+func (p CenterPrinter) Printf(format string, a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintf(format, a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -132,7 +129,7 @@ func (p CenterPrinter) Printf(format string, a ...any) *TextPrinter {
 // Printfln formats according to a format specifier and writes to standard output.
 // Spaces are always added between operands and a newline is appended.
 // It returns the number of bytes written and any write error encountered.
-func (p CenterPrinter) Printfln(format string, a ...any) *TextPrinter {
+func (p CenterPrinter) Printfln(format string, a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintfln(format, a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -141,7 +138,7 @@ func (p CenterPrinter) Printfln(format string, a ...any) *TextPrinter {
 // PrintOnError prints every error which is not nil.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p CenterPrinter) PrintOnError(a ...any) *TextPrinter {
+func (p CenterPrinter) PrintOnError(a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {
@@ -157,7 +154,7 @@ func (p CenterPrinter) PrintOnError(a ...any) *TextPrinter {
 // PrintOnErrorf wraps every error which is not nil and prints it.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p CenterPrinter) PrintOnErrorf(format string, a ...any) *TextPrinter {
+func (p CenterPrinter) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {

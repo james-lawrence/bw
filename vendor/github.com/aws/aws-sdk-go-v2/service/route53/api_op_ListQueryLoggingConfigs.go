@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -13,14 +14,11 @@ import (
 
 // Lists the configurations for DNS query logging that are associated with the
 // current Amazon Web Services account or the configuration that is associated with
-// a specified hosted zone.
-//
-// For more information about DNS query logs, see [CreateQueryLoggingConfig]. Additional information,
-// including the format of DNS query logs, appears in [Logging DNS Queries]in the Amazon Route 53
-// Developer Guide.
-//
-// [CreateQueryLoggingConfig]: https://docs.aws.amazon.com/Route53/latest/APIReference/API_CreateQueryLoggingConfig.html
-// [Logging DNS Queries]: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/query-logs.html
+// a specified hosted zone. For more information about DNS query logs, see
+// CreateQueryLoggingConfig (https://docs.aws.amazon.com/Route53/latest/APIReference/API_CreateQueryLoggingConfig.html)
+// . Additional information, including the format of DNS query logs, appears in
+// Logging DNS Queries (https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/query-logs.html)
+// in the Amazon Route 53 Developer Guide.
 func (c *Client) ListQueryLoggingConfigs(ctx context.Context, params *ListQueryLoggingConfigsInput, optFns ...func(*Options)) (*ListQueryLoggingConfigsOutput, error) {
 	if params == nil {
 		params = &ListQueryLoggingConfigsInput{}
@@ -39,32 +37,24 @@ func (c *Client) ListQueryLoggingConfigs(ctx context.Context, params *ListQueryL
 type ListQueryLoggingConfigsInput struct {
 
 	// (Optional) If you want to list the query logging configuration that is
-	// associated with a hosted zone, specify the ID in HostedZoneId .
-	//
-	// If you don't specify a hosted zone ID, ListQueryLoggingConfigs returns all of
-	// the configurations that are associated with the current Amazon Web Services
-	// account.
+	// associated with a hosted zone, specify the ID in HostedZoneId . If you don't
+	// specify a hosted zone ID, ListQueryLoggingConfigs returns all of the
+	// configurations that are associated with the current Amazon Web Services account.
 	HostedZoneId *string
 
 	// (Optional) The maximum number of query logging configurations that you want
 	// Amazon Route 53 to return in response to the current request. If the current
 	// Amazon Web Services account has more than MaxResults configurations, use the
-	// value of [NextToken]in the response to get the next page of results.
-	//
-	// If you don't specify a value for MaxResults , Route 53 returns up to 100
-	// configurations.
-	//
-	// [NextToken]: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html#API_ListQueryLoggingConfigs_RequestSyntax
+	// value of NextToken (https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html#API_ListQueryLoggingConfigs_RequestSyntax)
+	// in the response to get the next page of results. If you don't specify a value
+	// for MaxResults , Route 53 returns up to 100 configurations.
 	MaxResults *int32
 
 	// (Optional) If the current Amazon Web Services account has more than MaxResults
 	// query logging configurations, use NextToken to get the second and subsequent
-	// pages of results.
-	//
-	// For the first ListQueryLoggingConfigs request, omit this value.
-	//
-	// For the second and subsequent requests, get the value of NextToken from the
-	// previous response and specify that value for NextToken in the request.
+	// pages of results. For the first ListQueryLoggingConfigs request, omit this
+	// value. For the second and subsequent requests, get the value of NextToken from
+	// the previous response and specify that value for NextToken in the request.
 	NextToken *string
 
 	noSmithyDocumentSerde
@@ -72,24 +62,20 @@ type ListQueryLoggingConfigsInput struct {
 
 type ListQueryLoggingConfigsOutput struct {
 
-	// An array that contains one [QueryLoggingConfig] element for each configuration for DNS query
-	// logging that is associated with the current Amazon Web Services account.
-	//
-	// [QueryLoggingConfig]: https://docs.aws.amazon.com/Route53/latest/APIReference/API_QueryLoggingConfig.html
+	// An array that contains one QueryLoggingConfig (https://docs.aws.amazon.com/Route53/latest/APIReference/API_QueryLoggingConfig.html)
+	// element for each configuration for DNS query logging that is associated with the
+	// current Amazon Web Services account.
 	//
 	// This member is required.
 	QueryLoggingConfigs []types.QueryLoggingConfig
 
 	// If a response includes the last of the query logging configurations that are
 	// associated with the current Amazon Web Services account, NextToken doesn't
-	// appear in the response.
-	//
-	// If a response doesn't include the last of the configurations, you can get more
-	// configurations by submitting another [ListQueryLoggingConfigs]request. Get the value of NextToken that
-	// Amazon Route 53 returned in the previous response and include it in NextToken
-	// in the next request.
-	//
-	// [ListQueryLoggingConfigs]: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html
+	// appear in the response. If a response doesn't include the last of the
+	// configurations, you can get more configurations by submitting another
+	// ListQueryLoggingConfigs (https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html)
+	// request. Get the value of NextToken that Amazon Route 53 returned in the
+	// previous response and include it in NextToken in the next request.
 	NextToken *string
 
 	// Metadata pertaining to the operation's result.
@@ -120,28 +106,25 @@ func (c *Client) addOperationListQueryLoggingConfigsMiddlewares(stack *middlewar
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -156,16 +139,10 @@ func (c *Client) addOperationListQueryLoggingConfigsMiddlewares(stack *middlewar
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListQueryLoggingConfigs(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -183,20 +160,16 @@ func (c *Client) addOperationListQueryLoggingConfigsMiddlewares(stack *middlewar
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
-		return err
-	}
 	return nil
 }
+
+// ListQueryLoggingConfigsAPIClient is a client that implements the
+// ListQueryLoggingConfigs operation.
+type ListQueryLoggingConfigsAPIClient interface {
+	ListQueryLoggingConfigs(context.Context, *ListQueryLoggingConfigsInput, ...func(*Options)) (*ListQueryLoggingConfigsOutput, error)
+}
+
+var _ ListQueryLoggingConfigsAPIClient = (*Client)(nil)
 
 // ListQueryLoggingConfigsPaginatorOptions is the paginator options for
 // ListQueryLoggingConfigs
@@ -204,12 +177,9 @@ type ListQueryLoggingConfigsPaginatorOptions struct {
 	// (Optional) The maximum number of query logging configurations that you want
 	// Amazon Route 53 to return in response to the current request. If the current
 	// Amazon Web Services account has more than MaxResults configurations, use the
-	// value of [NextToken]in the response to get the next page of results.
-	//
-	// If you don't specify a value for MaxResults , Route 53 returns up to 100
-	// configurations.
-	//
-	// [NextToken]: https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html#API_ListQueryLoggingConfigs_RequestSyntax
+	// value of NextToken (https://docs.aws.amazon.com/Route53/latest/APIReference/API_ListQueryLoggingConfigs.html#API_ListQueryLoggingConfigs_RequestSyntax)
+	// in the response to get the next page of results. If you don't specify a value
+	// for MaxResults , Route 53 returns up to 100 configurations.
 	Limit int32
 
 	// Set to true if pagination should stop if the service returns a pagination token
@@ -271,9 +241,6 @@ func (p *ListQueryLoggingConfigsPaginator) NextPage(ctx context.Context, optFns 
 	}
 	params.MaxResults = limit
 
-	optFns = append([]func(*Options){
-		addIsPaginatorUserAgent,
-	}, optFns...)
 	result, err := p.client.ListQueryLoggingConfigs(ctx, &params, optFns...)
 	if err != nil {
 		return nil, err
@@ -292,14 +259,6 @@ func (p *ListQueryLoggingConfigsPaginator) NextPage(ctx context.Context, optFns 
 
 	return result, nil
 }
-
-// ListQueryLoggingConfigsAPIClient is a client that implements the
-// ListQueryLoggingConfigs operation.
-type ListQueryLoggingConfigsAPIClient interface {
-	ListQueryLoggingConfigs(context.Context, *ListQueryLoggingConfigsInput, ...func(*Options)) (*ListQueryLoggingConfigsOutput, error)
-}
-
-var _ ListQueryLoggingConfigsAPIClient = (*Client)(nil)
 
 func newServiceMetadataMiddleware_opListQueryLoggingConfigs(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{

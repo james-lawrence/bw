@@ -6,24 +6,20 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Gets the specified limit for the current account, for example, the maximum
-// number of health checks that you can create using the account.
-//
-// For the default limit, see [Limits] in the Amazon Route 53 Developer Guide. To request
-// a higher limit, [open a case].
-//
-// You can also view account limits in Amazon Web Services Trusted Advisor. Sign
+// number of health checks that you can create using the account. For the default
+// limit, see Limits (https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html)
+// in the Amazon Route 53 Developer Guide. To request a higher limit, open a case (https://console.aws.amazon.com/support/home#/case/create?issueType=service-limit-increase&limitType=service-code-route53)
+// . You can also view account limits in Amazon Web Services Trusted Advisor. Sign
 // in to the Amazon Web Services Management Console and open the Trusted Advisor
-// console at [https://console.aws.amazon.com/trustedadvisor/]. Then choose Service limits in the navigation pane.
-//
-// [Limits]: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/DNSLimitations.html
-// [https://console.aws.amazon.com/trustedadvisor/]: https://console.aws.amazon.com/trustedadvisor
-// [open a case]: https://console.aws.amazon.com/support/home#/case/create?issueType=service-limit-increase&limitType=service-code-route53
+// console at https://console.aws.amazon.com/trustedadvisor/ (https://console.aws.amazon.com/trustedadvisor)
+// . Then choose Service limits in the navigation pane.
 func (c *Client) GetAccountLimit(ctx context.Context, params *GetAccountLimitInput, optFns ...func(*Options)) (*GetAccountLimitOutput, error) {
 	if params == nil {
 		params = &GetAccountLimitInput{}
@@ -44,19 +40,14 @@ func (c *Client) GetAccountLimit(ctx context.Context, params *GetAccountLimitInp
 type GetAccountLimitInput struct {
 
 	// The limit that you want to get. Valid values include the following:
-	//
 	//   - MAX_HEALTH_CHECKS_BY_OWNER: The maximum number of health checks that you
 	//   can create using the current account.
-	//
 	//   - MAX_HOSTED_ZONES_BY_OWNER: The maximum number of hosted zones that you can
 	//   create using the current account.
-	//
 	//   - MAX_REUSABLE_DELEGATION_SETS_BY_OWNER: The maximum number of reusable
 	//   delegation sets that you can create using the current account.
-	//
 	//   - MAX_TRAFFIC_POLICIES_BY_OWNER: The maximum number of traffic policies that
 	//   you can create using the current account.
-	//
 	//   - MAX_TRAFFIC_POLICY_INSTANCES_BY_OWNER: The maximum number of traffic policy
 	//   instances that you can create using the current account. (Traffic policy
 	//   instances are referred to as traffic flow policy records in the Amazon Route 53
@@ -115,28 +106,25 @@ func (c *Client) addOperationGetAccountLimitMiddlewares(stack *middleware.Stack,
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -151,19 +139,13 @@ func (c *Client) addOperationGetAccountLimitMiddlewares(stack *middleware.Stack,
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addOpGetAccountLimitValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetAccountLimit(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -176,18 +158,6 @@ func (c *Client) addOperationGetAccountLimitMiddlewares(stack *middleware.Stack,
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

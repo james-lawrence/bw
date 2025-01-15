@@ -202,7 +202,6 @@ func (t Challenger) quorumcertificate(ctx context.Context, req *CertificateReque
 			} else {
 				log.Println("unable to decode cached certificate received", err)
 			}
-
 			return cached, nil
 		}
 

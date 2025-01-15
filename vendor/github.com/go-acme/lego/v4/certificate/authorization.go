@@ -7,10 +7,19 @@ import (
 	"github.com/go-acme/lego/v4/log"
 )
 
+const (
+	// overallRequestLimit is the overall number of request per second
+	// limited on the "new-reg", "new-authz" and "new-cert" endpoints.
+	// From the documentation the limitation is 20 requests per second,
+	// but using 20 as value doesn't work but 18 do.
+	// https://letsencrypt.org/docs/rate-limits/
+	overallRequestLimit = 18
+)
+
 func (c *Certifier) getAuthorizations(order acme.ExtendedOrder) ([]acme.Authorization, error) {
 	resc, errc := make(chan acme.Authorization), make(chan domainError)
 
-	delay := time.Second / time.Duration(c.overallRequestLimit)
+	delay := time.Second / overallRequestLimit
 
 	for _, authzURL := range order.Authorizations {
 		time.Sleep(delay)
@@ -29,7 +38,7 @@ func (c *Certifier) getAuthorizations(order acme.ExtendedOrder) ([]acme.Authoriz
 	var responses []acme.Authorization
 
 	failures := newObtainError()
-	for range len(order.Authorizations) {
+	for i := 0; i < len(order.Authorizations); i++ {
 		select {
 		case res := <-resc:
 			responses = append(responses, res)

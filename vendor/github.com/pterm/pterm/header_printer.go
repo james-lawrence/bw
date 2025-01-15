@@ -63,7 +63,7 @@ func (p HeaderPrinter) WithWriter(writer io.Writer) *HeaderPrinter {
 
 // Sprint formats using the default formats for its operands and returns the resulting string.
 // Spaces are added between operands when neither is a string.
-func (p HeaderPrinter) Sprint(a ...any) string {
+func (p HeaderPrinter) Sprint(a ...interface{}) string {
 	if RawOutput {
 		return Sprint(a...)
 	}
@@ -96,7 +96,7 @@ func (p HeaderPrinter) Sprint(a ...any) string {
 	}
 
 	var marginString string
-	var ret strings.Builder
+	var ret string
 
 	if p.FullWidth {
 		longestLineLen = runewidth.StringWidth(RemoveColorFromString(internal.ReturnLongestLine(text, "\n")))
@@ -105,21 +105,18 @@ func (p HeaderPrinter) Sprint(a ...any) string {
 		marginString = strings.Repeat(" ", p.Margin)
 	}
 
-	ret.WriteString(p.BackgroundStyle.Sprint(blankLine))
-	ret.WriteByte('\n')
+	ret += p.BackgroundStyle.Sprint(blankLine) + "\n"
 	for _, line := range strings.Split(text, "\n") {
 		line = strings.ReplaceAll(line, "\n", "")
 		line = marginString + line + marginString
 		if runewidth.StringWidth(line) < runewidth.StringWidth(blankLine) {
 			line += strings.Repeat(" ", runewidth.StringWidth(blankLine)-runewidth.StringWidth(line))
 		}
-		ret.WriteString(p.BackgroundStyle.Sprint(p.TextStyle.Sprint(line)))
-		ret.WriteByte('\n')
+		ret += p.BackgroundStyle.Sprint(p.TextStyle.Sprint(line)) + "\n"
 	}
-	ret.WriteString(p.BackgroundStyle.Sprint(blankLine))
-	ret.WriteByte('\n')
+	ret += p.BackgroundStyle.Sprint(blankLine) + "\n"
 
-	return ret.String()
+	return ret
 }
 
 func splitText(text string, width int) string {
@@ -156,25 +153,25 @@ func splitText(text string, width int) string {
 
 // Sprintln formats using the default formats for its operands and returns the resulting string.
 // Spaces are always added between operands and a newline is appended.
-func (p HeaderPrinter) Sprintln(a ...any) string {
+func (p HeaderPrinter) Sprintln(a ...interface{}) string {
 	return p.Sprint(strings.TrimSuffix(Sprintln(a...), "\n"))
 }
 
 // Sprintf formats according to a format specifier and returns the resulting string.
-func (p HeaderPrinter) Sprintf(format string, a ...any) string {
+func (p HeaderPrinter) Sprintf(format string, a ...interface{}) string {
 	return p.Sprint(Sprintf(format, a...))
 }
 
 // Sprintfln formats according to a format specifier and returns the resulting string.
 // Spaces are always added between operands and a newline is appended.
-func (p HeaderPrinter) Sprintfln(format string, a ...any) string {
+func (p HeaderPrinter) Sprintfln(format string, a ...interface{}) string {
 	return p.Sprintf(format, a...) + "\n"
 }
 
 // Print formats using the default formats for its operands and writes to standard output.
 // Spaces are added between operands when neither is a string.
 // It returns the number of bytes written and any write error encountered.
-func (p *HeaderPrinter) Print(a ...any) *TextPrinter {
+func (p *HeaderPrinter) Print(a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprint(a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -183,7 +180,7 @@ func (p *HeaderPrinter) Print(a ...any) *TextPrinter {
 // Println formats using the default formats for its operands and writes to standard output.
 // Spaces are always added between operands and a newline is appended.
 // It returns the number of bytes written and any write error encountered.
-func (p *HeaderPrinter) Println(a ...any) *TextPrinter {
+func (p *HeaderPrinter) Println(a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintln(a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -191,7 +188,7 @@ func (p *HeaderPrinter) Println(a ...any) *TextPrinter {
 
 // Printf formats according to a format specifier and writes to standard output.
 // It returns the number of bytes written and any write error encountered.
-func (p *HeaderPrinter) Printf(format string, a ...any) *TextPrinter {
+func (p *HeaderPrinter) Printf(format string, a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintf(format, a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -200,7 +197,7 @@ func (p *HeaderPrinter) Printf(format string, a ...any) *TextPrinter {
 // Printfln formats according to a format specifier and writes to standard output.
 // Spaces are always added between operands and a newline is appended.
 // It returns the number of bytes written and any write error encountered.
-func (p *HeaderPrinter) Printfln(format string, a ...any) *TextPrinter {
+func (p *HeaderPrinter) Printfln(format string, a ...interface{}) *TextPrinter {
 	Fprint(p.Writer, p.Sprintfln(format, a...))
 	tp := TextPrinter(p)
 	return &tp
@@ -209,7 +206,7 @@ func (p *HeaderPrinter) Printfln(format string, a ...any) *TextPrinter {
 // PrintOnError prints every error which is not nil.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p *HeaderPrinter) PrintOnError(a ...any) *TextPrinter {
+func (p *HeaderPrinter) PrintOnError(a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {
@@ -225,7 +222,7 @@ func (p *HeaderPrinter) PrintOnError(a ...any) *TextPrinter {
 // PrintOnErrorf wraps every error which is not nil and prints it.
 // If every error is nil, nothing will be printed.
 // This can be used for simple error checking.
-func (p *HeaderPrinter) PrintOnErrorf(format string, a ...any) *TextPrinter {
+func (p *HeaderPrinter) PrintOnErrorf(format string, a ...interface{}) *TextPrinter {
 	for _, arg := range a {
 		if err, ok := arg.(error); ok {
 			if err != nil {

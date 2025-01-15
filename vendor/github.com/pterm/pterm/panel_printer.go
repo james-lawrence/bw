@@ -75,20 +75,19 @@ func (p PanelPrinter) WithWriter(writer io.Writer) *PanelPrinter {
 }
 
 func (p PanelPrinter) getRawOutput() string {
-	var ret strings.Builder
+	var ret string
 	for _, panel := range p.Panels {
 		for _, panel2 := range panel {
-			ret.WriteString(panel2.Data)
-			ret.WriteString("\n\n")
+			ret += panel2.Data + "\n\n"
 		}
-		ret.WriteByte('\n')
+		ret += "\n"
 	}
-	return ret.String()
+	return ret
 }
 
 // Srender renders the Template as a string.
 func (p PanelPrinter) Srender() (string, error) {
-	var ret strings.Builder
+	var ret string
 
 	if RawOutput {
 		return p.getRawOutput(), nil
@@ -171,14 +170,14 @@ func (p PanelPrinter) Srender() (string, error) {
 						}
 					}
 					letterLine += strings.Repeat(" ", p.Padding)
-					ret.WriteString(letterLine)
+					ret += letterLine
 				}
-				ret.WriteByte('\n')
+				ret += "\n"
 			}
 		}
 	}
 
-	return ret.String(), nil
+	return ret, nil
 }
 
 // Render prints the Template to the terminal.

@@ -6,18 +6,17 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Route 53 does not perform authorization for this API because it retrieves
-// information that is already available to the public.
-//
-// GetCheckerIpRanges still works, but we recommend that you download
-// ip-ranges.json, which includes IP address ranges for all Amazon Web Services
-// services. For more information, see [IP Address Ranges of Amazon Route 53 Servers]in the Amazon Route 53 Developer Guide.
-//
-// [IP Address Ranges of Amazon Route 53 Servers]: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/route-53-ip-addresses.html
+// information that is already available to the public. GetCheckerIpRanges still
+// works, but we recommend that you download ip-ranges.json, which includes IP
+// address ranges for all Amazon Web Services services. For more information, see
+// IP Address Ranges of Amazon Route 53 Servers (https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/route-53-ip-addresses.html)
+// in the Amazon Route 53 Developer Guide.
 func (c *Client) GetCheckerIpRanges(ctx context.Context, params *GetCheckerIpRangesInput, optFns ...func(*Options)) (*GetCheckerIpRangesOutput, error) {
 	if params == nil {
 		params = &GetCheckerIpRangesInput{}
@@ -75,28 +74,25 @@ func (c *Client) addOperationGetCheckerIpRangesMiddlewares(stack *middleware.Sta
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -111,16 +107,10 @@ func (c *Client) addOperationGetCheckerIpRangesMiddlewares(stack *middleware.Sta
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetCheckerIpRanges(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -133,18 +123,6 @@ func (c *Client) addOperationGetCheckerIpRangesMiddlewares(stack *middleware.Sta
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

@@ -33,7 +33,7 @@ var DefaultProgressbar = ProgressbarPrinter{
 	ShowElapsedTime:           true,
 	BarFiller:                 Gray("█"),
 	MaxWidth:                  80,
-	Writer:                    os.Stderr,
+	Writer:                    os.Stdout,
 }
 
 // ProgressbarPrinter shows a progress animation in the terminal.
@@ -132,12 +132,6 @@ func (p ProgressbarPrinter) WithShowPercentage(b ...bool) *ProgressbarPrinter {
 	return &p
 }
 
-// WithStartedAt sets the time when the ProgressbarPrinter started.
-func (p ProgressbarPrinter) WithStartedAt(t time.Time) *ProgressbarPrinter {
-	p.startedAt = t
-	return &p
-}
-
 // WithTitleStyle sets the style of the title.
 func (p ProgressbarPrinter) WithTitleStyle(style *Style) *ProgressbarPrinter {
 	p.TitleStyle = style
@@ -171,16 +165,6 @@ func (p ProgressbarPrinter) WithWriter(writer io.Writer) *ProgressbarPrinter {
 // SetWriter sets the custom Writer.
 func (p *ProgressbarPrinter) SetWriter(writer io.Writer) {
 	p.Writer = writer
-}
-
-// SetStartedAt sets the time when the ProgressbarPrinter started.
-func (p *ProgressbarPrinter) SetStartedAt(t time.Time) {
-	p.startedAt = t
-}
-
-// ResetTimer resets the timer of the ProgressbarPrinter.
-func (p *ProgressbarPrinter) ResetTimer() {
-	p.startedAt = time.Now()
 }
 
 // Increment current value by one.
@@ -282,7 +266,7 @@ func (p *ProgressbarPrinter) Add(count int) *ProgressbarPrinter {
 }
 
 // Start the ProgressbarPrinter.
-func (p ProgressbarPrinter) Start(title ...any) (*ProgressbarPrinter, error) {
+func (p ProgressbarPrinter) Start(title ...interface{}) (*ProgressbarPrinter, error) {
 	cursor.Hide()
 	if RawOutput && p.ShowTitle {
 		Fprintln(p.Writer, p.Title)
