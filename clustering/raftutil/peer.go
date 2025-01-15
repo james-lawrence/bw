@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 )
 
@@ -45,7 +44,7 @@ func (t peer) Update(c rendezvous) state {
 	case raft.Leader:
 		return leader(t).Update(c)
 	default:
-		debugx.Println("peer current state", s)
+		log.Println("peer current state", s)
 		if t.protocol.MaybeLeave(c) || t.deadleadership(t.r) {
 			return leave(t.stateMeta)
 		}
