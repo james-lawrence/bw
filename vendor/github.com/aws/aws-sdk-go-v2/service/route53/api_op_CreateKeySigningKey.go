@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -43,32 +44,19 @@ type CreateKeySigningKeyInput struct {
 	// The Amazon resource name (ARN) for a customer managed key in Key Management
 	// Service (KMS). The KeyManagementServiceArn must be unique for each key-signing
 	// key (KSK) in a single hosted zone. To see an example of KeyManagementServiceArn
-	// that grants the correct permissions for DNSSEC, scroll down to Example.
-	//
-	// You must configure the customer managed customer managed key as follows:
-	//
-	// Status Enabled
-	//
-	// Key spec ECC_NIST_P256
-	//
-	// Key usage Sign and verify
-	//
-	// Key policy The key policy must give permission for the following actions:
-	//
+	// that grants the correct permissions for DNSSEC, scroll down to Example. You must
+	// configure the customer managed customer managed key as follows: Status Enabled
+	// Key spec ECC_NIST_P256 Key usage Sign and verify Key policy The key policy must
+	// give permission for the following actions:
 	//   - DescribeKey
-	//
 	//   - GetPublicKey
-	//
 	//   - Sign
-	//
 	// The key policy must also include the Amazon Route 53 service in the principal
 	// for your account. Specify the following:
-	//
 	//   - "Service": "dnssec-route53.amazonaws.com"
-	//
-	// For more information about working with a customer managed key in KMS, see [Key Management Service concepts].
-	//
-	// [Key Management Service concepts]: https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html
+	// For more information about working with a customer managed key in KMS, see Key
+	// Management Service concepts (https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html)
+	// .
 	//
 	// This member is required.
 	KeyManagementServiceArn *string
@@ -135,28 +123,25 @@ func (c *Client) addOperationCreateKeySigningKeyMiddlewares(stack *middleware.St
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -171,19 +156,13 @@ func (c *Client) addOperationCreateKeySigningKeyMiddlewares(stack *middleware.St
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addOpCreateKeySigningKeyValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateKeySigningKey(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -199,18 +178,6 @@ func (c *Client) addOperationCreateKeySigningKeyMiddlewares(stack *middleware.St
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

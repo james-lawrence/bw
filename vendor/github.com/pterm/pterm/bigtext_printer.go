@@ -72,13 +72,13 @@ func (p BigTextPrinter) WithWriter(writer io.Writer) *BigTextPrinter {
 
 // Srender renders the BigText as a string.
 func (p BigTextPrinter) Srender() (string, error) {
-	var ret strings.Builder
+	var ret string
 
 	if RawOutput {
 		for _, letter := range p.Letters {
-			ret.WriteString(letter.String)
+			ret += letter.String
 		}
-		return ret.String(), nil
+		return ret, nil
 	}
 
 	var bigLetters Letters
@@ -115,15 +115,15 @@ func (p BigTextPrinter) Srender() (string, error) {
 			}
 
 			if letter.RGB != (RGB{}) && (color.IsSupportRGBColor() || internal.RunsInCi()) {
-				ret.WriteString(letter.RGB.Sprint(letterLine))
+				ret += letter.RGB.Sprint(letterLine)
 			} else {
-				ret.WriteString(letter.Style.Sprint(letterLine))
+				ret += letter.Style.Sprint(letterLine)
 			}
 		}
-		ret.WriteByte('\n')
+		ret += "\n"
 	}
 
-	return ret.String(), nil
+	return ret, nil
 }
 
 // Render prints the BigText to the terminal.

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -43,7 +44,7 @@ func (r *Response) Error() error {
 	}
 
 	r.Body.Close()
-	r.Body = io.NopCloser(bodyBuf)
+	r.Body = ioutil.NopCloser(bodyBuf)
 	ns := r.Header.Get(NamespaceHeaderName)
 
 	// Build up the error object

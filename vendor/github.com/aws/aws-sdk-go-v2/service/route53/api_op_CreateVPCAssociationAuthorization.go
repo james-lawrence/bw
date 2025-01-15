@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -16,11 +17,10 @@ import (
 // specified hosted zone that was created by a different account. To submit a
 // CreateVPCAssociationAuthorization request, you must use the account that created
 // the hosted zone. After you authorize the association, use the account that
-// created the VPC to submit an AssociateVPCWithHostedZone request.
-//
-// If you want to associate multiple VPCs that you created by using one account
-// with a hosted zone that you created by using a different account, you must
-// submit one authorization request for each VPC.
+// created the VPC to submit an AssociateVPCWithHostedZone request. If you want to
+// associate multiple VPCs that you created by using one account with a hosted zone
+// that you created by using a different account, you must submit one authorization
+// request for each VPC.
 func (c *Client) CreateVPCAssociationAuthorization(ctx context.Context, params *CreateVPCAssociationAuthorizationInput, optFns ...func(*Options)) (*CreateVPCAssociationAuthorizationOutput, error) {
 	if params == nil {
 		params = &CreateVPCAssociationAuthorizationInput{}
@@ -98,28 +98,25 @@ func (c *Client) addOperationCreateVPCAssociationAuthorizationMiddlewares(stack 
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -134,19 +131,13 @@ func (c *Client) addOperationCreateVPCAssociationAuthorizationMiddlewares(stack 
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addOpCreateVPCAssociationAuthorizationValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opCreateVPCAssociationAuthorization(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -162,18 +153,6 @@ func (c *Client) addOperationCreateVPCAssociationAuthorizationMiddlewares(stack 
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

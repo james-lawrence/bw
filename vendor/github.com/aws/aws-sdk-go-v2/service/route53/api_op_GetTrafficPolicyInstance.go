@@ -6,18 +6,16 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
-// Gets information about a specified traffic policy instance.
-//
-// Use GetTrafficPolicyInstance with the id of new traffic policy instance to
-// confirm that the CreateTrafficPolicyInstance or an UpdateTrafficPolicyInstance
-// request completed successfully. For more information, see the State response
-// element.
-//
+// Gets information about a specified traffic policy instance. Use
+// GetTrafficPolicyInstance with the id of new traffic policy instance to confirm
+// that the CreateTrafficPolicyInstance or an UpdateTrafficPolicyInstance request
+// completed successfully. For more information, see the State response element.
 // In the Route 53 console, traffic policy instances are known as policy records.
 func (c *Client) GetTrafficPolicyInstance(ctx context.Context, params *GetTrafficPolicyInstanceInput, optFns ...func(*Options)) (*GetTrafficPolicyInstanceOutput, error) {
 	if params == nil {
@@ -82,28 +80,25 @@ func (c *Client) addOperationGetTrafficPolicyInstanceMiddlewares(stack *middlewa
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -118,19 +113,13 @@ func (c *Client) addOperationGetTrafficPolicyInstanceMiddlewares(stack *middlewa
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addOpGetTrafficPolicyInstanceValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opGetTrafficPolicyInstance(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -143,18 +132,6 @@ func (c *Client) addOperationGetTrafficPolicyInstanceMiddlewares(stack *middlewa
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

@@ -17,11 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	awstypes "github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/platform/config/env"
 	"github.com/go-acme/lego/v4/platform/wait"
-	"github.com/go-acme/lego/v4/providers/dns/internal/ptr"
 )
 
 // Environment variables names.
@@ -36,14 +34,10 @@ const (
 	EnvAssumeRoleArn   = envNamespace + "ASSUME_ROLE_ARN"
 	EnvExternalID      = envNamespace + "EXTERNAL_ID"
 
-	EnvWaitForRecordSetsChanged = envNamespace + "WAIT_FOR_RECORD_SETS_CHANGED"
-
 	EnvTTL                = envNamespace + "TTL"
 	EnvPropagationTimeout = envNamespace + "PROPAGATION_TIMEOUT"
 	EnvPollingInterval    = envNamespace + "POLLING_INTERVAL"
 )
-
-var _ challenge.ProviderTimeout = (*DNSProvider)(nil)
 
 // Config is used to configure the creation of the DNSProvider.
 type Config struct {
@@ -59,8 +53,6 @@ type Config struct {
 	AssumeRoleArn string
 	ExternalID    string
 
-	WaitForRecordSetsChanged bool
-
 	TTL                int
 	PropagationTimeout time.Duration
 	PollingInterval    time.Duration
@@ -75,8 +67,6 @@ func NewDefaultConfig() *Config {
 		MaxRetries:    env.GetOrDefaultInt(EnvMaxRetries, 5),
 		AssumeRoleArn: env.GetOrDefaultString(EnvAssumeRoleArn, ""),
 		ExternalID:    env.GetOrDefaultString(EnvExternalID, ""),
-
-		WaitForRecordSetsChanged: env.GetOrDefaultBool(EnvWaitForRecordSetsChanged, true),
 
 		TTL:                env.GetOrDefaultInt(EnvTTL, 10),
 		PropagationTimeout: env.GetOrDefaultSecond(EnvPropagationTimeout, 2*time.Minute),
@@ -152,7 +142,7 @@ func (d *DNSProvider) Present(domain, token, keyAuth string) error {
 
 	var found bool
 	for _, record := range records {
-		if ptr.Deref(record.Value) == realValue {
+		if deref(record.Value) == realValue {
 			found = true
 		}
 	}
@@ -197,7 +187,7 @@ func (d *DNSProvider) CleanUp(domain, token, keyAuth string) error {
 
 	var nonLegoRecords []awstypes.ResourceRecord
 	for _, record := range existingRecords {
-		if ptr.Deref(record.Value) != `"`+info.Value+`"` {
+		if deref(record.Value) != `"`+info.Value+`"` {
 			nonLegoRecords = append(nonLegoRecords, record)
 		}
 	}
@@ -245,22 +235,19 @@ func (d *DNSProvider) changeRecord(ctx context.Context, action awstypes.ChangeAc
 
 	changeID := resp.ChangeInfo.Id
 
-	if d.config.WaitForRecordSetsChanged {
-		return wait.For("route53", d.config.PropagationTimeout, d.config.PollingInterval, func() (bool, error) {
-			resp, err := d.client.GetChange(ctx, &route53.GetChangeInput{Id: changeID})
-			if err != nil {
-				return false, fmt.Errorf("failed to query change status: %w", err)
-			}
+	return wait.For("route53", d.config.PropagationTimeout, d.config.PollingInterval, func() (bool, error) {
+		reqParams := &route53.GetChangeInput{Id: changeID}
 
-			if resp.ChangeInfo.Status == awstypes.ChangeStatusInsync {
-				return true, nil
-			}
+		resp, err := d.client.GetChange(ctx, reqParams)
+		if err != nil {
+			return false, fmt.Errorf("failed to query change status: %w", err)
+		}
 
-			return false, fmt.Errorf("unable to retrieve change: ID=%s", ptr.Deref(changeID))
-		})
-	}
-
-	return nil
+		if resp.ChangeInfo.Status == awstypes.ChangeStatusInsync {
+			return true, nil
+		}
+		return false, fmt.Errorf("unable to retrieve change: ID=%s", deref(changeID))
+	})
 }
 
 func (d *DNSProvider) getExistingRecordSets(ctx context.Context, hostedZoneID, fqdn string) ([]awstypes.ResourceRecord, error) {
@@ -282,7 +269,7 @@ func (d *DNSProvider) getExistingRecordSets(ctx context.Context, hostedZoneID, f
 	var records []awstypes.ResourceRecord
 
 	for _, recordSet := range recordSetsOutput.ResourceRecordSets {
-		if ptr.Deref(recordSet.Name) == fqdn {
+		if deref(recordSet.Name) == fqdn {
 			records = append(records, recordSet.ResourceRecords...)
 		}
 	}
@@ -312,8 +299,8 @@ func (d *DNSProvider) getHostedZoneID(ctx context.Context, fqdn string) (string,
 	var hostedZoneID string
 	for _, hostedZone := range resp.HostedZones {
 		// .Name has a trailing dot
-		if !hostedZone.Config.PrivateZone && ptr.Deref(hostedZone.Name) == authZone {
-			hostedZoneID = ptr.Deref(hostedZone.Id)
+		if !hostedZone.Config.PrivateZone && deref(hostedZone.Name) == authZone {
+			hostedZoneID = deref(hostedZone.Id)
 			break
 		}
 	}
@@ -394,4 +381,13 @@ func createAWSConfigCheckParams(config *Config) error {
 	}
 
 	return nil
+}
+
+func deref[T string | int | int32 | int64 | bool](v *T) T {
+	if v == nil {
+		var zero T
+		return zero
+	}
+
+	return *v
 }

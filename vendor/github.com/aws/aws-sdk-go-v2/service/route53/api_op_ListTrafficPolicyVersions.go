@@ -6,13 +6,13 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
 // Gets information about all of the versions for a specified traffic policy.
-//
 // Traffic policy versions are listed in numerical order by VersionNumber .
 func (c *Client) ListTrafficPolicyVersions(ctx context.Context, params *ListTrafficPolicyVersionsInput, optFns ...func(*Options)) (*ListTrafficPolicyVersionsOutput, error) {
 	if params == nil {
@@ -47,13 +47,11 @@ type ListTrafficPolicyVersionsInput struct {
 	MaxItems *int32
 
 	// For your first request to ListTrafficPolicyVersions , don't include the
-	// TrafficPolicyVersionMarker parameter.
-	//
-	// If you have more traffic policy versions than the value of MaxItems ,
-	// ListTrafficPolicyVersions returns only the first group of MaxItems versions. To
-	// get more traffic policy versions, submit another ListTrafficPolicyVersions
-	// request. For the value of TrafficPolicyVersionMarker , specify the value of
-	// TrafficPolicyVersionMarker in the previous response.
+	// TrafficPolicyVersionMarker parameter. If you have more traffic policy versions
+	// than the value of MaxItems , ListTrafficPolicyVersions returns only the first
+	// group of MaxItems versions. To get more traffic policy versions, submit another
+	// ListTrafficPolicyVersions request. For the value of TrafficPolicyVersionMarker ,
+	// specify the value of TrafficPolicyVersionMarker in the previous response.
 	TrafficPolicyVersionMarker *string
 
 	noSmithyDocumentSerde
@@ -86,7 +84,6 @@ type ListTrafficPolicyVersionsOutput struct {
 	// first traffic policy that Amazon Route 53 will return if you submit another
 	// request. Call ListTrafficPolicyVersions again and specify the value of
 	// TrafficPolicyVersionMarker in the TrafficPolicyVersionMarker request parameter.
-	//
 	// This element is present only if IsTruncated is true .
 	//
 	// This member is required.
@@ -120,28 +117,25 @@ func (c *Client) addOperationListTrafficPolicyVersionsMiddlewares(stack *middlew
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addClientRequestID(stack); err != nil {
+	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addComputeContentLength(stack); err != nil {
+	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = addComputePayloadSHA256(stack); err != nil {
+	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
 		return err
 	}
-	if err = addRetry(stack, options); err != nil {
+	if err = addRetryMiddlewares(stack, options); err != nil {
 		return err
 	}
-	if err = addRawResponseToMetadata(stack); err != nil {
+	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = addRecordResponseTiming(stack); err != nil {
-		return err
-	}
-	if err = addSpanRetryLoop(stack, options); err != nil {
+	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -156,19 +150,13 @@ func (c *Client) addOperationListTrafficPolicyVersionsMiddlewares(stack *middlew
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
-	if err = addTimeOffsetBuild(stack, c); err != nil {
-		return err
-	}
-	if err = addUserAgentRetryMode(stack, options); err != nil {
-		return err
-	}
 	if err = addOpListTrafficPolicyVersionsValidationMiddleware(stack); err != nil {
 		return err
 	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListTrafficPolicyVersions(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = addRecursionDetection(stack); err != nil {
+	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -181,18 +169,6 @@ func (c *Client) addOperationListTrafficPolicyVersionsMiddlewares(stack *middlew
 		return err
 	}
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
-		return err
-	}
-	if err = addSpanInitializeStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanInitializeEnd(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestStart(stack); err != nil {
-		return err
-	}
-	if err = addSpanBuildRequestEnd(stack); err != nil {
 		return err
 	}
 	return nil

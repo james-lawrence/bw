@@ -16,7 +16,10 @@ import (
 
 const defaultResolvConf = "/etc/resolv.conf"
 
-var fqdnSoaCache = &sync.Map{}
+var (
+	fqdnSoaCache   = map[string]*soaCacheEntry{}
+	muFqdnSoaCache sync.Mutex
+)
 
 var defaultNameservers = []string{
 	"google-public-dns-a.google.com:53",
@@ -48,11 +51,9 @@ func (cache *soaCacheEntry) isExpired() bool {
 
 // ClearFqdnCache clears the cache of fqdn to zone mappings. Primarily used in testing.
 func ClearFqdnCache() {
-	// TODO(ldez): use `fqdnSoaCache.Clear()` when updating to go1.23
-	fqdnSoaCache.Range(func(k, v any) bool {
-		fqdnSoaCache.Delete(k)
-		return true
-	})
+	muFqdnSoaCache.Lock()
+	fqdnSoaCache = map[string]*soaCacheEntry{}
+	muFqdnSoaCache.Unlock()
 }
 
 func AddDNSTimeout(timeout time.Duration) ChallengeOption {
@@ -152,13 +153,12 @@ func FindZoneByFqdnCustom(fqdn string, nameservers []string) (string, error) {
 }
 
 func lookupSoaByFqdn(fqdn string, nameservers []string) (*soaCacheEntry, error) {
+	muFqdnSoaCache.Lock()
+	defer muFqdnSoaCache.Unlock()
+
 	// Do we have it cached and is it still fresh?
-	entAny, ok := fqdnSoaCache.Load(fqdn)
-	if ok && entAny != nil {
-		ent, ok1 := entAny.(*soaCacheEntry)
-		if ok1 && !ent.isExpired() {
-			return ent, nil
-		}
+	if ent := fqdnSoaCache[fqdn]; ent != nil && !ent.isExpired() {
+		return ent, nil
 	}
 
 	ent, err := fetchSoaByFqdn(fqdn, nameservers)
@@ -166,8 +166,7 @@ func lookupSoaByFqdn(fqdn string, nameservers []string) (*soaCacheEntry, error) 
 		return nil, err
 	}
 
-	fqdnSoaCache.Store(fqdn, ent)
-
+	fqdnSoaCache[fqdn] = ent
 	return ent, nil
 }
 

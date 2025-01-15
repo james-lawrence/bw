@@ -6,11 +6,10 @@ package api
 import (
 	"errors"
 	"math/rand"
-	"strings"
 	"sync"
 	"time"
 
-	"github.com/cenkalti/backoff/v4"
+	"github.com/cenkalti/backoff/v3"
 )
 
 var (
@@ -32,7 +31,6 @@ var (
 	DefaultRenewerRenewBuffer = 5
 )
 
-//go:generate enumer -type=RenewBehavior -trimprefix=RenewBehavior
 type RenewBehavior uint
 
 const (
@@ -290,18 +288,12 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		switch {
 		case nonRenewable || r.renewBehavior == RenewBehaviorRenewDisabled:
 			// Can't or won't renew, just keep the same expiration so we exit
-			// when it's re-authentication time
+			// when it's reauthentication time
 			remainingLeaseDuration = fallbackLeaseDuration
 
 		default:
 			// Renew the token
 			renewal, err = renew(credString, r.increment)
-			if err != nil && strings.Contains(err.Error(), "permission denied") {
-				// We can't renew since the token doesn't have permission to. Fall back
-				// to the code path for non-renewable tokens.
-				nonRenewable = true
-				continue
-			}
 			if err != nil || renewal == nil || (tokenMode && renewal.Auth == nil) {
 				if r.renewBehavior == RenewBehaviorErrorOnErrors {
 					if err != nil {
@@ -357,11 +349,8 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 
 		if errorBackoff == nil {
 			sleepDuration = r.calculateSleepDuration(remainingLeaseDuration, priorDuration)
-		} else {
-			sleepDuration = errorBackoff.NextBackOff()
-			if sleepDuration == backoff.Stop {
-				return err
-			}
+		} else if errorBackoff.NextBackOff() == backoff.Stop {
+			return err
 		}
 
 		// remainingLeaseDuration becomes the priorDuration for the next loop
