@@ -60,7 +60,7 @@ func (t passive) Update(c rendezvous) state {
 	log.Println(t.protocol.LocalNode.Name, "promoting self into raft protocol")
 
 	if transport, r, err = t.protocol.connect(c); err != nil {
-		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state"))
+		log.Println(errors.Wrap(err, "failed to join raft protocol remaining in current state, increase logging using BEARDED_WOOKIE_LOGS_* variables to get details"))
 		return unstable
 	}
 

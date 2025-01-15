@@ -2,10 +2,26 @@ package systemx
 
 import (
 	"errors"
+	"log"
 	"os"
+	"strings"
 	"syscall"
 	"time"
 )
+
+func MachineID() string {
+	var (
+		err error
+		raw []byte
+	)
+
+	if raw, err = os.ReadFile("/etc/machine-id"); err != nil {
+		log.Println("failed to read machine id, defaulting to empty string", err)
+		return ""
+	}
+
+	return strings.TrimSpace(string(raw))
+}
 
 // FileCreatedAt determine the creation time of a file.
 func FileCreatedAt(info os.FileInfo) (ctime time.Time, err error) {

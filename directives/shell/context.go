@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +45,7 @@ func DefaultContext(options ...Option) (ctx Context, err error) {
 		Hostname:      hostname,
 		FQDN:          _fqdn,
 		Domain:        _domain(_fqdn),
-		MachineID:     machineID(),
+		MachineID:     systemx.MachineID(),
 		Environ:       os.Environ(),
 		timeout:       5 * time.Minute,
 		output:        io.Discard,

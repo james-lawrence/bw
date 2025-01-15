@@ -22,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
+	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
@@ -109,7 +110,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return err
 	}
 
-	if localpriv, err = rsax.CachedAuto(filepath.Join(config.Root, bw.DefaultAgentNotaryKey)); err != nil {
+	if localpriv, err = rsax.CachedAutoDeterministic([]byte(systemx.MachineID()), filepath.Join(config.Root, bw.DefaultAgentNotaryKey)); err != nil {
 		return err
 	}
 
