@@ -40,8 +40,3 @@ func fqdn(hostname string) (string, error) {
 	// no FQDN found
 	return "", nil
 }
-
-func machineID() string {
-	log.Println("machine id not supported on darwin systems")
-	return ""
-}

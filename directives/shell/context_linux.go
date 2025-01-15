@@ -1,9 +1,7 @@
 package shell
 
 import (
-	"log"
 	"net"
-	"os"
 	"strings"
 
 	"github.com/james-lawrence/bw/internal/errorsx"
@@ -38,18 +36,4 @@ func fqdn(hostname string) (string, error) {
 
 	// no FQDN found
 	return "", nil
-}
-
-func machineID() string {
-	var (
-		err error
-		raw []byte
-	)
-
-	if raw, err = os.ReadFile("/etc/machine-id"); err != nil {
-		log.Println("failed to read machine id, defaulting to empty string", err)
-		return ""
-	}
-
-	return strings.TrimSpace(string(raw))
 }
