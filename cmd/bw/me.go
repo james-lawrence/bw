@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gofrs/uuid"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
@@ -59,6 +60,7 @@ func (t cmdMePub) Run(ctx *cmdopts.Global) (err error) {
 type cmdMeInit struct {
 	cmdopts.BeardedWookieEnv
 	Name string `help:"name to assign to the comment"`
+	Seed string `help:"deterministically initialize a user"`
 }
 
 func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
@@ -68,13 +70,14 @@ func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 		encoded     []byte
 	)
 
+	seed := []byte(stringsx.First(t.Seed, uuid.Must(uuid.NewV4()).String()))
 	if config, err = commandutils.ReadConfiguration(t.Environment); err != nil {
 		return err
 	}
 
 	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
 
-	if _, err = notary.NewAutoSigner(stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
+	if _, err = notary.NewDeterministicSigner(seed, stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
 		return err
 	}
 
