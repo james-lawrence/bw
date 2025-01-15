@@ -1,4 +1,3 @@
-disable bearded-wookie.service
 disable bearded-wookie-agent.service
 disable bearded-wookie-coordinator.service
 disable bearded-wookie-notifications.service
