@@ -22,6 +22,7 @@ var example1 = Context{
 	cachedir:      "CACHEDIR",
 	timeout:       time.Second,
 	commit:        "d9662c91bf8c4591ae311d853404ae8e",
+	bwconfigdir:   "CONFIGDIR",
 }
 
 var _ = g.Describe("Context", func() {
@@ -58,6 +59,7 @@ var _ = g.Describe("Context", func() {
 			"BW_ENVIRONMENT_WORK_DIRECTORY=WORKDIR",
 			"BW_ENVIRONMENT_TEMP_DIRECTORY=TEMPDIR",
 			"BW_ENVIRONMENT_CACHE_DIRECTORY=CACHEDIR",
+			"BW_ENVIRONMENT_CONFIG_DIRECTORY=CONFIGDIR",
 		),
 	)
 })
