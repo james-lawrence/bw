@@ -1,3 +1,53 @@
+commit 7429bc72bddfac6ba8a1248525680df24428bbd7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 22:27:41 2025 -0500
+
+    test fix
+
+commit bad8bc0dbaaf6a8ea3b8db0138cba141038cf15a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 22:19:54 2025 -0500
+
+    seed local priv key with machine id, we saw duplicates within gcp
+
+commit c136172c8375baeace55e37aa24f37d85309b2ac
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 21:57:17 2025 -0500
+
+    log cleanup
+
+commit 1f60557a511b86be73691a938f0efd4336370347
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 21:47:43 2025 -0500
+
+    update dependencies
+
+commit 78b5fd4feee49bfdb53757de4790bd468df6dc9a
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 20:03:13 2025 -0500
+
+    ug
+
+commit 586dc8adb924d6de26b3f0b26ab817a1f05f3db0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 19:57:55 2025 -0500
+
+    Revert "update dependencies"
+    
+    This reverts commit 364326626e25dacf73cf182b1efdf805ac78eb26.
+
+commit 66cf5176574897f8b261a3ed6365fab756a45632
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 18:05:09 2025 -0500
+
+    debugging regression
+
+commit 3c6896d7456e9b1cda7b39393459b1072c010b02
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 24 14:49:05 2024 -0500
+
+    release 0.1.1735068698-6cde059e
+
 commit 6cde059ed8a4a1e5aad1a0acfa8f96c55e1536bb
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 24 14:31:38 2024 -0500
