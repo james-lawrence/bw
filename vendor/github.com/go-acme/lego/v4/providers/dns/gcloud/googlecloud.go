@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
+	"github.com/go-acme/lego/v4/challenge"
 	"github.com/go-acme/lego/v4/challenge/dns01"
 	"github.com/go-acme/lego/v4/log"
 	"github.com/go-acme/lego/v4/platform/config/env"
@@ -20,10 +21,6 @@ import (
 	"google.golang.org/api/dns/v1"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/option"
-)
-
-const (
-	changeStatusDone = "done"
 )
 
 // Environment variables names.
@@ -40,6 +37,10 @@ const (
 	EnvPropagationTimeout = envNamespace + "PROPAGATION_TIMEOUT"
 	EnvPollingInterval    = envNamespace + "POLLING_INTERVAL"
 )
+
+const changeStatusDone = "done"
+
+var _ challenge.ProviderTimeout = (*DNSProvider)(nil)
 
 // Config is used to configure the creation of the DNSProvider.
 type Config struct {
@@ -83,7 +84,7 @@ func NewDNSProvider() (*DNSProvider, error) {
 	}
 
 	// Use default credentials.
-	project := env.GetOrDefaultString(EnvProject, autodetectProjectID())
+	project := env.GetOrDefaultString(EnvProject, autodetectProjectID(context.Background()))
 	return NewDNSProviderCredentials(project)
 }
 
@@ -391,8 +392,8 @@ func mustUnquote(raw string) string {
 	return clean
 }
 
-func autodetectProjectID() string {
-	if pid, err := metadata.ProjectID(); err == nil {
+func autodetectProjectID(ctx context.Context) string {
+	if pid, err := metadata.ProjectIDWithContext(ctx); err == nil {
 		return pid
 	}
 

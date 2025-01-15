@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package raftboltdb
 
 import (
 	"context"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/boltdb/bolt"
+	metrics "github.com/hashicorp/go-metrics/compat"
 )
 
 const (

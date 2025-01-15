@@ -15,7 +15,7 @@ var (
 	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 )
 
-func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) error {
+func failField(parent reflect.Value, field reflect.StructField, format string, args ...any) error {
 	name := parent.Type().Name()
 	if name == "" {
 		name = "<anonymous struct>"
@@ -24,7 +24,7 @@ func failField(parent reflect.Value, field reflect.StructField, format string, a
 }
 
 // Must creates a new Parser or panics if there is an error.
-func Must(ast interface{}, options ...Option) *Kong {
+func Must(ast any, options ...Option) *Kong {
 	k, err := New(ast, options...)
 	if err != nil {
 		panic(err)
@@ -76,7 +76,7 @@ type Kong struct {
 // New creates a new Kong parser on grammar.
 //
 // See the README (https://github.com/alecthomas/kong) for usage instructions.
-func New(grammar interface{}, options ...Option) (*Kong, error) {
+func New(grammar any, options ...Option) (*Kong, error) {
 	k := &Kong{
 		Exit:          os.Exit,
 		Stdout:        os.Stdout,
@@ -117,7 +117,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	// Embed any embedded structs.
 	for _, embed := range k.embedded {
-		tag, err := parseTagString(strings.Join(embed.tags, " ")) //nolint:govet
+		tag, err := parseTagString(strings.Join(embed.tags, " "))
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +167,40 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	k.bindings.add(k.vars)
 
+	if err = checkOverlappingXorAnd(k); err != nil {
+		return nil, err
+	}
+
 	return k, nil
+}
+
+func checkOverlappingXorAnd(k *Kong) error {
+	xorGroups := map[string][]string{}
+	andGroups := map[string][]string{}
+	for _, flag := range k.Model.Node.Flags {
+		for _, xor := range flag.Xor {
+			xorGroups[xor] = append(xorGroups[xor], flag.Name)
+		}
+		for _, and := range flag.And {
+			andGroups[and] = append(andGroups[and], flag.Name)
+		}
+	}
+	for xor, xorSet := range xorGroups {
+		for and, andSet := range andGroups {
+			overlappingEntries := []string{}
+			for _, xorTag := range xorSet {
+				for _, andTag := range andSet {
+					if xorTag == andTag {
+						overlappingEntries = append(overlappingEntries, xorTag)
+					}
+				}
+			}
+			if len(overlappingEntries) > 1 {
+				return fmt.Errorf("invalid xor and combination, %s and %s overlap with more than one: %s", xor, and, overlappingEntries)
+			}
+		}
+	}
+	return nil
 }
 
 type varStack []Vars
@@ -216,19 +249,19 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 		return fmt.Errorf("enum for %s: %s", value.Summary(), err)
 	}
 
-	updatedVars := map[string]string{
-		"default": value.Default,
-		"enum":    value.Enum,
-	}
 	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
 	if value.Enum, err = interpolate(value.Enum, vars, nil); err != nil {
 		return fmt.Errorf("enum value for %s: %s", value.Summary(), err)
 	}
+	updatedVars := map[string]string{
+		"default": value.Default,
+		"enum":    value.Enum,
+	}
 	if value.Flag != nil {
 		for i, env := range value.Flag.Envs {
-			if value.Flag.Envs[i], err = interpolate(env, vars, nil); err != nil {
+			if value.Flag.Envs[i], err = interpolate(env, vars, updatedVars); err != nil {
 				return fmt.Errorf("env value for %s: %s", value.Summary(), err)
 			}
 		}
@@ -328,16 +361,14 @@ func (k *Kong) applyHook(ctx *Context, name string) error {
 		default:
 			panic("unsupported Path")
 		}
-		method := getMethod(value, name)
-		if !method.IsValid() {
-			continue
-		}
-		binds := k.bindings.clone()
-		binds.add(ctx, trace)
-		binds.add(trace.Node().Vars().CloneWith(k.vars))
-		binds.merge(ctx.bindings)
-		if err := callFunction(method, binds); err != nil {
-			return err
+		for _, method := range getMethods(value, name) {
+			binds := k.bindings.clone()
+			binds.add(ctx, trace)
+			binds.add(trace.Node().Vars().CloneWith(k.vars))
+			binds.merge(ctx.bindings)
+			if err := callFunction(method, binds); err != nil {
+				return err
+			}
 		}
 	}
 	// Path[0] will always be the app root.
@@ -359,21 +390,19 @@ func (k *Kong) applyHookToDefaultFlags(ctx *Context, node *Node, name string) er
 			if !flag.HasDefault || ctx.values[flag.Value].IsValid() || !flag.Target.IsValid() {
 				continue
 			}
-			method := getMethod(flag.Target, name)
-			if !method.IsValid() {
-				continue
-			}
-			path := &Path{Flag: flag}
-			if err := callFunction(method, binds.clone().add(path)); err != nil {
-				return next(err)
+			for _, method := range getMethods(flag.Target, name) {
+				path := &Path{Flag: flag}
+				if err := callFunction(method, binds.clone().add(path)); err != nil {
+					return next(err)
+				}
 			}
 		}
 		return next(nil)
 	})
 }
 
-func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...interface{}) {
-	lines := strings.Split(fmt.Sprintf(format, args...), "\n")
+func formatMultilineMessage(w io.Writer, leaders []string, format string, args ...any) {
+	lines := strings.Split(strings.TrimRight(fmt.Sprintf(format, args...), "\n"), "\n")
 	leader := ""
 	for _, l := range leaders {
 		if l == "" {
@@ -388,25 +417,25 @@ func formatMultilineMessage(w io.Writer, leaders []string, format string, args .
 }
 
 // Printf writes a message to Kong.Stdout with the application name prefixed.
-func (k *Kong) Printf(format string, args ...interface{}) *Kong {
+func (k *Kong) Printf(format string, args ...any) *Kong {
 	formatMultilineMessage(k.Stdout, []string{k.Model.Name}, format, args...)
 	return k
 }
 
 // Errorf writes a message to Kong.Stderr with the application name prefixed.
-func (k *Kong) Errorf(format string, args ...interface{}) *Kong {
+func (k *Kong) Errorf(format string, args ...any) *Kong {
 	formatMultilineMessage(k.Stderr, []string{k.Model.Name, "error"}, format, args...)
 	return k
 }
 
 // Fatalf writes a message to Kong.Stderr with the application name prefixed then exits with a non-zero status.
-func (k *Kong) Fatalf(format string, args ...interface{}) {
+func (k *Kong) Fatalf(format string, args ...any) {
 	k.Errorf(format, args...)
 	k.Exit(1)
 }
 
 // FatalIfErrorf terminates with an error message if err != nil.
-func (k *Kong) FatalIfErrorf(err error, args ...interface{}) {
+func (k *Kong) FatalIfErrorf(err error, args ...any) {
 	if err == nil {
 		return
 	}
