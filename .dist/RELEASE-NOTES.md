@@ -1,3 +1,31 @@
+commit 39db498b0b3d0014b8e35fc2c133d4461249b158
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 15 09:25:50 2025 -0500
+
+    ci/cd setup
+
+commit 450c909b5754c5aa69205fc82fcd6f8c53e6ac71
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 15 06:41:43 2025 -0500
+
+    ensure all files in .dist/linux are copied.
+    
+    we were only copying the service files previously. leaving the presets
+    and tmpfiles.d behind.
+
+commit 6d6231d61e39af640474d8cfaf1a120495f7ce28
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 15 06:41:04 2025 -0500
+
+    move all system related files under /usr/lib, /etc is for systemd
+    admins.
+
+commit 5a30c68f4590310eba2ab3e45c6dd339cc68ee54
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 14 22:38:28 2025 -0500
+
+    release 0.1.1736911801-7429bc72
+
 commit 7429bc72bddfac6ba8a1248525680df24428bbd7
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Jan 14 22:27:41 2025 -0500
