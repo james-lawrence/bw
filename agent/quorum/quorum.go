@@ -24,7 +24,6 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/logx"
-	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
@@ -121,9 +120,6 @@ type Quorum struct {
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(events chan raft.Observation) {
-	timex.NowAndEvery(10*time.Second, func() {
-		log.Printf("CLUSTER %T %v\n", t.c, t.c.Members())
-	})
 	go t.rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {

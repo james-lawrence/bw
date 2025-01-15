@@ -232,7 +232,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	if dctx, err = daemons.Peered(dctx, &t.Peering); err != nil {
 		return errors.Wrap(err, "failed to initialize peering service")
 	}
-	log.Println("WAAAAT POST PEERED", dctx.Cluster.Peers())
+
 	// attempt notary synchronize before bootstrapping.
 	daemons.SyncAuthorizations(dctx)
 
@@ -252,7 +252,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	if tc, err = daemons.Torrent(dctx); err != nil {
 		return errors.Wrap(err, "failed to initialize deploy archive transfer service")
 	}
-	log.Println("WAAAAT AGENT", dctx.Cluster.Peers())
+
 	if err = daemons.Agent(dctx, tc.Uploader(), tc.Downloader()); err != nil {
 		return errors.Wrap(err, "failed to initialize agent service")
 	}
