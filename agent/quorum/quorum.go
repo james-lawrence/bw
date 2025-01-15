@@ -24,6 +24,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
@@ -120,7 +121,9 @@ type Quorum struct {
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(events chan raft.Observation) {
-	log.Println("CLUSTER", t.c.Peers())
+	timex.NowAndEvery(10*time.Second, func() {
+		log.Printf("CLUSTER %T %v\n", t.c, t.c.Members())
+	})
 	go t.rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
@@ -128,7 +131,6 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 		}),
 		raftutil.ProtocolOptionObservers(
 			t.leadershipTransfer.NewRaftObserver(),
-			// t.deployer.NewRaftObserver(),
 			raft.NewObserver(events, true, func(o *raft.Observation) bool {
 				switch d := o.Data.(type) {
 				case raft.LeaderObservation, raft.RaftState:

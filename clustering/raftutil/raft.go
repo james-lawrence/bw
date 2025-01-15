@@ -493,7 +493,7 @@ func configuration(c rendezvous) (conf raft.Configuration) {
 		q   = agent.QuorumNodes(c)
 	)
 
-	log.Println("potential quorum peers", len(q))
+	log.Println("potential quorum peers", len(q), len(c.GetN(10, nil)))
 	for _, peer := range q {
 		if rs, err = NodeToServer(peer); err != nil {
 			log.Println("ignoring peer, unable to compute address", peer.String(), err)

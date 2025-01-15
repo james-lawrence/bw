@@ -232,6 +232,14 @@ type Config struct {
 	// raft's configuration and index values.
 	NoSnapshotRestoreOnStart bool
 
+	// PreVoteDisabled deactivate the pre-vote feature when set to true
+	PreVoteDisabled bool
+
+	// NoLegacyTelemetry allows to skip the legacy metrics to avoid duplicates.
+	// legacy metrics are those that have `_peer_name` as metric suffix instead as labels.
+	// e.g: raft_replication_heartbeat_peer0
+	NoLegacyTelemetry bool
+
 	// skipStartup allows NewRaft() to bypass all background work goroutines
 	skipStartup bool
 }

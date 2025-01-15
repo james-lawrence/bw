@@ -183,6 +183,7 @@ func (t *Directory) refresh() (err error) {
 	}
 
 	// refresh the pool
+	log.Println("loading pool", t.pooldir)
 	return filepath.Walk(t.pooldir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			log.Println("error walking authority cache", err)
@@ -200,6 +201,8 @@ func (t *Directory) refresh() (err error) {
 		if err = LoadCert(t.pool, path); err != nil {
 			log.Println(err)
 			return nil
+		} else {
+			log.Println("loaded certificate", path)
 		}
 
 		return nil

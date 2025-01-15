@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
-	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -35,10 +34,13 @@ type ListHealthChecksInput struct {
 
 	// If the value of IsTruncated in the previous response was true , you have more
 	// health checks. To get another group, submit another ListHealthChecks request.
+	//
 	// For the value of marker , specify the value of NextMarker from the previous
 	// response, which is the ID of the first health check that Amazon Route 53 will
-	// return if you submit another request. If the value of IsTruncated in the
-	// previous response was false , there are no more health checks to get.
+	// return if you submit another request.
+	//
+	// If the value of IsTruncated in the previous response was false , there are no
+	// more health checks to get.
 	Marker *string
 
 	// The maximum number of health checks that you want ListHealthChecks to return in
@@ -112,25 +114,28 @@ func (c *Client) addOperationListHealthChecksMiddlewares(stack *middleware.Stack
 	if err = addSetLoggerMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddClientRequestIDMiddleware(stack); err != nil {
+	if err = addClientRequestID(stack); err != nil {
 		return err
 	}
-	if err = smithyhttp.AddComputeContentLengthMiddleware(stack); err != nil {
+	if err = addComputeContentLength(stack); err != nil {
 		return err
 	}
 	if err = addResolveEndpointMiddleware(stack, options); err != nil {
 		return err
 	}
-	if err = v4.AddComputePayloadSHA256Middleware(stack); err != nil {
+	if err = addComputePayloadSHA256(stack); err != nil {
 		return err
 	}
-	if err = addRetryMiddlewares(stack, options); err != nil {
+	if err = addRetry(stack, options); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRawResponseToMetadata(stack); err != nil {
+	if err = addRawResponseToMetadata(stack); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRecordResponseTiming(stack); err != nil {
+	if err = addRecordResponseTiming(stack); err != nil {
+		return err
+	}
+	if err = addSpanRetryLoop(stack, options); err != nil {
 		return err
 	}
 	if err = addClientUserAgent(stack, options); err != nil {
@@ -145,10 +150,16 @@ func (c *Client) addOperationListHealthChecksMiddlewares(stack *middleware.Stack
 	if err = addSetLegacyContextSigningOptionsMiddleware(stack); err != nil {
 		return err
 	}
+	if err = addTimeOffsetBuild(stack, c); err != nil {
+		return err
+	}
+	if err = addUserAgentRetryMode(stack, options); err != nil {
+		return err
+	}
 	if err = stack.Initialize.Add(newServiceMetadataMiddleware_opListHealthChecks(options.Region), middleware.Before); err != nil {
 		return err
 	}
-	if err = awsmiddleware.AddRecursionDetection(stack); err != nil {
+	if err = addRecursionDetection(stack); err != nil {
 		return err
 	}
 	if err = addRequestIDRetrieverMiddleware(stack); err != nil {
@@ -163,16 +174,20 @@ func (c *Client) addOperationListHealthChecksMiddlewares(stack *middleware.Stack
 	if err = addDisableHTTPSMiddleware(stack, options); err != nil {
 		return err
 	}
+	if err = addSpanInitializeStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanInitializeEnd(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestStart(stack); err != nil {
+		return err
+	}
+	if err = addSpanBuildRequestEnd(stack); err != nil {
+		return err
+	}
 	return nil
 }
-
-// ListHealthChecksAPIClient is a client that implements the ListHealthChecks
-// operation.
-type ListHealthChecksAPIClient interface {
-	ListHealthChecks(context.Context, *ListHealthChecksInput, ...func(*Options)) (*ListHealthChecksOutput, error)
-}
-
-var _ ListHealthChecksAPIClient = (*Client)(nil)
 
 // ListHealthChecksPaginatorOptions is the paginator options for ListHealthChecks
 type ListHealthChecksPaginatorOptions struct {
@@ -240,6 +255,9 @@ func (p *ListHealthChecksPaginator) NextPage(ctx context.Context, optFns ...func
 	}
 	params.MaxItems = limit
 
+	optFns = append([]func(*Options){
+		addIsPaginatorUserAgent,
+	}, optFns...)
 	result, err := p.client.ListHealthChecks(ctx, &params, optFns...)
 	if err != nil {
 		return nil, err
@@ -258,6 +276,14 @@ func (p *ListHealthChecksPaginator) NextPage(ctx context.Context, optFns ...func
 
 	return result, nil
 }
+
+// ListHealthChecksAPIClient is a client that implements the ListHealthChecks
+// operation.
+type ListHealthChecksAPIClient interface {
+	ListHealthChecks(context.Context, *ListHealthChecksInput, ...func(*Options)) (*ListHealthChecksOutput, error)
+}
+
+var _ ListHealthChecksAPIClient = (*Client)(nil)
 
 func newServiceMetadataMiddleware_opListHealthChecks(region string) *awsmiddleware.RegisterServiceMetadata {
 	return &awsmiddleware.RegisterServiceMetadata{
