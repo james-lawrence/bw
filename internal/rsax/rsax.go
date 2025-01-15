@@ -28,6 +28,11 @@ func Auto() (pkey []byte, err error) {
 	return Generate(defaultBits)
 }
 
+// AutoDeterministic ...
+func AutoDeterministic(seed []byte) func() (pkey []byte, err error) {
+	return func() (pkey []byte, err error) { return Deterministic(seed, defaultBits) }
+}
+
 // CachedAuto loads/generates an RSA key at the provided filepath.
 func CachedAuto(path string) (pkey []byte, err error) {
 	if systemx.FileExists(path) {
@@ -51,7 +56,7 @@ func CachedAutoDeterministic(seed []byte, path string) (pkey []byte, err error) 
 		return os.ReadFile(path)
 	}
 
-	if pkey, err = AutoDeterministic(seed); err != nil {
+	if pkey, err = Deterministic(seed, defaultBits); err != nil {
 		return nil, err
 	}
 
@@ -81,11 +86,6 @@ func CachedGenerate(path string, bits int) (pkey []byte, err error) {
 	}
 
 	return pkey, nil
-}
-
-// AutoDerive ...
-func AutoDeterministic(key []byte) (pkey []byte, err error) {
-	return Deterministic(key, defaultBits)
 }
 
 // Deterministic rsa private key based on the seed. uses a SHA512 hash as

@@ -1,3 +1,4 @@
+.eg.cache
 *.xml
 spike/*
 .bootstraps
