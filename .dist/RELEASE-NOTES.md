@@ -1,3 +1,15 @@
+commit 4a0e9ea19812ded66eb197f3be89f0d5b6c5d4dd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 16 11:41:29 2025 -0500
+
+    enable runtime directory on service
+
+commit 9ce11d1e929ea69ff9faf9370bb7db9d7ca084bf
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 16 11:40:23 2025 -0500
+
+    release 0.1.1737045125-d8330614
+
 commit d83306149c0a38c7e25b15edfa4bc225aa04cf59
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jan 16 11:32:05 2025 -0500
