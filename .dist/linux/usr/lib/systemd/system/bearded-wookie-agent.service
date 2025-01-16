@@ -11,6 +11,7 @@ Restart=always
 Slice=bearded-wookie.slice
 ConfigurationDirectory=%N
 CacheDirectory=%N
+RuntimeDirectory=%N
 # Load the environment variables specified by agent.env.
 # to see all available environment variables and their uses
 # see https://github.com/james-lawrence/bw/blob/master/environment.go.
