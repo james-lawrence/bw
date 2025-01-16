@@ -1,3 +1,15 @@
+commit d83306149c0a38c7e25b15edfa4bc225aa04cf59
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 16 11:32:05 2025 -0500
+
+    move p2p.key to runtime directory to prevent image creation issues
+
+commit 4c41a089d99f3497dd53cccf79e15f4295bdcb8d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Jan 15 11:20:42 2025 -0500
+
+    release 0.1.1736951340-39db498b
+
 commit 39db498b0b3d0014b8e35fc2c133d4461249b158
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Jan 15 09:25:50 2025 -0500
