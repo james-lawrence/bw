@@ -120,6 +120,9 @@ func (t Server) Cached(ctx context.Context, req *CertificateRequest) (cached *Ce
 	if cert, err := tlsx.DecodePEMCertificate(cached.Certificate); err != nil {
 		log.Println("unable to parse current certificate; treating as not found", err)
 		return nil, status.Error(codes.NotFound, "cached certificate not found")
+	} else if cert == nil {
+		log.Println("certificate is missing (nil)")
+		return nil, status.Error(codes.NotFound, "cached certificate not found")
 	} else if cert.NotAfter.Before(time.Now().Add(72 * time.Hour)) {
 		log.Printf("certificate is going to expire soon %s; treating as not found\n", cert.NotAfter)
 		return nil, status.Error(codes.NotFound, "cached certificate not found")
