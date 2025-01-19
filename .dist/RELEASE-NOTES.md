@@ -1,3 +1,15 @@
+commit 010fa7a2968ccf37b87ee8ba2da5f18ef1ebee09
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 18 19:04:57 2025 -0500
+
+    check for nil cert result
+
+commit 443d6794a3c4466e4aeb77d9eb1622d31048adfe
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jan 16 11:49:07 2025 -0500
+
+    release 0.1.1737045689-4a0e9ea1
+
 commit 4a0e9ea19812ded66eb197f3be89f0d5b6c5d4dd
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jan 16 11:41:29 2025 -0500
