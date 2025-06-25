@@ -1,3 +1,51 @@
+commit f2c6298a53ef6a6e67291f5b85ac20de19133259
+Author: James Lawrence <james@egdaemon.com>
+Date:   Wed Jun 25 16:41:20 2025 -0400
+
+    update vendor
+
+commit 40518a27a3e95836b281199ce8f0f57d57b72531
+Author: James Lawrence <james@egdaemon.com>
+Date:   Wed Jun 25 16:37:46 2025 -0400
+
+    prelimary archiving of tls certificate for more durable single server setups
+
+commit 15329a7191212d455295a88b1856c1b8110c5575
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Wed Apr 16 23:26:43 2025 +0000
+
+    Bump golang.org/x/net from 0.37.0 to 0.38.0 in /.eg
+    
+    Bumps [golang.org/x/net](https://github.com/golang/net) from 0.37.0 to 0.38.0.
+    - [Commits](https://github.com/golang/net/compare/v0.37.0...v0.38.0)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: golang.org/x/net
+      dependency-version: 0.38.0
+      dependency-type: indirect
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+
+commit c0efdfff9ac144b4ed9aa97cf668b6dc893eda93
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Mar 22 06:47:55 2025 -0400
+
+    update dependencies
+
+commit 0d617b6365aed4f7f9fd2c99b8e0e6b12c60bc38
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Fri Mar 21 18:37:22 2025 -0400
+
+    add pie mode
+
+commit 9fb8a2cfa37da632527f94bce8533ab2bba5c584
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sat Jan 18 19:14:41 2025 -0500
+
+    release 0.1.1737245102-010fa7a2
+
 commit 010fa7a2968ccf37b87ee8ba2da5f18ef1ebee09
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Sat Jan 18 19:04:57 2025 -0500
