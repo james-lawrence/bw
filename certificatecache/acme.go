@@ -154,5 +154,6 @@ func (t ACME) Refresh() (err error) {
 		errorsx.MaybeLog(err)
 		return err
 	}
+
 	return nil
 }

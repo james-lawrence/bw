@@ -16,7 +16,10 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/fsx"
+	"github.com/james-lawrence/bw/internal/iox"
 )
 
 // NewFilesystem consumes a configuration and generates a bootstrap socket
@@ -173,6 +176,28 @@ func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 
 	if err = os.Rename(metadata, t.metadata); err != nil {
 		return errors.WithStack(err)
+	}
+
+	// persist into the archive directory.
+	if p := filepath.Join(t.a.Credentials.Directory, certificatecache.DefaultTLSCertCA); fsx.IsRegularFile(p) {
+		if err = iox.Copy(p, filepath.Join(t.a.Bootstrap.ArchiveDirectory, certificatecache.DefaultTLSCertCA)); err != nil {
+			log.Printf("failed to copy file: %s - %v", p, err)
+			// return errors.WithStack(err)
+		}
+	}
+
+	if p := filepath.Join(t.a.Credentials.Directory, certificatecache.DefaultTLSCertServer); fsx.IsRegularFile(p) {
+		if err = iox.Copy(p, filepath.Join(t.a.Bootstrap.ArchiveDirectory, certificatecache.DefaultTLSCertServer)); err != nil {
+			log.Printf("failed to copy file: %s - %v", p, err)
+			// return errors.WithStack(err)
+		}
+	}
+
+	if p := filepath.Join(t.a.Credentials.Directory, certificatecache.DefaultTLSKeyServer); fsx.IsRegularFile(p) {
+		if err = iox.Copy(p, filepath.Join(t.a.Bootstrap.ArchiveDirectory, certificatecache.DefaultTLSKeyServer)); err != nil {
+			log.Printf("failed to copy file: %s - %v", p, err)
+			// return errors.WithStack(err)
+		}
 	}
 
 	return nil
