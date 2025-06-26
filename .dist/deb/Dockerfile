@@ -11,4 +11,4 @@ RUN add-apt-repository -n ppa:longsleep/golang-backports
 RUN apt-get update
 RUN apt-get -y install dput devscripts dh-make dput golang-1.24 pinentry-tty
 
-CMD /bin/bash build.sh jammy noble oracular
+CMD /bin/bash build.sh jammy noble oracular plucky
