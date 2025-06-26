@@ -1,4 +1,3 @@
-## workspace
 # atomicgo.dev/cursor v0.2.0
 ## explicit; go 1.15
 atomicgo.dev/cursor
@@ -335,54 +334,6 @@ github.com/davecgh/go-spew/spew
 # github.com/edsrzf/mmap-go v1.1.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
-# github.com/egdaemon/eg v0.0.0-20250612132840-8813478ae595
-## explicit; go 1.24
-github.com/egdaemon/eg
-github.com/egdaemon/eg/internal/coverage
-github.com/egdaemon/eg/internal/coverage/golangcov
-github.com/egdaemon/eg/internal/debugx
-github.com/egdaemon/eg/internal/envx
-github.com/egdaemon/eg/internal/errorsx
-github.com/egdaemon/eg/internal/execx
-github.com/egdaemon/eg/internal/fsx
-github.com/egdaemon/eg/internal/iox
-github.com/egdaemon/eg/internal/langx
-github.com/egdaemon/eg/internal/md5x
-github.com/egdaemon/eg/internal/modfilex
-github.com/egdaemon/eg/internal/numericx
-github.com/egdaemon/eg/internal/protobuflog
-github.com/egdaemon/eg/internal/slicesx
-github.com/egdaemon/eg/internal/stringsx
-github.com/egdaemon/eg/internal/systemx
-github.com/egdaemon/eg/internal/tracex
-github.com/egdaemon/eg/internal/userx
-github.com/egdaemon/eg/interp/c8s
-github.com/egdaemon/eg/interp/events
-github.com/egdaemon/eg/interp/exec
-github.com/egdaemon/eg/interp/runtime/wasi/ffierrors
-github.com/egdaemon/eg/interp/runtime/wasi/ffiguest
-github.com/egdaemon/eg/runtime/wasi/eg
-github.com/egdaemon/eg/runtime/wasi/egenv
-github.com/egdaemon/eg/runtime/wasi/eggit
-github.com/egdaemon/eg/runtime/wasi/egunsafe
-github.com/egdaemon/eg/runtime/wasi/egunsafe/fficoverage
-github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiegcontainer
-github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiexec
-github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigit
-github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigraph
-github.com/egdaemon/eg/runtime/wasi/env
-github.com/egdaemon/eg/runtime/wasi/shell
-github.com/egdaemon/eg/runtime/x/wasi/eggolang
-github.com/egdaemon/eg/runtime/x/wasi/execx
-# github.com/egdaemon/wasinet/wasinet v0.0.0-20250205011224-d5f0e1da96d7
-## explicit; go 1.23.4
-github.com/egdaemon/wasinet/wasinet
-github.com/egdaemon/wasinet/wasinet/ffi
-github.com/egdaemon/wasinet/wasinet/ffierrors
-github.com/egdaemon/wasinet/wasinet/internal/errorsx
-github.com/egdaemon/wasinet/wasinet/internal/langx
-github.com/egdaemon/wasinet/wasinet/stdlib/wasip1net
-github.com/egdaemon/wasinet/wasinet/stdlib/wasip1syscall
 # github.com/emirpasic/gods v1.18.1
 ## explicit; go 1.2
 github.com/emirpasic/gods/containers
