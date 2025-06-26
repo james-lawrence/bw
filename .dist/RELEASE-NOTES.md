@@ -1,3 +1,21 @@
+commit 5e1bb2069dc9a458c68709177403ba0e5a755b97
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 26 08:53:22 2025 -0400
+
+    update dependencies
+
+commit 579ee277681bf2d7da75f74bde80b9cc0be23c7d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 26 08:49:02 2025 -0400
+
+    add plucky to distro list
+
+commit 65ed7d05e78d9a915b24ea9a01c0d35760eb5f11
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 26 08:48:41 2025 -0400
+
+    release 0.1.1750940986-31d29d53
+
 commit 31d29d53f35595d63967050b148265380d1a7c18
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jun 26 08:28:22 2025 -0400
