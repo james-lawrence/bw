@@ -41,7 +41,7 @@ cp ${ARCHIVE} ../bearded-wookie_${VERSION}.orig.tar.gz
 
 tar -xf ../bearded-wookie_${VERSION}.orig.tar.gz -C src/
 
-/usr/lib/go-1.22/bin/go build -C src -buildvcs=false ./cmd/...
+/usr/lib/go-1.24/bin/go build -C src -buildvcs=false ./cmd/...
 ~/go/bin/bw version
 
 i=-1
