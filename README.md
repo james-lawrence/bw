@@ -83,3 +83,307 @@ Benefits of bearded-wookie:
 - when something does go wrong, bw is easy to repair. just destroy its cache (default /var/cache/bearded-wookie) and reboot the agents.
 - simple configuration simplest configuration is ~ 40 lines between the agent/clients, one port (tcp and udp), and DNS record.
 
+## Single-Node Deployment Architecture & Troubleshooting
+
+This section provides a deep dive into configuring BW for single-node deployments, common pitfalls, and debugging techniques based on real-world implementation experience.
+
+### Architecture Overview: Single-Node vs Multi-Node
+
+BW is designed for distributed multi-node clusters, but can be configured for single-node operation with specific settings:
+
+```
+Multi-Node (Production)          Single-Node (Development/Testing)
+┌─────────────────────────┐      ┌─────────────────────────┐
+│ Client                  │      │ Client                  │
+│ ├── bw deploy env       │      │ ├── bw deploy env       │
+│ └── TLS verification    │      │ └── --insecure flag     │
+└─────────────────────────┘      └─────────────────────────┘
+            │                                   │
+            ▼                                   ▼
+┌─────────────────────────┐      ┌─────────────────────────┐
+│ Load Balancer/Proxy     │      │ Optional Nginx Proxy    │
+│ ├── Port 443 (HTTPS)   │      │ ├── Port 443 → 2000     │
+│ └── ALPN Routing        │      │ └── Stream mode         │
+└─────────────────────────┘      └─────────────────────────┘
+            │                                   │
+    ┌───────┼───────┐                          ▼
+    ▼       ▼       ▼              ┌─────────────────────────┐
+┌───────┐ ┌───────┐ ┌───────┐      │ Single BW Agent         │
+│Agent 1│ │Agent 2│ │Agent N│      │ ├── Port 2000           │
+│:2000  │ │:2000  │ │:2000  │      │ ├── SWIM: self-gossip  │
+└───────┘ └───────┘ └───────┘      │ ├── RAFT: single voter  │
+    │       │       │              │ ├── P2P: 127.0.0.1     │
+    └───────┼───────┘              │ └── minimumNodes: 1     │
+            │                      └─────────────────────────┘
+┌─────────────────────────┐
+│ Distributed P2P Mesh    │
+│ ├── Cross-node gossip   │
+│ ├── RAFT consensus      │
+│ └── BitTorrent sharing  │
+└─────────────────────────┘
+```
+
+### Critical Configuration for Single-Node Deployments
+
+#### 1. Agent Configuration (`agent.config`)
+
+```yaml
+root: "/var/cache/bearded-wookie"
+keepN: 5                           # Deployment history retention
+minimumNodes: 1                    # ⚠️  CRITICAL: Override default safety
+snapshotFrequency: "3h"            # RAFT snapshot interval
+credentials:
+  source: disabled                 # ⚠️  CRITICAL: Disable TLS verification
+notary:
+  authority: [
+    "/etc/bearded-wookie/default/bw.auth.keys"  # SSH key authentication
+  ]
+clusterTokens:                     # Unique cluster identification
+  - "cluster-token-1"
+  - "cluster-token-2"
+```
+
+#### 2. Network Environment (`agent.env`)
+
+```bash
+# P2P Discovery and Communication
+BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT=2000
+
+# Network Binding Configuration
+BEARDED_WOOKIE_AGENT_P2P_BIND=0.0.0.0:2000           # Listen on all interfaces
+BEARDED_WOOKIE_AGENT_P2P_ADVERTISED=127.0.0.1:2000   # ⚠️  CRITICAL: Localhost for single-node
+
+# Cluster Identity
+BEARDED_WOOKIE_AGENT_SERVERNAME=your-node-name
+
+# Cloud Integration
+BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL=false # Disable auto-discovery
+
+# Execution Environment
+SHELL=/bin/bash
+```
+
+#### 3. Client Configuration (`.bwconfig/environment/config.yml`)
+
+```yaml
+address: "your-node:2000"         # External agent address
+discovery: "your-node:2000"       # Same as address for single-node
+servername: "your-node-name"      # Must match agent
+concurrency: 0.25                 # Deployment parallelism
+credentials:
+  source: disabled                 # ⚠️  CRITICAL: Match agent setting
+deploy:
+  dir: ".deploy/environment"       # Deployment scripts location
+  timeout: 1h0m0s                  # Deployment timeout
+  treeish: origin/main             # Git reference to deploy
+```
+
+### Common Errors and Debugging Techniques
+
+#### Error 1: "insufficient nodes for deployment"
+
+**Symptoms:**
+```
+[ERROR] deployment rejected: cluster has 1 nodes, minimum required: 3
+```
+
+**Root Cause:** BW's default safety mechanism requires multiple nodes for consensus.
+
+**Solution:**
+```yaml
+# In agent.config
+minimumNodes: 1  # Override default minimum
+```
+
+**Debugging:**
+```bash
+# Check cluster status
+bw info nodes environment-name --insecure -v
+
+# Verify agent configuration
+grep -i minimum /etc/bearded-wookie/default/agent.config
+```
+
+#### Error 2: "tls: failed to verify certificate"
+
+**Symptoms:**
+```
+[ERROR] x509: certificate signed by unknown authority
+[ERROR] failed to verify certificate: x509: certificate is not valid
+```
+
+**Root Cause:** Self-signed certificates don't match between client and server.
+
+**Solution:**
+```bash
+# Agent side: disable TLS verification
+credentials:
+  source: disabled
+
+# Client side: use insecure flag
+bw deploy env environment-name --insecure
+```
+
+**Debugging:**
+```bash
+# Test raw connectivity
+openssl s_client -connect your-node:2000 -verify_return_error
+
+# Check certificate details
+openssl x509 -in cert.pem -text -noout
+
+# Verify BW can connect
+bw info check your-node:2000 --insecure -v
+```
+
+#### Error 3: Network binding and discovery issues
+
+**Symptoms:**
+```
+[ERROR] failed to bind to address 127.0.0.1:2000: address already in use
+[ERROR] no peers discovered after timeout
+```
+
+**Root Cause:** Incorrect bind vs advertised address configuration.
+
+**Solution:**
+```bash
+# Bind to all interfaces for external access
+BEARDED_WOOKIE_AGENT_P2P_BIND=0.0.0.0:2000
+
+# Advertise localhost for single-node internal communication  
+BEARDED_WOOKIE_AGENT_P2P_ADVERTISED=127.0.0.1:2000
+
+# Ensure discovery port matches bind port
+BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT=2000
+```
+
+**Debugging:**
+```bash
+# Check port bindings
+netstat -tlnp | grep :2000
+ss -tlnp | grep :2000
+
+# Test connectivity from client
+telnet your-node 2000
+nc -zv your-node 2000
+
+# Check agent logs
+journalctl -u bearded-wookie-agent -f
+```
+
+#### Error 5: Go build environment issues
+
+**Symptoms:**
+```
+[LOCAL] executing go build ...
+[LOCAL] go: module cache not found: neither GOMODCACHE nor GOPATH is set
+[LOCAL] failed directive: build.bwcmd
+```
+
+**Root Cause:** Missing Go environment variables during build.
+
+**Solution:**
+```bash
+# In build script (.local/build.bwcmd)
+- command: cd %bw.temp.directory%/archive && go build -o %bw.archive.directory%/.filesystem/usr/local/bin/daemon ./cmd/daemon
+  loadenv:
+    - "%bw.archive.directory%/bw.env"
+
+# In bw.env file
+CGO_ENABLED=0
+GOOS=linux  
+GOARCH=amd64
+GOPATH=/tmp/go
+GOCACHE=/tmp/go-cache
+```
+
+**Debugging:**
+```bash
+# Check Go environment during build
+- command: env | grep GO | sort
+
+# Test build manually
+cd archive && CGO_ENABLED=0 GOOS=linux go build ./cmd/daemon
+```
+
+### Deployment Directory Structure
+
+Proper deployment structure following established patterns:
+
+```
+.deploy/environment/
+├── .local/                    # Local build scripts
+│   ├── 01-archive.bwcmd      # Git archive creation
+│   └── 02-build.bwcmd        # Binary compilation
+├── .remote/                   # Remote deployment scripts
+│   ├── 00-unpack.bwcmd       # Archive extraction
+│   ├── 01-services.bwcmd     # Service configuration
+│   └── 90-systemd.bwcmd      # Service management
+├── .filesystem/               # Files for deployment
+│   └── usr/local/bin/         # Compiled binaries
+├── systemd/                   # Systemd service files
+│   └── service.service
+├── bw.env                     # Build environment
+└── .gitignore                 # Exclude build artifacts
+```
+
+### Nginx Integration Patterns
+
+#### Simple TCP Proxy
+```nginx
+stream {
+    server {
+        listen 443;
+        proxy_pass 127.0.0.1:2000;
+        proxy_timeout 1s;
+        proxy_responses 1;
+    }
+}
+```
+
+#### ALPN Protocol Routing
+```nginx
+stream {
+    map $ssl_preread_alpn_protocols $upstream {
+        ~\bbw\b 127.0.0.1:2000;      # BW protocol traffic
+        default  127.0.0.1:8080;     # Application traffic
+    }
+    
+    server {
+        listen 443;
+        ssl_preread on;
+        proxy_pass $upstream;
+    }
+}
+```
+
+### Production Migration Path
+
+To migrate from single-node to multi-node:
+
+1. **Add additional nodes** with same cluster tokens
+2. **Update `minimumNodes`** to match cluster size
+3. **Enable proper TLS** with `credentials.source: acme` or custom CA
+4. **Configure load balancing** across all agents
+5. **Update client config** to use multiple discovery addresses
+
+### Monitoring and Observability
+
+Key metrics to monitor for single-node deployments:
+
+```bash
+# Agent health
+curl -s http://localhost:2000/healthz
+
+# Deployment history
+bw info deployments environment-name --insecure
+
+# Cluster status
+bw info nodes environment-name --insecure
+
+# Service status
+systemctl status bearded-wookie-agent
+journalctl -u bearded-wookie-agent --since="1 hour ago"
+```
+
