@@ -130,10 +130,10 @@ Multi-Node (Production)          Single-Node (Development/Testing)
 ```yaml
 root: "/var/cache/bearded-wookie"
 keepN: 5                           # Deployment history retention
-minimumNodes: 1                    # ⚠️  CRITICAL: Override default safety
+minimumNodes: 1                    # ⚠️  CRITICAL: disable quorum consensus.
 snapshotFrequency: "3h"            # RAFT snapshot interval
 credentials:
-  source: disabled                 # ⚠️  CRITICAL: Disable TLS verification
+  source: disabled                 # ⚠️  SECURITY: this is not recommended. but can be useful for debugging purposes.
 notary:
   authority: [
     "/etc/bearded-wookie/default/bw.auth.keys"  # SSH key authentication
@@ -151,13 +151,13 @@ BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT=2000
 
 # Network Binding Configuration
 BEARDED_WOOKIE_AGENT_P2P_BIND=0.0.0.0:2000           # Listen on all interfaces
-BEARDED_WOOKIE_AGENT_P2P_ADVERTISED=127.0.0.1:2000   # ⚠️  CRITICAL: Localhost for single-node
+BEARDED_WOOKIE_AGENT_P2P_ADVERTISED=127.0.0.1:2000   # ⚠️  NOTE: this depends on your cloud infrastructure.
 
 # Cluster Identity
-BEARDED_WOOKIE_AGENT_SERVERNAME=your-node-name
+# BEARDED_WOOKIE_AGENT_SERVERNAME=your-node-name      # you should almost never need to do this. but can be handy for debugging.
 
 # Cloud Integration
-BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL=false # Disable auto-discovery
+BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL=false # Disable auto-discovery of peers
 
 # Execution Environment
 SHELL=/bin/bash
