@@ -346,8 +346,10 @@ stream {
 ```nginx
 stream {
     map $ssl_preread_alpn_protocols $upstream {
-        ~\bbw\b 127.0.0.1:2000;      # BW protocol traffic
-        default  127.0.0.1:8080;     # Application traffic
+        ~\bacme-tls/1\b 127.0.0.1:2000; # BW tls management
+		      ~\bbw.mux\b 127.0.0.1:2000;     # BW protocol traffic
+		      ~\bbw.proxy\b 127.0.0.1:2000;   # BW proxy traffic
+        default  127.0.0.1:8080;        # Application traffic
     }
     
     server {
