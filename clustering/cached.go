@@ -18,7 +18,7 @@ func NewCached(fetch cachefiller) *Cached {
 }
 
 type Cached struct {
-	m       sync.Mutex
+	m       sync.RWMutex
 	fetch   cachefiller
 	ttl     time.Duration
 	last    time.Time
@@ -26,11 +26,23 @@ type Cached struct {
 }
 
 func (t *Cached) cached() Rendezvous {
+	t.m.RLock()
+	if time.Since(t.last) <= t.ttl && t._cached != nil {
+		cached := t._cached
+		t.m.RUnlock()
+		return cached
+	}
+	t.m.RUnlock()
+
 	t.m.Lock()
 	defer t.m.Unlock()
-	if time.Since(t.last) > t.ttl {
-		t._cached = t.fetch(context.Background())
+
+	if time.Since(t.last) <= t.ttl && t._cached != nil {
+		return t._cached
 	}
+
+	t._cached = t.fetch(context.Background())
+	t.last = time.Now()
 	return t._cached
 }
 
