@@ -2,6 +2,7 @@ package rendezvous_test
 
 import (
 	"net"
+	"testing"
 
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
@@ -43,22 +44,54 @@ var _ = Describe("Rendezvous", func() {
 			},
 			Entry(
 				"should return every node if n is larger than the number of peers", 2*peers, sampleKey1,
-				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
-				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
-				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
-				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
 				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
+				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
+				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
+				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
+				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
 			),
 			Entry(
 				"example 1", 1, sampleKey1,
-				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
+				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
 			),
 			Entry(
 				"example 2", 3, sampleKey1,
-				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
-				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
+				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
+				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
 				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
 			),
 		)
 	})
 })
+
+// createTestNodes creates a slice of test nodes for benchmarking
+func createTestNodes(count int) []*memberlist.Node {
+	nodes := make([]*memberlist.Node, count)
+	for i := range count {
+		nodes[i] = &memberlist.Node{
+			Name: string(rune('a'+i%26)) + string(rune('a'+(i/26)%26)),
+		}
+	}
+	return nodes
+}
+
+func BenchmarkMax(b *testing.B) {
+	nodes := createTestNodes(100)
+	key := []byte("test-key")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = Max(key, nodes)
+	}
+}
+
+func BenchmarkMaxN(b *testing.B) {
+	nodes := createTestNodes(100)
+	key := []byte("test-key")
+	n := 10
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = MaxN(n, key, nodes)
+	}
+}

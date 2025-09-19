@@ -2,6 +2,8 @@ package rendezvous
 
 import (
 	"crypto/md5"
+	"encoding/binary"
+	"hash"
 	"math/big"
 	"sort"
 
@@ -31,11 +33,12 @@ func Compute(key []byte, nodes []*memberlist.Node, x func(*memberlist.Node, *big
 
 // Max - finds the node with the highest hash for the given key.
 func Max(key []byte, nodes []*memberlist.Node) (max *memberlist.Node) {
-	maxValue := big.NewInt(0)
+	var maxValue uint64
+	hasher := md5.New()
 
-	Compute(key, nodes, func(node *memberlist.Node, bi *big.Int) {
-		if bi.Cmp(maxValue) == 1 {
-			maxValue = bi
+	computeFast(key, nodes, hasher, func(node *memberlist.Node, hashValue uint64) {
+		if hashValue > maxValue {
+			maxValue = hashValue
 			max = node
 		}
 	})
@@ -43,29 +46,42 @@ func Max(key []byte, nodes []*memberlist.Node) (max *memberlist.Node) {
 	return max
 }
 
-// MaxN - finds the node with the highest hash for the given key.
+// MaxN - finds the nodes with the highest hash values for the given key.
 func MaxN(n int, key []byte, nodes []*memberlist.Node) []*memberlist.Node {
-	type pair struct {
-		peer *memberlist.Node
-		val  *big.Int
-	}
-
 	if n > len(nodes) {
 		n = len(nodes)
 	}
 
 	results := make([]*memberlist.Node, 0, n)
-	peers := make([]pair, 0, len(nodes))
+	peers := make([]nodeHash, 0, len(nodes))
+	hasher := md5.New()
 
-	Compute(key, nodes, func(node *memberlist.Node, bi *big.Int) {
-		peers = append(peers, pair{peer: node, val: bi})
+	computeFast(key, nodes, hasher, func(node *memberlist.Node, hashValue uint64) {
+		peers = append(peers, nodeHash{peer: node, val: hashValue})
 	})
 
-	sort.Slice(peers, func(i, j int) bool { return peers[i].val.Cmp(peers[j].val) == -1 })
+	sort.Slice(peers, func(i, j int) bool { return peers[i].val > peers[j].val })
 
-	for _, p := range peers[:n] {
-		results = append(results, p.peer)
+	for i := 0; i < n; i++ {
+		results = append(results, peers[i].peer)
 	}
 
 	return results
+}
+
+// computeFast computes rendezvous hash using uint64 instead of big.Int for better performance
+func computeFast(key []byte, nodes []*memberlist.Node, hasher hash.Hash, x func(*memberlist.Node, uint64)) {
+	for _, node := range nodes {
+		hasher.Reset()
+		hasher.Write([]byte(node.Name))
+		hasher.Write(key)
+		hashBytes := hasher.Sum(nil)
+		hashValue := binary.BigEndian.Uint64(hashBytes[:8])
+		x(node, hashValue)
+	}
+}
+
+type nodeHash struct {
+	peer *memberlist.Node
+	val  uint64
 }
