@@ -287,6 +287,27 @@ func clearTorrents(c storage.TorrentConfig) chan *deployment.DeployResult {
 	return tdr
 }
 
+// refreshDialerCredentials regenerates daemon credentials and updates the dialer
+func refreshDialerCredentials(dctx *daemons.Context) error {
+	var (
+		newSigner notary.Signer
+		err       error
+	)
+
+	if newSigner, err = commandutils.Generatecredentials(dctx.Config, dctx.NotaryStorage); err != nil {
+		return err
+	}
+
+	// Replace the daemon context's dialer with fresh credentials
+	dctx.Dialer = dialers.NewDefaults(
+		dialers.WithMuxer(tlsx.NewDialer(dctx.RPCCredentials), dctx.Listener.Addr()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithPerRPCCredentials(newSigner),
+	)
+
+	return nil
+}
+
 func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployResult {
 	var (
 		ndr = make(chan *deployment.DeployResult)
@@ -296,6 +317,12 @@ func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployR
 		for dr := range ndr {
 			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(dctx.NotaryStorage.Root, bw.AuthKeysFile)))
 			daemons.SyncAuthorizations(dctx)
+
+			if err := refreshDialerCredentials(&dctx); err != nil {
+				log.Printf("failed to refresh daemon credentials post-deploy: %v", err)
+			} else {
+				log.Println("daemon credentials refreshed successfully post-deploy")
+			}
 		}
 	}()
 
