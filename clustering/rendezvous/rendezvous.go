@@ -3,7 +3,7 @@ package rendezvous
 import (
 	"crypto/md5"
 	"math/big"
-	"sort"
+	"slices"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -61,7 +61,7 @@ func MaxN(n int, key []byte, nodes []*memberlist.Node) []*memberlist.Node {
 		peers = append(peers, pair{peer: node, val: bi})
 	})
 
-	sort.Slice(peers, func(i, j int) bool { return peers[i].val.Cmp(peers[j].val) == -1 })
+	slices.SortStableFunc(peers, func(a, b pair) int { return b.val.Cmp(a.val) })
 
 	for _, p := range peers[:n] {
 		results = append(results, p.peer)

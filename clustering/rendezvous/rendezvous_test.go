@@ -13,7 +13,10 @@ import (
 )
 
 var _ = Describe("Rendezvous", func() {
-	const sampleKey1 = "hello world"
+	const (
+		sampleKey1 = "hello world"
+	)
+
 	DescribeTable("Max",
 		func(key string, expectedPeer *memberlist.Node, peers []*memberlist.Node) {
 			Expect(Max([]byte(key), peers)).To(Equal(expectedPeer))
@@ -43,22 +46,34 @@ var _ = Describe("Rendezvous", func() {
 			},
 			Entry(
 				"should return every node if n is larger than the number of peers", 2*peers, sampleKey1,
+				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
+				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
+				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
+				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
+				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
+			),
+			Entry(
+				"example 1", 1, sampleKey1,
+				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
+			),
+			Entry(
+				"example 2", 3, sampleKey1,
+				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
+				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
+				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
+			),
+		)
+
+		It("should return in the same order as Max", func() {
+			nodes := []*memberlist.Node{
 				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
 				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
 				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
 				clusteringtestutil.NewNode("node-5", net.ParseIP("127.0.0.5")),
 				clusteringtestutil.NewNode("node-1", net.ParseIP("127.0.0.1")),
-			),
-			Entry(
-				"example 1", 1, sampleKey1,
-				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
-			),
-			Entry(
-				"example 2", 3, sampleKey1,
-				clusteringtestutil.NewNode("node-3", net.ParseIP("127.0.0.3")),
-				clusteringtestutil.NewNode("node-4", net.ParseIP("127.0.0.4")),
-				clusteringtestutil.NewNode("node-2", net.ParseIP("127.0.0.2")),
-			),
-		)
+			}
+
+			Expect(Max([]byte(sampleKey1), nodes)).To(Equal(MaxN(1, []byte(sampleKey1), nodes)[0]))
+		})
 	})
 })
