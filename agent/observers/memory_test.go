@@ -1,6 +1,9 @@
 package observers
 
 import (
+	"sync"
+	"testing"
+
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -20,3 +23,21 @@ var _ = Describe("Directory", func() {
 		Eventually(func() int { return len(dirconns.observers) }).Should(Equal(0))
 	})
 })
+
+func BenchmarkMemoryDispatch(b *testing.B) {
+	observers := make(map[string]Conn, 100)
+	for i := 0; i < 100; i++ {
+		observers[string(rune('a'+i/26))+string(rune('a'+i%26))] = Conn{conn: nil}
+	}
+	m := &sync.RWMutex{}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		m.RLock()
+		for id, conn := range observers {
+			_ = id
+			_ = conn
+		}
+		m.RUnlock()
+	}
+}

@@ -98,22 +98,18 @@ func (t Memory) Connect(b chan *agent.Message) (l net.Listener, s *grpc.Server, 
 // Dispatch messages to the observers.
 func (t Memory) Dispatch(ctx context.Context, messages ...*agent.Message) error {
 	t.m.RLock()
-	cpy := make(map[string]Conn, len(t.observers))
-	for id, obs := range t.observers {
-		cpy[id] = obs
-	}
-	t.m.RUnlock()
+	defer t.m.RUnlock()
 
-	if len(cpy) == 0 {
+	if len(t.observers) == 0 {
 		return nil
 	}
 
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
-		log.Println("observer dispatch initiated", len(cpy))
-		defer log.Println("observer dispatch completed", len(cpy))
+		log.Println("observer dispatch initiated", len(t.observers))
+		defer log.Println("observer dispatch completed", len(t.observers))
 	}
 
-	for id, conn := range cpy {
+	for id, conn := range t.observers {
 		if err := t.dispatch(ctx, conn, messages...); err != nil {
 			log.Println(errors.Wrapf(err, "failed to deliver messages: %s", id))
 		}
