@@ -84,3 +84,19 @@ func (t *file) background() *file {
 
 	return t
 }
+
+// Refresh manually reloads the authorization data from the source file.
+// This is useful when file change notifications might have been missed.
+func (t *file) Refresh() error {
+	log.Printf("manual authorization refresh initiated %s\n", t.source)
+
+	m := NewMem()
+	if err := LoadAuthorizedKeys(m, t.source); err != nil {
+		log.Printf("manual authorization refresh failed %s: %v\n", t.source, err)
+		return err
+	}
+
+	t.storage = m
+	log.Printf("manual authorization refresh completed %s\n", t.source)
+	return nil
+}

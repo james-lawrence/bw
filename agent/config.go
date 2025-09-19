@@ -255,8 +255,9 @@ type Config struct {
 	ServerName        string
 	CA                string `yaml:"ca"`
 	Credentials       struct {
-		Mode      string `yaml:"source"`
-		Directory string `yaml:"directory"`
+		Mode         string `yaml:"source"`
+		Directory    string `yaml:"directory"`
+		PresharedKey string `yaml:"presharedKey"` // preshared key for automatic credential generation
 	} `yaml:"credentials"`
 	DNSBind      dnsBind  `yaml:"dnsBind"`
 	DNSBootstrap []string `yaml:"dnsBootstrap"`

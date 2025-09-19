@@ -2,6 +2,7 @@ package notary
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -82,6 +83,65 @@ func NewAutoSigner(comment string) (s Signer, err error) {
 
 func NewDeterministicSigner(seed []byte, comment string) (s Signer, err error) {
 	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.AutoDeterministic(seed))
+}
+
+// NewPresharedKeySigner creates a signer using a preshared key for deterministic credential generation.
+// This allows agents to automatically have valid credentials without manual provisioning.
+func NewPresharedKeySigner(presharedKey, agentID, comment string) (s Signer, err error) {
+	seed := sha256.Sum256([]byte(presharedKey + ":" + agentID))
+	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.AutoDeterministic(seed[:]))
+}
+
+// NewAgentPresharedKeySigner creates an agent signer using a preshared key.
+func NewAgentPresharedKeySigner(root, presharedKey, agentID string) (s Signer, err error) {
+	seed := sha256.Sum256([]byte(presharedKey + ":agent:" + agentID))
+	return newAutoSignerPath(filepath.Join(root, bw.DefaultAgentNotaryKey), "", rsax.AutoDeterministic(seed[:]))
+}
+
+// GeneratePresharedKeyCredentials generates the public key for a given preshared key + agent ID combination.
+// This is used to pre-populate the authorization system with valid credentials.
+func GeneratePresharedKeyCredentials(presharedKey, agentID string) (fingerprint string, pubKey []byte, err error) {
+	seed := sha256.Sum256([]byte(presharedKey + ":agent:" + agentID))
+
+	privateKey, err := rsax.AutoDeterministic(seed[:])()
+	if err != nil {
+		return "", nil, err
+	}
+
+	pubKey, err = sshx.PublicKey(privateKey)
+	if err != nil {
+		return "", nil, err
+	}
+
+	fingerprint = sshx.FingerprintSHA256(pubKey)
+	return fingerprint, pubKey, nil
+}
+
+// BootstrapPresharedKeyCredentials automatically adds credentials for all agents that would use the preshared key.
+// This should be called on cluster startup if preshared keys are enabled.
+func BootstrapPresharedKeyCredentials(storage storage, presharedKey string, agentIDs []string) error {
+	for _, agentID := range agentIDs {
+		fingerprint, pubKey, err := GeneratePresharedKeyCredentials(presharedKey, agentID)
+		if err != nil {
+			log.Printf("failed to generate preshared credentials for agent %s: %v", agentID, err)
+			continue
+		}
+
+		grant := &Grant{
+			Permission:    agent(),
+			Authorization: pubKey,
+			Fingerprint:   fingerprint,
+		}
+
+		if _, err := storage.Insert(grant); err != nil {
+			log.Printf("failed to insert preshared credentials for agent %s: %v", agentID, err)
+			continue
+		}
+
+		log.Printf("bootstrapped preshared credentials for agent %s (fingerprint: %s)", agentID, fingerprint)
+	}
+
+	return nil
 }
 
 // AutoSignerInfo returns the fingerprint and authorized ssh key.

@@ -130,6 +130,20 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return err
 	}
 
+	// Bootstrap preshared key credentials if configured
+	if config.Credentials.PresharedKey != "" {
+		// Use hostname as agent ID for preshared key generation
+		agentID := config.Name
+		if agentID == "" {
+			agentID = systemx.HostnameOrDefault("unknown")
+		}
+
+		log.Printf("bootstrapping preshared key credentials for agent: %s", agentID)
+		if err := notary.BootstrapPresharedKeyCredentials(ns, config.Credentials.PresharedKey, []string{agentID}); err != nil {
+			log.Printf("failed to bootstrap preshared key credentials: %v", err)
+		}
+	}
+
 	if ss, err = commandutils.Generatecredentials(config, ns); err != nil {
 		return err
 	}
@@ -295,6 +309,11 @@ func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployR
 	go func() {
 		for dr := range ndr {
 			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(dctx.NotaryStorage.Root, bw.AuthKeysFile)))
+
+			if err := dctx.NotaryStorage.Refresh(); err != nil {
+				log.Println("failed to refresh notary storage after deployment:", err)
+			}
+
 			daemons.SyncAuthorizations(dctx)
 		}
 	}()

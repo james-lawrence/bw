@@ -36,6 +36,16 @@ func Generatecredentials(config agent.Config, n notary.Composite) (ss notary.Sig
 	log.Println("generating credentials initiated")
 	defer log.Println("generating credentials completed")
 
+	if config.Credentials.PresharedKey != "" {
+		agentID := config.Name
+		if agentID == "" {
+			agentID = "unknown"
+		}
+
+		log.Printf("using preshared key for agent credentials: %s", agentID)
+		return notary.NewAgentPresharedKeySigner(config.Root, config.Credentials.PresharedKey, agentID)
+	}
+
 	if ring, err = config.Keyring(); err != nil {
 		return ss, err
 	}

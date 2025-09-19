@@ -86,6 +86,11 @@ type storage interface {
 	Sync(ctx context.Context, b Bloomy, c chan *Grant) (err error)
 }
 
+// Refreshable storage can reload its credentials from disk
+type Refreshable interface {
+	Refresh() error
+}
+
 type option func(*Service)
 
 type authority interface {

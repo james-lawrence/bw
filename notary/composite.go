@@ -108,3 +108,27 @@ func (t Composite) Insert(g *Grant) (*Grant, error) {
 func (t Composite) Delete(g *Grant) (*Grant, error) {
 	return t.primary.Delete(g)
 }
+
+// Refresh reloads authorization data from disk for all refreshable buckets.
+func (t Composite) Refresh() error {
+	var errs []error
+
+	if r, ok := t.primary.(Refreshable); ok {
+		if err := r.Refresh(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	for _, b := range t.buckets {
+		if r, ok := b.(Refreshable); ok {
+			if err := r.Refresh(); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+
+	if len(errs) > 0 {
+		return errs[0]
+	}
+	return nil
+}
