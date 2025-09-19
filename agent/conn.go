@@ -297,7 +297,9 @@ type archiveWriter interface {
 }
 
 func streamArchive(src io.Reader, stream archiveWriter) (err error) {
-	buf := make([]byte, 0, 1024*1024)
+	const chunkSize = 1024 * 1024
+	buffer := bytes.NewBuffer(make([]byte, 0, chunkSize))
+
 	emit := func(chunk, checksum []byte) error {
 		return errors.Wrap(stream.Send(&UploadChunk{
 			Checksum:             checksum,
@@ -307,10 +309,10 @@ func streamArchive(src io.Reader, stream archiveWriter) (err error) {
 	}
 
 	for {
-		buffer := bytes.NewBuffer(buf)
+		buffer.Reset()
 		checksum := sha256.New()
 
-		if _, err = io.CopyN(buffer, io.TeeReader(src, checksum), int64(buffer.Cap())); err == io.EOF {
+		if _, err = io.CopyN(buffer, io.TeeReader(src, checksum), chunkSize); err == io.EOF {
 			return emit(buffer.Bytes(), checksum.Sum(nil))
 		} else if err != nil {
 			return errors.Wrap(err, "failed to copy chunk")
