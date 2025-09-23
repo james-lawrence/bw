@@ -53,9 +53,7 @@ func ExprTemplateList(examples ...string) []ast.Expr {
 // ast.Expr.
 func ExprList(in ...ast.Expr) []ast.Expr {
 	result := make([]ast.Expr, 0, len(in))
-	for _, x := range in {
-		result = append(result, x)
-	}
+	result = append(result, in...)
 	return result
 }
 
@@ -156,7 +154,7 @@ func literalDecl(tok token.Token, name string, x ast.Expr) *ast.GenDecl {
 		Specs: []ast.Spec{
 			&ast.ValueSpec{
 				Names: []*ast.Ident{
-					&ast.Ident{
+					{
 						Name: name,
 						Obj: &ast.Object{
 							Kind: ast.Con,
@@ -233,7 +231,7 @@ func MapFieldsToTypExpr(args ...*ast.Field) []ast.Expr {
 			f.Names = []*ast.Ident{ast.NewIdent(fmt.Sprintf("f%d", idx))}
 		}
 
-		for _ = range f.Names {
+		for range f.Names {
 			r = append(r, f.Type)
 		}
 

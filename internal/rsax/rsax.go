@@ -98,7 +98,9 @@ func Deterministic(seed []byte, bits int) (pkey []byte, err error) {
 // generate an ssh key quickly for cases were we do not care about safety, i.e.
 // tests.
 func UnsafeAuto() (pkey []byte, err error) {
-	return Generate(128)
+	// sigh minimum of 1024 because of crypto nonsense erroring out for smaller keys.
+	pkey, err = Generate(1024)
+	return pkey, err
 }
 
 // Generate a RSA private key with the given bits size, returns the pem encoded bytes.

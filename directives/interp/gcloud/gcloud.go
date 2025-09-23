@@ -155,7 +155,6 @@ func targetPools(ctx context.Context, c *compute.Service, project string, zone s
 	}
 
 	if tmp, cause := igmTargetPools(ctx, c, project, zone, createdBy); cause == nil {
-		err = nil
 		targetPools = append(targetPools, tmp...)
 	}
 
