@@ -106,7 +106,7 @@ func (t DeployConn) RemoteDeploy(ctx context.Context, initiator string, dopts *D
 		Peers:     peers,
 	}
 
-	for err = status.Error(codes.Unavailable, ""); grpcx.IsUnavailable(err); l.Wait(ctx) {
+	for err = status.Error(codes.Unavailable, ""); grpcx.IsUnavailable(err); err = errorsx.Compact(l.Wait(ctx), err) {
 		_, err = rpc.Deploy(ctx, &req)
 	}
 

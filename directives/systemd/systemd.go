@@ -19,10 +19,10 @@ func resultToError(result string) error {
 	return errors.New(result)
 }
 
-func startJob(ctx context.Context, target string, d func(string, string, chan<- string) (int, error)) error {
+func startJob(ctx context.Context, target string, d func(context.Context, string, string, chan<- string) (int, error)) error {
 	await := make(chan string)
 
-	_, err := d(target, "replace", await)
+	_, err := d(ctx, target, "replace", await)
 	if err != nil {
 		return err
 	}
@@ -81,10 +81,6 @@ func ensureRunning(ctx context.Context, conn *dbus.Conn, units ...string) (err e
 	for {
 		select {
 		case <-ctx.Done():
-			type timeout interface {
-				Timeout() bool
-			}
-
 			if x := ctx.Err(); x == context.DeadlineExceeded {
 				// if the deadline passed; we still want to do the final check to ensure
 				// the services are running.
@@ -113,19 +109,19 @@ func ensureRunning(ctx context.Context, conn *dbus.Conn, units ...string) (err e
 
 // Export functionality to the interp
 func Export() (conn *dbus.Conn, exported map[string]reflect.Value, err error) {
-	if conn, err = dbus.NewSystemConnection(); err != nil {
+	if conn, err = dbus.NewSystemConnectionContext(context.Background()); err != nil {
 		return conn, exported, errors.Wrap(err, "failed to connect to systemd bus")
 	}
 
 	exported = map[string]reflect.Value{
 		"StartUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.StartUnit), "systemd start unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.StartUnitContext), "systemd start unit failed")
 		}),
 		"RestartUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.RestartUnit), "systemd restart unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.RestartUnitContext), "systemd restart unit failed")
 		}),
 		"ReloadUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.ReloadUnit), "systemd reload unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.ReloadUnitContext), "systemd reload unit failed")
 		}),
 		"RemainActive": reflect.ValueOf(func(ctx context.Context, units ...string) error {
 			return errors.Wrap(ensureRunning(ctx, conn, units...), "systemd ensure service is running failed")
@@ -137,19 +133,19 @@ func Export() (conn *dbus.Conn, exported map[string]reflect.Value, err error) {
 
 // ExportUser functionality to the interp
 func ExportUser() (conn *dbus.Conn, exported map[string]reflect.Value, err error) {
-	if conn, err = dbus.NewUserConnection(); err != nil {
+	if conn, err = dbus.NewUserConnectionContext(context.Background()); err != nil {
 		return conn, exported, errors.Wrap(err, "failed to connect to systemd bus")
 	}
 
 	exported = map[string]reflect.Value{
 		"StartUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.StartUnit), "systemd start unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.StartUnitContext), "systemd start unit failed")
 		}),
 		"RestartUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.RestartUnit), "systemd restart unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.RestartUnitContext), "systemd restart unit failed")
 		}),
 		"ReloadUnit": reflect.ValueOf(func(ctx context.Context, unit string) error {
-			return errors.Wrap(startJob(ctx, unit, conn.ReloadUnit), "systemd reload unit failed")
+			return errors.Wrap(startJob(ctx, unit, conn.ReloadUnitContext), "systemd reload unit failed")
 		}),
 		"RemainActive": reflect.ValueOf(func(ctx context.Context, units ...string) error {
 			return errors.Wrap(ensureRunning(ctx, conn, units...), "systemd ensure service is running failed")

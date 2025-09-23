@@ -1,4 +1,5 @@
 .eg.cache
+.eg.workload
 *.xml
 spike/*
 .bootstraps
