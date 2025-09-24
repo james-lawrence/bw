@@ -75,39 +75,32 @@ func NewFrom(root string, in io.Reader) (c Composite, err error) {
 
 // CloneAuthorizationFile copies the authorization from one location to another.
 func CloneAuthorizationFile(from, to string) (err error) {
-	updated, err := os.ReadFile(from)
-	if err != nil {
+	var (
+		ff *os.File
+		tf *os.File
+	)
+
+	debugx.Println("synchronizing authorization", from, "->", to)
+	if ff, err = os.Open(from); err != nil {
+		return err
+	}
+	defer ff.Close()
+
+	if tf, err = os.CreateTemp(filepath.Dir(to), fmt.Sprintf("%s.sync", filepath.Base(to))); err != nil {
+		return err
+	}
+	defer tf.Close()
+
+	if err = os.Chmod(tf.Name(), 0600); err != nil {
 		return err
 	}
 
-	return os.WriteFile(to, updated, 0600)
+	if _, err = io.Copy(tf, ff); err != nil {
+		return err
+	}
 
-	// var (
-	// 	ff *os.File
-	// 	tf *os.File
-	// )
-
-	// debugx.Println("synchronizing authorization", from, "->", to)
-	// if ff, err = os.Open(from); err != nil {
-	// 	return err
-	// }
-	// defer ff.Close()
-
-	// if tf, err = os.CreateTemp(filepath.Dir(to), fmt.Sprintf("%s.sync", filepath.Base(to))); err != nil {
-	// 	return err
-	// }
-	// defer tf.Close()
-
-	// if err = os.Chmod(tf.Name(), 0600); err != nil {
-	// 	return err
-	// }
-
-	// if _, err = io.Copy(tf, ff); err != nil {
-	// 	return err
-	// }
-
-	// debugx.Println("renaming", tf.Name(), "->", to)
-	// return os.Rename(tf.Name(), to)
+	debugx.Println("renaming", tf.Name(), "->", to)
+	return os.Rename(tf.Name(), to)
 }
 
 type notary struct {
