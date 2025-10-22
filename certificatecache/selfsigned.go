@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/cryptox"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/md5x"
 	"github.com/james-lawrence/bw/internal/rsax"
@@ -48,7 +49,7 @@ func (t selfsigned) Refresh() (err error) {
 	// fix the time window to today. ideally we'd be shifting the time window based on the seed.
 	ts := time.Now().Truncate(24 * time.Hour)
 
-	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(t.seed), minimumExpiration(), tlsx.FixedClock(ts), subject, tlsx.X509OptionHosts(t.domain), tlsx.X509OptionCA()); err != nil {
+	if template, err = tlsx.X509TemplateRand(cryptox.NewChaCha8(t.seed), minimumExpiration(), tlsx.FixedClock(ts), subject, tlsx.X509OptionHosts(t.domain), tlsx.X509OptionCA()); err != nil {
 		return err
 	}
 

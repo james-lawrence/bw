@@ -136,8 +136,9 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 		return resp, status.Error(codes.Internal, "acme setup failure")
 	}
 
-	// cache the private key used to generate the certificate for CSR.
-	if priv, err = rsax.CachedAuto(filepath.Join(t.c.Root, t.cachedir, t.digestCertificate(template)+".pem")); err != nil {
+	// generate and cache the deterministic the private key used to generate the certificate for CSR.
+	seed := rsax.DeterministcSeed([]byte(t.ac.Secret), []byte(template.Subject.CommonName), rsax.DeterministcSeed(template.DNSNames...))
+	if priv, err = rsax.CachedAutoDeterministic(seed, filepath.Join(t.c.Root, t.cachedir, t.digestCertificate(template)+".pem")); err != nil {
 		log.Println("cache failure unable to generate or retrieve the private key for the csr", err)
 		return resp, status.Error(codes.Internal, "cache failure")
 	}

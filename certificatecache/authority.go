@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/internal/cryptox"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/tlsx"
@@ -73,7 +74,7 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if template, err = tlsx.X509TemplateRand(rsax.NewSHA512CSPRNG(nil), time.Minute, tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
+	if template, err = tlsx.X509TemplateRand(cryptox.NewChaCha8([]byte(nil)), time.Minute, tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 

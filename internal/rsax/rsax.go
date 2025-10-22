@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/james-lawrence/bw/internal/cryptox"
+	"github.com/james-lawrence/bw/internal/md5x"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/pkg/errors"
 )
@@ -88,10 +90,21 @@ func CachedGenerate(path string, bits int) (pkey []byte, err error) {
 	return pkey, nil
 }
 
+// generate a deterministic seed from the provided parts
+func DeterministcSeed[T string | []byte](bs ...T) []byte {
+	block := []byte(nil)
+
+	for _, b := range bs {
+		block = append(block, []byte(b)...)
+	}
+
+	return md5x.DigestX(block)
+}
+
 // Deterministic rsa private key based on the seed. uses a SHA512 hash as
 // a csprng.
 func Deterministic(seed []byte, bits int) (pkey []byte, err error) {
-	return generate(NewSHA512CSPRNG(seed), bits, deterministicGenerateKey)
+	return generate(cryptox.NewChaCha8(seed), bits, deterministicGenerateKey)
 }
 
 // UnsafeAuto generates a ssh key using unsafe defaults, this method is used to

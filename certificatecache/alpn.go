@@ -2,6 +2,7 @@ package certificatecache
 
 import (
 	"crypto/tls"
+	"slices"
 
 	"github.com/go-acme/lego/v4/challenge/tlsalpn01"
 )
@@ -27,10 +28,8 @@ type ALPN struct {
 
 // GetCertificate for use by tls.Config.
 func (t ALPN) GetCertificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-	for _, proto := range hello.SupportedProtos {
-		if proto == tlsalpn01.ACMETLS1Protocol {
-			return t.cache.GetCertificate(hello)
-		}
+	if slices.Contains(hello.SupportedProtos, tlsalpn01.ACMETLS1Protocol) {
+		return t.cache.GetCertificate(hello)
 	}
 
 	if t.fallback == nil {

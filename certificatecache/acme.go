@@ -91,10 +91,6 @@ func (t ACME) Refresh() (err error) {
 	log.Println("acme refresh initiated")
 	defer log.Println("acme refresh completed")
 
-	if priv, err = rsax.MaybeDecode(rsax.CachedAuto(filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
-		return err
-	}
-
 	subj := pkix.Name{
 		CommonName:         t.CommonName,
 		Country:            t.Config.Country,
@@ -117,6 +113,11 @@ func (t ACME) Refresh() (err error) {
 		Subject:            subj,
 		SignatureAlgorithm: x509.SHA256WithRSA,
 		DNSNames:           append(t.Config.DNSNames, t.CommonName),
+	}
+
+	seed := rsax.DeterministcSeed([]byte(t.Config.Secret), []byte(template.Subject.CommonName), rsax.DeterministcSeed(template.DNSNames...))
+	if priv, err = rsax.MaybeDecode(rsax.CachedAutoDeterministic(seed, filepath.Join(t.CertificateDir, DefaultTLSKeyServer))); err != nil {
+		return errors.Wrap(err, "failed to generate private key")
 	}
 
 	csr, err := x509.CreateCertificateRequest(rand.Reader, template, priv)
