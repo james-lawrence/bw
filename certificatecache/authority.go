@@ -23,8 +23,9 @@ import (
 const ErrAuthorityNotAvailable = errorsx.String("authority not available")
 
 // NewAuthorityCache cached authority from the directory.
-func NewAuthorityCache(domain, dir string) *AuthorityCache {
+func NewAuthorityCache(seed []byte, domain, dir string) *AuthorityCache {
 	return &AuthorityCache{
+		seed:   seed,
 		dir:    dir,
 		domain: domain,
 		m:      &sync.RWMutex{},
@@ -33,6 +34,7 @@ func NewAuthorityCache(domain, dir string) *AuthorityCache {
 
 // AuthorityCache lazy creation of the authority cache if possible.
 type AuthorityCache struct {
+	seed      []byte
 	dir       string
 	domain    string
 	authority *Authority
@@ -74,7 +76,7 @@ func (t *AuthorityCache) Create(duration time.Duration, bits int, options ...tls
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
-	if template, err = tlsx.X509TemplateRand(cryptox.NewChaCha8([]byte(nil)), time.Minute, tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
+	if template, err = tlsx.X509TemplateRand(cryptox.NewChaCha8(t.seed), time.Minute, tlsx.DefaultClock(), subject, tlsx.X509OptionHosts(t.domain)); err != nil {
 		return ca, key, cert, ErrAuthorityNotAvailable
 	}
 
@@ -142,5 +144,5 @@ func (t Authority) Create(duration time.Duration, bits int, options ...tlsx.X509
 		return ca, key, cert, err
 	}
 
-	return cabuf.Bytes(), keybuf.Bytes(), certbuf.Bytes(), err
+	return cabuf.Bytes(), keybuf.Bytes(), certbuf.Bytes(), nil
 }
