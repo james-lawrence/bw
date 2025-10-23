@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
 type routeInfo struct {
@@ -33,7 +34,7 @@ func Printer(router *mux.Router) {
 	maxRouteLength := 25
 
 	routesInfo := make([]routeInfo, 0, 10)
-	router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+	errorsx.Log(router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
 		max := func(a, b int) int {
 			if a > b {
 				return a
@@ -80,7 +81,7 @@ func Printer(router *mux.Router) {
 		maxRouteLength = max(maxRouteLength, len(i.route))
 		routesInfo = append(routesInfo, i)
 		return nil
-	})
+	}))
 
 	pattern := fmt.Sprintf("%%-%d.%ds|%%-%d.%ds|%%-%d.%ds\n", maxFileLength, maxFileLength, maxNameLength, maxNameLength, maxRouteLength, maxRouteLength)
 	log.Printf(pattern, "file", "name", "route")

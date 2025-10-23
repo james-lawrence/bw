@@ -62,7 +62,7 @@ func Locally(ctx *Context, debug bool) (err error) {
 	if debug {
 		log.Printf("building directory '%s' will remain after exit\n", root)
 		defer func() {
-			errorsx.MaybeLog(
+			errorsx.Log(
 				errorsx.Compact(
 					err,
 					errorsx.Notification(

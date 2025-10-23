@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -8,9 +9,9 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
-	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	gdns "google.golang.org/api/dns/v1"
+	"google.golang.org/api/option"
 )
 
 // GCloudDNSOption options for google cloud dns
@@ -29,7 +30,7 @@ func NewGoogleCloudDNSFromMetadata(zoneID string, options ...GCloudDNSOption) (r
 		projectID, localZoneID string
 	)
 
-	if projectID, err = metadata.ProjectID(); err != nil {
+	if projectID, err = metadata.ProjectIDWithContext(context.Background()); err != nil {
 		return r, errors.Wrap(err, "failed to lookup project ID")
 	}
 
@@ -65,11 +66,11 @@ func (t GoogleCloudDNS) Sample(c cluster) (err error) {
 		rr     *gdns.ResourceRecordSetsListResponse
 	)
 
-	if client, err = google.DefaultClient(oauth2.NoContext, gdns.CloudPlatformScope); err != nil {
+	if client, err = google.DefaultClient(context.Background(), gdns.CloudPlatformScope); err != nil {
 		return errors.Wrap(err, "failed to build google cloud http client")
 	}
 
-	if s, err = gdns.New(client); err != nil {
+	if s, err = gdns.NewService(context.Background(), option.WithHTTPClient(client)); err != nil {
 		return errors.Wrap(err, "failed to build google dns service")
 	}
 

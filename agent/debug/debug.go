@@ -163,12 +163,12 @@ func (t *Service) profile(ctx context.Context, req *ProfileRequest, strategy fun
 		defer t.profiling.Store(false)
 		defer done()
 		p.Stop()
-		errorsx.MaybeLog(errors.Wrap(t.clone(tmpdir), "unable to finalize profile"))
+		errorsx.Log(errors.Wrap(t.clone(tmpdir), "unable to finalize profile"))
 		t.stoppable = profilex.Noop()
 	})
 
 	go func() {
-		errorsx.MaybeLog(errors.Wrap(profilex.Run(dctx, t.stoppable), ""))
+		errorsx.Log(errors.Wrap(profilex.Run(dctx, t.stoppable), ""))
 	}()
 
 	return &ProfileResponse{}, nil

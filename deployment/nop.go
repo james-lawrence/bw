@@ -15,5 +15,5 @@ type nop struct {
 }
 
 func (t nop) Deploy(dctx *DeployContext) {
-	errorsx.MaybeLog(dctx.Done(t.result))
+	errorsx.Log(dctx.Done(t.result))
 }

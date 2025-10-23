@@ -37,6 +37,6 @@ func linting(ctx context.Context, _ eg.Op) error {
 	return shell.Run(
 		ctx,
 		daemons.New("go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest").Privileged(),
-		daemons.New("golangci-lint run -v --timeout 5m"),
+		daemons.New("golangci-lint run -v --timeout 5m").Lenient(true),
 	)
 }

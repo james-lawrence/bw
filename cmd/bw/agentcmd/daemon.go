@@ -294,7 +294,7 @@ func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployR
 
 	go func() {
 		for dr := range ndr {
-			errorsx.MaybeLog(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(dctx.NotaryStorage.Root, bw.AuthKeysFile)))
+			errorsx.Log(notary.CloneAuthorizationFile(filepath.Join(dr.Root, bw.DirArchive, bw.AuthKeysFile), filepath.Join(dctx.NotaryStorage.Root, bw.AuthKeysFile)))
 			daemons.SyncAuthorizations(dctx)
 		}
 	}()

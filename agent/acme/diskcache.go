@@ -321,14 +321,14 @@ func (t DiskCache) clearCertCache(dir string) {
 		// duplicate certificate requests to 5 / week. so lets cache for
 		// 6 days.
 		if ctime, err := systemx.FileCreatedAt(info); err == nil && ctime.Add(6*24*time.Hour).Before(time.Now()) {
-			errorsx.MaybeLog(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
+			errorsx.Log(errors.Wrap(os.RemoveAll(path), "failed to remove file"))
 		} else if err != nil {
 			log.Println("failed to clear cached certificates", err)
 		}
 
 		return nil
 	})
-	errorsx.MaybeLog(errors.Wrap(err, "clear cert cache failed"))
+	errorsx.Log(errors.Wrap(err, "clear cert cache failed"))
 }
 
 func (t DiskCache) digestCertificate(csr *x509.CertificateRequest) (digest string) {

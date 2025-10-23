@@ -163,12 +163,12 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 
 					// background this task so dispatches work.
 					go func(ctx context.Context) {
-						errorsx.MaybeLog(sm.initialize())
-						logx.Verbose(errors.Wrap(
+						errorsx.Log(sm.initialize())
+						_ = logx.Verbose(errors.Wrap(
 							t.deployment.restartActiveDeploy(ctx, t.dialer, sm),
 							"failed to restart an active deploy",
 						))
-						errorsx.MaybeLog(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
+						errorsx.Log(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
 					}(context.Background())
 
 					return sm
@@ -277,7 +277,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 	events := make(chan *agent.Message)
 	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
 		cause := errors.Wrap(err, "failed to connect to dispatcher")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return cause
 	}
 
@@ -288,20 +288,20 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		select {
 		case <-out.Context().Done():
 			cause := errors.WithStack(out.Context().Err())
-			errorsx.MaybeLog(cause)
+			errorsx.Log(cause)
 			return cause
 		case <-disconnected:
 			cause := errors.New("disconnected")
-			errorsx.MaybeLog(cause)
+			errorsx.Log(cause)
 			return cause
 		case <-lost:
 			cause := errors.New("quorum membership lost")
-			errorsx.MaybeLog(cause)
+			errorsx.Log(cause)
 			return cause
 		case m := <-events:
 			if err = out.Send(m); err != nil {
 				cause := errors.Wrap(err, "failed to deliver message")
-				errorsx.MaybeLog(cause)
+				errorsx.Log(cause)
 				return cause
 			}
 		}

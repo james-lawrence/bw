@@ -335,7 +335,7 @@ github.com/davecgh/go-spew/spew
 # github.com/edsrzf/mmap-go v1.1.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
-# github.com/egdaemon/eg v0.0.0-20250822160759-fe792fd2c2b0
+# github.com/egdaemon/eg v0.0.0-20251003002534-f7cbff1a311a
 ## explicit; go 1.24.0
 github.com/egdaemon/eg
 github.com/egdaemon/eg/backoff

@@ -35,5 +35,7 @@ func main() {
 		Authority:   auth,
 	}
 
-	protox.WriteFile(os.Args[4], 0600, challenge)
+	if err := protox.WriteFile(os.Args[4], 0600, challenge); err != nil {
+		log.Fatalln("failed to write challenge", err)
+	}
 }

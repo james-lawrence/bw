@@ -9,6 +9,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/clustering"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 
@@ -87,8 +88,8 @@ func NewCluster(n int, options ...clustering.Option) (network memberlist.MockNet
 		}
 
 		if _, err = Connect(c, out...); err != nil {
-			ShutdownCluster(out...)
-			ShutdownCluster(c)
+			errorsx.Log(ShutdownCluster(out...))
+			errorsx.Log(ShutdownCluster(c))
 			return network, out, errors.WithMessage(err, "failed to connect")
 		}
 

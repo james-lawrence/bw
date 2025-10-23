@@ -30,7 +30,7 @@ func (t Conn) Dispatch(ctx context.Context, messages ...*agent.Message) (err err
 	rpc := agent.NewObserverClient(t.conn)
 	if _, err = rpc.Dispatch(ctx, &dispatch); err != nil {
 		cause := errors.Wrap(err, "failed to dispatch messages")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return cause
 	}
 

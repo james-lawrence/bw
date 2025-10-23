@@ -103,7 +103,7 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment complete", spew.Sdump(&dcmd))
 		}
-		errorsx.MaybeLog(d.Dispatch(context.Background(), agent.NewDeployCommand(c.Local(), dcmd)))
+		errorsx.Log(d.Dispatch(context.Background(), agent.NewDeployCommand(c.Local(), dcmd)))
 	}()
 
 	return nil

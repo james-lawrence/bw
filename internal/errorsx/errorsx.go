@@ -18,7 +18,7 @@ func Compact(errs ...error) error {
 	return nil
 }
 
-func MaybeLog(err error) {
+func Log(err error) {
 	if err == nil {
 		return
 	}
@@ -26,6 +26,14 @@ func MaybeLog(err error) {
 	if cause := log.Output(2, fmt.Sprintln(err)); cause != nil {
 		panic(cause)
 	}
+}
+
+func Fatal(err error) {
+	if err == nil {
+		return
+	}
+
+	panic(err)
 }
 
 func Ignore(err error, ignore ...error) error {

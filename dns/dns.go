@@ -74,17 +74,11 @@ type Sampler interface {
 	Sample(c cluster) error
 }
 
-type noopSampler struct{}
-
-func (t noopSampler) Sample(c cluster) error {
-	return nil
-}
-
 // MaybeSample ...
 func MaybeSample(s Sampler, err error) func(cluster) error {
 	return func(c cluster) error {
 		if err == nil {
-			s.Sample(c)
+			return s.Sample(c)
 		}
 
 		return err

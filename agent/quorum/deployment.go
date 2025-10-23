@@ -190,7 +190,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 
 	if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
 		msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
-		errorsx.MaybeLog(sm.Dispatch(ctx, msg))
+		errorsx.Log(sm.Dispatch(ctx, msg))
 		return errors.Wrap(err, "cancellation failure")
 	}
 

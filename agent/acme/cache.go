@@ -32,7 +32,7 @@ func (t ALPNCertCache) GetCertificate(_ *tls.ClientHelloInfo) (cert *tls.Certifi
 
 	if cc, err = t.r.Resolution(context.Background()); err != nil {
 		cause := errors.Wrap(err, "failed to retrieve challenge")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return nil, cause
 	}
 

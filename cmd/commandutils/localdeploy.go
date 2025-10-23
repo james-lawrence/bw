@@ -22,7 +22,7 @@ func RemoteTasksAvailable(config agent.ConfigClient) bool {
 	defer debugx.Println("done checking")
 
 	_, err := os.Stat(filepath.Join(config.Deployspace(), deployment.RemoteDirName))
-	errorsx.MaybeLog(errors.Wrap(err, "stat failed"))
+	errorsx.Log(errors.Wrap(err, "stat failed"))
 	return err == nil
 }
 

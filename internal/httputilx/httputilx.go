@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/backoff"
 	"github.com/james-lawrence/bw/internal/debugx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
@@ -194,7 +195,8 @@ func WriteEmptyJSONArray(resp http.ResponseWriter, code int) {
 	const emptyJSON = "[]"
 	resp.Header().Set("Content-Type", "application/json")
 	resp.WriteHeader(code)
-	resp.Write([]byte(emptyJSON))
+	_, err := resp.Write([]byte(emptyJSON))
+	errorsx.Log(err)
 }
 
 // WriteEmptyJSON emits empty json with the provided status code.
@@ -202,7 +204,8 @@ func WriteEmptyJSON(resp http.ResponseWriter, code int) {
 	const emptyJSON = "{}"
 	resp.Header().Set("Content-Type", "application/json")
 	resp.WriteHeader(code)
-	resp.Write([]byte(emptyJSON))
+	_, err := resp.Write([]byte(emptyJSON))
+	errorsx.Log(err)
 }
 
 // IsWebsocketShutdownError detects shutdown errors for websocket connections.

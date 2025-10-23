@@ -23,7 +23,7 @@ ExecStartPre=echo curl --insecure https://localhost:15000/roots/0 --output ${CAC
 ExecStartPre=curl --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
 EnvironmentFile=%C/%p/%i/agent.env
 SyslogIdentifier=%p-%i
-ExecStart=%h/go/bin/bw agent runtime --agent-config="%C/%p/%i/agent.config"
+ExecStart=%h/go/bin/bw agent runtime -vvvv --agent-config="%C/%p/%i/agent.config"
 
 [Install]
 WantedBy=default.target

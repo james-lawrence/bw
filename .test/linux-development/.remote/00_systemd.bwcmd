@@ -10,5 +10,5 @@
 - command: rsync --quiet --checksum --recursive --progress agent9/* %h/.cache/bearded-wookie/agent9/
 - command: rsync --quiet --checksum --recursive --progress agent10/* %h/.cache/bearded-wookie/agent10/
 - command: rsync --quiet --checksum --recursive --progress pebble/* %h/.config/bearded-wookie-pebble/
-- command: ls systemd/* | xargs -I {} systemctl --user link --force ${WORKING_DIR}/.test/linux-development/{}
+- command: ls systemd/* | xargs -I {} systemctl --user link --force %bw.work.directory%/.test/linux-development/{}
 - command: systemctl --user daemon-reload

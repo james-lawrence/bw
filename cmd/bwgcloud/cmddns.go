@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net"
@@ -39,8 +40,8 @@ func (t *cmdDNS) Configure(parent *kingpin.CmdClause) {
 	)
 
 	if metadata.OnGCE() {
-		if t.projectID, err = metadata.ProjectID(); err != nil {
-			errorsx.MaybeLog(errors.Wrap(err, "failed to retrieve project ID from metadata service"))
+		if t.projectID, err = metadata.ProjectIDWithContext(context.Background()); err != nil {
+			errorsx.Log(errors.Wrap(err, "failed to retrieve project ID from metadata service"))
 		}
 	}
 

@@ -25,7 +25,7 @@ func EnsureLeader(ctx context.Context, d dialers.DefaultsDialer, proxy *agent.Pe
 
 	for {
 		if conn != nil {
-			errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close previous client"))
+			errorsx.Log(errors.Wrap(conn.Close(), "failed to close previous client"))
 		}
 
 		if err = rl.Wait(ctx); err != nil {

@@ -27,10 +27,12 @@ func Run(ctx context.Context, socket string, o agent.BootstrapServer, options ..
 	s := grpc.NewServer(options...)
 	agent.RegisterBootstrapServer(s, o)
 
-	go s.Serve(l)
+	go func() {
+		errorsx.Log(s.Serve(l))
+	}()
 	go func() {
 		<-ctx.Done()
-		errorsx.MaybeLog(errors.Wrap(l.Close(), "during bootstrap socket shutdown"))
+		errorsx.Log(errors.Wrap(l.Close(), "during bootstrap socket shutdown"))
 	}()
 
 	return nil

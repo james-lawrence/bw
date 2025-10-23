@@ -2,7 +2,6 @@ package bwfs
 
 import (
 	"io"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -185,12 +184,6 @@ func chown(a Archive) (err error) {
 	}
 
 	return errors.WithStack(fil.ChownR(a.Path, uid, gid))
-}
-
-func printIfErr(err error) {
-	if err != nil {
-		log.Println(err)
-	}
 }
 
 type logger interface {

@@ -362,7 +362,7 @@ func (t *Protocol) connect(c rendezvous) (network raft.Transport, r *raft.Raft, 
 	}
 
 	if r, err = raft.NewRaft(&conf, t.getStateMachine(), store, store, snapshots, network); err != nil {
-		errorsx.MaybeLog(errors.Wrap(autocloseTransport(network), "failed to cleanup"))
+		errorsx.Log(errors.Wrap(autocloseTransport(network), "failed to cleanup"))
 		return nil, nil, errors.WithStack(err)
 	}
 

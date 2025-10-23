@@ -72,7 +72,7 @@ func ConnectClientUntilSuccess(
 		default:
 		}
 
-		errorsx.MaybeLog(errors.Wrap(err, "connection failed"))
+		errorsx.Log(errors.Wrap(err, "connection failed"))
 
 		time.Sleep(250 * time.Millisecond)
 	}

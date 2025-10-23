@@ -114,13 +114,13 @@ func LoadConfiguration(ctx context.Context, environment string, options ...agent
 			return config, errors.Wrap(err, "failed to check credentials")
 		}
 
-		errorsx.MaybeLog(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
-		errorsx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+		errorsx.Log(os.Remove(filepath.Join(config.Credentials.Directory, cc.DefaultTLSCertCA)))
+		errorsx.Log(os.Remove(bw.LocateFirstInDir(
 			config.Credentials.Directory,
 			cc.DefaultTLSCertServer,
 			cc.DefaultTLSCertClient,
 		)))
-		errorsx.MaybeLog(os.Remove(bw.LocateFirstInDir(
+		errorsx.Log(os.Remove(bw.LocateFirstInDir(
 			config.Credentials.Directory,
 			cc.DefaultTLSKeyServer,
 			cc.DefaultTLSKeyClient,
