@@ -1,3 +1,65 @@
+commit 168984a12c51c192dbbaf526910e9fac150d3157
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Oct 22 23:31:26 2025 -0400
+
+    fixup peer id generation for test environment
+
+commit f3caa177c73cd128cf44d600148fdcae3fd53bba
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Oct 22 21:27:02 2025 -0400
+
+    update linting issues
+
+commit 26f84a48f691b3279284cff8f468017e5cf01a5f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Oct 22 18:14:01 2025 -0400
+
+    deterministic csr so lets encrypt returns previously validated certificate
+
+commit 9b86602b88933079fc3e79e0e4b721d9370e8acd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Sep 24 15:43:26 2025 -0400
+
+    update dependency
+
+commit 32bdb8423b609f12d971215847e938a7e7e5cb5c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Sep 23 16:26:27 2025 -0400
+
+    test fix
+
+commit feb434cfa3a9378276cc2a3b412ac759fc2bd51f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Sep 18 23:26:46 2025 -0400
+
+    Fix ordering mismatch between rendezvous.Max and MaxN.
+    
+    they need to return elements in the same order.
+
+commit 94510de9f1f41e55e5ac9a7fe1ba73c1932d78b1
+Author: James Lawrence <james-lawrence@users.noreply.github.com>
+Date:   Wed Jul 30 09:46:02 2025 -0400
+
+    Update README.md
+
+commit 3e929a0397f3e67443d67a518cb7a9618cc4f1b8
+Author: James Lawrence <james-lawrence@users.noreply.github.com>
+Date:   Wed Jul 30 09:43:22 2025 -0400
+
+    Update README.md
+
+commit 7200b219a18874ced2f77d45a86e0eaf0074b591
+Author: Maanas Sathaye <maanas@sightly.com>
+Date:   Mon May 26 16:08:23 2025 -0500
+
+    maanas/readme-updates-with-singlenode-specs
+
+commit f9bf98cdeff6c2acc7ae97a00e529d11e59aa9ec
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Thu Jun 26 09:58:56 2025 -0400
+
+    release 0.1.1750942853-458e9e4b
+
 commit 458e9e4b9dfe3c61cd6a0137b83cc6e71660eb43
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Thu Jun 26 09:00:53 2025 -0400
