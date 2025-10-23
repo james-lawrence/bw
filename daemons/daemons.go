@@ -47,6 +47,7 @@ type dialer interface {
 
 // Context common information passed to all daemons.
 type Context struct {
+	Ring               *memberlist.Keyring
 	Deploys            Deployer
 	Local              *_cluster.Local
 	Listener           net.Listener

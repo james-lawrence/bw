@@ -111,7 +111,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return err
 	}
 
-	if localpriv, err = rsax.CachedAutoDeterministic([]byte(systemx.MachineID()), userx.DefaultRuntimeDirectory(bw.DefaultAgentNotaryKey)); err != nil {
+	if localpriv, err = rsax.CachedAutoDeterministic([]byte(envx.String(systemx.MachineID(), bw.EnvAgentClusterPeerIDSeed)), userx.DefaultRuntimeDirectory(bw.DefaultAgentNotaryKey)); err != nil {
 		return err
 	}
 
@@ -174,6 +174,7 @@ func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	}
 
 	dctx := daemons.Context{
+		Ring:              ring,
 		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,
