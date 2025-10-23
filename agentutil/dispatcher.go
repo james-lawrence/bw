@@ -130,7 +130,7 @@ func (t *Dispatcher) dropClient(bad agent.Client, err error) error {
 	t.m.Lock()
 	t.c = nil
 	t.m.Unlock()
-	errorsx.MaybeLog(errors.Wrap(bad.Close(), "failed to cleanup client"))
+	errorsx.Log(errors.Wrap(bad.Close(), "failed to cleanup client"))
 
 	return err
 }

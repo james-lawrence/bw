@@ -44,7 +44,7 @@ func NewDirectory(serverName, dir, ca string, pool *x509.CertPool) (cache *Direc
 	}
 
 	// this is necessary to initialize the clients with the correct CAs
-	errorsx.MaybeLog(d.init())
+	errorsx.Log(d.init())
 
 	return d
 }
@@ -75,7 +75,7 @@ func (t *Directory) init() (err error) {
 	})
 
 	err = errors.Wrap(err, "failed to initialize certificate cache")
-	errorsx.MaybeLog(err)
+	errorsx.Log(err)
 	return err
 }
 
@@ -95,7 +95,7 @@ func (t *Directory) background() {
 	for {
 		select {
 		case <-debounce.C:
-			errorsx.MaybeLog(t.refresh())
+			errorsx.Log(t.refresh())
 		case <-t.watcher.Events:
 			debounce.Reset(time.Second)
 		case err := <-t.watcher.Errors:
@@ -117,7 +117,7 @@ func (t *Directory) cert() (cert *tls.Certificate, err error) {
 
 	if cert == nil {
 		err = errors.Errorf("certificate missing in: %s", t.dir)
-		errorsx.MaybeLog(err)
+		errorsx.Log(err)
 		return nil, err
 	}
 

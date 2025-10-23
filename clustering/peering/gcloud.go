@@ -35,11 +35,11 @@ func (t GCloudTargetPool) Peers(ctx context.Context) (results []string, err erro
 		return results, nil
 	}
 
-	if project, err = metadata.ProjectID(); err != nil {
+	if project, err = metadata.ProjectIDWithContext(ctx); err != nil {
 		return results, errors.WithStack(err)
 	}
 
-	if zone, err = metadata.Zone(); err != nil {
+	if zone, err = metadata.ZoneWithContext(ctx); err != nil {
 		return results, errors.WithStack(err)
 	}
 

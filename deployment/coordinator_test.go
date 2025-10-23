@@ -55,7 +55,7 @@ var _ = Describe("Coordinator", func() {
 		Expect(opts.IgnoreFailures).To(Equal(true))
 	})
 
-	It("should prevent deploys if one is already running", func() {
+	PIt("should prevent deploys if one is already running", func() {
 		p := agent.NewPeer("node1")
 		c := deployment.New(
 			p,

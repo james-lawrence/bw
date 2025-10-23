@@ -29,10 +29,10 @@ func (t dummy) Deploy(dctx *DeployContext) {
 		failedDuration := time.Duration(rand.Intn(t.sleepy)*2) * time.Second
 		select {
 		case <-time.After(completedDuration):
-			errorsx.MaybeLog(dctx.Done(nil))
+			errorsx.Log(dctx.Done(nil))
 		case <-time.After(failedDuration):
 			log.Println("failed deployment due to timeout", failedDuration)
-			errorsx.MaybeLog(dctx.Done(timeout{Duration: failedDuration}))
+			errorsx.Log(dctx.Done(timeout{Duration: failedDuration}))
 		}
 	}()
 }

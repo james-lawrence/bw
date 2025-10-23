@@ -109,7 +109,9 @@ func (t *M) release(p Protocol) {
 func Listen(ctx context.Context, m *M, l net.Listener) error {
 	inbound := make(chan net.Conn, 200)
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go accept1(ctx, m, inbound)
+		go func() {
+			errorsx.Log(errors.Wrap(accept1(ctx, m, inbound), "accept shutdown"))
+		}()
 	}
 
 	// log.Println("spawned", runtime.NumCPU(), "accepts")
@@ -208,8 +210,12 @@ func handshakeOutbound(protocol []byte, conn net.Conn) (err error) {
 		resp    Accepted
 	)
 
-	conn.SetWriteDeadline(time.Now().Add(time.Second))
-	defer conn.SetWriteDeadline(time.Time{})
+	if err := conn.SetWriteDeadline(time.Now().Add(time.Second)); err != nil {
+		return errors.Wrap(err, "unable to set write deadline")
+	}
+	defer func() {
+		err = errorsx.Compact(err, conn.SetWriteDeadline(time.Time{}))
+	}()
 
 	if err = req(conn, protocol); err != nil {
 		return errorsx.Compact(err, conn.Close())
@@ -240,8 +246,12 @@ func handshakeInbound(m *M, conn net.Conn) (protocol Protocol, err error) {
 		inbound [20]byte // 4 (version) + protocol (16)
 	)
 
-	conn.SetReadDeadline(time.Now().Add(time.Second))
-	defer conn.SetReadDeadline(time.Time{}) // remove deadline
+	if err := conn.SetReadDeadline(time.Now().Add(time.Second)); err != nil {
+		return unknown, errors.Wrap(err, "failed to set read deadline")
+	}
+	defer func() {
+		err = errorsx.Compact(err, conn.SetReadDeadline(time.Time{}))
+	}()
 
 	if n, err := io.ReadFull(conn, inbound[:]); err != nil {
 		return unknown, errorsx.Compact(err, reject(conn, unknown[:], Accepted_ClientError))

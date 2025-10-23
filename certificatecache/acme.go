@@ -138,21 +138,21 @@ func (t ACME) Refresh() (err error) {
 	log.Println("writing authority certificate", capath)
 	if err = os.WriteFile(capath, authority, 0600); err != nil {
 		err = errors.Wrapf(err, "failed to write certificate authority to %s", capath)
-		errorsx.MaybeLog(err)
+		errorsx.Log(err)
 		return err
 	}
 
 	log.Println("writing certificate", certpath)
 	if err = os.WriteFile(certpath, cert, 0600); err != nil {
 		err = errors.Wrapf(err, "failed to write certificate to %s", certpath)
-		errorsx.MaybeLog(err)
+		errorsx.Log(err)
 		return err
 	}
 
 	log.Println("writing private key", keypath)
 	if err = os.WriteFile(keypath, key, 0600); err != nil {
 		err = errors.Wrapf(err, "failed to write private key to %s", keypath)
-		errorsx.MaybeLog(err)
+		errorsx.Log(err)
 		return err
 	}
 

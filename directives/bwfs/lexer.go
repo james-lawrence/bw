@@ -53,7 +53,6 @@ type token struct {
 	typ    tokenType
 	offset int
 	val    string
-	err    error
 }
 
 func (t token) String() string {
@@ -235,6 +234,7 @@ func (t *lexer) acceptRun(valid string) bool {
 	return t.hasAdvanced()
 }
 
+//nolint:unused
 func (t *lexer) traveled() int {
 	return t.pos - t.start
 }

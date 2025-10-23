@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/posener/complete"
 )
 
 func Deployspaces(args complete.Args) (results []string) {
 	root := bw.LocateDeployspace(bw.DefaultDeployspaceConfigDir)
-	filepath.Walk(root, func(path string, d os.FileInfo, err error) error {
+	errorsx.Fatal(filepath.Walk(root, func(path string, d os.FileInfo, err error) error {
 		if root == path {
 			return nil
 		}
@@ -27,6 +28,6 @@ func Deployspaces(args complete.Args) (results []string) {
 		}
 
 		return filepath.SkipDir
-	})
+	}))
 	return results
 }

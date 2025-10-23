@@ -40,7 +40,7 @@ type Notifier struct {
 func (t Notifier) Notify(dc *agent.DeployCommand) {
 	title := notifications.ExpandEnv(t.Title, dc)
 	msg := notifications.ExpandEnv(t.Message, dc)
-	errorsx.MaybeLog(errors.Wrap(t.dst.Push(title, msg, "", urgency(dc.Command)), "failed to send notification"))
+	errorsx.Log(errors.Wrap(t.dst.Push(title, msg, "", urgency(dc.Command)), "failed to send notification"))
 }
 
 func urgency(c agent.DeployCommand_Command) string {

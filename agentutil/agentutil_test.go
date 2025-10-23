@@ -71,7 +71,7 @@ var _ = Describe("Agentutil", func() {
 				time.Sleep(30 * time.Millisecond)
 				d3 := makedir(root)
 				log.Println(d1, d2, d3)
-				MaybeClean(KeepNewestN(1))(Dirs(root))
+				Expect(MaybeClean(KeepNewestN(1))(Dirs(root))).To(Succeed())
 				Expect(d1).ToNot(BeAnExistingFile())
 				Expect(d2).ToNot(BeAnExistingFile())
 				Expect(d3).To(BeAnExistingFile())
@@ -91,7 +91,7 @@ var _ = Describe("Agentutil", func() {
 						time.Sleep(30 * time.Millisecond)
 					}
 
-					MaybeClean(KeepOldestN(n))(Dirs(root))
+					Expect(MaybeClean(KeepOldestN(n))(Dirs(root))).To(Succeed())
 
 					for _, d := range dirs[:n] {
 						Expect(d).To(BeAnExistingFile())
@@ -114,7 +114,7 @@ var _ = Describe("Agentutil", func() {
 				time.Sleep(30 * time.Millisecond)
 				d3 := makedir(root)
 
-				MaybeClean(KeepOldestN(1))(Dirs(root))
+				Expect(MaybeClean(KeepOldestN(1))(Dirs(root))).To(Succeed())
 				Expect(d1).To(BeAnExistingFile())
 				Expect(d2).ToNot(BeAnExistingFile())
 				Expect(d3).ToNot(BeAnExistingFile())

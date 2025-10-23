@@ -12,5 +12,5 @@ func (t Cached) Deploy(dctx *DeployContext) {
 }
 
 func (t Cached) deploy(dctx *DeployContext) {
-	errorsx.MaybeLog(dctx.Done(nil))
+	errorsx.Log(dctx.Done(nil))
 }

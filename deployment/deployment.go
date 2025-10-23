@@ -186,14 +186,14 @@ func (t DeployContext) Cancel(reason error) {
 		return
 	}
 
-	errorsx.MaybeLog(t.Dispatch(agent.LogError(t.Local, errors.Wrap(reason, "cancelled deploy"))))
+	errorsx.Log(t.Dispatch(agent.LogError(t.Local, errors.Wrap(reason, "cancelled deploy"))))
 	t.cancel()
 }
 
 // Done is responsible for closing out the deployment context.
 func (t DeployContext) Done(result error) error {
 	t.done.Do(func() {
-		errorsx.MaybeLog(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
+		errorsx.Log(errors.Wrap(t.Log.Close(), "failed to close deployment log"))
 
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment done", t.completed != nil)
@@ -272,7 +272,7 @@ func (t DeployResult) deployComplete() *agent.Deploy {
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
-	errorsx.MaybeLog(t.Dispatch(agent.DeployEvent(t.Local, d)))
+	errorsx.Log(t.Dispatch(agent.DeployEvent(t.Local, d)))
 	return d
 }
 
@@ -283,7 +283,7 @@ func (t DeployResult) deployFailed(err error) *agent.Deploy {
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
 	d := &agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
-	errorsx.MaybeLog(
+	errorsx.Log(
 		t.Dispatch(
 			agent.LogError(t.Local, err),
 			agent.DeployEvent(t.Local, d),
@@ -312,8 +312,8 @@ func heartbeat(ctx context.Context, local *agent.Peer, freq rate.Limit, d dispat
 	l := rate.NewLimiter(freq, 1)
 
 	for err = l.Wait(ctx); err == nil; err = l.Wait(ctx) {
-		errorsx.MaybeLog(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
+		errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
 	}
 
-	errorsx.MaybeLog(errors.Wrap(err, "heartbeat ending"))
+	errorsx.Log(errors.Wrap(err, "heartbeat ending"))
 }

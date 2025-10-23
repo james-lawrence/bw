@@ -81,7 +81,7 @@ func (t cmdInfoWatch) Run(gctx *cmdopts.Global) (err error) {
 
 	go func() {
 		<-gctx.Context.Done()
-		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.Log(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	if quorum, err = agent.NewQuorumClient(conn).Info(gctx.Context, &agent.InfoRequest{}); err != nil {
@@ -92,7 +92,7 @@ func (t cmdInfoWatch) Run(gctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	errorsx.MaybeLog(err)
+	errorsx.Log(err)
 
 	events := make(chan *agent.Message, 100)
 
@@ -148,7 +148,7 @@ func (t cmdInfoNodes) Run(gctx *cmdopts.Global) (err error) {
 
 	go func() {
 		<-gctx.Context.Done()
-		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.Log(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	cx := cluster.New(local, c)

@@ -141,7 +141,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 
 	for {
 		if conn != nil {
-			errorsx.MaybeLog(conn.Close())
+			errorsx.Log(conn.Close())
 		}
 
 		select {

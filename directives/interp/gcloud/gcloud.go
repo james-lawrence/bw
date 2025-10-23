@@ -111,11 +111,11 @@ func modify(ctx context.Context, op op) (err error) {
 		return errors.Errorf("unable to detach from target pool: requires running within a gce environment")
 	}
 
-	if project, err = metadata.ProjectID(); err != nil {
+	if project, err = metadata.ProjectIDWithContext(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 
-	if zone, err = metadata.Zone(); err != nil {
+	if zone, err = metadata.ZoneWithContext(ctx); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -129,7 +129,7 @@ func modify(ctx context.Context, op op) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if id, err = metadata.InstanceID(); err != nil {
+	if id, err = metadata.InstanceIDWithContext(ctx); err != nil {
 		return err
 	}
 

@@ -143,7 +143,7 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 			time.Sleep(due)
 
 			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
-				errorsx.MaybeLog(errors.Wrap(err, "failed to refresh credentials"))
+				errorsx.Log(errors.Wrap(err, "failed to refresh credentials"))
 			}
 		}
 	}()

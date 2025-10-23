@@ -108,7 +108,7 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 
 	client = agent.NewDeployConn(conn)
 	s.Logger.Println(s.au.Yellow(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
-	errorsx.MaybeLog(
+	errorsx.Log(
 		errorsx.Compact(
 			agentutil.PrintLogs(b, client, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
 			client.Close(),

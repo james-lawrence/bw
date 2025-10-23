@@ -18,7 +18,7 @@ const (
 
 // CleanSockets ...
 func CleanSockets(c agent.Config) {
-	errorsx.MaybeLog(
+	errorsx.Log(
 		errors.Wrap(
 			os.RemoveAll(filepath.Join(c.Root, "bootstrap")),
 			"failed to clean bootstrap service directory",
@@ -28,7 +28,7 @@ func CleanSockets(c agent.Config) {
 
 func ensureSocketDirectory(c agent.Config) {
 	if err := os.MkdirAll(filepath.Join(c.Root, "bootstrap"), 0744); err != nil {
-		errorsx.MaybeLog(errors.Wrap(err, "failed to create bootstrap socket directory"))
+		errorsx.Log(errors.Wrap(err, "failed to create bootstrap socket directory"))
 	}
 }
 

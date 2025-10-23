@@ -40,8 +40,8 @@ func WriteMetadata(path string, d *DeployCommand) error {
 	if dst, err = os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644); err != nil {
 		return errors.WithStack(err)
 	}
-	defer func() { errorsx.MaybeLog(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
-	defer func() { errorsx.MaybeLog(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
+	defer func() { errorsx.Log(errors.WithMessage(dst.Close(), "failed to close archive metadata file")) }()
+	defer func() { errorsx.Log(errors.WithMessage(dst.Sync(), "failed to sync archive metadata to disk")) }()
 
 	if raw, err = proto.Marshal(d); err != nil {
 		return errors.WithStack(err)

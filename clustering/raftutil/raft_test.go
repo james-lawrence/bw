@@ -123,10 +123,12 @@ func notLeader(i raft.RaftState) bool {
 	return i != raft.Leader
 }
 
+//nolint:unused
 func notShutdownFilter(i raft.RaftState) bool {
 	return i != raft.Shutdown
 }
 
+//nolint:unused
 func random(peers ...clustering.Memberlist) clustering.Memberlist {
 	rand.Shuffle(len(peers), func(i int, j int) {
 		peers[i], peers[j] = peers[j], peers[i]

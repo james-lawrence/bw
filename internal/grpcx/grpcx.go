@@ -118,7 +118,7 @@ func Retry(ctx context.Context, op func() error, retry ...codes.Code) (err error
 		}
 
 		debugx.Println("attempting grpc retry", err)
-		errorsx.MaybeLog(errors.Wrap(l.Wait(context.Background()), "wait failure"))
+		errorsx.Log(errors.Wrap(l.Wait(context.Background()), "wait failure"))
 	}
 }
 
@@ -146,7 +146,7 @@ func UntilSuccess(ctx context.Context, c func(context.Context) (*grpc.ClientConn
 
 		log.Println(errors.Wrap(err, "connection attempt failed"))
 
-		l.Wait(ctx)
+		errorsx.Log(l.Wait(ctx))
 	}
 }
 

@@ -24,7 +24,9 @@ func PrintNode(nodeinfo *agent.StatusResponse) error {
 	}
 
 	pterm.Printfln("Node: %s", PeerString(nodeinfo.Peer))
-	pterm.DefaultTable.WithHasHeader().WithData(deployments).Render()
+	if err := pterm.DefaultTable.WithHasHeader().WithData(deployments).Render(); err != nil {
+		return err
+	}
 	pterm.Println()
 
 	return nil
@@ -44,9 +46,7 @@ func PrintQuorum(quoruminfo *agent.InfoResponse) error {
 	pterm.Printfln("Leader    : %s", PeerString(quoruminfo.Leader))
 	pterm.Printfln("Latest    : %s", DeploymentString(quoruminfo.Deployed))
 	pterm.Printfln("Deploying : %s", DeploymentString(quoruminfo.Deploying))
-	pterm.DefaultTable.WithHasHeader().WithData(quorum).Render()
-
-	return nil
+	return pterm.DefaultTable.WithHasHeader().WithData(quorum).Render()
 }
 
 func PeerString(p *agent.Peer) string {

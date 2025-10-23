@@ -101,7 +101,7 @@ func (t Deployment) Deploy(ctx context.Context, req *agent.DeployCommandRequest)
 
 	if cc, err = t.conn(ctx); err != nil {
 		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return resp, cause
 	}
 	defer cc.Close()
@@ -121,7 +121,7 @@ func (t Deployment) Cancel(ctx context.Context, req *agent.CancelRequest) (resp 
 
 	if cc, err = t.conn(ctx); err != nil {
 		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return resp, cause
 	}
 	defer cc.Close()
@@ -142,7 +142,7 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 
 	if cc, err = t.conn(out.Context()); err != nil {
 		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return cause
 	}
 	defer cc.Close()
@@ -173,7 +173,7 @@ func (t Deployment) Dispatch(ctx context.Context, req *agent.DispatchRequest) (r
 
 	if cc, err = t.conn(ctx); err != nil {
 		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return resp, cause
 	}
 	defer cc.Close()
@@ -201,7 +201,7 @@ func (t Deployment) Logs(req *agent.LogRequest, out agent.Deployments_LogsServer
 
 	if cc, err = t.direct(out.Context(), req.Peer); err != nil {
 		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.MaybeLog(cause)
+		errorsx.Log(cause)
 		return cause
 	}
 	defer cc.Close()

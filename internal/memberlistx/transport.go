@@ -12,6 +12,7 @@ import (
 
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/memberlist"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
@@ -20,10 +21,6 @@ const (
 	// udpPacketBufSize is used to buffer incoming packets during read
 	// operations.
 	udpPacketBufSize = 65536
-
-	// udpRecvBufSize is a large buffer size that we attempt to set UDP
-	// sockets to in order to handle a large volume of messages.
-	udpRecvBufSize = 2 * 1024 * 1024
 )
 
 // NetTransportConfig is used to configure a net transport.
@@ -73,8 +70,8 @@ type SWIMTransport struct {
 // NewSWIMTransport returns a net transport with the given configuration. On
 // success all the network listeners will be created and listening.
 func NewSWIMTransport(d dialer, options ...SWIMTransportOption) (*SWIMTransport, error) {
-	// // If we reject the empty list outright we can assume that there's at
-	// // least one listener of each type later during operation.
+	// If we reject the empty list outright we can assume that there's at
+	// least one listener of each type later during operation.
 
 	// Build out the new transport.
 	var ok bool
@@ -93,18 +90,19 @@ func NewSWIMTransport(d dialer, options ...SWIMTransportOption) (*SWIMTransport,
 		return nil, fmt.Errorf("missing dialer")
 	}
 	if len(t.streams) == 0 {
-		return nil, fmt.Errorf("At least one reliable transport (tcp, unix domain socket, net.Listener) required")
+		return nil, fmt.Errorf("at least one reliable transport (tcp, unix domain socket, net.Listener) required")
 	}
 
 	if len(t.packets) == 0 {
-		return nil, fmt.Errorf("At least one unreliable packet transport (udp, net.PacketConn) required")
+		return nil, fmt.Errorf("at least one unreliable packet transport (udp, net.PacketConn) required")
 	}
 
 	// Clean up listeners if there's an error.
 	defer func() {
-		if !ok {
-			t.Shutdown()
+		if ok {
+			return
 		}
+		errorsx.Log(errors.Wrap(t.Shutdown(), "failed to shutdown swim transport"))
 	}()
 
 	// Fire them up now that we've been able to create them all.
@@ -140,7 +138,7 @@ func (t *SWIMTransport) FinalAdvertiseAddr(ip string, port int) (_ net.IP, _ int
 		// If they've supplied an address, use that.
 		advertiseAddr = net.ParseIP(ip)
 		if advertiseAddr == nil {
-			return nil, 0, fmt.Errorf("Failed to parse advertise address %q", ip)
+			return nil, 0, fmt.Errorf("failed to parse advertise address %q", ip)
 		}
 
 		// Ensure IPv4 conversion if necessary.
@@ -154,15 +152,15 @@ func (t *SWIMTransport) FinalAdvertiseAddr(ip string, port int) (_ net.IP, _ int
 			if s.IP.IsUnspecified() {
 				ip, err = sockaddr.GetPrivateIP()
 				if err != nil {
-					return nil, 0, fmt.Errorf("Failed to get interface addresses: %v", err)
+					return nil, 0, fmt.Errorf("failed to get interface addresses: %v", err)
 				}
 				if ip == "" {
-					return nil, 0, fmt.Errorf("No private IP address found, and explicit IP not provided")
+					return nil, 0, fmt.Errorf("no private IP address found, and explicit IP not provided")
 				}
 
 				advertiseAddr = net.ParseIP(ip)
 				if advertiseAddr == nil {
-					return nil, 0, fmt.Errorf("Failed to parse advertise address: %q", ip)
+					return nil, 0, fmt.Errorf("failed to parse advertise address: %q", ip)
 				}
 			} else {
 				advertiseAddr = s.IP

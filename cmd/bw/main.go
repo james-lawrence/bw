@@ -91,7 +91,7 @@ func main() {
 	)
 
 	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
-		commandutils.LogCause(err)
+		_ = commandutils.LogCause(err)
 		os.Exit(1)
 	}
 

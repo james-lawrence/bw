@@ -55,7 +55,7 @@ func Cancel(gctx *Context) (err error) {
 
 	go func() {
 		<-gctx.Context.Done()
-		errorsx.MaybeLog(errors.Wrap(conn.Close(), "failed to close connection"))
+		errorsx.Log(errors.Wrap(conn.Close(), "failed to close connection"))
 	}()
 
 	client = agent.NewDeployConn(conn)

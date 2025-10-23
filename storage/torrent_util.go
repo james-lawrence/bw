@@ -47,7 +47,7 @@ func (TorrentUtil) ClearTorrents(c TorrentConfig) {
 				deployDir := filepath.Join(deploysDir, tf.Path())
 				if _, cause := os.Stat(deployDir); os.IsNotExist(cause) {
 					c.client.Stop(tt.Metadata())
-					errorsx.MaybeLog(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
+					errorsx.Log(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
 					dropped = dropped + 1
 				}
 			}

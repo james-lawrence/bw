@@ -209,7 +209,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
 		soft = errors.Wrap(soft, "failed to clear workspace directory")
 		log.Println(soft)
-		errorsx.MaybeLog(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft)))
+		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft)))
 	}
 
 	dcopts := []DeployContextOption{
@@ -217,7 +217,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	}
 
 	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, by, opts, archive, dcopts...); err != nil {
-		errorsx.MaybeLog(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
+		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
 		return t.ds.current, err
 	}
 
@@ -237,7 +237,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
 		}
 
-		errorsx.MaybeLog(dctx.Dispatch(agent.LogError(t.local, err)))
+		errorsx.Log(dctx.Dispatch(agent.LogError(t.local, err)))
 		return t.ds.current, dctx.Done(err)
 	}
 
@@ -245,11 +245,11 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
-		errorsx.MaybeLog(dctx.Dispatch(agent.LogError(t.local, err)))
+		errorsx.Log(dctx.Dispatch(agent.LogError(t.local, err)))
 		return d, dctx.Done(errors.WithStack(err))
 	}
 
-	errorsx.MaybeLog(dctx.Dispatch(agent.DeployEvent(dctx.Local, d)))
+	errorsx.Log(dctx.Dispatch(agent.DeployEvent(dctx.Local, d)))
 
 	if err = downloadArchive(t.dlreg, dctx); err != nil {
 		return d, dctx.Done(err)
@@ -281,7 +281,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		errorsx.MaybeLog(agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogEvent(t.local, "cancelled deploy")))
+		errorsx.Log(agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogEvent(t.local, "cancelled deploy")))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}
@@ -331,7 +331,7 @@ func downloadArchive(dlreg storage.DownloadFactory, dctx *DeployContext) (err er
 	}
 
 	defer func() {
-		errorsx.MaybeLog(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
+		errorsx.Log(errors.Wrap(errorsx.Compact(dst.Sync(), dst.Close()), "archive cleanup failed"))
 	}()
 
 	if _, err = io.Copy(dst, dlreg.New(dctx.Archive.Location).Download(dctx.deadline, dctx.Archive)); err != nil {
