@@ -207,7 +207,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	// without this behaviour the torrent can be removed while nodes are still trying to deploy.
 	// preventing further deploys.
 	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
-		soft = errors.Wrap(soft, "failed to clear workspace directory")
+		soft = errors.Wrap(soft, "failed to clear deploy directory")
 		log.Println(soft)
 		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft)))
 	}
