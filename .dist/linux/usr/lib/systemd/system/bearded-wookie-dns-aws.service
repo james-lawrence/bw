@@ -6,5 +6,5 @@ Requires=bearded-wookie-agent.service
 [Service]
 Type=oneshot
 Slice=bearded-wookie.slice
-EnvironmentFile=-/etc/bearded-wookie/default/agent.env
+EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
 ExecStart=/usr/bin/bwaws dns
