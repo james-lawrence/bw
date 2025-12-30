@@ -35,6 +35,7 @@ func X509OptionSubject(s pkix.Name) X509Option {
 func X509OptionCA() X509Option {
 	return func(t *x509.Certificate) {
 		t.IsCA = true
+		t.BasicConstraintsValid = true
 		t.KeyUsage = t.KeyUsage | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign | x509.KeyUsageKeyAgreement | x509.KeyUsageContentCommitment | x509.KeyUsageDataEncipherment | x509.KeyUsageKeyAgreement
 		t.ExtKeyUsage = append(t.ExtKeyUsage, x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth)
 	}
