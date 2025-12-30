@@ -1,3 +1,21 @@
+commit 78cd96b7929495cb858faffa6ebbf16ac5a842ee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 12:39:04 2025 -0500
+
+    remove p2p key on boot
+
+commit 9b77957bc3b766ea3fc28c2b5f561ef590e9fd46
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 12:26:35 2025 -0500
+
+    update tmpfiles.d for new paths
+
+commit 21790f97dc8d4b6290c0b4cb737dd3da884b2a95
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 07:07:51 2025 -0500
+
+    release 0.1.1767095861-89ce832b
+
 commit 89ce832baa6e46cebf2095b3d97786ed6f409e0a
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 30 06:57:41 2025 -0500
