@@ -1,3 +1,15 @@
+commit a71234eff6c1ee01dc3a1651af80be953fff158f
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 13:53:23 2025 -0500
+
+    fix tlsx.X509OptionCA for golang 1.15
+
+commit ed3bf69d47bb786d90eb87bce8a8994f224e61c7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 13:34:55 2025 -0500
+
+    release 0.1.1767118651-ea0b941b
+
 commit ea0b941baa4cf01b1a64b6b385e9a2c24c150278
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 30 13:17:31 2025 -0500
