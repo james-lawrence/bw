@@ -16,6 +16,8 @@ RuntimeDirectory=%N
 # to see all available environment variables and their uses
 # see https://github.com/james-lawrence/bw/blob/master/environment.go.
 EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
+# keep previous path around for backwards compatibility.
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 # specify the shell used for running commands.
 Environment=SHELL=/bin/bash
 ExecStart=/usr/bin/bw agent
