@@ -1,3 +1,33 @@
+commit 560ae6678a3399a1329dbabf237b4b524ba154d0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 05:09:07 2025 -0500
+
+    update some eg stuff getting it closer to working
+
+commit 6fa8fe70551edc3340052da41b75be907c7e4d03
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 04:59:57 2025 -0500
+
+    update eg
+
+commit ba81a26428f737f4218eece388398387aba70663
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 04:55:04 2025 -0500
+
+    update environment file path
+
+commit e73225f56fdfb5950fa779498c96ee33c82a1fee
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Sun Nov 23 05:16:59 2025 -0500
+
+    fix copy on logging message to be accurate
+
+commit a7dbf768b662d49e14c585891e19d0f7cc196024
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Wed Oct 22 23:45:00 2025 -0400
+
+    update release notes
+
 commit 168984a12c51c192dbbaf526910e9fac150d3157
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Wed Oct 22 23:31:26 2025 -0400
