@@ -1,3 +1,15 @@
+commit da818357c9fcaf86ef1d32b6ffac5af233652a19
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 14:11:22 2025 -0500
+
+    attempt to handle io.EOF on upload more gracefully
+
+commit 6d2d8307c506aa0d771751a179ab8a85f627942d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 14:09:45 2025 -0500
+
+    release 0.1.1767120803-a71234ef
+
 commit a71234eff6c1ee01dc3a1651af80be953fff158f
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 30 13:53:23 2025 -0500
