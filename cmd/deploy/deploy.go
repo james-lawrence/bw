@@ -31,6 +31,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type Context struct {
@@ -184,12 +185,15 @@ func Into(gctx *Context) error {
 			Vcscommit: commitish,
 		}
 
-		if darchive, err = client.Upload(gctx.Context, &meta, dst); err != nil {
+		if darchive, err = client.Upload(gctx.Context, &meta, dst); errors.Is(err, io.EOF) {
+			// occassionally we'll run into an EOF, due to server restarts, or random network failures. ceorce
+			// the io.EOF error into a grpc codes.Unavailable error so the retry takes hold.
+			return status.Error(codes.Unavailable, err.Error())
+		} else if err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
 			events <- agent.LogEvent(local, "deployment failed")
 			return err
 		}
-
 		return nil
 	}, codes.Unavailable)
 
