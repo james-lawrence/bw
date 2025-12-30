@@ -1,3 +1,27 @@
+commit ea0b941baa4cf01b1a64b6b385e9a2c24c150278
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 13:17:31 2025 -0500
+
+    fix dns-gcloud command
+
+commit 5560175640e1f736c2f67214381f31fbbf9c6ef2
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 13:15:47 2025 -0500
+
+    retain some backwards compat for enviroonment file for now
+
+commit 4fc92703e0bf7ccf1bf948773fd8d45a4c4895ba
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 13:15:47 2025 -0500
+
+    retain some backwards compat for enviroonment file for now
+
+commit 29303a28677ac828c0a25083e22f06e8262a1dfd
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 12:47:53 2025 -0500
+
+    release 0.1.1767116344-78cd96b7
+
 commit 78cd96b7929495cb858faffa6ebbf16ac5a842ee
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 30 12:39:04 2025 -0500
