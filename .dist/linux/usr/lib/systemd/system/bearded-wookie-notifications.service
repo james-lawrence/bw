@@ -10,6 +10,7 @@ Slice=bearded-wookie.slice
 ConfigurationDirectory=bearded-wookie
 CacheDirectory=bearded-wookie
 EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
+EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 ExecStart=/usr/bin/bw notify
 
 [Install]
