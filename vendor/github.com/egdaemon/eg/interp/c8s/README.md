@@ -1,1 +1,0 @@
-# Containers (c8s) support
