@@ -235,7 +235,8 @@ func Into(gctx *Context) error {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
 		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)
 		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(displayname, darchive.DeployOption, dopts.DeployOption))
+		return cause
 	}
 
-	return err
+	return nil
 }
