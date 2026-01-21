@@ -1,10 +1,13 @@
 ### Bearded Wookie configuration management.
+
 secure, fast, reliable, and self contained configuration management.
 
 #### security
+
 bearded-wookie uses TLS to encrypt all data transferred between agents and clients.
 
 #### project goals - how features are decided on and accepted. (no particular order)
+
 - be a secure, resource efficient, and reliable configuration management tool.
 - no centralized server.
 - no required infrastructure. any additional infrastructure should be optional.
@@ -21,6 +24,7 @@ sudo apt-get install bearded-wookie
 ```
 
 ### quick start - local development (assumes linux).
+
 ```bash
 # install bearded wookie
 go install github.com/james-lawrence/bw/cmd/...
@@ -37,6 +41,7 @@ bw deploy env linux-test --insecure
 ```
 
 ### quick start - gcloud (assumes a gcloud project, and terraform).
+
 IMPORTANT: quickstart examples don't configure a VPN, a VPN is highly recommended for production environments.
 
 ```bash
@@ -54,18 +59,21 @@ pushd .examples/gcloud && terraform destroy && terraform apply && popd
 pushd .examples && bw deploy example && popd
 ```
 
-example commands:  
- - `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.
- - `bw environment create {name} {address}` creates a new environment within the workspace.
- - `bw deploy {environment}` deploy to the specified environment.
- - `bw deploy --canary {environment}` deploy to a single consistent server.
- - `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters.
- - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive.
- - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers.
- - `bw info check {address}:{port}` checks if the cluster is reachable.
+example commands:
+
+- `bw workspace bootstrap` creates a deployment workspace. this is a directory + skeleton.
+- `bw environment create {name} {address}` creates a new environment within the workspace.
+- `bw deploy {environment}` deploy to the specified environment.
+- `bw deploy --canary {environment}` deploy to a single consistent server.
+- `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters.
+- `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive.
+- `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers.
+- `bw info check {address}:{port}` checks if the cluster is reachable.
 
 ### architecture overview
+
 bearded-wookie is built off 4 main protocols.
+
 - SWIM - a gossip protocol for discovering peers and agent health checks.
 - RAFT - consensus algorithm for shared state, e.g.) current deployment.
 - ACME protocol - for bootstrapping TLS.
@@ -74,6 +82,7 @@ bearded-wookie is built off 4 main protocols.
 by using these 4 protocols bearded-wookie avoids needing a centralized server, while remaining durable and easy to operate.
 
 Benefits of bearded-wookie:
+
 - can work entirely inside of a VPN; no need to expose anything outside of the network. (requires using ACME DNS challenge, or a custom certificate authority)
 - durable. unless you literally lose all of the nodes and a majority of your entire cluster simultaneously the cluster will continue to operate.
   - bw does have support for remote bootstrapping, its just not required for normal operation.
@@ -129,16 +138,16 @@ Multi-Node (Production)          Single-Node (Development/Testing)
 
 ```yaml
 root: "/var/cache/bearded-wookie"
-keepN: 5                           # Deployment history retention
-minimumNodes: 1                    # ⚠️  CRITICAL: disable quorum consensus.
-snapshotFrequency: "3h"            # RAFT snapshot interval
+keepN: 5 # Deployment history retention
+minimumNodes: 1 # ⚠️  CRITICAL: disable quorum consensus.
+snapshotFrequency: "3h" # RAFT snapshot interval
 credentials:
-  source: disabled                 # ⚠️  SECURITY: this is not recommended. but can be useful for debugging purposes.
+  source: disabled # ⚠️  SECURITY: this is not recommended. but can be useful for debugging purposes.
 notary:
   authority: [
-    "/etc/bearded-wookie/default/bw.auth.keys"  # SSH key authentication
-  ]
-clusterTokens:                     # Unique cluster identification
+      "/etc/bearded-wookie/default/bw.auth.keys", # SSH key authentication
+    ]
+clusterTokens: # Unique cluster identification
   - "cluster-token-1"
   - "cluster-token-2"
 ```
@@ -166,16 +175,16 @@ SHELL=/bin/bash
 #### 3. Client Configuration (`.bwconfig/environment/config.yml`)
 
 ```yaml
-address: "your-node:2000"         # External agent address
-discovery: "your-node:2000"       # Same as address for single-node
-servername: "your-node-name"      # Must match agent
-concurrency: 0.25                 # Deployment parallelism
+address: "your-node:2000" # External agent address
+discovery: "your-node:2000" # Same as address for single-node
+servername: "your-node-name" # Must match agent
+concurrency: 0.25 # Deployment parallelism
 credentials:
-  source: disabled                 # ⚠️  CRITICAL: Match agent setting
+  source: disabled # ⚠️  CRITICAL: Match agent setting
 deploy:
-  dir: ".deploy/environment"       # Deployment scripts location
-  timeout: 1h0m0s                  # Deployment timeout
-  treeish: origin/main             # Git reference to deploy
+  dir: ".deploy/environment" # Deployment scripts location
+  timeout: 1h0m0s # Deployment timeout
+  treeish: origin/main # Git reference to deploy
 ```
 
 ### Common Errors and Debugging Techniques
@@ -183,6 +192,7 @@ deploy:
 #### Error 1: "insufficient nodes for deployment"
 
 **Symptoms:**
+
 ```
 [ERROR] deployment rejected: cluster has 1 nodes, minimum required: 3
 ```
@@ -190,12 +200,14 @@ deploy:
 **Root Cause:** BW's default safety mechanism requires multiple nodes for consensus.
 
 **Solution:**
+
 ```yaml
 # In agent.config
-minimumNodes: 1  # Override default minimum
+minimumNodes: 1 # Override default minimum
 ```
 
 **Debugging:**
+
 ```bash
 # Check cluster status
 bw info nodes environment-name --insecure -v
@@ -207,6 +219,7 @@ grep -i minimum /etc/bearded-wookie/default/agent.config
 #### Error 2: "tls: failed to verify certificate"
 
 **Symptoms:**
+
 ```
 [ERROR] x509: certificate signed by unknown authority
 [ERROR] failed to verify certificate: x509: certificate is not valid
@@ -215,6 +228,7 @@ grep -i minimum /etc/bearded-wookie/default/agent.config
 **Root Cause:** Self-signed certificates don't match between client and server.
 
 **Solution:**
+
 ```bash
 # Agent side: disable TLS verification
 credentials:
@@ -225,6 +239,7 @@ bw deploy env environment-name --insecure
 ```
 
 **Debugging:**
+
 ```bash
 # Test raw connectivity
 openssl s_client -connect your-node:2000 -verify_return_error
@@ -239,6 +254,7 @@ bw info check your-node:2000 --insecure -v
 #### Error 3: Network binding and discovery issues
 
 **Symptoms:**
+
 ```
 [ERROR] failed to bind to address 127.0.0.1:2000: address already in use
 [ERROR] no peers discovered after timeout
@@ -247,11 +263,12 @@ bw info check your-node:2000 --insecure -v
 **Root Cause:** Incorrect bind vs advertised address configuration.
 
 **Solution:**
+
 ```bash
 # Bind to all interfaces for external access
 BEARDED_WOOKIE_AGENT_P2P_BIND=0.0.0.0:2000
 
-# Advertise localhost for single-node internal communication  
+# Advertise localhost for single-node internal communication
 BEARDED_WOOKIE_AGENT_P2P_ADVERTISED=127.0.0.1:2000
 
 # Ensure discovery port matches bind port
@@ -259,6 +276,7 @@ BEARDED_WOOKIE_AGENT_CLUSTER_P2P_DISCOVERY_PORT=2000
 ```
 
 **Debugging:**
+
 ```bash
 # Check port bindings
 netstat -tlnp | grep :2000
@@ -275,6 +293,7 @@ journalctl -u bearded-wookie-agent -f
 #### Error 5: Go build environment issues
 
 **Symptoms:**
+
 ```
 [LOCAL] executing go build ...
 [LOCAL] go: module cache not found: neither GOMODCACHE nor GOPATH is set
@@ -284,6 +303,7 @@ journalctl -u bearded-wookie-agent -f
 **Root Cause:** Missing Go environment variables during build.
 
 **Solution:**
+
 ```bash
 # In build script (.local/build.bwcmd)
 - command: cd %bw.temp.directory%/archive && go build -o %bw.archive.directory%/.filesystem/usr/local/bin/daemon ./cmd/daemon
@@ -292,13 +312,14 @@ journalctl -u bearded-wookie-agent -f
 
 # In bw.env file
 CGO_ENABLED=0
-GOOS=linux  
+GOOS=linux
 GOARCH=amd64
 GOPATH=/tmp/go
 GOCACHE=/tmp/go-cache
 ```
 
 **Debugging:**
+
 ```bash
 # Check Go environment during build
 - command: env | grep GO | sort
@@ -331,6 +352,7 @@ Proper deployment structure following established patterns:
 ### Nginx Integration Patterns
 
 #### Simple TCP Proxy
+
 ```nginx
 stream {
     server {
@@ -343,6 +365,7 @@ stream {
 ```
 
 #### ALPN Protocol Routing
+
 ```nginx
 stream {
     map $ssl_preread_alpn_protocols $upstream {
@@ -351,7 +374,7 @@ stream {
 		      ~\bbw.proxy\b 127.0.0.1:2000;   # BW proxy traffic
         default  127.0.0.1:8080;        # Application traffic
     }
-    
+
     server {
         listen 443;
         ssl_preread on;
@@ -388,4 +411,3 @@ bw info nodes environment-name --insecure
 systemctl status bearded-wookie-agent
 journalctl -u bearded-wookie-agent --since="1 hour ago"
 ```
-
