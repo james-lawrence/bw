@@ -8,4 +8,4 @@ Type=oneshot
 Slice=bearded-wookie.slice
 EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
-ExecStart=/usr/local/bin/bwaws dns
+ExecStart=/usr/bin/bwaws dns
