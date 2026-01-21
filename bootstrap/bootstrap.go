@@ -59,7 +59,7 @@ func OptionBackoff(bs backoff.Strategy) func(*UntilSuccess) {
 // NewUntilSuccess continuously bootstraps until it succeeds or hits maximum attempts.
 func NewUntilSuccess(options ...option) UntilSuccess {
 	us := UntilSuccess{
-		maxAttempts: math.MaxInt64, // effectively forever.
+		maxAttempts: math.MaxInt, // effectively forever.
 		bs: backoff.New(
 			backoff.Exponential(2*time.Second),
 			backoff.Maximum(time.Minute),

@@ -27,7 +27,7 @@ override_dh_auto_build:
 	cp $(CURDIR)/src/LICENSE $(CURDIR)/debian/copyright
 
 	GOWORK="off" GOPROXY="direct" GOMODCACHE="$(CURDIR)/gomodcache" GOCACHE="$(CURDIR)/gocache" /usr/lib/go-1.24/bin/go build -C ./src -mod=vendor -buildmode=pie -buildvcs=false -ldflags="${BW_LDFLAGS}" -o "$(CURDIR)/linux/usr/bin" ./cmd/...
-	tree $(CURDIR)/linux
+# 	tree $(CURDIR)/linux
 
 override_dh_auto_test:
 	$(CURDIR)/linux/usr/bin/bw version
