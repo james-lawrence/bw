@@ -1,0 +1,36 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+DH_VERBOSE = 1
+
+# see FEATURE AREAS in dpkg-buildflags(1)
+#export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+# see ENVIRONMENT in dpkg-buildflags(1)
+# package maintainers to append CFLAGS
+#export DEB_CFLAGS_MAINT_APPEND  = -Wall -pedantic
+# package maintainers to append LDFLAGS
+#export DEB_LDFLAGS_MAINT_APPEND = -Wl,--as-needed
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	echo "DH AUTO BUILD OVERRIDE"
+	echo "$(CURDIR)"
+	mkdir -p $(CURDIR)/linux/usr/bin
+	mkdir -p $(CURDIR)/gocache
+	mkdir -p $(CURDIR)/gomodcache
+
+	cat $(CURDIR)/debian/control
+	cp -R $(CURDIR)/src/.dist/linux/* linux
+	cp $(CURDIR)/src/LICENSE $(CURDIR)/debian/copyright
+
+	GOWORK="off" GOPROXY="direct" GOMODCACHE="$(CURDIR)/gomodcache" GOCACHE="$(CURDIR)/gocache" /usr/lib/go-1.24/bin/go build -C ./src -mod=vendor -buildmode=pie -buildvcs=false -ldflags="${BW_LDFLAGS}" -o "$(CURDIR)/linux/usr/bin" ./cmd/...
+	tree $(CURDIR)/linux
+
+override_dh_auto_test:
+	$(CURDIR)/linux/usr/bin/bw version
+
+override_dh_auto_install:
+	echo "DH AUTO INSTALL OVERRIDE"

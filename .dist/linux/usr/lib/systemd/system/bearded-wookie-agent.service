@@ -20,7 +20,7 @@ EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env
 # specify the shell used for running commands.
 Environment=SHELL=/bin/bash
-ExecStart=/usr/bin/bw agent
+ExecStart=/usr/local/bin/bw agent
 
 [Install]
 WantedBy=default.target

@@ -2,13 +2,13 @@ package main
 
 import (
 	"context"
+	"eg/compute/debian"
 	"eg/compute/maintainer"
 	"log"
 
 	"github.com/egdaemon/eg/runtime/wasi/eg"
 	"github.com/egdaemon/eg/runtime/wasi/egenv"
 	"github.com/egdaemon/eg/runtime/wasi/eggit"
-	"github.com/egdaemon/eg/runtime/x/wasi/egdebuild"
 )
 
 func main() {
@@ -19,13 +19,12 @@ func main() {
 	err := eg.Perform(
 		ctx,
 		eggit.AutoClone,
-		eg.Build(deb.BuildFromFile(".dist/deb/Dockerfile")),
-		egdebuild.Prepare,
+		debian.Prepare,
 		eg.Module(
 			ctx,
 			deb,
-			egdebuild.Build,
-			egdebuild.Upload,
+			debian.Build,
+			debian.Upload,
 		),
 	)
 
