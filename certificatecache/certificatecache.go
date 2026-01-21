@@ -77,7 +77,7 @@ func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
 // FromConfig will automatically refresh credentials in the provided directory
 // based on the mode and the configuration file.
 func FromConfig(dir, mode, configfile string, futureoffset time.Duration, fallback refresher) (err error) {
-	log.Println("tls credentials mode", mode)
+	log.Printf("tls credentials mode '%s' - offset '%v'\n", mode, futureoffset)
 	switch mode {
 	case ModeDisabled:
 		return RefreshAutomatic(dir, futureoffset, Noop{})
@@ -129,6 +129,7 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 	var (
 		due time.Duration
 	)
+
 	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
 
 	if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
@@ -137,13 +138,15 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 
 	go func() {
 		for {
+			certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
 			if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-				log.Println("next refresh", due)
+				log.Println("next refresh", certpath, due)
 			}
 			time.Sleep(due)
 
 			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 				errorsx.Log(errors.Wrap(err, "failed to refresh credentials"))
+				continue
 			}
 		}
 	}()
@@ -169,6 +172,7 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	// set the next refresh to be a minute from now, forces a hopefully successful
 	// iteration where it'll use the certicates actual expiration to compute the next iteration.
 	if _, err = os.Stat(certpath); os.IsNotExist(err) {
+		log.Println("forcing refresh due to missing certificate", certpath)
 		return due, r.Refresh()
 	}
 
@@ -179,12 +183,10 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	// check once a day, unless the expiration / 4 is sooner.
 	due = timex.DurationMin(24*time.Hour, expiration.Sub(t)/4)
 
-	// no reason to refresh more frequently than 30s, even when we have an expired certificate.
+	// no reason to refresh more frequently than the minfrequency, even when we have an expired certificate.
 	due = timex.DurationMax(minFrequency, due)
 	refreshNeeded := t.Equal(expiration) || t.After(expiration)
-	if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-		log.Println("certificate refresh check", expiration, "<=", t, "->", refreshNeeded)
-	}
+	log.Println("certificate refresh check", certpath, due, expiration, "<=", t, "->", refreshNeeded)
 
 	if refreshNeeded {
 		return due, r.Refresh()

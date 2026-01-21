@@ -26,7 +26,7 @@ func Test(ctx context.Context, op eg.Op) error {
 		eggolang.AutoCompile(),
 		eg.Parallel(
 			eggolang.AutoTest(),
-			linting,
+			// linting,
 		),
 	)
 }

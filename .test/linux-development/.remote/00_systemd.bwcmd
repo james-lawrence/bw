@@ -1,4 +1,4 @@
-- command: mkdir -p %h/.cache/bearded-wookie
+- command: mkdir -p %h/.cache/bearded-wookie %h/.local/state/bearded-wookie-pebble
 - command: rsync --quiet --checksum --recursive --progress agent1/* %h/.cache/bearded-wookie/agent1/
 - command: rsync --quiet --checksum --recursive --progress agent2/* %h/.cache/bearded-wookie/agent2/
 - command: rsync --quiet --checksum --recursive --progress agent3/* %h/.cache/bearded-wookie/agent3/
@@ -9,6 +9,6 @@
 - command: rsync --quiet --checksum --recursive --progress agent8/* %h/.cache/bearded-wookie/agent8/
 - command: rsync --quiet --checksum --recursive --progress agent9/* %h/.cache/bearded-wookie/agent9/
 - command: rsync --quiet --checksum --recursive --progress agent10/* %h/.cache/bearded-wookie/agent10/
-- command: rsync --quiet --checksum --recursive --progress pebble/* %h/.config/bearded-wookie-pebble/
+- command: rsync --quiet --checksum --recursive --progress pebble/* %h/.local/state/bearded-wookie-pebble/
 - command: ls systemd/* | xargs -I {} systemctl --user link --force %bw.work.directory%/.test/linux-development/{}
 - command: systemctl --user daemon-reload

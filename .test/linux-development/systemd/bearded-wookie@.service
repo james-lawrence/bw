@@ -15,13 +15,13 @@ Environment=BEARDED_WOOKIE_TOKEN2="b9ff094b-3e06-40e6-89c5-127790897eb3"
 Environment=BEARDED_WOOKIE_TEST_CAURL="https://127.0.0.1:14000/dir"
 Environment=BEARDED_WOOKIE_TEST_EMAIL="9e07ed74-cf4e-41e6-82bb-58b9135dc335@gmail.com"
 Environment=BEARDED_WOOKIE_AGENT_CLUSTER_PEER_ID_SEED="%p.%i"
-Environment=LEGO_CA_CERTIFICATES="%h/.config/bearded-wookie-pebble/certs/pebble.minica.pem"
+Environment=LEGO_CA_CERTIFICATES="%S/bearded-wookie-pebble/certs/pebble.minica.pem"
 ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY}"
 ExecStartPre=mkdir -p ${CACHE_DIRECTORY}/tls/authorities
-ExecStartPre=echo curl --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
-ExecStartPre=curl --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
-ExecStartPre=echo curl --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
-ExecStartPre=curl --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
+ExecStartPre=echo curl --retry 999 --retry-delay 1 --retry-connrefused --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
+ExecStartPre=curl --retry 999 --retry-delay 1 --retry-connrefused --insecure https://localhost:15000/intermediates/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.pem
+ExecStartPre=echo curl --retry 999 --retry-delay 1 --retry-connrefused --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
+ExecStartPre=curl --retry 999 --retry-delay 1 --retry-connrefused --insecure https://localhost:15000/roots/0 --output ${CACHE_DIRECTORY}/tls/authorities/pebble.root.pem
 EnvironmentFile=%C/%p/%i/agent.env
 SyslogIdentifier=%p-%i
 ExecStart=%h/go/bin/bw agent runtime --agent-config="%C/%p/%i/agent.config"

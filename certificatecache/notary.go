@@ -1,18 +1,22 @@
 package certificatecache
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 	nsvc "github.com/james-lawrence/bw/notary"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	"github.com/pkg/errors"
 )
@@ -74,8 +78,16 @@ func (t Notary) Refresh() (err error) {
 
 	dd := dialers.NewDirect(agent.URIAgent(t.Address), d.Defaults()...)
 	client := nsvc.NewClient(dd)
+	ctx, done := context.WithTimeout(context.Background(), time.Minute)
+	defer done()
 
-	if ca, key, cert, err = client.Refresh(); err != nil {
+	err = grpcx.Retry(ctx, func() error {
+		if ca, key, cert, err = client.Refresh(); err != nil {
+			return err
+		}
+		return nil
+	}, codes.Unavailable)
+	if err != nil {
 		return err
 	}
 

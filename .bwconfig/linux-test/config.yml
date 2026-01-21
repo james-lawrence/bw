@@ -1,7 +1,7 @@
-address: bearded-wookie.lan:2000
-discovery: bearded-wookie.lan:2000
+address: localhost:2000
+discovery: localhost:2000
 concurrency: 2
-servername: "bearded-wookie.lan"
+servername: "localhost"
 deploy:
   dir: ".test/.bw"
   timeout: 10m

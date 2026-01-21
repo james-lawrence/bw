@@ -8,12 +8,15 @@ Restart=always
 StateDirectory=%p/%i
 RuntimeDirectory=%p/%i
 CacheDirectory=%p/%i
-WorkingDirectory=%h/.config/%p
+ConfigurationDirectory=%p/%i
+WorkingDirectory=%S/%p
 SyslogIdentifier=%p
 Environment=PEBBLE_VA_NOSLEEP=1
 Environment=PEBBLE_WFE_NONCEREJECT=0
-ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY} runtime=${RUNTIME_DIRECTORY} - ${PWD}"
-ExecStart=%h/go/bin/pebble -config ${STATE_DIRECTORY}/config.json
+ExecStartPre=/usr/bin/echo "cache=${CACHE_DIRECTORY} state=${STATE_DIRECTORY} runtime=${RUNTIME_DIRECTORY} - %S/%p/config.json"
+ExecStartPre=/usr/bin/tree %S
+ExecStartPre=/usr/bin/echo "%h/go/bin/pebble -strict -config %S/%p/config.json"
+ExecStart=%h/go/bin/pebble -strict -config %S/%p/config.json
 
 [Install]
 WantedBy=default.target
