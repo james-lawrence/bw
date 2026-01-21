@@ -35,7 +35,7 @@ func init() {
 		egdebuild.Option.Maintainer(maintainer.Name, maintainer.Email),
 		egdebuild.Option.SigningKeyID(maintainer.GPGFingerprint),
 		egdebuild.Option.ChangeLogDate(c.Committer.When),
-		egdebuild.Option.Version("0.0.:autopatch:"),
+		egdebuild.Option.Version("0.1.:autopatch:"),
 		egdebuild.Option.Description("distributed configuration management", "bearded-wookie is a distributed configuration management system\n designed for high availability and minimal infrastructure overhead."),
 		egdebuild.Option.Debian(errorsx.Must(fs.Sub(debskel, ".debskel"))),
 		egdebuild.Option.DependsBuild("golang-1.24", "dh-make", "debhelper"),
