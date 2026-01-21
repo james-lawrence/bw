@@ -1,3 +1,51 @@
+commit 0d80b9854ac4f3d4f9fe8312819a5eb84964c04d
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 20 22:26:50 2026 -0500
+
+    remove old make release process
+
+commit c3281af994ebe7e823ed187c53d470dcaa6a7ff5
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 20 21:38:31 2026 -0500
+
+    move debian build into eg
+
+commit 9dab3bab01c6988fadfd020f76eb6161ff8fe78c
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 20 20:32:47 2026 -0500
+
+    working eg tests
+
+commit a4c275fff878bed6e1a54dc53f5170a558f29b66
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 20 17:27:50 2026 -0500
+
+    update dependencies
+
+commit e0d977b75629f902c5ded4299b7f9f8d4ca9b3e0
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Jan 20 17:13:35 2026 -0500
+
+    update work.sum
+
+commit 2380fce11368dd364e5c10e18b0ebc504b55099a
+Author: James Lawrence <james@alignmt.ai>
+Date:   Tue Jan 20 11:50:55 2026 -0500
+
+    ensure non-zero is returned when deploy fails
+
+commit b073881393340fc1715366e2e4317cb2d1eb7563
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Mon Jan 12 17:01:56 2026 -0500
+
+    fix macosx build
+
+commit 9af673c2df73339c4508dabdb9762f1c2f154fe7
+Author: James Lawrence <jljatone@gmail.com>
+Date:   Tue Dec 30 14:40:26 2025 -0500
+
+    release 0.1.1767121882-da818357
+
 commit da818357c9fcaf86ef1d32b6ffac5af233652a19
 Author: James Lawrence <jljatone@gmail.com>
 Date:   Tue Dec 30 14:11:22 2025 -0500
