@@ -3,6 +3,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 
 	"eg/compute/errorsx"
 
@@ -14,6 +15,11 @@ import (
 )
 
 func Test(ctx context.Context, op eg.Op) error {
+	type grpcerror interface {
+		error
+		GRPCStatus() *status.Status
+	}
+
 	runtime := eggolang.Runtime()
 
 	return eg.Perform(
@@ -27,6 +33,7 @@ func Test(ctx context.Context, op eg.Op) error {
 		),
 		// execute various deployments to ensure behaviors.
 		shell.Op(runtime.Newf("run0 -u egd -g egd -D %s bw deploy env linux-test-example1 --insecure", egenv.WorkingDirectory()).Privileged()),
+		// ensure deploys set exit code when they fail.
 		ExpectedFailure(
 			shell.Op(runtime.Newf("run0 -u egd -g egd -D %s bw deploy env linux-test-example2 --insecure", egenv.WorkingDirectory()).Privileged()),
 			new(grpcerror),
@@ -38,14 +45,10 @@ func Test(ctx context.Context, op eg.Op) error {
 func ExpectedFailure(op eg.OpFn, allowed ...any) eg.OpFn {
 	return func(ctx context.Context, o eg.Op) error {
 		if err := op(ctx, o); err == nil {
+			return fmt.Errorf("unexpected success")
 		} else if errorsx.Ignore2(err, allowed...) != nil {
 			return err
 		}
 		return nil
 	}
-}
-
-type grpcerror interface {
-	error
-	GRPCStatus() *status.Status
 }
