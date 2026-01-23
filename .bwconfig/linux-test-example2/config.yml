@@ -1,0 +1,8 @@
+address: localhost:2000
+discovery: localhost:2000
+concurrency: 2
+servername: "localhost"
+deploy:
+  dir: ".test/example2"
+  timeout: 10m
+  treeish: "HEAD"

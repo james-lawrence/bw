@@ -37,6 +37,16 @@ func Ignore(err error, ignore ...error) error {
 	return err
 }
 
+func Ignore2(err error, ignore ...any) error {
+	for _, i := range ignore {
+		if errors.As(err, i) {
+			return nil
+		}
+	}
+
+	return err
+}
+
 // Never panic when error is seen.
 func Never(err error) {
 	if err == nil {

@@ -124,8 +124,10 @@ func Into(gctx *Context) error {
 
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
+	dctx, failurefn := context.WithCancelCause(gctx.Context)
+	defer failurefn(nil)
 	termui.NewFromClientConfig(
-		gctx.Context, config, qd, local, events,
+		dctx, failurefn, config, qd, local, events,
 		ux.OptionHeartbeat(gctx.Heartbeat),
 		ux.OptionDebug(gctx.Verbose),
 	)
@@ -235,6 +237,11 @@ func Into(gctx *Context) error {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
 		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)
 		events <- agent.NewDeployCommand(local, agent.DeployCommandFailed(displayname, darchive.DeployOption, dopts.DeployOption))
+		return cause
+	}
+
+	<-dctx.Done()
+	if cause := context.Cause(dctx); errorsx.Ignore(cause, context.Canceled) != nil {
 		return cause
 	}
 

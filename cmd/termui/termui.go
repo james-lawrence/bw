@@ -11,20 +11,23 @@ import (
 	"github.com/james-lawrence/bw/ux"
 )
 
-func NewFromClientConfig(ctx context.Context, config agent.ConfigClient, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
+func NewFromClientConfig(ctx context.Context, shutdown context.CancelCauseFunc, config agent.ConfigClient, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
 	dctx, ddone := context.WithTimeout(ctx, config.Deployment.Timeout+time.Minute)
-	New(dctx, ddone, d, local, events, options...)
+	New(dctx, func(cause error) {
+		ddone()
+		shutdown(cause)
+	}, d, local, events, options...)
 }
 
-func New(ctx context.Context, shutdown context.CancelFunc, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
+func New(ctx context.Context, shutdown context.CancelCauseFunc, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
 	contextx.WaitGroupAdd(ctx, 1)
 	cached := dialers.NewCached(d)
 	go agentutil.WatchEvents(ctx, local, cached, events)
 	go func() {
-		defer shutdown()
+		defer shutdown(nil)
 		defer contextx.WaitGroupDone(ctx)
 		ux.Deploy(
-			ctx, cached, events,
+			ctx, shutdown, cached, events,
 			append(
 				options,
 				ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, cached)),
@@ -33,14 +36,14 @@ func New(ctx context.Context, shutdown context.CancelFunc, d dialers.Quorum, loc
 	}()
 }
 
-func NewLogging(ctx context.Context, shutdown context.CancelFunc, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
+func NewLogging(ctx context.Context, shutdown context.CancelCauseFunc, d dialers.Quorum, local *agent.Peer, events chan *agent.Message, options ...ux.Option) {
 	contextx.WaitGroupAdd(ctx, 1)
 	cached := dialers.NewCached(d)
 
 	go agentutil.WatchEvents(ctx, local, cached, events)
 	go func() {
-		defer shutdown()
+		defer shutdown(nil)
 		defer contextx.WaitGroupDone(ctx)
-		ux.Logging(ctx, cached, events, options...)
+		ux.Logging(ctx, shutdown, cached, events, options...)
 	}()
 }

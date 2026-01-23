@@ -96,15 +96,21 @@ func (t cmdInfoWatch) Run(gctx *cmdopts.Global) (err error) {
 
 	events := make(chan *agent.Message, 100)
 
+	dctx, failurefn := context.WithCancelCause(gctx.Context)
+	defer failurefn(nil)
 	termui.NewLogging(
-		gctx.Context,
-		gctx.Shutdown,
+		dctx,
+		failurefn,
 		qd,
 		local,
 		events,
 		ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, qd)),
 		ux.OptionHeartbeat(time.Duration(math.MaxInt64)),
 	)
+
+	if err = context.Cause(dctx); errorsx.Ignore(err, context.Canceled) != nil {
+		return err
+	}
 
 	return nil
 }

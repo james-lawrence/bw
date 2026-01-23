@@ -9,22 +9,30 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/contextx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	. "github.com/james-lawrence/bw/ux"
 )
 
 var _ = Describe("Log Deploy", func() {
 	DescribeTable("should process every message",
-		func(messages ...*agent.Message) {
+		func(failure error, messages ...*agent.Message) {
 			buf := make(chan *agent.Message, len(messages))
 			for _, m := range messages {
 				buf <- m
 			}
 			ctx := contextx.NewWaitGroup(context.Background())
-			Deploy(ctx, nil, buf)
+			ctx, failed := context.WithCancelCause(ctx)
+			Deploy(ctx, failed, nil, buf)
 			Expect(len(buf)).To(Equal(0))
+			if failure != nil {
+				Expect(context.Cause(ctx)).To(MatchError(failure))
+			} else {
+				Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+			}
 		},
 		Entry(
 			"successful deploy",
+			error(nil),
 			agent.LogEvent(agent.NewPeer("node1"), "hello world"),
 			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
 			agent.LogEvent(agent.NewPeer("node1"), "info message"),
@@ -32,6 +40,7 @@ var _ = Describe("Log Deploy", func() {
 		),
 		Entry(
 			"failed deploy",
+			errorsx.String("deploy failed"),
 			agent.LogEvent(agent.NewPeer("node1"), "hello world"),
 			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
 			agent.LogEvent(agent.NewPeer("node1"), "info message"),
@@ -40,6 +49,7 @@ var _ = Describe("Log Deploy", func() {
 		),
 		Entry(
 			"automatic restart deploy",
+			error(nil),
 			agent.LogEvent(agent.NewPeer("node1"), "hello world"),
 			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
 			agent.LogEvent(agent.NewPeer("node1"), "info message"),

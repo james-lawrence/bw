@@ -3,6 +3,8 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/egdaemon/eg v0.0.0-20260114142858-b5617b8e9e04 h1:X4O4xtosO8istSD0sv0UOpGrLQSp/X4f6ek8NnHzX48=
 github.com/egdaemon/eg v0.0.0-20260114142858-b5617b8e9e04/go.mod h1:ybUhO+LUd3+BcRE+Kr+wnl4VRNAqgBaQE4mZQYVBrQQ=
+github.com/egdaemon/eg v0.0.0-20260123020241-cf916add8ca5 h1:faspbScZQy/N59xWONw70xmY3xJq7bmC1DFBLGC0JGM=
+github.com/egdaemon/eg v0.0.0-20260123020241-cf916add8ca5/go.mod h1:ybUhO+LUd3+BcRE+Kr+wnl4VRNAqgBaQE4mZQYVBrQQ=
 github.com/egdaemon/wasinet/wasinet v0.0.0-20250806175613-49e153bd345a h1:yMN/o4Z06znmJbjVcZMlA+stIXbEJPf0LWY1++zUg6Y=
 github.com/egdaemon/wasinet/wasinet v0.0.0-20250806175613-49e153bd345a/go.mod h1:vPVQ3HHYTa9Fe7lz+ZBqI49kw76LSTQfvKZlO8QpWsY=
 github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=

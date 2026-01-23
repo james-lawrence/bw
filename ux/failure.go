@@ -29,6 +29,7 @@ func (t failure) Consume(m *agent.Message) consumer {
 	case agent.Message_DeployCommandEvent:
 		t.logs()
 		t.cState.printDeployCommand(m)
+		t.cState.failed(errorsx.String("deploy failed"))
 		return nil // done.
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()

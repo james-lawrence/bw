@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -95,8 +96,11 @@ func Redeploy(gctx *Context, deploymentID string) error {
 
 	client = agent.NewDeployConn(conn)
 
+	dctx, failurefn := context.WithCancelCause(gctx.Context)
+	defer failurefn(nil)
+
 	termui.NewFromClientConfig(
-		gctx.Context, config, qd, local, events,
+		dctx, failurefn, config, qd, local, events,
 		ux.OptionHeartbeat(gctx.Heartbeat),
 		ux.OptionDebug(gctx.Verbose),
 	)
@@ -156,5 +160,10 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}
 
-	return err
+	<-dctx.Done()
+	if cause := context.Cause(dctx); errorsx.Ignore(cause, context.Canceled) != nil {
+		return cause
+	}
+
+	return nil
 }

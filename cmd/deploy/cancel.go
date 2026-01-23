@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"log"
 
 	"github.com/james-lawrence/bw/agent"
@@ -66,7 +67,9 @@ func Cancel(gctx *Context) (err error) {
 		}
 	}()
 
-	termui.NewFromClientConfig(gctx.Context, config, qd, local, events)
+	dctx, failurefn := context.WithCancelCause(gctx.Context)
+	defer failurefn(nil)
+	termui.NewFromClientConfig(dctx, failurefn, config, qd, local, events)
 	events <- agent.LogEvent(local, "connected to cluster")
 
 	cmd := agent.DeployCommandCancel(displayname)
@@ -76,6 +79,11 @@ func Cancel(gctx *Context) (err error) {
 	}
 
 	events <- agent.LogEvent(local, "deploy cancelled")
+
+	<-dctx.Done()
+	if cause := context.Cause(dctx); errorsx.Ignore(cause, context.Canceled) != nil {
+		return cause
+	}
 
 	return nil
 }

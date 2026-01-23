@@ -40,7 +40,7 @@ func OptionDebug(b bool) Option {
 }
 
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
+func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
 	var (
 		s = deploying{
 			cState: cState{
@@ -50,15 +50,17 @@ func Deploy(ctx context.Context, cached *dialers.Cached, events chan *agent.Mess
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
 				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
+				failed:         failed,
 			}.merge(options...),
 		}
 	)
 
+	defer failed(nil)
 	s.run(ctx, events, s)
 }
 
 // Logging based ux
-func Logging(ctx context.Context, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
+func Logging(ctx context.Context, failed context.CancelCauseFunc, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
 	var (
 		s = tail{
 			cState: cState{
@@ -68,10 +70,13 @@ func Logging(ctx context.Context, cached *dialers.Cached, events chan *agent.Mes
 				FailureDisplay: FailureDisplayNoop{},
 				au:             aurora.NewAurora(true),
 				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
+				failed:         failed,
 			}.merge(options...),
 		}
 	)
 
+	defer failed(nil)
+	defer log.Println("run completed")
 	s.run(ctx, events, s)
 }
 
@@ -148,6 +153,7 @@ type cState struct {
 	au             aurora.Aurora
 	heartbeat      time.Duration
 	debug          bool
+	failed         context.CancelCauseFunc
 }
 
 func (t cState) merge(options ...Option) cState {
@@ -292,7 +298,6 @@ func (t deploying) Consume(m *agent.Message) consumer {
 		d := m.GetDeploy()
 		switch d.Stage {
 		case agent.Deploy_Failed:
-			log.Println("failure detected")
 			digest := md5.Sum([]byte(d.Error))
 			return failure{
 				cState: t.cState,
