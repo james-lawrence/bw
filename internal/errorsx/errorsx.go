@@ -138,3 +138,23 @@ func (t userfriendly) Unwrap() error {
 func (t userfriendly) Cause() error {
 	return t.error
 }
+
+func Zero[T any](v T, err error) T {
+	if err == nil {
+		return v
+	}
+
+	if cause := log.Output(2, fmt.Sprintln(err)); cause != nil {
+		panic(cause)
+	}
+
+	return v
+}
+
+func Must[T any](v T, err error) T {
+	if err == nil {
+		return v
+	}
+
+	panic(err)
+}
