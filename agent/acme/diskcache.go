@@ -93,6 +93,10 @@ func (t DiskCache) Challenge(ctx context.Context, req *CertificateRequest) (resp
 	if resp, err = t.cached(template); err == nil {
 		checkexpiration := func() error {
 			if cert, err := tlsx.DecodePEMCertificate(resp.Certificate); err == nil {
+				if cert == nil {
+					return fmt.Errorf("cached information does not contain a certificate, ignoring")
+				}
+
 				minimum, ts := timex.DurationFromMillisecond(req.CacheMinimumExpiration), time.Until(cert.NotAfter)
 				if ts < minimum {
 					return fmt.Errorf("ignoring cached certificate, expires too soon: %v", cert.NotAfter)
