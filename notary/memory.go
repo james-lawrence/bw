@@ -2,8 +2,13 @@ package notary
 
 import (
 	"context"
-	"errors"
 	"sync"
+
+	"github.com/james-lawrence/bw/internal/errorsx"
+)
+
+var (
+	ErrFingerprintNotFound = errorsx.String("fingerprint not found")
 )
 
 func NewMem(grants ...*Grant) memory {
@@ -42,7 +47,7 @@ func (t memory) Lookup(fingerprint string) (g *Grant, err error) {
 	defer t.m.RUnlock()
 
 	if g, ok = t.mem[fingerprint]; !ok {
-		return g, errors.New("fingerprint not found")
+		return g, ErrFingerprintNotFound
 	}
 
 	return g, nil
