@@ -61,6 +61,7 @@ func RunLocalDirectives(ctx context.Context, config agent.ConfigClient) (commiti
 		shell.OptionWorkDir(root),
 		shell.OptionBWConfigDir(config.Dir()),
 		shell.OptionVCSCommit(commitish),
+		shell.OptionInitiator(displayname),
 	)
 
 	dctx, err = deployment.NewDeployContext(

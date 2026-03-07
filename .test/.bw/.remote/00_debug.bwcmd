@@ -1,4 +1,6 @@
 - command: "echo deployment id \'%bw.deploy.id%\'"
+- command: "echo deployment commit \'%bw.deploy.commit%\'"
+- command: "echo deployment initator \'%bw.deploy.user.name%\'"
 - command: "echo work directory \'%bw.work.directory%\'"
 - command: "echo archive directory \'%bw.archive.directory%\'"
 - command: "echo cache directory \'%bw.cache.directory%\'"

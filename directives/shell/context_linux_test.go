@@ -23,6 +23,7 @@ var example1 = Context{
 	timeout:       time.Second,
 	commit:        "d9662c91bf8c4591ae311d853404ae8e",
 	bwconfigdir:   "CONFIGDIR",
+	initiator:     "DEPLOYER",
 }
 
 var _ = g.Describe("Context", func() {
@@ -34,6 +35,7 @@ var _ = g.Describe("Context", func() {
 		g.Entry("basic environment deprecated", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ARCHIVEDIR WORKDIR 00000000-0000-0000-0000-000000000000 %"),
 		g.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bw.work.directory% %bw.archive.directory% %bw.cache.directory% %bw.temp.directory% %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR WORKDIR ARCHIVEDIR CACHEDIR TEMPDIR 00000000-0000-0000-0000-000000000000 %"),
 		g.Entry("properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"),
+		g.Entry("deploy information", example1, "%bw.deploy.id% %bw.deploy.user.name% %bw.deploy.commit%", "00000000-0000-0000-0000-000000000000 DEPLOYER d9662c91bf8c4591ae311d853404ae8e"),
 	)
 
 	g.DescribeTable("environment variables",

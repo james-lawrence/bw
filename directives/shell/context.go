@@ -146,10 +146,10 @@ func OptionDeployID(id string) Option {
 	}
 }
 
-// OptionDeployID the id of the current deployment
-func OptionDeployerDisplayName(name string) Option {
+// OptionInitiator display name for the individual who initiated the deploy.
+func OptionInitiator(name string) Option {
 	return func(ctx *Context) {
-		ctx.User.Username = name
+		ctx.initiator = name
 	}
 }
 
@@ -175,6 +175,7 @@ type Context struct {
 	Environ       []string
 	loadenv       []string
 	output        io.Writer
+	initiator     string
 	deploymentID  string
 	dir           string
 	tmpdir        string
@@ -211,6 +212,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bw.config.directory%", t.bwconfigdir, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.id%", t.deploymentID, -1)
 	cmd = strings.Replace(cmd, "%bw.deploy.commit%", t.commit, -1)
+	cmd = strings.Replace(cmd, "%bw.deploy.user.name%", t.initiator, -1)
 	cmd = strings.Replace(cmd, escaped, "%", -1)
 
 	return cmd
