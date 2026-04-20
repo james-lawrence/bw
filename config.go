@@ -16,8 +16,10 @@ import (
 )
 
 const (
-	// DefaultDir agent and client configuration directory, relative to a absolute path.
+	// DefaultDir client configuration directory, relative to a absolute path.
 	DefaultDir = "bearded-wookie"
+	// DefaultDir agent configuration directory, relative to a absolute path.
+	DefaultAgentDir = "bearded-wookie-agent"
 	// DefaultAgentConfig default filename of the agent configuration.
 	DefaultAgentConfig = "agent.config"
 	// DefaultDeployspaceDir default directory of the workspace.
@@ -70,9 +72,10 @@ func DefaultLocation(name, override string) string {
 
 	envconfig := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), DefaultDir)
 	home := filepath.Join(user.HomeDir, ".config", DefaultDir)
-	system := filepath.Join("/etc", DefaultDir)
+	systemold := filepath.Join("/etc", DefaultDir)
+	system := filepath.Join("/etc", DefaultAgentDir)
 
-	return locateFile(name, override, envconfig, home, system)
+	return locateFile(name, override, envconfig, home, system, systemold)
 }
 
 // LocateFirstInDir locates the first file in the given directory by name.
@@ -114,9 +117,10 @@ func DefaultDirLocation(rel string) string {
 
 	env := filepath.Join(os.Getenv("XDG_CONFIG_HOME"), DefaultDir)
 	home := filepath.Join(user.HomeDir, ".config", DefaultDir)
-	system := filepath.Join("/etc", DefaultDir)
+	systemold := filepath.Join("/etc", DefaultDir)
+	system := filepath.Join("/etc", DefaultAgentDir)
 
-	return DefaultDirectory(rel, env, home, system)
+	return DefaultDirectory(rel, env, home, system, systemold)
 }
 
 // DefaultCacheDirectory cache directory for storing data.
@@ -126,8 +130,9 @@ func DefaultCacheDirectory() string {
 	cachedir := os.Getenv("CACHE_DIRECTORY")
 	env := filepath.Join(os.Getenv("XDG_CACHE_HOME"), DefaultDir)
 	home := filepath.Join(user.HomeDir, ".cache", DefaultDir)
-	system := filepath.Join("/", "var", "cache", DefaultDir)
-	return DefaultDirectory("", cachedir, env, home, system)
+	systemold := filepath.Join("/etc", DefaultDir)
+	system := filepath.Join("/etc", DefaultAgentDir)
+	return DefaultDirectory("", cachedir, env, home, system, systemold)
 }
 
 // DefaultDirectory finds the first directory root that exists and then returns
