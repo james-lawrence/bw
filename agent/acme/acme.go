@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/memberlist"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -47,6 +48,10 @@ func ReadConfig(c agent.Config, path string) (svc DiskCache, err error) {
 
 	if nameserver := envx.String("", bw.EnvAgentACMEDNSChallengeNameServer); strings.TrimSpace(nameserver) != "" {
 		cc.ACME.Challenges.NameServers = append(cc.ACME.Challenges.NameServers, nameserver)
+	}
+
+	if envx.Boolean(false, bw.EnvLogsConfiguration) {
+		log.Printf("acme configuration: %s\n", spew.Sdump(cc.ACME))
 	}
 
 	a := account{ACMEConfig: cc.ACME, Config: c}
