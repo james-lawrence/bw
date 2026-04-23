@@ -4,7 +4,10 @@ go 1.24.2
 
 toolchain go1.24.4
 
-require github.com/egdaemon/eg v0.0.0-20260123020241-cf916add8ca5
+require (
+	github.com/egdaemon/eg v0.0.0-20260123020241-cf916add8ca5
+	google.golang.org/grpc v1.79.3
+)
 
 require (
 	github.com/egdaemon/wasinet/wasinet v0.0.0-20250806175613-49e153bd345a // indirect
@@ -14,6 +17,5 @@ require (
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/tools v0.41.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260120174246-409b4a993575 // indirect
-	google.golang.org/grpc v1.76.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
