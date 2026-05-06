@@ -1,3 +1,4 @@
+## workspace
 # atomicgo.dev/cursor v0.2.0
 ## explicit; go 1.15
 atomicgo.dev/cursor
@@ -9,7 +10,7 @@ atomicgo.dev/keyboard/keys
 # atomicgo.dev/schedule v0.1.0
 ## explicit; go 1.18
 atomicgo.dev/schedule
-# cloud.google.com/go/auth v0.15.0
+# cloud.google.com/go/auth v0.16.4
 ## explicit; go 1.23.0
 cloud.google.com/go/auth
 cloud.google.com/go/auth/credentials
@@ -24,10 +25,10 @@ cloud.google.com/go/auth/internal/credsfile
 cloud.google.com/go/auth/internal/jwt
 cloud.google.com/go/auth/internal/transport
 cloud.google.com/go/auth/internal/transport/cert
-# cloud.google.com/go/auth/oauth2adapt v0.2.7
-## explicit; go 1.22
+# cloud.google.com/go/auth/oauth2adapt v0.2.8
+## explicit; go 1.23.0
 cloud.google.com/go/auth/oauth2adapt
-# cloud.google.com/go/compute/metadata v0.7.0
+# cloud.google.com/go/compute/metadata v0.8.0
 ## explicit; go 1.23.0
 cloud.google.com/go/compute/metadata
 # dario.cat/mergo v1.0.2
@@ -181,8 +182,8 @@ github.com/aws/aws-sdk-go/service/sso/ssoiface
 github.com/aws/aws-sdk-go/service/ssooidc
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/aws/aws-sdk-go-v2 v1.32.7
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2 v1.41.1
+## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/aws
 github.com/aws/aws-sdk-go-v2/aws/defaults
 github.com/aws/aws-sdk-go-v2/aws/middleware
@@ -207,11 +208,11 @@ github.com/aws/aws-sdk-go-v2/internal/shareddefaults
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/config v1.28.7
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/config v1.29.13
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/config
-# github.com/aws/aws-sdk-go-v2/credentials v1.17.48
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/credentials v1.17.66
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/credentials
 github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds
 github.com/aws/aws-sdk-go-v2/credentials/endpointcreds
@@ -219,24 +220,24 @@ github.com/aws/aws-sdk-go-v2/credentials/endpointcreds/internal/client
 github.com/aws/aws-sdk-go-v2/credentials/processcreds
 github.com/aws/aws-sdk-go-v2/credentials/ssocreds
 github.com/aws/aws-sdk-go-v2/credentials/stscreds
-# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.22
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.30
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds
 github.com/aws/aws-sdk-go-v2/feature/ec2/imds/internal/config
-# github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.26
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.17
+## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/internal/configsources
-# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.26
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17
+## explicit; go 1.23
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2
-# github.com/aws/aws-sdk-go-v2/internal/ini v1.8.1
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/internal/ini
-# github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding
-# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.7
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
 # github.com/aws/aws-sdk-go-v2/service/route53 v1.46.4
 ## explicit; go 1.21
@@ -244,23 +245,23 @@ github.com/aws/aws-sdk-go-v2/service/route53
 github.com/aws/aws-sdk-go-v2/service/route53/internal/customizations
 github.com/aws/aws-sdk-go-v2/service/route53/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/route53/types
-# github.com/aws/aws-sdk-go-v2/service/sso v1.24.8
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/service/sso v1.25.3
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/sso
 github.com/aws/aws-sdk-go-v2/service/sso/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sso/types
-# github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.7
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/ssooidc
 github.com/aws/aws-sdk-go-v2/service/ssooidc/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/ssooidc/types
-# github.com/aws/aws-sdk-go-v2/service/sts v1.33.3
-## explicit; go 1.21
+# github.com/aws/aws-sdk-go-v2/service/sts v1.33.18
+## explicit; go 1.22
 github.com/aws/aws-sdk-go-v2/service/sts
 github.com/aws/aws-sdk-go-v2/service/sts/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sts/types
-# github.com/aws/smithy-go v1.22.1
-## explicit; go 1.21
+# github.com/aws/smithy-go v1.24.0
+## explicit; go 1.23
 github.com/aws/smithy-go
 github.com/aws/smithy-go/auth
 github.com/aws/smithy-go/auth/bearer
@@ -347,6 +348,60 @@ github.com/davecgh/go-spew/spew
 # github.com/edsrzf/mmap-go v1.1.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
+# github.com/egdaemon/eg v0.0.0-20260504131737-58bd751243f7
+## explicit; go 1.24.2
+github.com/egdaemon/eg
+github.com/egdaemon/eg/backoff
+github.com/egdaemon/eg/internal/contextx
+github.com/egdaemon/eg/internal/coverage
+github.com/egdaemon/eg/internal/coverage/golangcov
+github.com/egdaemon/eg/internal/debugx
+github.com/egdaemon/eg/internal/envx
+github.com/egdaemon/eg/internal/errorsx
+github.com/egdaemon/eg/internal/execx
+github.com/egdaemon/eg/internal/fsx
+github.com/egdaemon/eg/internal/iox
+github.com/egdaemon/eg/internal/iterx
+github.com/egdaemon/eg/internal/langx
+github.com/egdaemon/eg/internal/md5x
+github.com/egdaemon/eg/internal/modfilex
+github.com/egdaemon/eg/internal/numericx
+github.com/egdaemon/eg/internal/protobuflog
+github.com/egdaemon/eg/internal/slicesx
+github.com/egdaemon/eg/internal/stringsx
+github.com/egdaemon/eg/internal/systemx
+github.com/egdaemon/eg/internal/timex
+github.com/egdaemon/eg/internal/tracex
+github.com/egdaemon/eg/internal/userx
+github.com/egdaemon/eg/interp/c8s
+github.com/egdaemon/eg/interp/events
+github.com/egdaemon/eg/interp/execproxy
+github.com/egdaemon/eg/interp/runtime/wasi/ffierrors
+github.com/egdaemon/eg/interp/runtime/wasi/ffiguest
+github.com/egdaemon/eg/runtime/wasi/eg
+github.com/egdaemon/eg/runtime/wasi/egenv
+github.com/egdaemon/eg/runtime/wasi/eggit
+github.com/egdaemon/eg/runtime/wasi/egunsafe
+github.com/egdaemon/eg/runtime/wasi/egunsafe/fficoverage
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiegcontainer
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiexec
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigit
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigraph
+github.com/egdaemon/eg/runtime/wasi/env
+github.com/egdaemon/eg/runtime/wasi/shell
+github.com/egdaemon/eg/runtime/x/wasi/egdebuild
+github.com/egdaemon/eg/runtime/x/wasi/egfs
+github.com/egdaemon/eg/runtime/x/wasi/eggolang
+github.com/egdaemon/eg/runtime/x/wasi/execx
+# github.com/egdaemon/wasinet/wasinet v0.0.0-20250806175613-49e153bd345a
+## explicit; go 1.23.4
+github.com/egdaemon/wasinet/wasinet
+github.com/egdaemon/wasinet/wasinet/ffi
+github.com/egdaemon/wasinet/wasinet/ffierrors
+github.com/egdaemon/wasinet/wasinet/internal/errorsx
+github.com/egdaemon/wasinet/wasinet/internal/langx
+github.com/egdaemon/wasinet/wasinet/stdlib/wasip1net
+github.com/egdaemon/wasinet/wasinet/stdlib/wasip1syscall
 # github.com/emirpasic/gods v1.18.1
 ## explicit; go 1.2
 github.com/emirpasic/gods/containers
@@ -474,6 +529,9 @@ github.com/godbus/dbus/v5
 # github.com/gofrs/uuid v4.4.0+incompatible
 ## explicit
 github.com/gofrs/uuid
+# github.com/gofrs/uuid/v5 v5.4.0
+## explicit; go 1.19
+github.com/gofrs/uuid/v5
 # github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 ## explicit; go 1.20
 github.com/golang/groupcache/lru
@@ -520,8 +578,8 @@ github.com/google/uuid
 ## explicit; go 1.23.0
 github.com/googleapis/enterprise-certificate-proxy/client
 github.com/googleapis/enterprise-certificate-proxy/client/util
-# github.com/googleapis/gax-go/v2 v2.14.1
-## explicit; go 1.21
+# github.com/googleapis/gax-go/v2 v2.15.0
+## explicit; go 1.23.0
 github.com/googleapis/gax-go/v2
 github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
@@ -957,7 +1015,7 @@ golang.org/x/tools/internal/stdlib
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
-# google.golang.org/api v0.227.0
+# google.golang.org/api v0.247.0
 ## explicit; go 1.23.0
 google.golang.org/api/compute/v1
 google.golang.org/api/dns/v1
