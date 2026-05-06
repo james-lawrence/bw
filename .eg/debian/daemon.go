@@ -66,15 +66,14 @@ func Build(ctx context.Context, o eg.Op) error {
 		// useful for resolving build issues on ubuntu's workers
 		egdebuild.Build(
 			gcfg,
-			egdebuild.Option.
-				Distro(egdebuild.UbuntuLatestCodename).
-				BuildBinary(defaultTimeout),
+			egdebuild.Option.BuildBinary(defaultTimeout),
+			egdebuild.Option.Distro(egdebuild.UbuntuLatestCodename),
 		),
 		eg.Parallel(
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("jammy").Timeout(defaultTimeout)),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("noble").Timeout(defaultTimeout).NoLint()),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("questing").Timeout(defaultTimeout).NoLint()),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro(egdebuild.UbuntuLatestCodename).NoLint()),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("jammy"), egdebuild.Option.Timeout(defaultTimeout)),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("noble"), egdebuild.Option.Timeout(defaultTimeout), egdebuild.Option.NoLint()),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("questing"), egdebuild.Option.Timeout(defaultTimeout), egdebuild.Option.NoLint()),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro(egdebuild.UbuntuLatestCodename), egdebuild.Option.Timeout(defaultTimeout), egdebuild.Option.NoLint()),
 		),
 	)(ctx, o)
 }
