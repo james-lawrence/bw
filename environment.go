@@ -17,6 +17,7 @@ const (
 	EnvAgentClusterBootstrap             = "BEARDED_WOOKIE_AGENT_BOOTSTRAP"                            // environment variable to specify the tcp address to connect to allowing for bootstrapping.
 	EnvAgentClusterPeerIDSeed            = "BEARDED_WOOKIE_AGENT_CLUSTER_PEER_ID_SEED"                 // environment variable to specify the seed to the deterministic peer id.
 	EnvAgentClusterPassiveCheckin        = "BEARDED_WOOKIE_AGENT_CLUSTER_PASSIVE_CHECKIN"              // environment variable to adjust the passive checking rate for the leader node.
+	EnvAgentClusterEnableP2P             = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_P2P"                    // enable p2p peer detection
 	EnvAgentClusterEnableAWSAutoscaling  = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_AWS_AUTOSCALING_GROUPS" // enable aws autoscale group peer detection
 	EnvAgentClusterEnableGoogleCloudPool = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_GCLOUD_POOL"            // enable gcloud pool peer detection
 	EnvAgentClusterEnableDNS             = "BEARDED_WOOKIE_AGENT_CLUSTER_PEERS_DNS"                    // enable dns peer detection

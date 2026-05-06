@@ -42,6 +42,7 @@ func (t Global) AfterApply() error {
 
 type Peering struct {
 	Bootstrap     []*net.TCPAddr `name:"bootstrap-static-addresses" help:"addresses of the cluster to bootstrap from" env:"${env_bw_agent_bootstrap_static}"`
+	P2PEnabled    bool           `name:"bootstrap-p2p-enable" help:"enable p2p peering" negatable:"" default:"true" env:"${env_bw_agent_bootstrap_p2p_enabled}"`
 	DNSEnabled    bool           `name:"bootstrap-dns-enable" alias:"cluster-dns-enable" help:"enable dns peering" env:"${env_bw_agent_bootstrap_dns_enabled}"`
 	AWSEnabled    bool           `name:"bootstrap-aws-enable" alias:"cluster-aws-enable" help:"enable aws autoscaling group peering" env:"${env_bw_agent_bootstrap_aws_autoscaling_enabled}"`
 	GCloudEnabled bool           `name:"bootstrap-gcloud-enable" alias:"cluster-gcloud-enable" help:"enable gcloud target pools peering" env:"${env_bw_agent_bootstrap_gcloud_taget_pool_enabled}"`
@@ -49,16 +50,20 @@ type Peering struct {
 
 func (t *Peering) Join(ctx context.Context, config agent.Config, c clustering.Joiner, snap peering.File) (err error) {
 	var (
-		p2ppeers    clustering.Source
 		clipeers    clustering.Source = peering.NewStaticTCP(t.Bootstrap...)
+		p2ppeers    clustering.Source = peering.NewStaticTCP()
 		awspeers    clustering.Source = peering.NewStaticTCP()
 		gcloudpeers clustering.Source = peering.NewStaticTCP()
 		dnspeers    clustering.Source = peering.NewStaticTCP()
 	)
 
-	if p2ppeers, err = p2ppeering(config); err != nil {
-		log.Println("WARNING: P2P discovery disabled", err)
-		p2ppeers = peering.NewStaticTCP()
+	if t.P2PEnabled {
+		if p2ppeers, err = p2ppeering(config); err != nil {
+			log.Println("P2P discovery disabled", err)
+			p2ppeers = peering.NewStaticTCP()
+		}
+	} else {
+		log.Println("P2P discovery disabled")
 	}
 
 	if t.DNSEnabled {

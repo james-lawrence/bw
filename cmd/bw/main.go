@@ -73,6 +73,7 @@ func main() {
 			"env_bw_agent_bind_advertised":                     bw.EnvAgentP2PAdvertised,
 			"env_bw_agent_bind_secondary":                      bw.EnvAgentP2PAlternatesBind,
 			"env_bw_agent_bootstrap_static":                    bw.EnvAgentClusterBootstrap,
+			"env_bw_agent_bootstrap_p2p_enabled":               bw.EnvAgentClusterEnableP2P,
 			"env_bw_agent_bootstrap_dns_enabled":               bw.EnvAgentClusterEnableDNS,
 			"env_bw_agent_bootstrap_aws_autoscaling_enabled":   bw.EnvAgentClusterEnableAWSAutoscaling,
 			"env_bw_agent_bootstrap_gcloud_taget_pool_enabled": bw.EnvAgentClusterEnableGoogleCloudPool,
