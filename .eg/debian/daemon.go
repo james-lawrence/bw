@@ -61,15 +61,20 @@ func Runner() eg.ContainerRunner {
 }
 
 func Build(ctx context.Context, o eg.Op) error {
+	const defaultTimeout = 10 * time.Minute
 	return eg.Sequential(
 		// useful for resolving build issues on ubuntu's workers
-		egdebuild.Build(gcfg, egdebuild.Option.Distro("noble"), egdebuild.Option.BuildBinary(time.Minute)),
-		// shell.Op(shell.New("false")),
+		egdebuild.Build(
+			gcfg,
+			egdebuild.Option.
+				Distro(egdebuild.UbuntuLatestCodename).
+				BuildBinary(defaultTimeout),
+		),
 		eg.Parallel(
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("jammy")),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("noble")),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("plucky")),
-			egdebuild.Build(gcfg, egdebuild.Option.Distro("questing")),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("jammy").Timeout(defaultTimeout)),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("noble").Timeout(defaultTimeout).NoLint()),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro("questing").Timeout(defaultTimeout).NoLint()),
+			egdebuild.Build(gcfg, egdebuild.Option.Distro(egdebuild.UbuntuLatestCodename).NoLint()),
 		),
 	)(ctx, o)
 }
