@@ -1,4 +1,4 @@
-FROM ubuntu:plucky
+FROM ubuntu:questing
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update
@@ -14,3 +14,6 @@ RUN ln -s /usr/lib/go-1.25/bin/go /usr/local/bin/go
 
 RUN systemd-sysusers
 RUN systemd-tmpfiles --create
+
+# hack for questing.
+RUN update-alternatives --set sudo /usr/bin/sudo.ws

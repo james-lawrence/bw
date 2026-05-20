@@ -5,7 +5,7 @@ go 1.24.2
 toolchain go1.24.4
 
 require (
-	github.com/egdaemon/eg v0.0.0-20260506191109-914d566a6779
+	github.com/egdaemon/eg v0.0.0-20260507200146-64e01f9c1ba8
 	google.golang.org/grpc v1.76.0
 )
 
