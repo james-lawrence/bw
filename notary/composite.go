@@ -108,3 +108,18 @@ func (t Composite) Insert(g *Grant) (*Grant, error) {
 func (t Composite) Delete(g *Grant) (*Grant, error) {
 	return t.primary.Delete(g)
 }
+
+type reloader interface {
+	reload() error
+}
+
+// Reload forces the read only buckets to reload from their sources.
+func (t Composite) Reload() (err error) {
+	for _, b := range t.buckets {
+		if r, ok := b.(reloader); ok {
+			err = errorsx.Compact(err, r.reload())
+		}
+	}
+
+	return err
+}
