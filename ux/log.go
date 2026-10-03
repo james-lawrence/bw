@@ -106,7 +106,7 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 		case m := <-events:
 			switch local := m.Event.(type) {
 			case *agent.Message_History:
-				replayable := slice(last, local.History.Messages...)
+				replayable := t.slice(last, local.History.Messages...)
 				s = consume(s, replayable...)
 				last = latest(last, replayable...)
 			default:
@@ -139,21 +139,29 @@ func latest(last *agent.Message, messages ...*agent.Message) *agent.Message {
 	return last
 }
 
-func slice(last *agent.Message, messages ...*agent.Message) []*agent.Message {
-	if last == nil {
+// slice returns the messages after last. when last isn't in the history and a deployment
+// is being monitored the history since the latest begin is returned instead; replaying
+// it is safe because commands for other deployments are ignored.
+func (t cState) slice(last *agent.Message, messages ...*agent.Message) []*agent.Message {
+	if last != nil {
+		for idx, m := range messages {
+			if m.Id == last.Id {
+				return messages[idx+1:]
+			}
+		}
+	}
+
+	if t.deploymentID == nil {
 		return []*agent.Message{}
 	}
 
-	consumable := false
-	for idx, m := range messages {
-		if consumable {
+	for idx := len(messages) - 1; idx >= 0; idx-- {
+		if m := messages[idx]; m.Type == agent.Message_DeployCommandEvent && m.GetDeployCommand().Command == agent.DeployCommand_Begin {
 			return messages[idx:]
 		}
-
-		consumable = m.Id == last.Id
 	}
 
-	return []*agent.Message{}
+	return messages
 }
 
 func consume(c consumer, messages ...*agent.Message) consumer {

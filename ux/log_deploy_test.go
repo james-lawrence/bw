@@ -124,6 +124,62 @@ var _ = Describe("Log Deploy", func() {
 		),
 	)
 
+	DescribeTable("should replay history when the last message is unknown",
+		func(monitored bool, finished bool, messages ...*agent.Message) {
+			options := []Option{}
+			if monitored {
+				id := []byte("ours")
+				deploymentID := new(atomic.Pointer[[]byte])
+				deploymentID.Store(&id)
+				options = append(options, OptionDeployment(deploymentID))
+			}
+
+			buf := make(chan *agent.Message, len(messages))
+			for _, m := range messages {
+				buf <- m
+			}
+
+			ctx, timeout := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			defer timeout()
+			ctx = contextx.NewWaitGroup(ctx)
+			ctx, failed := context.WithCancelCause(ctx)
+			Deploy(ctx, failed, nil, buf, options...)
+			if finished {
+				Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+			} else {
+				Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
+			}
+		},
+		Entry(
+			"first connect after the deploy completed",
+			true, true,
+			agent.NewLogHistoryFromMessages(
+				agent.NewPeer("local"),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}}),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}}),
+			),
+		),
+		Entry(
+			"last message no longer in the history",
+			true, true,
+			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}}),
+			agent.NewLogHistoryFromMessages(
+				agent.NewPeer("local"),
+				agent.PeersCompletedEvent(agent.NewPeer("node1"), 1),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}}),
+			),
+		),
+		Entry(
+			"first connect without a monitored deployment ignores the history",
+			false, false,
+			agent.NewLogHistoryFromMessages(
+				agent.NewPeer("local"),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+			),
+		),
+	)
+
 	It("should resume history replay across consecutive reconnects", func() {
 		local := agent.NewPeer("local")
 		node := agent.NewPeer("node1")
