@@ -139,6 +139,16 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 		conn *grpc.ClientConn
 	)
 
+	// deliver the message unless the context is done. returns false if the message wasn't delivered.
+	deliver := func(m *agent.Message) bool {
+		select {
+		case events <- m:
+			return true
+		case <-ctx.Done():
+			return false
+		}
+	}
+
 	for {
 		if conn != nil {
 			errorsx.Log(conn.Close())
@@ -151,30 +161,36 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 		}
 
 		if err = rl.Wait(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))
+			if !deliver(agent.LogError(local, errors.Wrap(err, "failed to wait during rate limiting"))) {
+				return
+			}
 			continue
 		}
 
 		if conn, err = d.DialContext(ctx); err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "events dialer failed to connect"))
+			if !deliver(agent.LogError(local, errors.Wrap(err, "events dialer failed to connect"))) {
+				return
+			}
 			continue
 		}
 
-		events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))
+		if !deliver(agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))) {
+			errorsx.Log(conn.Close())
+			return
+		}
 		err = grpcx.Retry(ctx, func() error {
 			if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
-				select {
-				case events <- agent.NewLogHistoryFromMessages(local, history.Messages...):
-				case <-ctx.Done():
-					events <- agent.LogError(local, errors.Wrap(ctx.Err(), "unable to replay history"))
+				if !deliver(agent.NewLogHistoryFromMessages(local, history.Messages...)) {
+					return errors.Wrap(ctx.Err(), "unable to replay history")
 				}
 				return nil
 			} else {
 				return err
 			}
 		}, codes.Unavailable)
-		if err != nil {
-			events <- agent.LogError(local, err)
+		if err != nil && !deliver(agent.LogError(local, err)) {
+			errorsx.Log(conn.Close())
+			return
 		}
 
 		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
@@ -183,7 +199,10 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 			if envx.Boolean(false, bw.EnvLogsDeploy) {
 				log.Println(err)
 			}
-			events <- agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, msg)
+			if !deliver(agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, msg)) {
+				errorsx.Log(conn.Close())
+				return
+			}
 			continue
 		}
 	}
