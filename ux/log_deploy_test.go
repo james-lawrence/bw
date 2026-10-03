@@ -2,6 +2,7 @@ package ux_test
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -61,4 +62,25 @@ var _ = Describe("Log Deploy", func() {
 			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
 		),
 	)
+
+	It("should resume history replay across consecutive reconnects", func() {
+		local := agent.NewPeer("local")
+		node := agent.NewPeer("node1")
+		begin := agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}})
+		done := agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}})
+
+		buf := make(chan *agent.Message, 3)
+		buf <- begin
+		// reconnect with nothing new since begin.
+		buf <- agent.NewLogHistoryFromMessages(local, begin)
+		// reconnect after the deploy completed while disconnected.
+		buf <- agent.NewLogHistoryFromMessages(local, begin, done)
+
+		ctx, timeout := context.WithTimeout(context.Background(), time.Second)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf)
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+	})
 })

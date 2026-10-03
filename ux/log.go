@@ -97,24 +97,35 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 			case *agent.Message_History:
 				replayable := slice(last, local.History.Messages...)
 				s = consume(s, replayable...)
+				last = latest(last, replayable...)
 			default:
 				s = consume(s, m)
+				last = latest(last, m)
 			}
 
 			if s == nil {
 				// we're done
 				return
 			}
-
-			switch m.Type {
-			case agent.Message_LogEvent:
-			default:
-				last = m
-			}
 		case <-ctx.Done():
 			return
 		}
 	}
+}
+
+// latest returns the most recent message a history replay can resume from.
+// log events are skipped, as are history messages since they're generated
+// by the client and never appear in the history itself.
+func latest(last *agent.Message, messages ...*agent.Message) *agent.Message {
+	for _, m := range messages {
+		switch m.Type {
+		case agent.Message_LogEvent, agent.Message_LogHistoryEvent:
+		default:
+			last = m
+		}
+	}
+
+	return last
 }
 
 func slice(last *agent.Message, messages ...*agent.Message) []*agent.Message {
