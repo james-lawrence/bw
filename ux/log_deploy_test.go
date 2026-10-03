@@ -62,6 +62,16 @@ var _ = Describe("Log Deploy", func() {
 			agent.LogEvent(agent.NewPeer("node1"), "info message"),
 			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
 		),
+		Entry(
+			"automatic restart after a node failure",
+			error(nil),
+			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
+			agent.DeployEvent(agent.NewPeer("node1"), &agent.Deploy{Stage: agent.Deploy_Failed, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}, Error: "boom"}),
+			agent.NewDeployCommand(agent.NewPeer("node1"), agent.DeployCommandRestart()),
+			agent.NewDeployCommand(agent.NewPeer("node1"), agent.DeployCommandCancel("")),
+			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
+			agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}}),
+		),
 	)
 
 	DescribeTable("should only finish on commands for the monitored deployment",
@@ -179,6 +189,28 @@ var _ = Describe("Log Deploy", func() {
 			),
 		),
 	)
+
+	It("should resume history replay from the last message before a heartbeat", func() {
+		local := agent.NewPeer("local")
+		node := agent.NewPeer("node1")
+		begin := agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}})
+		completed := agent.PeersCompletedEvent(node, 1)
+		done := agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}})
+
+		buf := make(chan *agent.Message, 4)
+		buf <- begin
+		buf <- completed
+		// heartbeats are delivered live but never recorded in the history.
+		buf <- agent.NewDeployHeartbeat(node)
+		buf <- agent.NewLogHistoryFromMessages(local, begin, completed, done)
+
+		ctx, timeout := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf)
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+	})
 
 	It("should resume history replay across consecutive reconnects", func() {
 		local := agent.NewPeer("local")

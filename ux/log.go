@@ -126,11 +126,11 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 
 // latest returns the most recent message a history replay can resume from.
 // log events are skipped, as are history messages since they're generated
-// by the client and never appear in the history itself.
+// by the client and heartbeats since they're never recorded in the history.
 func latest(last *agent.Message, messages ...*agent.Message) *agent.Message {
 	for _, m := range messages {
 		switch m.Type {
-		case agent.Message_LogEvent, agent.Message_LogHistoryEvent:
+		case agent.Message_LogEvent, agent.Message_LogHistoryEvent, agent.Message_DeployHeartbeat:
 		default:
 			last = m
 		}

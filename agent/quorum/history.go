@@ -28,6 +28,8 @@ func (t History) Decode(ctx TranscoderContext, m *agent.Message) error {
 	}
 
 	switch m.Type {
+	case agent.Message_DeployHeartbeat:
+		// heartbeats only signal liveness, recording them evicts the actual history.
 	case agent.Message_DeployCommandEvent:
 		switch m.GetDeployCommand().Command {
 		case agent.DeployCommand_Begin:
