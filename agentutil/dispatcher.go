@@ -13,6 +13,8 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -97,39 +99,50 @@ type Dispatcher struct {
 // Dispatch dispatches messages
 func (t *Dispatcher) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
 	var (
-		c agent.Client
+		conn *grpc.ClientConn
 	)
 
-	if c, err = t.getClient(ctx); err != nil {
+	if conn, err = t.getClient(ctx); err != nil {
 		log.Println("-------------- dispatching failed---------------")
 		return err
 	}
 
-	return t.dropClient(c, c.Dispatch(ctx, m...))
+	return t.dropClient(ctx, conn, agent.NewConn(conn).Dispatch(ctx, m...))
 }
 
-func (t *Dispatcher) getClient(ctx context.Context) (c agent.Client, err error) {
+func (t *Dispatcher) getClient(ctx context.Context) (c *grpc.ClientConn, err error) {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if t.c != nil {
-		return agent.NewConn(t.c), nil
+		return t.c, nil
 	}
 
 	if t.c, err = t.dialer.DialContext(ctx); err != nil {
 		return nil, err
 	}
 
-	return agent.NewConn(t.c), nil
+	return t.c, nil
 }
 
-func (t *Dispatcher) dropClient(bad agent.Client, err error) error {
+// dropClient discards the connection when the dispatch failed due to the connection.
+// the connection is shared by concurrent dispatches, so failures caused by the
+// caller (cancellation) or observed on an already replaced connection are ignored.
+func (t *Dispatcher) dropClient(ctx context.Context, bad *grpc.ClientConn, err error) error {
 	if err == nil {
 		return err
 	}
 
+	if errors.Is(ctx.Err(), context.Canceled) || status.Code(err) == codes.Canceled {
+		return err
+	}
+
 	t.m.Lock()
+	defer t.m.Unlock()
+	if t.c != bad {
+		return err
+	}
 	t.c = nil
-	t.m.Unlock()
+
 	errorsx.Log(errors.Wrap(bad.Close(), "failed to cleanup client"))
 
 	return err
