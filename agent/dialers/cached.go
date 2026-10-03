@@ -39,16 +39,21 @@ func (t *Cached) DialContext(ctx context.Context, options ...grpc.DialOption) (c
 	c = t.conn
 	t.m.RUnlock()
 
-	if c != nil {
-		if c.GetState() != connectivity.Shutdown {
-			return c, nil
-		} else {
-			c.Close()
-		}
+	if c != nil && c.GetState() != connectivity.Shutdown {
+		return c, nil
 	}
 
 	t.m.Lock()
 	defer t.m.Unlock()
+
+	// another caller may have already replaced the connection while we waited for the lock.
+	if t.conn != nil && t.conn.GetState() != connectivity.Shutdown {
+		return t.conn, nil
+	}
+
+	if t.conn != nil {
+		t.conn.Close()
+	}
 
 	if t.conn, err = t.d.DialContext(ctx, options...); err != nil {
 		return nil, err
