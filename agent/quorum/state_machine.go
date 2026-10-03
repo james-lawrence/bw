@@ -103,10 +103,19 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 			log.Println("deployment complete", spew.Sdump(&dcmd))
 		}
-		errorsx.Log(d.Dispatch(context.Background(), agent.NewDeployCommand(c.Local(), dcmd)))
+		errorsx.Log(dispatchDeployResult(context.Background(), d, c.Local(), dcmd))
 	}()
 
 	return nil
+}
+
+// dispatchDeployResult records the outcome of a deployment. clients and the cluster
+// wait on this message to consider the deploy finished, so retry until it's delivered.
+func dispatchDeployResult(ctx context.Context, d agent.Dispatcher, local *agent.Peer, dcmd *agent.DeployCommand) error {
+	ctx, done := context.WithTimeout(ctx, time.Minute)
+	defer done()
+
+	return agentutil.ReliableDispatch(ctx, d, agent.NewDeployCommand(local, dcmd))
 }
 
 func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
