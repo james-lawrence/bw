@@ -1,12 +1,14 @@
 package ux
 
 import (
+	"bytes"
 	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -30,6 +32,15 @@ func OptionFailureDisplay(fd failureDisplay) Option {
 func OptionHeartbeat(d time.Duration) Option {
 	return func(cs *cState) {
 		cs.heartbeat = 3 * d
+	}
+}
+
+// OptionDeployment ignore deploy commands for other deployments.
+// the id is provided once known (e.g. after the archive is uploaded).
+func OptionDeployment(id *atomic.Pointer[[]byte]) Option {
+	return func(cs *cState) {
+		cs.deploymentID = id
+		cs.deploying = new(bool)
 	}
 }
 
@@ -159,6 +170,8 @@ func consume(c consumer, messages ...*agent.Message) consumer {
 type cState struct {
 	cached         *dialers.Cached
 	connection     *agent.ConnectionEvent
+	deploymentID   *atomic.Pointer[[]byte]
+	deploying      *bool
 	FailureDisplay failureDisplay
 	Logger         *log.Logger
 	au             aurora.Aurora
@@ -175,6 +188,43 @@ func (t cState) merge(options ...Option) cState {
 	}
 
 	return dup
+}
+
+// relevant reports if the message applies to the monitored deployment.
+// messages that carry an archive must match the deployment's id. cancel and restart
+// commands carry no archive and apply to whichever deployment is running, so they're
+// only relevant once the monitored deployment has begun.
+// when no deployment is being monitored every message is relevant.
+func (t cState) relevant(m *agent.Message) bool {
+	var (
+		archive *agent.Archive
+	)
+
+	if t.deploymentID == nil {
+		return true
+	}
+
+	switch m.Type {
+	case agent.Message_DeployCommandEvent:
+		archive = m.GetDeployCommand().Archive
+	case agent.Message_DeployEvent:
+		archive = m.GetDeploy().Archive
+	default:
+		return true
+	}
+
+	if archive == nil {
+		return *t.deploying
+	}
+
+	id := t.deploymentID.Load()
+	matched := id != nil && bytes.Equal(*id, archive.DeploymentID)
+
+	if m.Type == agent.Message_DeployCommandEvent && m.GetDeployCommand().Command == agent.DeployCommand_Begin {
+		*t.deploying = matched
+	}
+
+	return matched
 }
 
 func (t cState) print(m *agent.Message) {
@@ -291,6 +341,10 @@ type deploying struct {
 
 func (t deploying) Consume(m *agent.Message) consumer {
 	t.cState.print(m)
+
+	if !t.cState.relevant(m) {
+		return t
+	}
 
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:

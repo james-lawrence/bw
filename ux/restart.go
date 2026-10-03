@@ -11,6 +11,10 @@ type restart struct {
 func (t restart) Consume(m *agent.Message) consumer {
 	t.cState.print(m)
 
+	if !t.cState.relevant(m) {
+		return t
+	}
+
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
 		// ignore failures and cancels as restart will emit a cancel triggering failures.

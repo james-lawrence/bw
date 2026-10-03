@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync/atomic"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -99,10 +100,12 @@ func Redeploy(gctx *Context, deploymentID string) error {
 	dctx, failurefn := context.WithCancelCause(gctx.Context)
 	defer failurefn(nil)
 
+	monitored := new(atomic.Pointer[[]byte])
 	termui.NewFromClientConfig(
 		dctx, failurefn, config, qd, local, events,
 		ux.OptionHeartbeat(gctx.Heartbeat),
 		ux.OptionDebug(gctx.Verbose),
+		ux.OptionDeployment(monitored),
 	)
 
 	events <- agent.LogEvent(local, "connected to cluster")
@@ -128,6 +131,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 	}
 
 	archive = located.Archive
+	monitored.Store(&archive.DeploymentID)
 
 	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", displayname, archive.Location))
 

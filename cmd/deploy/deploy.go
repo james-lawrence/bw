@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/james-lawrence/bw"
@@ -126,10 +127,12 @@ func Into(gctx *Context) error {
 
 	dctx, failurefn := context.WithCancelCause(gctx.Context)
 	defer failurefn(nil)
+	monitored := new(atomic.Pointer[[]byte])
 	termui.NewFromClientConfig(
 		dctx, failurefn, config, qd, local, events,
 		ux.OptionHeartbeat(gctx.Heartbeat),
 		ux.OptionDebug(gctx.Verbose),
+		ux.OptionDeployment(monitored),
 	)
 
 	conn = grpcx.UntilSuccess(gctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
@@ -203,6 +206,7 @@ func Into(gctx *Context) error {
 		return err
 	}
 
+	monitored.Store(&darchive.DeploymentID)
 	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", displayname, darchive.Location))
 
 	max := gctx.Concurrency

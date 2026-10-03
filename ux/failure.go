@@ -25,6 +25,10 @@ type failure struct {
 }
 
 func (t failure) Consume(m *agent.Message) consumer {
+	if !t.cState.relevant(m) {
+		return t
+	}
+
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
 		t.logs()
