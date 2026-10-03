@@ -31,6 +31,12 @@ func (t failure) Consume(m *agent.Message) consumer {
 
 	switch m.Type {
 	case agent.Message_DeployCommandEvent:
+		// the deploy is being restarted, the failures are moot.
+		if m.GetDeployCommand().Command == agent.DeployCommand_Restart {
+			t.cState.printDeployCommand(m)
+			return restart{cState: t.cState}
+		}
+
 		t.logs()
 		t.cState.printDeployCommand(m)
 		t.cState.failed(errorsx.String("deploy failed"))
