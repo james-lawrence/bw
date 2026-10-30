@@ -406,13 +406,11 @@ github.com/dustin/go-humanize
 # github.com/edsrzf/mmap-go v1.1.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
-# github.com/egdaemon/eg v0.0.0-20261030191608-b8d9561071a3
+# github.com/egdaemon/eg v0.0.0-20261030201623-bd74787ece93
 ## explicit; go 1.27.2
 github.com/egdaemon/eg
 github.com/egdaemon/eg/astcodec
-github.com/egdaemon/eg/authn
 github.com/egdaemon/eg/backoff
-github.com/egdaemon/eg/compute
 github.com/egdaemon/eg/internal/contextx
 github.com/egdaemon/eg/internal/coverage
 github.com/egdaemon/eg/internal/coverage/golangcov
@@ -421,12 +419,9 @@ github.com/egdaemon/eg/internal/envx
 github.com/egdaemon/eg/internal/errorsx
 github.com/egdaemon/eg/internal/execx
 github.com/egdaemon/eg/internal/fsx
-github.com/egdaemon/eg/internal/gitx
 github.com/egdaemon/eg/internal/goosex
-github.com/egdaemon/eg/internal/httpx
 github.com/egdaemon/eg/internal/iox
 github.com/egdaemon/eg/internal/iterx
-github.com/egdaemon/eg/internal/jwtx
 github.com/egdaemon/eg/internal/langx
 github.com/egdaemon/eg/internal/md5x
 github.com/egdaemon/eg/internal/modfilex
@@ -445,7 +440,6 @@ github.com/egdaemon/eg/interp/events
 github.com/egdaemon/eg/interp/execproxy
 github.com/egdaemon/eg/interp/runtime/wasi/ffierrors
 github.com/egdaemon/eg/interp/runtime/wasi/ffiguest
-github.com/egdaemon/eg/jsonx
 github.com/egdaemon/eg/runtime/wasi/eg
 github.com/egdaemon/eg/runtime/wasi/egenv
 github.com/egdaemon/eg/runtime/wasi/eggit
@@ -456,7 +450,6 @@ github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigit
 github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigraph
 github.com/egdaemon/eg/runtime/wasi/env
 github.com/egdaemon/eg/runtime/wasi/shell
-github.com/egdaemon/eg/runtime/x/wasi/egbug
 github.com/egdaemon/eg/runtime/x/wasi/egdebuild
 github.com/egdaemon/eg/runtime/x/wasi/egfs
 github.com/egdaemon/eg/runtime/x/wasi/eggolang
@@ -532,12 +525,6 @@ github.com/go-git/gcfg
 github.com/go-git/gcfg/scanner
 github.com/go-git/gcfg/token
 github.com/go-git/gcfg/types
-# github.com/go-git/gcfg/v2 v2.0.2
-## explicit; go 1.21
-github.com/go-git/gcfg/v2
-github.com/go-git/gcfg/v2/scanner
-github.com/go-git/gcfg/v2/token
-github.com/go-git/gcfg/v2/types
 # github.com/go-git/go-billy/v5 v5.6.2
 ## explicit; go 1.21
 github.com/go-git/go-billy/v5
@@ -546,14 +533,6 @@ github.com/go-git/go-billy/v5/helper/polyfill
 github.com/go-git/go-billy/v5/memfs
 github.com/go-git/go-billy/v5/osfs
 github.com/go-git/go-billy/v5/util
-# github.com/go-git/go-billy/v6 v6.0.0-beta.1
-## explicit; go 1.25.0
-github.com/go-git/go-billy/v6
-github.com/go-git/go-billy/v6/helper/chroot
-github.com/go-git/go-billy/v6/helper/polyfill
-github.com/go-git/go-billy/v6/memfs
-github.com/go-git/go-billy/v6/osfs
-github.com/go-git/go-billy/v6/util
 # github.com/go-git/go-git/v5 v5.16.2
 ## explicit; go 1.23.0
 github.com/go-git/go-git/v5
@@ -602,70 +581,6 @@ github.com/go-git/go-git/v5/utils/merkletrie/internal/frame
 github.com/go-git/go-git/v5/utils/merkletrie/noder
 github.com/go-git/go-git/v5/utils/sync
 github.com/go-git/go-git/v5/utils/trace
-# github.com/go-git/go-git/v6 v6.0.0-beta.1
-## explicit; go 1.26.0
-github.com/go-git/go-git/v6
-github.com/go-git/go-git/v6/config
-github.com/go-git/go-git/v6/internal/archive
-github.com/go-git/go-git/v6/internal/packhandle
-github.com/go-git/go-git/v6/internal/pathutil
-github.com/go-git/go-git/v6/internal/reference
-github.com/go-git/go-git/v6/internal/repository
-github.com/go-git/go-git/v6/internal/revision
-github.com/go-git/go-git/v6/internal/sharedfile
-github.com/go-git/go-git/v6/internal/transport
-github.com/go-git/go-git/v6/internal/url
-github.com/go-git/go-git/v6/plumbing
-github.com/go-git/go-git/v6/plumbing/cache
-github.com/go-git/go-git/v6/plumbing/client
-github.com/go-git/go-git/v6/plumbing/color
-github.com/go-git/go-git/v6/plumbing/filemode
-github.com/go-git/go-git/v6/plumbing/format/config
-github.com/go-git/go-git/v6/plumbing/format/diff
-github.com/go-git/go-git/v6/plumbing/format/gitignore
-github.com/go-git/go-git/v6/plumbing/format/idxfile
-github.com/go-git/go-git/v6/plumbing/format/index
-github.com/go-git/go-git/v6/plumbing/format/objfile
-github.com/go-git/go-git/v6/plumbing/format/packfile
-github.com/go-git/go-git/v6/plumbing/format/packfile/util
-github.com/go-git/go-git/v6/plumbing/format/pktline
-github.com/go-git/go-git/v6/plumbing/format/reflog
-github.com/go-git/go-git/v6/plumbing/format/revfile
-github.com/go-git/go-git/v6/plumbing/hash
-github.com/go-git/go-git/v6/plumbing/object
-github.com/go-git/go-git/v6/plumbing/protocol
-github.com/go-git/go-git/v6/plumbing/protocol/capability
-github.com/go-git/go-git/v6/plumbing/protocol/packp
-github.com/go-git/go-git/v6/plumbing/protocol/packp/sideband
-github.com/go-git/go-git/v6/plumbing/revlist
-github.com/go-git/go-git/v6/plumbing/storer
-github.com/go-git/go-git/v6/plumbing/transport
-github.com/go-git/go-git/v6/plumbing/transport/file
-github.com/go-git/go-git/v6/plumbing/transport/git
-github.com/go-git/go-git/v6/plumbing/transport/http
-github.com/go-git/go-git/v6/plumbing/transport/ssh
-github.com/go-git/go-git/v6/plumbing/transport/ssh/knownhosts
-github.com/go-git/go-git/v6/plumbing/transport/ssh/sshagent
-github.com/go-git/go-git/v6/storage
-github.com/go-git/go-git/v6/storage/filesystem
-github.com/go-git/go-git/v6/storage/filesystem/dotgit
-github.com/go-git/go-git/v6/storage/memory
-github.com/go-git/go-git/v6/utils/binary
-github.com/go-git/go-git/v6/utils/convert
-github.com/go-git/go-git/v6/utils/diff
-github.com/go-git/go-git/v6/utils/ioutil
-github.com/go-git/go-git/v6/utils/merkletrie
-github.com/go-git/go-git/v6/utils/merkletrie/filesystem
-github.com/go-git/go-git/v6/utils/merkletrie/index
-github.com/go-git/go-git/v6/utils/merkletrie/internal/frame
-github.com/go-git/go-git/v6/utils/merkletrie/noder
-github.com/go-git/go-git/v6/utils/sync
-github.com/go-git/go-git/v6/utils/trace
-github.com/go-git/go-git/v6/x/fdpool
-github.com/go-git/go-git/v6/x/plugin
-github.com/go-git/go-git/v6/x/plugin/config
-github.com/go-git/go-git/v6/x/plugin/zlib
-github.com/go-git/go-git/v6/x/storage
 # github.com/go-jose/go-jose/v4 v4.1.4
 ## explicit; go 1.24.0
 github.com/go-jose/go-jose/v4
@@ -688,9 +603,6 @@ github.com/godbus/dbus/v5
 # github.com/gofrs/uuid/v5 v5.5.1
 ## explicit; go 1.25
 github.com/gofrs/uuid/v5
-# github.com/golang-jwt/jwt/v4 v4.5.2
-## explicit; go 1.16
-github.com/golang-jwt/jwt/v4
 # github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8
 ## explicit; go 1.20
 github.com/golang/groupcache/lru
@@ -1226,7 +1138,6 @@ golang.org/x/oauth2/jwt
 ## explicit; go 1.26.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-golang.org/x/sync/singleflight
 # golang.org/x/sys v0.49.0
 ## explicit; go 1.26.0
 golang.org/x/sys/cpu
