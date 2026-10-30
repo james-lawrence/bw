@@ -8,6 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
@@ -35,6 +36,14 @@ func MessageTime(m *Message) time.Time {
 	}
 }
 
+// stamp identifies the message and records when it was created from a single reading of the clock,
+// so the timestamp embedded in the uuidv7 id matches Ts (to the millisecond).
+func stamp(m *Message) {
+	now := time.Now()
+	m.Id = uuid.Must(uuid.NewV7AtTime(now)).String()
+	m.Ts = now.UnixNano()
+}
+
 // PeersFoundEvent ...
 func PeersFoundEvent(p *Peer, n int64) *Message {
 	return integerEvent(p, Message_PeersFoundEvent, n)
@@ -47,17 +56,15 @@ func PeersCompletedEvent(p *Peer, n int64) *Message {
 
 // LogEvent create a log event message.
 func LogEvent(p *Peer, s string) *Message {
-	return &Message{
-		Id:   uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type: Message_LogEvent,
 		Peer: p,
-		Ts:   time.Now().UnixNano(),
 		Event: &Message_Log{
 			Log: &Log{
 				Log: s,
 			},
 		},
-	}
+	}, stamp))
 }
 
 // NewTLSCertificates ...
@@ -81,33 +88,29 @@ func NewWALPreamble() *WALPreamble {
 
 // LogError create a log event message from an error.
 func LogError(p *Peer, s error) *Message {
-	return &Message{
-		Id:   uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type: Message_LogEvent,
 		Peer: p,
-		Ts:   time.Now().UnixNano(),
 		Event: &Message_Log{
 			Log: &Log{
 				Log: s.Error(),
 			},
 		},
-	}
+	}, stamp))
 }
 
 func NewConnectionLog(p *Peer, s ConnectionEvent_Type, description string) *Message {
-	return &Message{
-		Id:        uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:      Message_LogEvent,
 		Ephemeral: true,
 		Peer:      p,
-		Ts:        time.Now().UnixNano(),
 		Event: &Message_Connection{
 			Connection: &ConnectionEvent{
 				State:       s,
 				Description: description,
 			},
 		},
-	}
+	}, stamp))
 }
 func NewLogHistoryEvent(m ...*Message) *LogHistoryEvent {
 	return &LogHistoryEvent{
@@ -116,16 +119,14 @@ func NewLogHistoryEvent(m ...*Message) *LogHistoryEvent {
 }
 
 func NewLogHistoryMessage(p *Peer, log *LogHistoryEvent) *Message {
-	return &Message{
-		Id:        uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:      Message_LogHistoryEvent,
 		Ephemeral: true,
 		Peer:      p,
-		Ts:        time.Now().UnixNano(),
 		Event: &Message_History{
 			History: log,
 		},
-	}
+	}, stamp))
 }
 
 func NewLogHistoryFromMessages(p *Peer, m ...*Message) *Message {
@@ -133,38 +134,32 @@ func NewLogHistoryFromMessages(p *Peer, m ...*Message) *Message {
 }
 
 func NewDeployHeartbeat(p *Peer) *Message {
-	return &Message{
-		Id:        uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:      Message_DeployHeartbeat,
 		Ephemeral: true,
 		Peer:      p,
-		Ts:        time.Now().UnixNano(),
 		Event: &Message_Heartbeat{
 			Heartbeat: &DeployHeartbeat{},
 		},
-	}
+	}, stamp))
 }
 
 // PeerEvent ...
 func PeerEvent(p *Peer) *Message {
-	return &Message{
-		Id:    uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:  Message_PeerEvent,
 		Peer:  p,
-		Ts:    time.Now().UnixNano(),
 		Event: &Message_None{},
-	}
+	}, stamp))
 }
 
 // NodeEvent ...
 func NodeEvent(p *Peer, event Message_NodeEvent) *Message {
-	return &Message{
-		Id:    uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:  Message_PeerEvent,
 		Peer:  p,
-		Ts:    time.Now().UnixNano(),
 		Event: &Message_Membership{Membership: event},
-	}
+	}, stamp))
 }
 
 func deployToOptions(d *Deploy) (dopts *DeployOptions) {
@@ -251,15 +246,13 @@ func DeployCommandRestart() *DeployCommand {
 
 // DeployCommand send a deploy command message
 func NewDeployCommand(p *Peer, dc *DeployCommand) *Message {
-	return &Message{
-		Id:   uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type: Message_DeployCommandEvent,
 		Peer: p,
-		Ts:   time.Now().UnixNano(),
 		Event: &Message_DeployCommand{
 			DeployCommand: dc,
 		},
-	}
+	}, stamp))
 }
 
 // DeployEvent represents a deploy being triggered.
@@ -272,25 +265,21 @@ func DeployEventFailed(p *Peer, by string, di *DeployOptions, a *Archive, cause 
 }
 
 func deployEvent(t Deploy_Stage, p *Peer, by string, di *DeployOptions, a *Archive, err string) *Message {
-	return &Message{
-		Id:    uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type:  Message_DeployEvent,
 		Peer:  p,
-		Ts:    time.Now().UnixNano(),
 		Event: &Message_Deploy{Deploy: &Deploy{Stage: t, Initiator: by, Options: di, Archive: a, Error: err}},
-	}
+	}, stamp))
 }
 
 func integerEvent(p *Peer, t Message_Type, n int64) *Message {
-	return &Message{
-		Id:   uuid.Must(uuid.NewV7()).String(),
+	return new(langx.Clone(Message{
 		Type: t,
 		Peer: p,
-		Ts:   time.Now().UnixNano(),
 		Event: &Message_Int{
 			Int: n,
 		},
-	}
+	}, stamp))
 }
 
 // ApplyToStateMachine utility function that applies an event to the provided

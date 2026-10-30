@@ -246,7 +246,7 @@ var _ = Describe("StateMachine", func() {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
-			for m := range jrnl.Connect().Each(ctx) {
+			for m := range jrnl.Connect(agent.Cursor{}).Each(ctx) {
 				obs <- m
 			}
 		}()
@@ -279,7 +279,7 @@ var _ = Describe("StateMachine", func() {
 		defer cancel()
 		stalled := make(chan *agent.Message) // never read.
 		go func() {
-			for m := range jrnl.Connect().Each(ctx) {
+			for m := range jrnl.Connect(agent.Cursor{}).Each(ctx) {
 				select {
 				case stalled <- m:
 				case <-ctx.Done():

@@ -143,7 +143,7 @@ var _ = Describe("Journal", func() {
 
 		It("should replay from the beginning without duplicates and then tail", func() {
 			Expect(j.Dispatch(ctx, v4("1", epoch), v4("2", epoch.Add(20*time.Second)))).To(Succeed())
-			go pump(ctx, j.From(agent.Cursor{}), out)
+			go pump(ctx, j.Connect(agent.WindowCursor(epoch)), out)
 			Expect(receive(out, 2)).To(Equal([]string{"1", "2"}))
 			Expect(j.Dispatch(ctx, v4("3", epoch.Add(21*time.Second)), v4("4", epoch.Add(40*time.Second)))).To(Succeed())
 			Expect(receive(out, 2)).To(Equal([]string{"3", "4"}))
@@ -152,7 +152,7 @@ var _ = Describe("Journal", func() {
 
 		It("should start at the tail by default", func() {
 			Expect(j.Dispatch(ctx, v4("old", epoch))).To(Succeed())
-			go pump(ctx, j.Connect(), out)
+			go pump(ctx, j.Connect(agent.Cursor{}), out)
 			Consistently(out, 200*time.Millisecond).ShouldNot(Receive())
 			Expect(j.Dispatch(ctx, v4("new", epoch.Add(time.Second)))).To(Succeed())
 			Expect(receive(out, 1)).To(Equal([]string{"new"}))
@@ -162,21 +162,34 @@ var _ = Describe("Journal", func() {
 			Expect(j.Dispatch(ctx, v4("1", epoch), v4("2", epoch))).To(Succeed())
 			cursor := j.Tail()
 			Expect(j.Dispatch(ctx, v4("3", epoch), v4("4", epoch.Add(15*time.Second)))).To(Succeed())
-			go pump(ctx, j.From(cursor), out)
+			go pump(ctx, j.Connect(cursor), out)
 			Expect(receive(out, 2)).To(Equal([]string{"3", "4"}))
+		})
+
+		It("should replay the window of a message when resumed from its cursor", func() {
+			m1, m2, m3 := v7("1", epoch), v7("2", epoch.Add(time.Second)), v7("3", epoch.Add(20*time.Second))
+			Expect(j.Dispatch(ctx, m1, m2, m3)).To(Succeed())
+			go pump(ctx, j.Connect(agent.CursorOf(m2)), out)
+			Expect(receive(out, 3)).To(Equal([]string{"1", "2", "3"}))
+		})
+
+		It("should skip windows that have been pruned", func() {
+			Expect(j.Dispatch(ctx, v4("1", epoch.Add(30*time.Second)))).To(Succeed())
+			go pump(ctx, j.Connect(agent.WindowCursor(epoch)), out)
+			Expect(receive(out, 1)).To(Equal([]string{"1"}))
 		})
 
 		It("should not deliver hidden messages", func() {
 			hidden := v4("hidden", epoch)
 			hidden.Hidden = true
-			go pump(ctx, j.Connect(), out)
+			go pump(ctx, j.Connect(agent.Cursor{}), out)
 			Expect(j.Dispatch(ctx, hidden, v4("visible", epoch))).To(Succeed())
 			Expect(receive(out, 1)).To(Equal([]string{"visible"}))
 		})
 
 		It("should not block the writer when a reader is stalled", func() {
 			stalled := make(chan *agent.Message) // never read.
-			go pump(ctx, j.Connect(), stalled)
+			go pump(ctx, j.Connect(agent.Cursor{}), stalled)
 
 			start := time.Now()
 			for i := 0; i < 1000; i++ {
@@ -186,7 +199,7 @@ var _ = Describe("Journal", func() {
 		})
 
 		It("should stop when the context is cancelled", func() {
-			seq := j.Connect()
+			seq := j.Connect(agent.Cursor{})
 			done := make(chan error, 1)
 			go func() {
 				for range seq.Each(ctx) {
@@ -199,7 +212,7 @@ var _ = Describe("Journal", func() {
 
 		It("should stop without an error when the consumer stops", func() {
 			Expect(j.Dispatch(ctx, v4("1", epoch), v4("2", epoch), v4("3", epoch))).To(Succeed())
-			seq := iterx.N(2, j.From(agent.Cursor{}))
+			seq := iterx.N(2, j.Connect(agent.WindowCursor(epoch)))
 
 			var got []string
 			for m := range seq.Each(ctx) {

@@ -135,8 +135,9 @@ func KeepNewestN(n int) Cleaner {
 func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(10*time.Second), 1)
 	var (
-		err  error
-		conn *grpc.ClientConn
+		err     error
+		conn    *grpc.ClientConn
+		resumed resume // tracks the delivered messages so a reconnect continues where this left off.
 	)
 
 	// deliver the message unless the context is done. returns false if the message wasn't delivered.
@@ -193,7 +194,7 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 			return
 		}
 
-		if err = agent.NewDeployConn(conn).Watch(ctx, events); err != nil {
+		if err = agent.NewDeployConn(conn).WatchFrom(ctx, resumed.cursor, resumed.accept, events); err != nil {
 			msg := fmt.Sprintf("connection lost %s", conn.Target())
 			err = errors.Wrap(err, msg)
 			if envx.Boolean(false, bw.EnvLogsDeploy) {

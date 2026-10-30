@@ -1,6 +1,7 @@
 package agent_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -55,5 +56,27 @@ func TestNewMessagesCarryTheirOwnTime(t *testing.T) {
 	}
 	if time.Unix(0, m.Ts).Before(before) {
 		t.Fatalf("expected ts in nanoseconds got %d", m.Ts)
+	}
+}
+
+func TestMessageIdMatchesTimestamp(t *testing.T) {
+	p := agent.NewPeer("node")
+
+	for name, m := range map[string]*agent.Message{
+		"LogEvent":           agent.LogEvent(p, "message"),
+		"LogError":           agent.LogError(p, errors.New("failure")),
+		"NewConnectionLog":   agent.NewConnectionLog(p, agent.ConnectionEvent_Connected, "connected"),
+		"NewDeployHeartbeat": agent.NewDeployHeartbeat(p),
+		"PeerEvent":          agent.PeerEvent(p),
+		"NodeEvent":          agent.NodeEvent(p, agent.Message_NodeEvent(0)),
+		"PeersFoundEvent":    agent.PeersFoundEvent(p, 1),
+		"NewDeployCommand":   agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+	} {
+		t.Run(name, func(t *testing.T) {
+			expected := time.Unix(0, m.Ts).Truncate(time.Millisecond)
+			if got := agent.MessageTime(m); !got.Equal(expected) {
+				t.Fatalf("id time %v does not match ts %v", got, expected)
+			}
+		})
 	}
 }

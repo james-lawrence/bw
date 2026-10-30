@@ -89,7 +89,7 @@ message Message {
   // Identifies which field is filled in.
   Type type = 1;
   Peer peer = 2;
-  int64 ts = 3; // unix timestamp.
+  int64 ts = 3; // creation time; nanoseconds when the id is a uuidv7, seconds otherwise (see agent.MessageTime).
 
   oneof Event {
     bool none = 4;
@@ -170,7 +170,10 @@ message UploadChunk {
 
 message UploadResponse { Archive archive = 1; }
 
-message WatchRequest {}
+message WatchRequest {
+  // position to resume from, see agent.Cursor. empty watches the messages sent after the request.
+  bytes cursor = 1;
+}
 message DispatchResponse {}
 
 message InfoRequest {}

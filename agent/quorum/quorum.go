@@ -260,7 +260,7 @@ func (t *Quorum) History(context.Context) (_ []*agent.Message, err error) {
 }
 
 // Watch watch for events.
-func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
+func (t *Quorum) Watch(cursor agent.Cursor, out agent.Quorum_WatchServer) (err error) {
 	disconnected := t.disconnected
 	lost := t.lost
 
@@ -281,7 +281,7 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		}
 	}()
 
-	seq := t.ConnectableDispatcher.Connect()
+	seq := t.ConnectableDispatcher.Connect(cursor)
 	for m := range seq.Each(ctx) {
 		if err = out.Send(m); err != nil {
 			cause := errors.Wrap(err, "failed to deliver message")

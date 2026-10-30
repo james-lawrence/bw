@@ -30,27 +30,15 @@ import (
 
 const (
 	// Window is the amount of time covered by a single segment.
-	Window = 15 * time.Second
+	Window = agent.CursorWindow
 
 	extension = ".log"
 )
 
-// segmentID returns the smallest UUIDv7 for the window containing t, the timestamp is
-// the start of the window and every other bit is zero (besides version and variant).
-func segmentID(t time.Time) uuid.UUID {
-	id := uuid.UUID{}
-	// 48 bit timestamp in the high bytes, the low 16 bits (version and rand_a) stay zero.
-	binary.BigEndian.PutUint64(id[:8], uint64(t.Truncate(Window).UnixMilli())<<16)
-	id.SetVersion(uuid.V7)
-	id.SetVariant(uuid.VariantRFC9562)
-
-	return id
-}
-
 // Segment returns the file name for the window containing t. the name is the smallest UUIDv7
 // for the start of the window so that lexicographic order is chronological order.
 func Segment(t time.Time) string {
-	return segmentName(segmentID(t))
+	return segmentName(agent.WindowCursor(t).Segment())
 }
 
 func segmentName(id uuid.UUID) string {
@@ -280,31 +268,35 @@ func (t *Journal) waiter() <-chan struct{} {
 	return t.wake
 }
 
-// Connect streams the messages written after the call.
-func (t *Journal) Connect() iterx.Seq[*agent.Message] {
-	return t.From(t.Tail())
+// Connect streams the messages starting at the cursor, the zero cursor streams the messages written after the call.
+// a cursor into a window continues from the cursor, windows pruned in the meantime are skipped. hidden messages
+// are skipped. the sequence runs until the context is cancelled or the consumer stops.
+func (t *Journal) Connect(c agent.Cursor) iterx.Seq[*agent.Message] {
+	if c == (agent.Cursor{}) {
+		c = t.Tail()
+	}
+
+	return iterx.New(func(ctx context.Context, yield func(*agent.Message) bool) error {
+		return t.follow(ctx, c, yield)
+	})
 }
 
-// From streams the messages starting at the cursor. hidden messages are skipped.
-// the sequence runs until the context is cancelled or the consumer stops.
-func (t *Journal) From(c agent.Cursor) iterx.Seq[*agent.Message] {
-	return iterx.New(func(ctx context.Context, yield func(*agent.Message) bool) (err error) {
-		for {
-			// grab the waiter before reading so writes landing during the read are not missed.
-			wake := t.waiter()
+func (t *Journal) follow(ctx context.Context, c agent.Cursor, yield func(*agent.Message) bool) (err error) {
+	for {
+		// grab the waiter before reading so writes landing during the read are not missed.
+		wake := t.waiter()
 
-			var more bool
-			if c, more, err = t.drain(ctx, c, yield); err != nil || !more {
-				return err
-			}
-
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-wake:
-			}
+		var more bool
+		if c, more, err = t.drain(ctx, c, yield); err != nil || !more {
+			return err
 		}
-	})
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-wake:
+		}
+	}
 }
 
 // drain delivers everything currently in the journal after the cursor. more is false when the

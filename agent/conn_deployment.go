@@ -115,17 +115,28 @@ func (t DeployConn) RemoteDeploy(ctx context.Context, initiator string, dopts *D
 
 // Watch for messages sent to the leader. blocks.
 func (t DeployConn) Watch(ctx context.Context, out chan<- *Message) (err error) {
+	return t.WatchFrom(ctx, Cursor{}, nil, out)
+}
+
+// WatchFrom watches for messages sent to the leader starting at the cursor, see WatchRequest. blocks.
+// the replay starts at the beginning of a window so messages the caller has already seen are repeated,
+// accept filters them, a message is skipped when it returns false. nil accepts everything.
+func (t DeployConn) WatchFrom(ctx context.Context, cursor Cursor, accept func(*Message) bool, out chan<- *Message) (err error) {
 	var (
 		src Deployments_WatchClient
 		msg *Message
 	)
 
 	c := NewDeploymentsClient(t.conn)
-	if src, err = c.Watch(ctx, &WatchRequest{}); err != nil {
+	if src, err = c.Watch(ctx, &WatchRequest{Cursor: cursor.Bytes()}); err != nil {
 		return errors.WithStack(err)
 	}
 
 	for msg, err = src.Recv(); err == nil; msg, err = src.Recv() {
+		if accept != nil && !accept(msg) {
+			continue
+		}
+
 		select {
 		case out <- msg:
 		case <-ctx.Done():

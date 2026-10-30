@@ -10,7 +10,7 @@ import (
 type quorum interface {
 	Deploy(ctx context.Context, by string, opts *DeployOptions, a *Archive, peers ...*Peer) error
 	Upload(stream Quorum_UploadServer) error
-	Watch(stream Quorum_WatchServer) error
+	Watch(cursor Cursor, stream Quorum_WatchServer) error
 	History(context.Context) ([]*Message, error)
 	Dispatch(context.Context, ...*Message) error
 	Info(context.Context) (InfoResponse, error)
@@ -94,12 +94,12 @@ func (t Quorum) Upload(stream Quorum_UploadServer) (err error) {
 }
 
 // Watch watch for events.
-func (t Quorum) Watch(_ *WatchRequest, out Quorum_WatchServer) (err error) {
+func (t Quorum) Watch(req *WatchRequest, out Quorum_WatchServer) (err error) {
 	if err := t.auth.Deploy(out.Context()); err != nil {
 		return err
 	}
 
-	return t.q.Watch(out)
+	return t.q.Watch(CursorFromBytes(req.GetCursor()), out)
 }
 
 // Dispatch record deployment events.
