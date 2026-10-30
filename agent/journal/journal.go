@@ -6,6 +6,7 @@ package journal
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/binary"
 	"io"
@@ -69,6 +70,14 @@ func OptionRetention(d time.Duration) Option {
 	}
 }
 
+// OptionDebounce how long followers coalesce writes for, a follower woken by a write waits this long before reading
+// so a burst of writes is delivered by a single pass.
+func OptionDebounce(d time.Duration) Option {
+	return func(j *Journal) {
+		j.debounce = d
+	}
+}
+
 type discard struct {
 	*Journal
 	discard string
@@ -87,7 +96,7 @@ func New(dir string, options ...Option) (*Journal, error) {
 	j := new(langx.Clone(Journal{
 		dir:       dir,
 		retention: time.Hour,
-		wake:      make(chan struct{}),
+		debounce:  200 * time.Millisecond,
 		pruner: asynccompute.New(
 			func(_ context.Context, evt discard) error {
 				evt.prune(evt.discard)
@@ -97,6 +106,9 @@ func New(dir string, options ...Option) (*Journal, error) {
 			asynccompute.Backlog[discard](4),
 		),
 	}, options...))
+
+	// the cond is built after the clone, it has to reference the mutex of the journal returned.
+	j.written = sync.NewCond(&j.m)
 
 	return j, nil
 }
@@ -110,6 +122,7 @@ func (t *Journal) Close() (err error) {
 		return nil
 	}
 	t.closed = true
+	t.written.Broadcast() // release the followers waiting for more data.
 
 	if t.f != nil {
 		err = errors.WithStack(t.f.Close())
@@ -123,6 +136,7 @@ func (t *Journal) Close() (err error) {
 type Journal struct {
 	dir       string
 	retention time.Duration
+	debounce  time.Duration
 
 	pruner *asynccompute.Pool[discard] // removes expired segments off the apply path.
 
@@ -130,7 +144,8 @@ type Journal struct {
 	closed  bool
 	current string
 	f       *os.File
-	wake    chan struct{} // closed and replaced on every write.
+	tail    agent.Cursor // one past the last message written to the newest segment, where the next record starts.
+	written *sync.Cond   // broadcast when tail moves or the journal closes, over m.
 }
 
 // Dispatch appends the messages to the journal. every message is recorded, filtering
@@ -149,8 +164,7 @@ func (t *Journal) Dispatch(_ context.Context, messages ...*agent.Message) (err e
 		}
 	}
 
-	close(t.wake)
-	t.wake = make(chan struct{})
+	t.written.Broadcast()
 
 	return nil
 }
@@ -189,8 +203,23 @@ func (t *Journal) append(m *agent.Message) (err error) {
 	}
 
 	// a single write so readers never observe a partially written length prefix and body in separate calls.
-	_, err = f.Write(record)
-	return errors.WithStack(err)
+	if _, err = f.Write(record); err != nil {
+		return errors.WithStack(err)
+	}
+
+	// late messages for an older window don't move the tail, there is nothing newer for the followers to read.
+	if name == t.current {
+		segment := agent.WindowCursor(ts).Segment()
+
+		var offset int64
+		if t.tail.Segment() == segment {
+			offset = t.tail.Offset()
+		}
+
+		t.tail = agent.NewCursor(segment, offset+int64(len(record)))
+	}
+
+	return nil
 }
 
 func (t *Journal) rollover(name string) (f *os.File, err error) {
@@ -242,34 +271,32 @@ func (t *Journal) Segments() []string {
 	return names
 }
 
-// Tail returns a cursor pointing at the end of the journal.
+// Tail returns a cursor pointing at the end of the journal, one past the last message written.
 func (t *Journal) Tail() agent.Cursor {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	segments := t.Segments()
-	if len(segments) == 0 {
-		return agent.Cursor{}
-	}
-
-	last := segments[len(segments)-1]
-	info, err := os.Stat(filepath.Join(t.dir, last))
-	if err != nil {
-		return agent.Cursor{}
-	}
-
-	id, err := uuid.FromString(strings.TrimSuffix(last, extension))
-	if err != nil {
-		return agent.Cursor{}
-	}
-
-	return agent.NewCursor(id, info.Size())
+	return t.tail
 }
 
-func (t *Journal) waiter() <-chan struct{} {
+// await blocks until the journal has data past the cursor, it is closed, or the context is done.
+func (t *Journal) await(ctx context.Context, c agent.Cursor) error {
 	t.m.Lock()
 	defer t.m.Unlock()
-	return t.wake
+
+	for bytes.Compare(t.tail[:], c[:]) <= 0 {
+		if t.closed {
+			return errors.New("journal is closed")
+		}
+
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		t.written.Wait()
+	}
+
+	return nil
 }
 
 // Connect streams the messages starting at the cursor, the zero cursor streams the messages written after the call.
@@ -286,19 +313,34 @@ func (t *Journal) Connect(c agent.Cursor) iterx.Seq[*agent.Message] {
 }
 
 func (t *Journal) follow(ctx context.Context, c agent.Cursor, yield func(*agent.Message) bool) (err error) {
-	for {
-		// grab the waiter before reading so writes landing during the read are not missed.
-		wake := t.waiter()
+	// Cond.Wait can't observe the context, ring the doorbell when it is done so the waiters re-check it. the lock is
+	// required: await checks the context and registers for the broadcast under it, without it a cancellation landing
+	// in between would be missed.
+	stop := context.AfterFunc(ctx, func() {
+		t.m.Lock()
+		defer t.m.Unlock()
+		t.written.Broadcast()
+	})
+	defer stop()
 
+	for {
 		var more bool
 		if c, more, err = t.drain(ctx, c, yield); err != nil || !more {
 			return err
 		}
 
+		if err = t.await(ctx, c); err != nil {
+			return err
+		}
+
+		// coalesce the writes of the window into a single pass. the window starts with the first wake and isn't
+		// extended by further writes, otherwise a steady stream of writes would starve the follower.
+		timer := time.NewTimer(t.debounce)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return ctx.Err()
-		case <-wake:
+		case <-timer.C:
 		}
 	}
 }

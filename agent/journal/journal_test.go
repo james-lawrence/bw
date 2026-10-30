@@ -3,6 +3,8 @@ package journal_test
 import (
 	"context"
 	"os"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -74,7 +76,7 @@ var _ = Describe("Journal", func() {
 	BeforeEach(func() {
 		var err error
 		dir = GinkgoT().TempDir()
-		j, err = journal.New(dir)
+		j, err = journal.New(dir, journal.OptionDebounce(20*time.Millisecond))
 		Expect(err).To(Succeed())
 		DeferCleanup(j.Close)
 	})
@@ -138,6 +140,36 @@ var _ = Describe("Journal", func() {
 			Expect(j.Dispatch(context.Background(), v4("old", now.Add(-time.Hour)))).To(Succeed())
 			Expect(j.Dispatch(context.Background(), v4("new", now))).To(Succeed())
 			Eventually(j.Segments).Should(Equal([]string{journal.Segment(now)}))
+		})
+	})
+
+	Describe("tail", func() {
+		It("is the zero cursor for an empty journal", func() {
+			Expect(j.Tail()).To(Equal(agent.Cursor{}))
+		})
+
+		It("is one past the last message written to the newest segment", func() {
+			Expect(j.Dispatch(context.Background(), v4("1", epoch), v4("2", epoch.Add(time.Second)), v4("3", epoch.Add(20*time.Second)))).To(Succeed())
+
+			newest := journal.Segment(epoch.Add(20 * time.Second))
+			info, err := os.Stat(filepath.Join(dir, newest))
+			Expect(err).To(Succeed())
+
+			tail := j.Tail()
+			Expect(tail.Segment()).To(Equal(agent.WindowCursor(epoch.Add(20 * time.Second)).Segment()))
+			Expect(tail.Offset()).To(Equal(info.Size()))
+
+			Expect(j.Dispatch(context.Background(), v4("4", epoch.Add(21*time.Second)))).To(Succeed())
+			info, err = os.Stat(filepath.Join(dir, newest))
+			Expect(err).To(Succeed())
+			Expect(j.Tail().Offset()).To(Equal(info.Size()))
+		})
+
+		It("does not move for a late message of an older window", func() {
+			Expect(j.Dispatch(context.Background(), v4("new", epoch.Add(20*time.Second)))).To(Succeed())
+			before := j.Tail()
+			Expect(j.Dispatch(context.Background(), v4("late", epoch))).To(Succeed())
+			Expect(j.Tail()).To(Equal(before))
 		})
 	})
 
@@ -234,6 +266,74 @@ var _ = Describe("Journal", func() {
 
 			Expect(got).To(Equal([]string{"1", "2"}))
 			Expect(seq.Err()).To(Succeed())
+		})
+
+		It("should release a follower that is caught up and waiting when the context is cancelled", func() {
+			Expect(j.Dispatch(ctx, v4("1", epoch))).To(Succeed())
+
+			seq := j.Connect(agent.WindowCursor(epoch))
+			done := make(chan error, 1)
+			go func() {
+				for range seq.Each(ctx) {
+					// delivered, now caught up and parked waiting for more.
+				}
+				done <- seq.Err()
+			}()
+
+			Consistently(done, 100*time.Millisecond).ShouldNot(Receive())
+			cancel()
+			Eventually(done, time.Second).Should(Receive(MatchError(context.Canceled)))
+		})
+
+		It("should end a waiting follower with an error when the journal is closed", func() {
+			seq := j.Connect(agent.Cursor{})
+			done := make(chan error, 1)
+			go func() {
+				for range seq.Each(ctx) {
+				}
+				done <- seq.Err()
+			}()
+
+			Consistently(done, 100*time.Millisecond).ShouldNot(Receive())
+			Expect(j.Close()).To(Succeed())
+			Eventually(done, time.Second).Should(Receive(MatchError(ContainSubstring("journal is closed"))))
+		})
+
+		It("should deliver a burst of writes completely and in order", func() {
+			burst, err := journal.New(GinkgoT().TempDir(), journal.OptionDebounce(100*time.Millisecond))
+			Expect(err).To(Succeed())
+			DeferCleanup(burst.Close)
+
+			go pump(ctx, burst.Connect(agent.Cursor{}), out)
+			time.Sleep(50 * time.Millisecond) // the follower is parked.
+
+			expected := make([]string, 0, 20)
+			for i := 0; i < 20; i++ {
+				expected = append(expected, strconv.Itoa(i))
+				Expect(burst.Dispatch(ctx, v4(strconv.Itoa(i), epoch))).To(Succeed())
+			}
+
+			Expect(receive(out, 20)).To(Equal(expected))
+		})
+
+		It("should not starve a follower while writes keep arriving", func() {
+			steady, err := journal.New(GinkgoT().TempDir(), journal.OptionDebounce(100*time.Millisecond))
+			Expect(err).To(Succeed())
+			DeferCleanup(steady.Close)
+
+			go pump(ctx, steady.Connect(agent.Cursor{}), out)
+
+			// a write every 10ms for 600ms, a debounce that restarts on every write would deliver nothing until it ends.
+			start := time.Now()
+			go func() {
+				for i := 0; i < 60 && ctx.Err() == nil; i++ {
+					_ = steady.Dispatch(ctx, v4(strconv.Itoa(i), epoch))
+					time.Sleep(10 * time.Millisecond)
+				}
+			}()
+
+			Eventually(out, 400*time.Millisecond).Should(Receive())
+			Expect(time.Since(start)).To(BeNumerically("<", 450*time.Millisecond))
 		})
 	})
 })
