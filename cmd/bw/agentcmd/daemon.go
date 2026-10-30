@@ -38,14 +38,14 @@ import (
 )
 
 type CmdDaemon struct {
-	Runtime     CmdRuntime           `cmd:"" help:"run the deploy agent runtime" default:"true" aliases:"deploy"`
+	Runtime     CmdRuntime           `cmd:"" help:"run the deploy agent runtime" default:"withargs" aliases:"deploy"`
 	Coordinator CmdCoordinator       `cmd:"" help:"run a coordination server that purely acts as a command and control node, a deploy to the cluster will store the archive but not actually process it within the deployment runtime"`
 	QuorumLog   CmdDaemonDebugRaft   `cmd:"" name:"quorum-state" help:"display the quorum log, only runs on the server"`
 	Quorum      CmdDaemonDebugQuorum `cmd:"" name:"quorum" help:"display quorum member information, only runs on the server"`
 }
 
 type CmdRuntime struct {
-	daemon
+	Daemon
 }
 
 func (t CmdRuntime) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
@@ -61,23 +61,25 @@ func (t CmdRuntime) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) 
 		deployment.DirectiveOptionShellContext(sctx),
 	)
 
-	return t.daemon.bind(ctx, aconfig.Clone(), deployer)
+	return t.Daemon.bind(ctx, aconfig.Clone(), deployer)
 }
 
 type CmdCoordinator struct {
-	daemon
+	Daemon
 }
 
 func (t CmdCoordinator) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
-	return t.daemon.bind(ctx, aconfig.Clone(), deployment.Cached{})
+	return t.Daemon.bind(ctx, aconfig.Clone(), deployment.Cached{})
 }
 
-type daemon struct {
+// Daemon is the configuration shared by the agent commands. it has to stay exported: kong only discovers
+// hooks (Config.AfterApply applies the bind address flags and environment) on exported embedded fields.
+type Daemon struct {
 	cmdopts.Peering
 	Config
 }
 
-func (t *daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons.Deployer) (err error) {
+func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons.Deployer) (err error) {
 	var (
 		ring      *memberlist.Keyring
 		l         net.Listener

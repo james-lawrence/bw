@@ -12,6 +12,8 @@ import (
 	"syscall"
 
 	"github.com/alecthomas/kong"
+	"github.com/egdaemon/gdx"
+	"github.com/egdaemon/gdx/konggdx"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/autocomplete"
@@ -21,26 +23,74 @@ import (
 	"github.com/james-lawrence/bw/internal/contextx"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/userx"
 	"github.com/posener/complete"
 	"github.com/willabides/kongplete"
 )
 
+// cli is the command line of bw.
+type cli struct {
+	cmdopts.Global
+	Version            cmdVersion                   `cmd:"" help:"display versioning information"`
+	Environment        cmdEnv                       `cmd:"" help:"environment related commands"`
+	Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
+	Redeploy           cmdDeployRedeploy            `cmd:"" name:"redeploy" help:"redeploy an archive to nodes within the cluster of the specified environment"`
+	Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
+	Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment"`
+	Notary             cmdNotary                    `cmd:"" help:"retrieve and manage permissions"`
+	Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
+	Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
+	AgentControl       agentcmd.CmdControl          `cmd:"" name:"actl" help:"remote administration of the environment" aliases:"agent-control"`
+	Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
+	GDX                konggdx.Commands             `cmd:"" name:"gdx" help:"pull profiles/traces from a running bw agent debug socket"`
+	InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
+}
+
+// gdxSocket is the unix socket the agent serves its debug surface on. it lives in the runtime directory, which
+// systemd makes unique per agent instance (RuntimeDirectory=%p/%i), so agents sharing a host don't share a socket.
+func gdxSocket() string {
+	return filepath.Join(userx.DefaultRuntimeDirectory(), gdx.DefaultSocket)
+}
+
+// newcmdroot builds the parser used by main. defaults is bound so the command hooks (agentcmd.Config.AfterApply)
+// can apply the flags and environment onto it. options are appended last, tests use them to override the
+// kong.Vars or exit behavior without touching the real filesystem.
+func newcmdroot(c *cli, defaults *agent.Config, options ...kong.Option) *kong.Kong {
+	return kong.Must(
+		c,
+		append([]kong.Option{
+			kong.Name("bw"),
+			kong.Description("user frontend to bearded-wookie"),
+			kong.Vars{
+				"vars_bw_default_env_name":                         bw.DefaultEnvironmentName,
+				"vars_bw_default_deployspace_directory":            bw.DefaultDeployspaceDir,
+				"vars_bw_default_deployspace_config_directory":     bw.DefaultDeployspaceConfigDir,
+				"vars_bw_default_agent_configuration_location":     bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
+				"vars_bw_default_agent_address":                    defaults.P2PBind.String(),
+				"vars_gdx_socket":                                  gdxSocket(),
+				"vars_gdx_default_output":                          "-",
+				"env_bw_agent_bind_primary":                        bw.EnvAgentP2PBind,
+				"env_bw_agent_bind_advertised":                     bw.EnvAgentP2PAdvertised,
+				"env_bw_agent_bind_secondary":                      bw.EnvAgentP2PAlternatesBind,
+				"env_bw_agent_bootstrap_static":                    bw.EnvAgentClusterBootstrap,
+				"env_bw_agent_bootstrap_p2p_enabled":               bw.EnvAgentClusterEnableP2P,
+				"env_bw_agent_bootstrap_dns_enabled":               bw.EnvAgentClusterEnableDNS,
+				"env_bw_agent_bootstrap_aws_autoscaling_enabled":   bw.EnvAgentClusterEnableAWSAutoscaling,
+				"env_bw_agent_bootstrap_gcloud_taget_pool_enabled": bw.EnvAgentClusterEnableGoogleCloudPool,
+			},
+			kong.UsageOnError(),
+			kong.Bind(&c.Global),
+			kong.Bind(defaults),
+			kong.BindTo(c.Context, (*context.Context)(nil)), // konggdx commands take a plain context.
+			kong.TypeMapper(reflect.TypeOf(&net.IP{}), kong.MapperFunc(cmdopts.ParseIP)),
+			kong.TypeMapper(reflect.TypeOf(&net.TCPAddr{}), kong.MapperFunc(cmdopts.ParseTCPAddr)),
+			kong.TypeMapper(reflect.TypeOf([]*net.TCPAddr(nil)), kong.MapperFunc(cmdopts.ParseTCPAddrArray)),
+		}, options...)...,
+	)
+}
+
 func main() {
-	var shellCli struct {
-		cmdopts.Global
-		Version            cmdVersion                   `cmd:"" help:"display versioning information"`
-		Environment        cmdEnv                       `cmd:"" help:"environment related commands"`
-		Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
-		Redeploy           cmdDeployRedeploy            `cmd:"" name:"redeploy" help:"redeploy an archive to nodes within the cluster of the specified environment"`
-		Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
-		Info               cmdInfo                      `cmd:"" help:"retrieve information from an environment"`
-		Notary             cmdNotary                    `cmd:"" help:"retrieve and manage permissions"`
-		Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`
-		Agent              agentcmd.CmdDaemon           `cmd:"" help:"agent that manages deployments"`
-		AgentControl       agentcmd.CmdControl          `cmd:"" name:"actl" help:"remote administration of the environment" aliases:"agent-control"`
-		Notify             agentcmd.Notify              `cmd:"" help:"watch for and emit deployment notifications"`
-		InstallCompletions kongplete.InstallCompletions `cmd:"" help:"install shell completions"`
-	}
+	var shellCli cli
 
 	var (
 		err                 error
@@ -59,32 +109,7 @@ func main() {
 		log.Println("waiting for systems to shutdown")
 	})
 
-	parser := kong.Must(
-		&shellCli,
-		kong.Name("bw"),
-		kong.Description("user frontend to bearded-wookie"),
-		kong.Vars{
-			"vars_bw_default_env_name":                         bw.DefaultEnvironmentName,
-			"vars_bw_default_deployspace_directory":            bw.DefaultDeployspaceDir,
-			"vars_bw_default_deployspace_config_directory":     bw.DefaultDeployspaceConfigDir,
-			"vars_bw_default_agent_configuration_location":     bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
-			"vars_bw_default_agent_address":                    agentconfigdefaults.P2PBind.String(),
-			"env_bw_agent_bind_primary":                        bw.EnvAgentP2PBind,
-			"env_bw_agent_bind_advertised":                     bw.EnvAgentP2PAdvertised,
-			"env_bw_agent_bind_secondary":                      bw.EnvAgentP2PAlternatesBind,
-			"env_bw_agent_bootstrap_static":                    bw.EnvAgentClusterBootstrap,
-			"env_bw_agent_bootstrap_p2p_enabled":               bw.EnvAgentClusterEnableP2P,
-			"env_bw_agent_bootstrap_dns_enabled":               bw.EnvAgentClusterEnableDNS,
-			"env_bw_agent_bootstrap_aws_autoscaling_enabled":   bw.EnvAgentClusterEnableAWSAutoscaling,
-			"env_bw_agent_bootstrap_gcloud_taget_pool_enabled": bw.EnvAgentClusterEnableGoogleCloudPool,
-		},
-		kong.UsageOnError(),
-		kong.Bind(&shellCli.Global),
-		kong.Bind(&agentconfigdefaults),
-		kong.TypeMapper(reflect.TypeOf(&net.IP{}), kong.MapperFunc(cmdopts.ParseIP)),
-		kong.TypeMapper(reflect.TypeOf(&net.TCPAddr{}), kong.MapperFunc(cmdopts.ParseTCPAddr)),
-		kong.TypeMapper(reflect.TypeOf([]*net.TCPAddr(nil)), kong.MapperFunc(cmdopts.ParseTCPAddrArray)),
-	)
+	parser := newcmdroot(&shellCli, &agentconfigdefaults)
 
 	// Run kongplete.Complete to handle completion requests
 	kongplete.Complete(parser,
@@ -94,6 +119,17 @@ func main() {
 	if ctx, err = parser.Parse(os.Args[1:]); err != nil {
 		_ = commandutils.LogCause(err)
 		os.Exit(1)
+	}
+
+	// only the long running agents serve the debug surface. serving it removes any existing socket, short lived
+	// commands must not take the socket of a running agent.
+	switch ctx.Command() {
+	case "agent", "agent runtime", "agent coordinator":
+		go func() {
+			if err := (konggdx.Serve{Socket: gdxSocket()}).Run(shellCli.Context); err != nil {
+				log.Println("gdx debug server failed", err)
+			}
+		}()
 	}
 
 	if err = commandutils.LogCause(ctx.Run()); err != nil {

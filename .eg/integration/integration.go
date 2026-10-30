@@ -24,14 +24,14 @@ func Test(ctx context.Context, op eg.Op) error {
 	return eg.Perform(
 		ctx,
 		eg.Parallel(
-			shell.Op(shell.New("journalctl -f --user --since '-15min'")),
+			shell.Op(shell.Newf("journalctl -f --user --since '-15min' | tee %s", egenv.CacheDirectory(egenv.RunID()+".log"))),
 			egbug.DebugFailure(eg.Sequential(
 				shell.Op(
 					runtime.Newf("run0 -u egd -g egd -D %s go install github.com/letsencrypt/pebble/v2/...@latest", egenv.WorkingDirectory()).Privileged(),
 					runtime.Newf("run0 -u egd -g egd -D %s bw me init --seed test linux-dev", egenv.WorkingDirectory()).Privileged(),
 					runtime.Newf("run0 -u egd -g egd -D %s bw deploy local linux-dev", egenv.WorkingDirectory()).Privileged(),
 					runtime.Newf("run0 -u egd -g egd -D %s systemctl --user enable --now bearded-wookie-pebble.service", egenv.WorkingDirectory()).Privileged().Lenient(true),
-					runtime.Newf("run0 -u egd -g egd -D %s systemctl --user enable --now bearded-wookie@agent1.service", egenv.WorkingDirectory()).Privileged(),
+					runtime.Newf("run0 -u egd -g egd -D %s systemctl --user enable --now bearded-wookie@agent1.service bearded-wookie@agent2.service bearded-wookie@agent3.service bearded-wookie@agent4.service", egenv.WorkingDirectory()).Privileged(),
 				),
 				// execute various deployments to ensure behaviors.
 				shell.Op(
