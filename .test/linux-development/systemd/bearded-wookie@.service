@@ -25,6 +25,8 @@ ExecStartPre=curl --retry 999 --retry-delay 1 --retry-connrefused --insecure htt
 EnvironmentFile=%C/%p/%i/agent.env
 SyslogIdentifier=%p-%i
 ExecStart=%h/go/bin/bw agent runtime --agent-config="%C/%p/%i/agent.config"
+LogRateLimitIntervalSec=10s
+LogRateLimitBurst=200
 
 [Install]
 WantedBy=default.target
