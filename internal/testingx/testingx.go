@@ -32,9 +32,13 @@ func TempDir() (dir string) {
 	return dir
 }
 
-// Cleanup used to cleanup the test directory after a suite is run.
+// Cleanup used to cleanup the test directory after a suite is run. specs frequently leave background work behind,
+// e.g.) a deploy that is still writing its files, which makes the removal race with it ("directory not empty").
+// retry briefly, the writers finish quickly once the specs are done.
 func Cleanup() {
-	gomega.Expect(os.RemoveAll(rootDir)).ToNot(gomega.HaveOccurred())
+	gomega.Eventually(func() error {
+		return os.RemoveAll(rootDir)
+	}, 5*time.Second, 50*time.Millisecond).Should(gomega.Succeed())
 }
 
 // NewGRPCServer sets up a server and a connection.
