@@ -11,6 +11,7 @@ import (
 
 	_eg "github.com/egdaemon/eg"
 	"github.com/egdaemon/eg/internal/contextx"
+	"github.com/egdaemon/eg/internal/coverage"
 	"github.com/egdaemon/eg/internal/coverage/golangcov"
 	"github.com/egdaemon/eg/internal/envx"
 	"github.com/egdaemon/eg/internal/errorsx"
@@ -20,75 +21,134 @@ import (
 	"github.com/egdaemon/eg/internal/slicesx"
 	"github.com/egdaemon/eg/internal/stringsx"
 	"github.com/egdaemon/eg/internal/timex"
-	"github.com/egdaemon/eg/interp/events"
 	"github.com/egdaemon/eg/runtime/wasi/eg"
 	"github.com/egdaemon/eg/runtime/wasi/egenv"
-	"github.com/egdaemon/eg/runtime/wasi/egunsafe/fficoverage"
 	"github.com/egdaemon/eg/runtime/wasi/shell"
 )
 
-var BuildOption = boption(nil)
-
-type buildOption struct {
-	flags   []string
-	environ []string
-	bctx    build.Context
-	timeout time.Duration
+type config struct {
+	flags     []string
+	environ   []string
+	bctx      build.Context
+	timeout   time.Duration
+	coverage  string // coverage mode, test only.
+	count     string // test only.
+	randomize string // test only.
+	verbose   string // test only.
 }
 
-type boption func(*buildOption)
+type option = func(*config)
+type options []option
+
+func New() options {
+	return options(nil)
+}
 
 // provide a timeout for the command.
-func (boption) Timeout(d time.Duration) boption {
-	return func(o *buildOption) {
+func (t options) Timeout(d time.Duration) options {
+	return append(t, func(o *config) {
 		o.timeout = d
-	}
+	})
 }
 
 // enable debug flag
-func (boption) Debug(b bool) boption {
-	return func(o *buildOption) {
+func (t options) Debug(b bool) options {
+	return append(t, func(o *config) {
 		if !b {
 			return
 		}
 		o.flags = append(o.flags, "-x")
-	}
+	})
 }
 
-func (boption) Tags(tags ...string) boption {
-	return func(o *buildOption) {
+func (t options) Tags(tags ...string) options {
+	return append(t, func(o *config) {
 		o.bctx.BuildTags = tags
-	}
+	})
 }
 
-func (boption) WorkingDirectory(s string) boption {
-	return func(o *buildOption) {
+func (t options) WorkingDirectory(s string) options {
+	return append(t, func(o *config) {
 		o.bctx.Dir = s
-	}
-}
-
-func Build(opts ...boption) (b buildOption) {
-	return langx.Clone(b, opts...)
+	})
 }
 
 // escape hatch for setting command line flags.
 // useful for flags not explicitly implemented by this package.
-func (boption) Flags(flags ...string) boption {
-	return func(o *buildOption) {
+func (t options) Flags(flags ...string) options {
+	return append(t, func(o *config) {
 		o.flags = append(o.flags, flags...)
-	}
+	})
 }
 
 // escape hatch for setting command environment variables.
 // useful for flags not explicitly implemented by this package.
-func (boption) Environ(envvars ...string) boption {
-	return func(o *buildOption) {
+func (t options) Environ(envvars ...string) options {
+	return append(t, func(o *config) {
 		o.environ = append(o.environ, envvars...)
-	}
+	})
 }
 
-func (t buildOption) options() (opts []string) {
-	copy(opts, t.flags)
+// Randomize execution order of the tests using the provided seed value.
+// defaults to on.
+// 0 = off
+// 1 = on
+// N = seed
+func (t options) Randomize(seed int) options {
+	return append(t, func(o *config) {
+		switch seed {
+		case 0:
+			o.randomize = "-shuffle off"
+		case 1:
+			o.randomize = "-shuffle on"
+		default:
+			o.randomize = fmt.Sprintf("-shuffle %d", seed)
+		}
+	})
+}
+
+// The number of times to run the test suite.
+// 0 uses go test default.
+func (t options) Count(n int) options {
+	return append(t, func(o *config) {
+		o.count = countflag(n)
+	})
+}
+
+func countflag(n int) string {
+	if n == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("-count %d", n)
+}
+
+// used to disable golang test caching.
+// short for Count(1) see go help test.
+// will only be applied if count is unset.
+func (t options) NoCache() options {
+	return append(t, func(o *config) {
+		if stringsx.Present(o.count) {
+			return
+		}
+
+		o.count = countflag(1)
+	})
+}
+
+func (t options) Verbose(b bool) options {
+	return append(t, func(o *config) {
+		if b {
+			o.verbose = "-v"
+		} else {
+			o.verbose = ""
+		}
+	})
+}
+
+// flags shared by every go command.
+func (t config) buildflags() (opts []string) {
+	opts = append(opts, t.flags...)
 	if len(t.bctx.BuildTags) > 0 {
 		opts = append(opts, fmt.Sprintf("-tags=%s", strings.Join(t.bctx.BuildTags, ",")))
 	}
@@ -96,27 +156,46 @@ func (t buildOption) options() (opts []string) {
 	return opts
 }
 
-var InstallOption = ioption(nil)
+// flags for go test.
+func (t config) testflags() (dst []string) {
+	ignoreEmpty := func(dst []string, o string) []string {
+		if stringsx.Blank(o) {
+			return dst
+		}
 
-type ioption func(*installOption)
-
-type installOption struct {
-	buildOption
-}
-
-func (ioption) BuildOptions(b buildOption) ioption {
-	return func(o *installOption) {
-		o.buildOption = b
+		return append(dst, o)
 	}
+	dst = t.buildflags()
+	dst = ignoreEmpty(dst, t.randomize)
+	dst = ignoreEmpty(dst, t.count)
+	dst = ignoreEmpty(dst, t.verbose)
+	dst = append(dst, t.coverage)
+
+	return dst
 }
 
-func AutoInstall(options ...ioption) eg.OpFn {
-	var (
-		opts installOption
-	)
+// shorthand for New().AutoInstall()
+func AutoInstall() eg.OpFn {
+	return New().AutoInstall()
+}
 
-	opts = langx.Clone(opts, options...)
-	flags := stringsx.Join(" ", opts.buildOption.options()...)
+// shorthand for New().AutoCompile()
+func AutoCompile() eg.OpFn {
+	return New().AutoCompile()
+}
+
+// shorthand for New().AutoTest()
+func AutoTest() eg.OpFn {
+	return New().AutoTest()
+}
+
+func (t options) AutoInstall() eg.OpFn {
+	return t.autoinstall(shell.Runtime())
+}
+
+func (t options) autoinstall(base shell.Command) eg.OpFn {
+	opts := langx.Clone(config{}, t...)
+	flags := stringsx.Join(" ", opts.buildflags()...)
 
 	return eg.OpFn(func(ctx context.Context, _ eg.Op) (err error) {
 		var (
@@ -127,11 +206,11 @@ func AutoInstall(options ...ioption) eg.OpFn {
 			return err
 		}
 
-		runtime := shell.Runtime().EnvironFrom(goenv...)
+		runtime := base.EnvironFrom(goenv...).EnvironFrom(opts.environ...)
 		timeout := timex.DurationMin(contextx.Until(ctx), timex.DurationFirstNonZero(opts.timeout, shell.DefaultTimeout))
 
 		for gomod := range modfilex.FindModules(stringsx.DefaultIfBlank(opts.bctx.Dir, egenv.WorkingDirectory())) {
-			cmd := stringsx.Join(" ", slicesx.Filter(func(s string) bool { return stringsx.Present(s) }, "go", "-C", filepath.Dir(gomod), "install", flags, "./...")...)
+			cmd := stringsx.Join(" ", slicesx.Filter(func(s string) bool { return stringsx.Present(s) }, "go", "-C", filepath.Dir(gomod), "install", "-modcacherw", flags, "./...")...)
 			if err := shell.Run(ctx, runtime.New(cmd).Timeout(timeout)); err != nil {
 				return errorsx.Wrap(err, "unable to run tests")
 			}
@@ -141,27 +220,13 @@ func AutoInstall(options ...ioption) eg.OpFn {
 	})
 }
 
-var CompileOption = coption(nil)
-
-type coption func(*compileOption)
-
-func (coption) BuildOptions(b buildOption) coption {
-	return func(o *compileOption) {
-		o.buildOption = b
-	}
+func (t options) AutoCompile() eg.OpFn {
+	return t.autocompile(shell.Runtime())
 }
 
-type compileOption struct {
-	buildOption
-}
-
-func AutoCompile(options ...coption) eg.OpFn {
-	var (
-		opts compileOption
-	)
-
-	opts = langx.Clone(opts, options...)
-	flags := stringsx.Join(" ", opts.buildOption.options()...)
+func (t options) autocompile(base shell.Command) eg.OpFn {
+	opts := langx.Clone(config{}, t...)
+	flags := stringsx.Join(" ", opts.buildflags()...)
 
 	return eg.OpFn(func(ctx context.Context, _ eg.Op) (err error) {
 		var (
@@ -172,11 +237,11 @@ func AutoCompile(options ...coption) eg.OpFn {
 			return err
 		}
 
-		runtime := shell.Runtime().EnvironFrom(goenv...).EnvironFrom(opts.buildOption.environ...)
+		runtime := base.EnvironFrom(goenv...).EnvironFrom(opts.environ...)
 		timeout := timex.DurationMin(contextx.Until(ctx), timex.DurationFirstNonZero(opts.timeout, shell.DefaultTimeout))
 
 		for gomod := range modfilex.FindModules(stringsx.DefaultIfBlank(opts.bctx.Dir, egenv.WorkingDirectory())) {
-			cmd := stringsx.Join(" ", "go", "-C", filepath.Dir(gomod), "build", flags, "./...")
+			cmd := stringsx.Join(" ", "go", "-C", filepath.Dir(gomod), "build", "-modcacherw", flags, "./...")
 			if err := shell.Run(ctx, runtime.New(cmd).Timeout(timeout)); err != nil {
 				return errorsx.Wrap(err, "unable to compile")
 			}
@@ -186,110 +251,13 @@ func AutoCompile(options ...coption) eg.OpFn {
 	})
 }
 
-var TestOption = toption(nil)
-
-type toption func(*testOption)
-
-func (toption) BuildOptions(b buildOption) toption {
-	return func(o *testOption) {
-		o.buildOption = b
-	}
+func (t options) AutoTest() eg.OpFn {
+	return t.autotest(shell.Runtime())
 }
 
-// Randomize execution order of the tests using the provided seed value.
-// defaults to on.
-// 0 = off
-// 1 = on
-// N = seed
-func (toption) Randomize(seed int) toption {
-	return func(o *testOption) {
-		switch seed {
-		case 0:
-			o.randomize = "-shuffle off"
-		case 1:
-			o.randomize = "-shuffle on"
-		default:
-			o.randomize = fmt.Sprintf("-shuffle %d", seed)
-		}
-	}
-}
-
-// The number of times to run the test suite.
-// 0 uses go test default.
-func (toption) Count(n int) toption {
-	return func(o *testOption) {
-		switch n {
-		case 0:
-			o.count = ""
-		default:
-			o.count = fmt.Sprintf("-count %d", n)
-		}
-	}
-}
-
-// used to disable golang test caching.
-// short for Count(1) see go help test.
-// will only be applied if count is unset.
-func (t toption) NoCache(o *testOption) {
-	if stringsx.Present(o.count) {
-		return
-	}
-
-	t.Count(1)(o)
-}
-
-func (toption) Verbose(b bool) toption {
-	return func(o *testOption) {
-		if b {
-			o.verbose = "-v"
-		} else {
-			o.verbose = ""
-		}
-	}
-}
-
-// set environment variables for this test specifically.
-func (toption) Environ(envvars ...string) toption {
-	return func(o *testOption) {
-		o.environ = append(o.environ, envvars...)
-	}
-}
-
-type testOption struct {
-	buildOption
-	coverage  string // coverage mode
-	count     string
-	randomize string
-	verbose   string
-	environ   []string
-}
-
-func (t testOption) options() (dst []string) {
-	ignoreEmpty := func(dst []string, o string) []string {
-		if stringsx.Blank(o) {
-			return dst
-		}
-
-		return append(dst, o)
-	}
-	dst = t.buildOption.options()
-	dst = ignoreEmpty(dst, t.randomize)
-	dst = ignoreEmpty(dst, t.count)
-	dst = ignoreEmpty(dst, t.verbose)
-	dst = append(dst, t.coverage)
-
-	return dst
-}
-
-func AutoTest(options ...toption) eg.OpFn {
-	var (
-		opts = testOption{
-			coverage: "-covermode count",
-		}
-	)
-
-	opts = langx.Clone(opts, options...)
-	flags := stringsx.Join(" ", opts.options()...)
+func (t options) autotest(base shell.Command) eg.OpFn {
+	opts := langx.Clone(config{coverage: "-covermode count"}, t...)
+	flags := stringsx.Join(" ", opts.testflags()...)
 
 	return eg.OpFn(func(ctx context.Context, _ eg.Op) (err error) {
 		var (
@@ -297,7 +265,7 @@ func AutoTest(options ...toption) eg.OpFn {
 		)
 
 		covpath := coveragedir()
-		if err := shell.Run(ctx, shell.Newf("mkdir -p %s", covpath)); err != nil {
+		if err := shell.Run(ctx, base.Newf("mkdir -p %s", covpath)); err != nil {
 			return errorsx.Wrap(err, "unable to run tests")
 		}
 
@@ -305,11 +273,11 @@ func AutoTest(options ...toption) eg.OpFn {
 			return err
 		}
 
-		runtime := shell.Runtime().EnvironFrom(goenv...).EnvironFrom(opts.environ...)
+		runtime := base.EnvironFrom(goenv...).EnvironFrom(opts.environ...)
 		timeout := timex.DurationMin(contextx.Until(ctx), timex.DurationFirstNonZero(opts.timeout, shell.DefaultTimeout))
 
 		for gomod := range modfilex.FindModules(egenv.WorkingDirectory()) {
-			cmd := stringsx.Join(" ", "go", "-C", filepath.Dir(gomod), "test", fmt.Sprintf("-timeout=%s", timeout), flags, fmt.Sprintf("-coverprofile %s", filepath.Join(covpath, md5x.String(gomod))), "./...")
+			cmd := stringsx.Join(" ", "go", "-C", filepath.Dir(gomod), "test", "-modcacherw", fmt.Sprintf("-timeout=%s", timeout), flags, fmt.Sprintf("-coverprofile %s", filepath.Join(covpath, md5x.String(gomod))), "./...")
 			if err := shell.Run(ctx, runtime.New(cmd).Timeout(timeout+time.Second)); err != nil {
 				return errorsx.Wrap(err, "unable to run tests")
 			}
@@ -319,32 +287,12 @@ func AutoTest(options ...toption) eg.OpFn {
 	})
 }
 
-// Record the coverage profile into the duckdb database.
-func RecordCoverage(ctx context.Context, _ eg.Op) (err error) {
-	covpath := coveragedir()
-
-	// recover metrics
-	batch := make([]*events.Coverage, 0, 128)
-	for rep, err := range golangcov.Coverage(ctx, covpath) {
-		if err != nil {
-			return err
-		}
-
-		batch = append(batch, rep)
-
-		if len(batch) == cap(batch) {
-			if err := fficoverage.Report(ctx, batch...); err != nil {
-				return err
-			}
-			batch = batch[:0]
-		}
-	}
-
-	if err := fficoverage.Report(ctx, batch...); err != nil {
-		return err
-	}
-
-	return nil
+// Coverage is the coverage of the profiles AutoTest wrote, with paths relative to the workspace. it is recorded with
+// egcoverage.Report.
+func Coverage() coverage.Options {
+	return coverage.New(func(ctx context.Context) coverage.Seq {
+		return golangcov.Coverage(ctx, coveragedir(), golangcov.Modules(modfilex.FindModules(egenv.WorkingDirectory())))
+	}).Transforms(coverage.TransformPath(egenv.PathRelativeWorkspace))
 }
 
 func CacheDirectory(dirs ...string) string {
@@ -362,7 +310,7 @@ func CacheModuleDirectory() string {
 // attempt to build the golang environment that sets up
 // the golang environment for caching.
 func env() ([]string, error) {
-	return envx.Build().FromEnv(os.Environ()...).
+	return envx.Build().FromEnviron(os.Environ()...).
 		Var("GOCACHE", CacheBuildDirectory()).
 		Var("GOMODCACHE", CacheModuleDirectory()).
 		Var("XDG_CACHE_HOME", envx.String(CacheDirectory(), "XDG_CACHE_HOME")). // used by go module code. only set it if its unset.

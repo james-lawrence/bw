@@ -1,9 +1,11 @@
 package egenv
 
 import (
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/egdaemon/eg"
@@ -19,9 +21,48 @@ func TTL() time.Duration {
 	return env.Duration(time.Hour, eg.EnvComputeTTL)
 }
 
+// CloneEnabled reports whether the repository is cloned from, and so pushed to, a remote. false for `eg compute local`,
+// which works on the local checkout where there is nothing to push to.
+func CloneEnabled() bool {
+	return env.Boolean(true, eg.EnvUnsafeGitCloneEnabled)
+}
+
 // Read the run ID from the environment
 func RunID() string {
 	return env.String("00000000-0000-0000-0000-000000000000", eg.EnvComputeRunID)
+}
+
+// Read the account ID from the environment
+func AccountID() string {
+	return env.String("00000000-0000-0000-0000-000000000000", eg.EnvComputeAccountID)
+}
+
+var initiated = sync.OnceValue(func() time.Time {
+	ts, err := time.Parse(time.RFC3339Nano, env.String("", eg.EnvComputeInitiatedTimestamp))
+	if err != nil {
+		log.Println("unable to parse", eg.EnvComputeInitiatedTimestamp, "falling back to the current time", err)
+		return time.Now()
+	}
+
+	return ts
+})
+
+// Initiated provides the instant the billed run duration started at. returns time.Now()
+// as an approximation: when the runtime did not provide it, the time of the first call is used.
+// the environment is only parsed once.
+func Initiated() time.Time {
+	return initiated()
+}
+
+// Read the entry path of the workload from the environment, empty when the runtime did not provide it.
+func Workload() string {
+	return env.String("", eg.EnvComputeWorkload)
+}
+
+// Read the name of the workload (the module it runs, i.e. the folder name within the module directory)
+// from the environment, empty for the default workload (see eg.DefaultWorkload).
+func WorkloadName() string {
+	return env.String("", eg.EnvComputeWorkloadName)
 }
 
 // returns the current user.
@@ -69,6 +110,26 @@ func WorkspaceDirectory(paths ...string) string {
 	return filepath.Join(env.String(eg.DefaultWorkspaceDirectory(), eg.EnvComputeWorkspaceDirectory), filepath.Join(paths...))
 }
 
+// PathRelative reports paths within dir relative to it. relative paths and paths outside dir are returned as is.
+func PathRelative(dir string, path string) string {
+	if !filepath.IsAbs(path) {
+		return path
+	}
+
+	rel, err := filepath.Rel(dir, path)
+	if err != nil || !filepath.IsLocal(rel) {
+		return path
+	}
+
+	return rel
+}
+
+// PathRelativeWorkspace reports paths within the workspace directory relative to it, so they hold wherever the workspace is
+// located, e.g.) a git worktree. relative paths and paths outside the workspace are returned as is.
+func PathRelativeWorkspace(path string) string {
+	return PathRelative(WorkspaceDirectory(), path)
+}
+
 // returns the absolute path to the working directory of the module. this directory is the
 // initial working directory of the workload and is used for cloning git repositories etc.
 func WorkingDirectory(paths ...string) string {
@@ -102,6 +163,16 @@ func Boolean(fallback bool, keys ...string) bool {
 // returns the first valid result if none of the keys exist then the fallback is returned.
 func String(fallback string, keys ...string) string {
 	return envx.String(fallback, keys...)
+}
+
+// Base64 read value as a base64 encoded string, the standard alphabet is attempted first and then the url alphabet.
+func Base64(fallback []byte, keys ...string) []byte {
+	return envx.Base64(fallback, keys...)
+}
+
+// Base64URL read value as a url base64 encoded string
+func Base64URL(fallback []byte, keys ...string) []byte {
+	return envx.Base64URL(fallback, keys...)
 }
 
 // Int retrieve a integer flag from the environment, checks each key in order

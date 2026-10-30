@@ -43,25 +43,28 @@ type ChangeLog struct {
 }
 
 type Dependency struct {
-	Build   []string
-	Runtime []string
+	Build      []string
+	Runtime    []string
+	Recommends []string
+	Suggests   []string
 }
 
 type Config struct {
 	Maintainer
 	ChangeLog
 	Dependency
-	Description    string        // package description
-	Architecture   string        // architecture for the debian package, defaults to any.
-	SignatureKeyID string        // GPG key ID to use for signing the package.
-	Name           string        // name of the package to build. correlates to the DEB_PACKAGE_NAME environment variable.
-	Version        string        // version of the package to build. correlates to DEB_VERSION environment variable.
-	Distro         string        // distribution to build the package for. correlates to DEB_DISTRO environment variable.
-	SourceDir      string        // absolute path to the source files to use for building the package.
-	Debian         fs.FS         // debian package files to use for building the package. generally only the rules file needs to be provided. the 'debian' directory is cloned from the fs.FS
-	Environ        []string      // additional environment variables to pass to the build process.
-	lintian        string        // lintian flag
-	timeout        time.Duration // command timeout
+	Description    string                            // package description
+	Architecture   string                            // architecture for the debian package, defaults to any.
+	SignatureKeyID string                            // GPG key ID to use for signing the package.
+	Name           string                            // name of the package to build. correlates to the DEB_PACKAGE_NAME environment variable.
+	Version        string                            // version of the package to build. correlates to DEB_VERSION environment variable.
+	Distro         string                            // distribution to build the package for. correlates to DEB_DISTRO environment variable.
+	SourceDir      string                            // absolute path to the source files to use for building the package.
+	Debian         fs.FS                             // debian package files to use for building the package. generally only the rules file needs to be provided. the 'debian' directory is cloned from the fs.FS
+	Environ        []string                          // additional environment variables to pass to the build process.
+	lintian        string                            // lintian flag
+	timeout        time.Duration                     // command timeout
+	runtimeadj     func(shell.Command) shell.Command // internal allows adjusting the runtime dynamicly
 	buildCommand   func(*Config, shell.Command) shell.Command
 }
 
@@ -124,6 +127,20 @@ func (option) Depends(deps ...string) option {
 	}
 }
 
+// packages that are installed by default but are not required for the package to function.
+func (option) Recommends(deps ...string) option {
+	return func(c *Config) {
+		c.Dependency.Recommends = deps
+	}
+}
+
+// packages that enhance the package but are never installed automatically, apt only lists them.
+func (option) Suggests(deps ...string) option {
+	return func(c *Config) {
+		c.Dependency.Suggests = deps
+	}
+}
+
 func (option) Description(short, long string) option {
 	return func(c *Config) {
 		c.Description = fmt.Sprintf("%s\n %s", short, long)
@@ -139,7 +156,7 @@ func (option) BuildCommand(d func(c1 *Config, c2 shell.Command) shell.Command) o
 func (option) BuildBinary(d time.Duration) option {
 	return func(c *Config) {
 		c.buildCommand = func(cfg *Config, runtime shell.Command) shell.Command {
-			return runtime.Newf("debuild %s-b -k%s", cfg.lintian, cfg.SignatureKeyID).Privileged().Timeout(d)
+			return runtime.Newf("debuild %s-b -k%s", cfg.lintian, cfg.SignatureKeyID).Timeout(d)
 		}
 	}
 }
@@ -162,6 +179,12 @@ func (option) NoLint() option {
 	}
 }
 
+func (option) Runtime(opt func(shell.Command) shell.Command) option {
+	return func(c *Config) {
+		c.runtimeadj = opt
+	}
+}
+
 var Option = option(nil)
 
 func From(c Config, opts ...option) Config {
@@ -176,9 +199,10 @@ func New(pkg string, distro string, src string, opts ...option) (c Config) {
 		Architecture: "any",
 		Description:  "package built by egdebuild\n A package should provide its own description",
 		buildCommand: func(cfg *Config, runtime shell.Command) shell.Command {
-			return runtime.Newf("debuild %s-S -k%s", cfg.lintian, cfg.SignatureKeyID).Privileged()
+			return runtime.Newf("debuild %s-S -k%s", cfg.lintian, cfg.SignatureKeyID)
 		},
-		timeout: 5 * time.Minute,
+		timeout:    5 * time.Minute,
+		runtimeadj: func(c shell.Command) shell.Command { return c },
 	}, opts...)
 }
 
@@ -213,19 +237,23 @@ func Runner() eg.ContainerRunner {
 // Shell environment runtime from a config.
 func Runtime(cfg Config, opts ...option) shell.Command {
 	cfg = From(cfg, opts...)
-	return shell.Runtime().
-		Timeout(cfg.timeout).
-		Environ("DEB_PACKAGE_NAME", cfg.Name).
-		Environ("DEB_VERSION", applyversionsubstitutions(cfg)).
-		Environ("DEB_DISTRO", cfg.Distro).
-		Environ("DEB_ARCHITECTURE", cfg.Architecture).
-		Environ("DEB_DESCRIPTION", cfg.Description).
-		Environ("DEB_CHANGELOG_DATE", cfg.ChangeLog.When.Format(time.RFC1123Z)).
-		Environ("DEB_MAINTAINER_EMAIL", cfg.Maintainer.Email).
-		Environ("DEB_MAINTAINER_FULLNAME", cfg.Maintainer.Name).
-		Environ("DEB_DEPENDS_BUILD", strings.Join(append(cfg.Dependency.Build, "dh-make", "debhelper (>= 10)", "software-properties-common"), ", ")).
-		Environ("DEB_DEPENDS_RUNTIME", strings.Join(append(cfg.Dependency.Runtime, "${misc:Depends}", "${shlibs:Depends}"), ", ")).
-		EnvironFrom(cfg.Environ...)
+	return cfg.runtimeadj(
+		shell.Runtime().
+			Timeout(cfg.timeout).
+			Environ("DEB_PACKAGE_NAME", cfg.Name).
+			Environ("DEB_VERSION", applyversionsubstitutions(cfg)).
+			Environ("DEB_DISTRO", cfg.Distro).
+			Environ("DEB_ARCHITECTURE", cfg.Architecture).
+			Environ("DEB_DESCRIPTION", cfg.Description).
+			Environ("DEB_CHANGELOG_DATE", cfg.ChangeLog.When.Format(time.RFC1123Z)).
+			Environ("DEB_MAINTAINER_EMAIL", cfg.Maintainer.Email).
+			Environ("DEB_MAINTAINER_FULLNAME", cfg.Maintainer.Name).
+			Environ("DEB_DEPENDS_BUILD", strings.Join(append(cfg.Dependency.Build, "dh-make", "debhelper (>= 10)", "software-properties-common"), ", ")).
+			Environ("DEB_DEPENDS_RUNTIME", strings.Join(append(cfg.Dependency.Runtime, "${misc:Depends}", "${shlibs:Depends}"), ", ")).
+			Environ("DEB_RECOMMENDS", strings.Join(cfg.Dependency.Recommends, ", ")).
+			Environ("DEB_SUGGESTS", strings.Join(cfg.Dependency.Suggests, ", ")).
+			EnvironFrom(cfg.Environ...),
+	)
 }
 
 // Build creates a debian package from debian skeleton folder containing.
@@ -261,6 +289,7 @@ func Build(cfg Config, opts ...option) eg.OpFn {
 
 		return shell.Run(
 			ctx,
+			// need to run permission adjustments as privileged since the files were created as the root user.
 			runtime.Newf("chown -R egd:egd %s", root).Privileged(),
 			runtime.Newf("rsync --recursive --perms --links %s/ src/", cfg.SourceDir),
 			runtime.New("cat debian/control | envsubst | tee debian/control.new && mv debian/control.new debian/control"),
@@ -279,15 +308,18 @@ func UploadDPut(gcfg Config, dput fs.FS, opts ...option) eg.OpFn {
 		}
 		root := fmt.Sprintf("deb.%s", gcfg.Name)
 		bdir := egenv.EphemeralDirectory(root)
-		runtime := Runtime(gcfg, opts...)
+		cfg := From(gcfg, opts...)
+		runtime := Runtime(cfg)
 		return shell.Run(
 			ctx,
+			// need to run permission adjustments as privileged since the files were created as the root user.
+			runtime.Newf("chown -R egd:egd %s", egenv.EphemeralDirectory("dput.config")).Privileged(),
 			runtime.Newf(
 				"ls %s/*_source.changes | xargs -I {} dput -f -c %s %s {}",
 				bdir,
 				egenv.EphemeralDirectory("dput.config"),
-				gcfg.Name,
-			).Privileged(),
+				cfg.Name,
+			),
 		)
 	}
 }

@@ -118,6 +118,7 @@ func Perform(octx context.Context, operations ...OpFn) error {
 	return nil
 }
 
+// Run operations in sequence
 func Sequential(operations ...OpFn) OpFn {
 	return func(octx context.Context, o Op) error {
 		parent := prefixedop("seq", o)
@@ -153,7 +154,7 @@ func Parallel(operations ...OpFn) OpFn {
 			}
 		})
 
-		for i := 0; i < len(operations); i++ {
+		for range operations {
 			select {
 			case <-octx.Done():
 				return octx.Err()

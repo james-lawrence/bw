@@ -45,8 +45,15 @@ func Wait(ctx context.Context, d time.Duration, path string) error {
 // and returns the path once found, if no path is found then it returns
 // the name without a directory, which makes its a relative path.
 func Locate(name string) string {
+	return LocateWithin(systemx.WorkingDirectoryOrDefault("."), name)
+}
+
+// Locate - looks for the provided filename up the file tree.
+// and returns the path once found, if no path is found then it returns
+// the name without a directory, which makes its a relative path.
+func LocateWithin(dir, name string) string {
 	// fallback to root so it'll stop immediately.
-	for dir := systemx.WorkingDirectoryOrDefault("."); dir != "/"; dir = filepath.Dir(dir) {
+	for ; dir != "/"; dir = filepath.Dir(dir) {
 		path := filepath.Join(dir, name)
 		if _, err := os.Stat(path); err == nil {
 			return path
@@ -266,6 +273,43 @@ func MkDirs(perm fs.FileMode, paths ...string) (err error) {
 	}
 
 	return nil
+}
+
+// RemoveAll removes path and everything beneath it. when removal is denied the
+// directories are made writable and removed again, so read-only trees such as
+// the golang module cache can be removed without paying for the walk otherwise.
+func RemoveAll(path string) error {
+	if err := os.RemoveAll(path); err == nil {
+		return nil
+	} else if errorsx.Ignore(err, fs.ErrPermission) != nil {
+		return err
+	}
+
+	errorsx.Log(filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || !d.IsDir() {
+			return nil
+		}
+
+		return os.Chmod(p, 0700)
+	}))
+
+	return os.RemoveAll(path)
+}
+
+// String reads the entire contents of the file at path and returns it as a string.
+func String(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	raw, err := io.ReadAll(f)
+	if err != nil {
+		return "", err
+	}
+
+	return string(raw), nil
 }
 
 func ErrIsNotExist(err error) error {

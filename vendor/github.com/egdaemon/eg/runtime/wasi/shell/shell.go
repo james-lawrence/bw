@@ -9,6 +9,10 @@ import (
 	"os/user"
 	"time"
 
+	"github.com/logrusorgru/aurora"
+	"golang.org/x/time/rate"
+
+	_eg "github.com/egdaemon/eg"
 	"github.com/egdaemon/eg/internal/errorsx"
 	"github.com/egdaemon/eg/internal/stringsx"
 	"github.com/egdaemon/eg/internal/userx"
@@ -20,25 +24,45 @@ const (
 	DefaultTimeout = 5 * time.Minute
 )
 
+// defaultRetryLimiter retries once every 200ms.
+func defaultRetryLimiter() *rate.Limiter {
+	return rate.NewLimiter(rate.Every(200*time.Millisecond), 1)
+}
+
 type Execer func(ctx context.Context, dir string, environ []string, cmd string, args []string) error
 type entrypoint func(ctx context.Context, user string, group string, cmd string, directory string, environ []string, do Execer) (err error)
 
 type Command struct {
-	user      string
-	group     string
-	cmd       string
-	directory string
-	environ   []string
-	timeout   time.Duration
-	attempts  int16
-	lenient   bool
-	entry     entrypoint
-	exec      Execer
+	user       string
+	group      string
+	cmd        string
+	directory  string
+	environ    []string
+	timeout    time.Duration
+	attempts   int16
+	retrylimit *rate.Limiter
+	lenient    bool
+	silent     bool
+	entry      entrypoint
+	exec       Execer
+	color      aurora.Aurora
+}
+
+// enable or disable colorized log output (warnings on retries, errors on failure). default is enabled.
+func (t Command) Colors(enabled bool) Command {
+	t.color = aurora.NewAurora(enabled)
+	return t
 }
 
 // number of attempts to make before giving up.
 func (t Command) Attempts(a int16) Command {
 	t.attempts = a
+	return t
+}
+
+// limits how quickly attempts are retried, see Attempts. the limiter must not be nil.
+func (t Command) Retry(l *rate.Limiter) Command {
+	t.retrylimit = l
 	return t
 }
 
@@ -51,6 +75,13 @@ func (t Command) Directory(d string) Command {
 // directory to run the command in. must be a relative path.
 func (t Command) Lenient(d bool) Command {
 	t.lenient = d
+	return t
+}
+
+// silence the warnings logged when a failure is ignored by Lenient or before a retry, see Attempts.
+// the output of the command itself is not affected, and a failure that is returned is still reported.
+func (t Command) Silent(d bool) Command {
+	t.silent = d
 	return t
 }
 
@@ -103,6 +134,16 @@ func (t Command) Privileged() Command {
 	return t.As("root")
 }
 
+// specialized for As("root") which runs the command as root when true.
+// allows conditional flagging privileged.
+// when false the command is unchanged.
+func (t Command) MaybePrivileged(b bool) Command {
+	if b {
+		return t.As("root")
+	}
+	return t
+}
+
 // Internal use only not under compatability promises.
 func (t Command) UnsafeEntrypoint(e entrypoint) Command {
 	t.entry = e
@@ -121,6 +162,14 @@ func (t Command) Debug() Command {
 		log.Println("running command", directory, user, group, cmd, environ)
 		return original(ctx, user, group, cmd, directory, environ, do)
 	}
+	return t
+}
+
+func (t Command) MaybeDebug(b bool) Command {
+	if b {
+		return t.Debug()
+	}
+
 	return t
 }
 
@@ -151,13 +200,15 @@ func (t Command) Newf(cmd string, options ...any) Command {
 func New(cmd string) Command {
 	u := userx.CurrentUserOrDefault(user.User{})
 	return Command{
-		user:     stringsx.First(u.Username, "egd"), // default user to execute commands as
-		group:    stringsx.First(defaultgroup(u), "egd"),
-		cmd:      cmd,
-		timeout:  DefaultTimeout,
-		entry:    run,
-		exec:     ffiexec.Command,
-		attempts: 1,
+		user:       stringsx.First(u.Username, _eg.DefaultUsername), // default user to execute commands as
+		group:      stringsx.First(defaultgroup(u), _eg.DefaultUsername),
+		cmd:        cmd,
+		timeout:    DefaultTimeout,
+		entry:      run,
+		exec:       ffiexec.Command,
+		attempts:   1,
+		retrylimit: defaultRetryLimiter(),
+		color:      aurora.NewAurora(true),
 	}
 }
 
@@ -193,15 +244,27 @@ func Op(cmds ...Command) eg.OpFn {
 	}
 }
 
+// Convience function for running a set of commands in parallel as an operation.
+func Parallel(cmds ...Command) eg.OpFn {
+	ops := make([]eg.OpFn, 0, len(cmds))
+	for _, cmd := range cmds {
+		ops = append(ops, func(ctx context.Context, o eg.Op) error {
+			return Run(ctx, cmd)
+		})
+	}
+	return eg.Parallel(ops...)
+}
+
 // Run the provided commands using the operation.
 func Run(ctx context.Context, cmds ...Command) error {
 	for _, cmd := range cmds {
-		if err := retry(ctx, cmd, func() error {
+		if ts, err := time.Now(), retry(ctx, cmd, func() error {
 			cctx, done := context.WithTimeout(ctx, cmd.timeout)
 			defer done()
-
 			if cause := cmd.entry(cctx, cmd.user, cmd.group, cmd.cmd, cmd.directory, cmd.environ, cmd.exec); cmd.lenient && cause != nil {
-				log.Println("command failed, but lenient mode enable, ignoring", cause)
+				if !cmd.silent {
+					log.Println(cmd.color.Yellow("WARN"), "command failed, but lenient mode enable, ignoring", cause)
+				}
 				return nil
 			} else if cause != nil {
 				return cause
@@ -209,7 +272,7 @@ func Run(ctx context.Context, cmds ...Command) error {
 
 			return nil
 		}); err != nil {
-			return errorsx.Wrapf(err, "shell command failed: %s", cmd.cmd)
+			return errorsx.Wrapf(err, "%s duration(%v) shell command failed: %s", cmd.color.Red("ERROR"), time.Since(ts), cmd.cmd)
 		}
 	}
 
@@ -231,12 +294,15 @@ func retry(ctx context.Context, c Command, do func() error) (err error) {
 			return nil
 		} else {
 			err = errorsx.Compact(err, cause)
+			if i+1 < attempts && ctx.Err() == nil && !c.silent {
+				log.Println(c.color.Yellow("WARN"), fmt.Sprintf("attempt %d failed, retrying: %s", i+1, c.cmd), cause)
+			}
 		}
 
-		select {
-		case <-time.After(200 * time.Millisecond):
-		case <-ctx.Done():
-			return ctx.Err()
+		if i+1 < attempts {
+			if werr := c.retrylimit.Wait(ctx); werr != nil {
+				return errorsx.Compact(err, werr)
+			}
 		}
 	}
 

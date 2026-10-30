@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dustin/go-humanize"
 	"github.com/egdaemon/eg"
 	"github.com/egdaemon/eg/internal/debugx"
 	"github.com/egdaemon/eg/internal/errorsx"
@@ -48,6 +49,13 @@ func Uint64(fallback uint64, keys ...string) uint64 {
 
 func Float64(fallback float64, keys ...string) float64 {
 	return NewEnviron(os.Getenv).Float64(fallback, keys...)
+}
+
+// Bytes retrieve a byte size flag from the environment, checks each key in order
+// first to parse successfully is returned. accepts human readable byte sizes
+// such as '6g', '6GB', or '6GiB' in addition to plain integers.
+func Bytes(fallback uint64, keys ...string) uint64 {
+	return NewEnviron(os.Getenv).Bytes(fallback, keys...)
 }
 
 // Boolean retrieve a boolean flag from the environment, checks each key in order
@@ -85,6 +93,10 @@ func Hex(fallback []byte, keys ...string) []byte {
 // Base64 read value as a base64 encoded string
 func Base64(fallback []byte, keys ...string) []byte {
 	return NewEnviron(os.Getenv).Base64(fallback, keys...)
+}
+
+func Base64URL(fallback []byte, keys ...string) []byte {
+	return NewEnviron(os.Getenv).Base64URL(fallback, keys...)
 }
 
 func URL(fallback string, keys ...string) *url.URL {
@@ -200,6 +212,16 @@ func (t environ) Uint64(fallback uint64, keys ...string) uint64 {
 	}, keys...)
 }
 
+// Bytes retrieve a byte size flag from the environment, checks each key in order
+// first to parse successfully is returned. accepts human readable byte sizes
+// such as '6g', '6GB', or '6GiB' in addition to plain integers.
+func (t environ) Bytes(fallback uint64, keys ...string) uint64 {
+	return envval(fallback, t.m, func(s string) (uint64, error) {
+		decoded, err := humanize.ParseBytes(s)
+		return decoded, errorsx.Wrapf(err, "bytes '%s' is invalid", s)
+	}, keys...)
+}
+
 func (t environ) Float64(fallback float64, keys ...string) float64 {
 	return envval(fallback, t.m, func(s string) (float64, error) {
 		decoded, err := strconv.ParseFloat(s, 64)
@@ -242,12 +264,32 @@ func (t environ) Hex(fallback []byte, keys ...string) []byte {
 	}, keys...)
 }
 
-// Base64 read value as a base64 encoded string
+// Base64 read value as a base64 encoded string, the standard alphabet is attempted first and then the url alphabet.
 func (t environ) Base64(fallback []byte, keys ...string) []byte {
-	enc := base64.RawStdEncoding.WithPadding('=')
+	return t.base64(fallback, keys, base64.RawStdEncoding.WithPadding('='), base64.URLEncoding)
+}
+
+// Base64URL read value as a url base64 encoded string
+func (t environ) Base64URL(fallback []byte, keys ...string) []byte {
+	return t.base64(fallback, keys, base64.URLEncoding)
+}
+
+// base64 decodes the value with the first encoding that succeeds, failing with the error of the first encoding.
+func (t environ) base64(fallback []byte, keys []string, encs ...*base64.Encoding) []byte {
 	return envval(fallback, t.m, func(s string) ([]byte, error) {
-		decoded, err := enc.DecodeString(s)
-		return decoded, errorsx.Wrapf(err, "invalid base64 encoded data '%s'", s)
+		var first error
+		for _, enc := range encs {
+			decoded, err := enc.DecodeString(s)
+			if err == nil {
+				return decoded, nil
+			}
+
+			if first == nil {
+				first = err
+			}
+		}
+
+		return nil, errorsx.Wrapf(first, "invalid base64 encoded data '%s'", s)
 	}, keys...)
 }
 
@@ -407,6 +449,31 @@ func (t *Builder) FromReader(r io.Reader) *Builder {
 func (t *Builder) FromEnviron(environ ...string) *Builder {
 	t.environ = append(t.environ, environ...)
 	return t
+}
+
+// AutoEnviron resolves a list of keys or explicit key=value strings into a
+// []string suitable for use as os.Environ.
+//
+// Arguments that contain an '=' are treated as explicit key=value pairs and
+// passed through verbatim. Arguments without '=' are treated as bare key names;
+// the value is looked up from the current process environment via
+// os.LookupEnv. Keys that are not set are silently omitted.
+func AutoEnviron(keysOrEnviron ...string) (environ []string) {
+	environ = make([]string, 0, len(keysOrEnviron))
+
+	for _, k := range keysOrEnviron {
+		_k, v, ok := strings.Cut(k, "=")
+		if ok && len(v) > 0 {
+			environ = append(environ, k)
+			continue
+		}
+
+		if v, ok := os.LookupEnv(_k); ok {
+			environ = append(environ, Format(_k, v, FormatOptionTransforms(allowAll)))
+		}
+	}
+
+	return environ
 }
 
 // extract the key/value pairs from the os.Environ.

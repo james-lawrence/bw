@@ -7,7 +7,9 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/egdaemon/eg"
@@ -31,7 +33,7 @@ const ErrNotFound = errorsx.String("executable file not found in $path")
 func findExecutable(file string) error {
 	d, err := os.Stat(file)
 	if err != nil {
-		log.Println("finding failed", err)
+		debugx.Println("finding failed", err)
 		return err
 	}
 	if m := d.Mode(); !m.IsDir() && m&0111 != 0 {
@@ -68,6 +70,26 @@ func LookPath(file string) (string, error) {
 		}
 	}
 	return "", &exec.Error{Name: file, Err: exec.ErrNotFound}
+}
+
+// RunAs builds an *exec.Cmd for name/args that runs as the named OS
+// user via sudo -- used when a target path is owned by a different uid than
+// this process (e.g. a repository bind-mounted into a workload container
+// under a service account), where running directly would trip permission or
+// ownership checks. Falls back to running directly (no sudo) when username
+// doesn't resolve to a system user, or already matches the current uid.
+func RunAs(ctx context.Context, username string, name string, args ...string) *exec.Cmd {
+	u, err := user.Lookup(username)
+	if err != nil {
+		debugx.Println("fallback to current user", err)
+		return exec.CommandContext(ctx, name, args...)
+	}
+
+	if uid, err := strconv.Atoi(u.Uid); err == nil && uid == os.Getuid() {
+		return exec.CommandContext(ctx, name, args...)
+	}
+
+	return exec.CommandContext(ctx, "sudo", append([]string{"-u", u.Username, "-g", u.Username, "--", name}, args...)...)
 }
 
 func String(ctx context.Context, prog string, args ...string) (_ string, err error) {

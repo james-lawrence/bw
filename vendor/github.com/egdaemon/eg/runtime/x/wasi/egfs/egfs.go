@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/egdaemon/eg/internal/debugx"
 	"github.com/egdaemon/eg/internal/errorsx"
 )
 
@@ -44,6 +43,23 @@ func Find(tree fs.FS, pattern string) iter.Seq[string] {
 		})
 
 		errorsx.Log(errorsx.Wrap(err, "unable to find modules"))
+	}
+}
+
+// String returns the contents of the file at the provided path.
+func String(path string) (string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
+
+// StringLazy returns a function that reads the file at the provided path when called.
+func StringLazy(path string) func() (string, error) {
+	return func() (string, error) {
+		return String(path)
 	}
 }
 
@@ -174,7 +190,7 @@ func CloneFS(ctx context.Context, dstdir string, rootdir string, archive fs.FS) 
 			return err
 		}
 
-		debugx.Println("cloning", rootdir, path, "->", dst, info.Mode().Perm())
+		log.Println("cloning", rootdir, path, "->", dst, info.Mode().Perm())
 
 		if d.IsDir() {
 			return os.MkdirAll(dst, info.Mode().Perm())

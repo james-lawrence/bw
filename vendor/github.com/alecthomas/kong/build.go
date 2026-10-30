@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"unicode/utf8"
 )
 
 // Plugins are dynamically embedded command-line structures.
@@ -31,6 +32,9 @@ func build(k *Kong, ast any) (app *Application, err error) {
 	}
 	if len(node.Positional) > 0 && len(node.Children) > 0 {
 		return nil, fmt.Errorf("can't mix positional arguments and branching arguments on %T", ast)
+	}
+	if provider, ok := v.Interface().(HelpProvider); ok {
+		node.Detail = provider.Help()
 	}
 	app.Node = node
 	app.Node.Flags = append(extraFlags, app.Node.Flags...)
@@ -210,7 +214,11 @@ MAIN:
 			delete(seenFlags, negFlag)
 		}
 		for _, aflag := range flag.Aliases {
-			delete(seenFlags, "--"+aflag)
+			if utf8.RuneCountInString(aflag) == 1 {
+				delete(seenFlags, "-"+aflag)
+			} else {
+				delete(seenFlags, "--"+aflag)
+			}
 		}
 	}
 
@@ -341,6 +349,9 @@ func buildField(k *Kong, node *Node, v reflect.Value, ft reflect.StructField, fv
 		seenFlags["--"+value.Name] = true
 		for _, alias := range tag.Aliases {
 			aliasFlag := "--" + alias
+			if utf8.RuneCountInString(alias) == 1 {
+				aliasFlag = "-" + alias
+			}
 			if seenFlags[aliasFlag] {
 				return failField(v, ft, "duplicate flag %s", aliasFlag)
 			}

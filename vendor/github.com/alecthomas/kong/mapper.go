@@ -446,10 +446,10 @@ func floatDecoder(bits int) MapperFunc {
 			target.SetFloat(v)
 
 		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-			target.Set(reflect.ValueOf(v))
+			target.SetFloat(reflect.ValueOf(v).Convert(reflect.TypeOf(float64(0))).Float())
 
 		default:
-			return fmt.Errorf("expected an int but got %q (%T)", t, t.Value)
+			return fmt.Errorf("expected a float but got %q (%T)", t, t.Value)
 		}
 		return nil
 	}
@@ -541,8 +541,12 @@ func sliceDecoder(r *Registry) MapperFunc {
 		if ctx.Value.Flag != nil {
 			t := ctx.Scan.Pop()
 			// If decoding a flag, we need a value.
+			tail := ""
+			if sep != -1 {
+				tail += string(sep) + "..."
+			}
 			if t.IsEOL() {
-				return fmt.Errorf("missing value, expecting \"<arg>%c...\"", sep)
+				return fmt.Errorf("missing value, expecting \"<arg>%s\"", tail)
 			}
 			switch v := t.Value.(type) {
 			case string:
@@ -580,6 +584,7 @@ func pathMapper(r *Registry) MapperFunc {
 		if target.Kind() == reflect.Slice {
 			return sliceDecoder(r)(ctx, target)
 		}
+		originalTarget := target
 		if target.Kind() == reflect.Ptr && target.Elem().Kind() == reflect.String {
 			if target.IsNil() {
 				return nil
@@ -593,6 +598,13 @@ func pathMapper(r *Registry) MapperFunc {
 		err := ctx.Scan.PopValueInto("file", &path)
 		if err != nil {
 			return err
+		}
+		// Skip if path with default is explicitly set to "". For the current directory use ".".
+		if ctx.Value.HasDefault && path == "" {
+			if originalTarget.Kind() == reflect.Ptr {
+				originalTarget.Set(reflect.Zero(originalTarget.Type()))
+			}
+			return nil
 		}
 		if path != "-" {
 			path = ExpandPath(path)
@@ -612,6 +624,12 @@ func fileMapper(r *Registry) MapperFunc {
 		if err != nil {
 			return err
 		}
+
+		// Skip if value was already set to avoid opening the default file when an explicit value was provided
+		if ctx.Value.HasDefault && ctx.Value.Set {
+			return nil
+		}
+
 		var file *os.File
 		if path == "-" {
 			file = os.Stdin
@@ -699,7 +717,7 @@ func existingDirMapper(r *Registry) MapperFunc {
 
 func fileContentMapper(r *Registry) MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		if target.Kind() != reflect.Slice && target.Elem().Kind() != reflect.Uint8 {
+		if target.Kind() != reflect.Slice || target.Type().Elem().Kind() != reflect.Uint8 {
 			return fmt.Errorf("\"filecontent\" must be applied to []byte not %s", target.Type())
 		}
 		var path string
@@ -776,19 +794,32 @@ func counterMapper() MapperFunc {
 			if err != nil {
 				return err
 			}
+			var n int64
 			switch v := t.Value.(type) {
 			case string:
-				n, err := strconv.ParseInt(v, 10, 64)
+				n, err = strconv.ParseInt(v, 10, 64)
 				if err != nil {
 					return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
 				}
-				target.SetInt(n)
 
 			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-				target.Set(reflect.ValueOf(v))
+				n = reflect.ValueOf(v).Convert(reflect.TypeOf(int64(0))).Int()
 
 			default:
 				return fmt.Errorf("expected a counter but got %q (%T)", t, t.Value)
+			}
+
+			// Assign by the target's kind, like the increment path below, so a
+			// counter declared as a uint or float field doesn't panic.
+			switch target.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				target.SetInt(n)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				target.SetUint(uint64(n)) //nolint:gosec // a counter value is small and non-negative
+			case reflect.Float32, reflect.Float64:
+				target.SetFloat(float64(n))
+			default:
+				return fmt.Errorf("type:\"counter\" must be used with a numeric field")
 			}
 			return nil
 		}

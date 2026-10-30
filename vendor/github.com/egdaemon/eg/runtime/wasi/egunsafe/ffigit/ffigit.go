@@ -1,13 +1,33 @@
 package ffigit
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"os"
 
+	"github.com/egdaemon/eg"
+	"github.com/egdaemon/eg/internal/envx"
+	"github.com/egdaemon/eg/internal/stringsx"
 	"github.com/egdaemon/eg/interp/runtime/wasi/ffiguest"
 )
+
+func Bearer() string {
+	envtoken := envx.String("", eg.EnvGitAuthHTTPPassword, eg.EnvGithubToken)
+	if stringsx.Present(envtoken) {
+		return envtoken
+	}
+
+	var buf = make([]byte, 1024)
+	tokenptr, tokenlen := ffiguest.Bytes(buf)
+	errcode := bearer(tokenptr, tokenlen)
+	if err := ffiguest.Error(errcode, fmt.Errorf("bearer failed")); err != nil {
+		log.Println("unable to get bearer token", err)
+		return ""
+	}
+	return string(bytes.TrimRight(ffiguest.BytesRead(tokenptr, tokenlen), "\x00"))
+}
 
 func Commitish(ctx context.Context, treeish string) string {
 	var (
