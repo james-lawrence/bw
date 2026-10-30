@@ -18,6 +18,12 @@ func Compact(errs ...error) error {
 	return nil
 }
 
+// Zero logs that the error occurred but otherwise ignores it, returning the value.
+func Zero[T any](v T, err error) T {
+	Log(err)
+	return v
+}
+
 func Log(err error) {
 	if err == nil {
 		return

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/akutz/memconn"
-	"github.com/gofrs/uuid"
+	"github.com/gofrs/uuid/v5"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/onsi/gomega"
 	"google.golang.org/grpc"

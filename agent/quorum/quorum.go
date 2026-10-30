@@ -8,7 +8,6 @@ import (
 	"hash"
 	"io"
 	"log"
-	"net"
 	"sync"
 	"time"
 
@@ -262,11 +261,6 @@ func (t *Quorum) History(context.Context) (_ []*agent.Message, err error) {
 
 // Watch watch for events.
 func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
-	var (
-		s *grpc.Server
-		l net.Listener
-	)
-
 	disconnected := t.disconnected
 	lost := t.lost
 
@@ -274,38 +268,31 @@ func (t *Quorum) Watch(out agent.Quorum_WatchServer) (err error) {
 		return errors.Wrap(err, "watch")
 	}
 
-	events := make(chan *agent.Message)
-	if l, s, err = t.ConnectableDispatcher.Connect(events); err != nil {
-		cause := errors.Wrap(err, "failed to connect to dispatcher")
-		errorsx.Log(cause)
-		return cause
-	}
+	ctx, cancel := context.WithCancelCause(out.Context())
+	defer cancel(nil)
 
-	defer l.Close()
-	defer s.Stop()
-
-	for {
+	go func() {
 		select {
-		case <-out.Context().Done():
-			cause := errors.WithStack(out.Context().Err())
-			errorsx.Log(cause)
-			return cause
+		case <-ctx.Done():
 		case <-disconnected:
-			cause := errors.New("disconnected")
-			errorsx.Log(cause)
-			return cause
+			cancel(errors.New("disconnected"))
 		case <-lost:
-			cause := errors.New("quorum membership lost")
+			cancel(errors.New("quorum membership lost"))
+		}
+	}()
+
+	seq := t.ConnectableDispatcher.Connect()
+	for m := range seq.Each(ctx) {
+		if err = out.Send(m); err != nil {
+			cause := errors.Wrap(err, "failed to deliver message")
 			errorsx.Log(cause)
 			return cause
-		case m := <-events:
-			if err = out.Send(m); err != nil {
-				cause := errors.Wrap(err, "failed to deliver message")
-				errorsx.Log(cause)
-				return cause
-			}
 		}
 	}
+
+	cause := errors.WithStack(errorsx.Compact(context.Cause(ctx), seq.Err()))
+	errorsx.Log(cause)
+	return cause
 }
 
 // Dispatch record deployment events.

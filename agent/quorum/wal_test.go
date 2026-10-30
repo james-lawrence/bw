@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/observers"
+	"github.com/james-lawrence/bw/agent/journal"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -94,7 +94,7 @@ var (
 var _ = DescribeTable(
 	"WAL Snapshot/Restore", func(commands ...*agent.Message) {
 		deployment := newDeployment(nil)
-		mobs, err := observers.NewMemory()
+		mobs, err := journal.New(GinkgoT().TempDir())
 		Expect(err).To(Succeed())
 		obs := NewObserver(mobs)
 		wal := NewWAL(
@@ -156,7 +156,7 @@ var _ = DescribeTable(
 var _ = DescribeTable(
 	"WAL Restore", func(commands ...proto.Message) {
 		deployment := newDeployment(nil)
-		mobs, err := observers.NewMemory()
+		mobs, err := journal.New(GinkgoT().TempDir())
 		Expect(err).To(Succeed())
 		obs := NewObserver(mobs)
 		wal := NewWAL(

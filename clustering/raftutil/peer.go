@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/james-lawrence/bw/internal/stringsx"
 )
 
 type peer struct {
@@ -19,8 +18,16 @@ func (t peer) deadleadership(p *raft.Raft) bool {
 	// however that function doesn't actually return accurate values. it updates every time a protocol message
 	// is sent, including candidate promotions. thereby not accurately representing the last contact time with
 	// the leadership.
-	log.Println("current leader", stringsx.DefaultIfBlank(leader, "[None]"), t.lastContact, time.Since(t.lastContact), ">", t.protocol.lastContactGrace)
-	if leader == "" && t.lastContact.Add(t.protocol.lastContactGrace).Before(time.Now()) {
+	// lastContact is the time of the previous evaluation that saw a leader, it only advances when the state
+	// does (cluster changes), so with a leader present the elapsed time is the evaluation cadence not an outage.
+	since := time.Since(t.lastContact)
+	if leader != "" {
+		log.Println("current leader", leader, "previous evaluation with a leader", since)
+		return false
+	}
+
+	log.Println("current leader [None] missing for", since, "grace period", t.protocol.lastContactGrace)
+	if since > t.protocol.lastContactGrace {
 		log.Println("leader is missing and grace period has passed, resetting this peer", t.protocol.lastContactGrace)
 		return true
 	}

@@ -6,13 +6,14 @@ import (
 	"io"
 	"log"
 	"runtime"
+	"time"
 
 	"github.com/hashicorp/raft"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/james-lawrence/bw/agent"
 
-	"github.com/james-lawrence/bw/agent/observers"
+	"github.com/james-lawrence/bw/agent/journal"
 	. "github.com/james-lawrence/bw/agent/quorum"
 	. "github.com/onsi/ginkgo/v2"
 
@@ -239,14 +240,18 @@ var _ = Describe("StateMachine", func() {
 		}
 
 		obs := make(chan *agent.Message, len(messages))
-		obsmem, err := observers.NewMemory()
+		jrnl, err := journal.New(GinkgoT().TempDir())
 		Expect(err).To(Succeed())
-		l, s, err := obsmem.Connect(obs)
-		Expect(err).To(Succeed())
-		defer l.Close()
-		defer s.Stop()
+		DeferCleanup(jrnl.Close)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		go func() {
+			for m := range jrnl.Connect().Each(ctx) {
+				obs <- m
+			}
+		}()
 
-		ob := NewObserver(obsmem)
+		ob := NewObserver(jrnl)
 		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
 		Expect(err).ToNot(HaveOccurred())
 		leader := findFirstState(raft.Leader, protocols...)
@@ -262,5 +267,36 @@ var _ = Describe("StateMachine", func() {
 			expected := <-obs
 			Expect(proto.Equal(expected, m)).To(BeTrue())
 		}
+	})
+
+	// regression: observers are invoked from the raft FSM, a stalled observer must not throttle the WAL
+	// otherwise the apply queue fills and writes fail with "timed out enqueuing operation".
+	It("should not be throttled by stalled observers", func() {
+		jrnl, err := journal.New(GinkgoT().TempDir())
+		Expect(err).To(Succeed())
+		DeferCleanup(jrnl.Close)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		stalled := make(chan *agent.Message) // never read.
+		go func() {
+			for m := range jrnl.Connect().Each(ctx) {
+				select {
+				case stalled <- m:
+				case <-ctx.Done():
+					return
+				}
+			}
+		}()
+
+		protocols, _, err := newCluster(NewTranscoder(NewObserver(jrnl)), "server1")
+		Expect(err).ToNot(HaveOccurred())
+		leader := findFirstState(raft.Leader, protocols...)
+		sm := NewMachine(agent.NewPeer("node"), leader)
+
+		start := time.Now()
+		for i := 0; i < 50; i++ {
+			Expect(sm.Dispatch(context.Background(), agent.LogEvent(local.Local(), "message"))).To(Succeed())
+		}
+		Expect(time.Since(start)).To(BeNumerically("<", time.Second))
 	})
 })

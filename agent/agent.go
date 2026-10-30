@@ -4,8 +4,8 @@ import (
 	"context"
 	"hash"
 	"io"
-	"net"
 
+	"github.com/james-lawrence/bw/internal/iterx"
 	"google.golang.org/grpc"
 )
 
@@ -22,10 +22,13 @@ type Dispatcher interface {
 	Dispatch(context.Context, ...*Message) error
 }
 
-// ConnectableDispatcher ...
+// ConnectableDispatcher a dispatcher whose messages can be followed by observers.
 type ConnectableDispatcher interface {
 	Dispatcher
-	Connect(chan *Message) (net.Listener, *grpc.Server, error)
+	// Connect streams the messages dispatched after the call, until the context it is consumed with is cancelled.
+	Connect() iterx.Seq[*Message]
+	// From streams the messages starting at the cursor, see Cursor.
+	From(Cursor) iterx.Seq[*Message]
 }
 
 // Client - client facade interface.

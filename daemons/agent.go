@@ -12,12 +12,13 @@ import (
 	"github.com/james-lawrence/bw/agent/acme"
 	"github.com/james-lawrence/bw/agent/debug"
 	"github.com/james-lawrence/bw/agent/dialers"
-	"github.com/james-lawrence/bw/agent/observers"
+	"github.com/james-lawrence/bw/agent/journal"
 	"github.com/james-lawrence/bw/agent/proxy"
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/userx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 )
@@ -25,14 +26,15 @@ import (
 // Agent daemon - rpc endpoint for the system.
 func Agent(dctx Context, upload storage.UploadProtocol, download storage.DownloadProtocol) (err error) {
 	var (
-		bind         net.Listener
-		observersmem observers.Memory
-		dlreg        = storage.New(storage.OptionProtocols(download))
+		bind     net.Listener
+		journald *journal.Journal
+		dlreg    = storage.New(storage.OptionProtocols(download))
 	)
 
-	if observersmem, err = observers.NewMemory(); err != nil {
+	if journald, err = journal.New(userx.DefaultCacheDirectory("journal.d")); err != nil {
 		return err
 	}
+	defer journald.Close()
 
 	qdialer := dialers.NewQuorum(
 		dctx.Cluster,
@@ -65,7 +67,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 	).Bind(server)
 
 	q := quorum.New(
-		observersmem,
+		journald,
 		dctx.Cluster,
 		quorum.NewTranscoder(
 			quorum.Logging{},

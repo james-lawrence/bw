@@ -28,6 +28,19 @@ func DurationOrDefault(a, b time.Duration) time.Duration {
 	return a
 }
 
+// FirstNonZero returns the first non-zero timestamp.
+func FirstNonZero(s ...time.Time) (_zero time.Time) {
+	for _, v := range s {
+		if v.IsZero() {
+			continue
+		}
+
+		return v
+	}
+
+	return _zero
+}
+
 // DurationMax select the maximum duration from the set.
 func DurationMax(ds ...time.Duration) (d time.Duration) {
 	for _, c := range ds {
