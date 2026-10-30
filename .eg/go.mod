@@ -1,8 +1,6 @@
 module eg/compute
 
-go 1.24.2
-
-toolchain go1.24.4
+go 1.25
 
 require (
 	github.com/egdaemon/eg v0.0.0-20260507200146-64e01f9c1ba8
@@ -11,7 +9,7 @@ require (
 
 require (
 	github.com/egdaemon/wasinet/wasinet v0.0.0-20250806175613-49e153bd345a // indirect
-	github.com/gofrs/uuid/v5 v5.4.0 // indirect
+	github.com/gofrs/uuid/v5 v5.5.1 // indirect
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
