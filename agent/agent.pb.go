@@ -2996,9 +2996,7 @@ const file_agent_proto_rawDesc = "" +
 	"\x06Deploy\x12\x14.agent.DeployRequest\x1a\x15.agent.DeployResponse\"\x00\x127\n" +
 	"\x06Cancel\x12\x14.agent.CancelRequest\x1a\x15.agent.CancelResponse\"\x00\x12=\n" +
 	"\bShutdown\x12\x16.agent.ShutdownRequest\x1a\x17.agent.ShutdownResponse\"\x00\x121\n" +
-	"\x04Logs\x12\x11.agent.LogRequest\x1a\x12.agent.LogResponse\"\x000\x012I\n" +
-	"\bObserver\x12=\n" +
-	"\bDispatch\x12\x16.agent.DispatchRequest\x1a\x17.agent.DispatchResponse\"\x002G\n" +
+	"\x04Logs\x12\x11.agent.LogRequest\x1a\x12.agent.LogResponse\"\x000\x012G\n" +
 	"\tBootstrap\x12:\n" +
 	"\aArchive\x12\x15.agent.ArchiveRequest\x1a\x16.agent.ArchiveResponse\"\x002M\n" +
 	"\aCluster\x12B\n" +
@@ -3131,32 +3129,30 @@ var file_agent_proto_depIdxs = []int32{
 	41, // 57: agent.Agent.Cancel:input_type -> agent.CancelRequest
 	39, // 58: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
 	43, // 59: agent.Agent.Logs:input_type -> agent.LogRequest
-	45, // 60: agent.Observer.Dispatch:input_type -> agent.DispatchRequest
-	46, // 61: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
-	48, // 62: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
-	26, // 63: agent.Deployments.Upload:output_type -> agent.UploadResponse
-	22, // 64: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
-	42, // 65: agent.Deployments.Cancel:output_type -> agent.CancelResponse
-	44, // 66: agent.Deployments.Logs:output_type -> agent.LogResponse
-	17, // 67: agent.Deployments.Watch:output_type -> agent.Message
-	26, // 68: agent.Quorum.Upload:output_type -> agent.UploadResponse
-	17, // 69: agent.Quorum.Watch:output_type -> agent.Message
-	28, // 70: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
-	22, // 71: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
-	30, // 72: agent.Quorum.Info:output_type -> agent.InfoResponse
-	42, // 73: agent.Quorum.Cancel:output_type -> agent.CancelResponse
-	32, // 74: agent.Quorum.History:output_type -> agent.HistoryResponse
-	34, // 75: agent.Agent.Connect:output_type -> agent.ConnectResponse
-	36, // 76: agent.Agent.Info:output_type -> agent.StatusResponse
-	38, // 77: agent.Agent.Deploy:output_type -> agent.DeployResponse
-	42, // 78: agent.Agent.Cancel:output_type -> agent.CancelResponse
-	40, // 79: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
-	44, // 80: agent.Agent.Logs:output_type -> agent.LogResponse
-	28, // 81: agent.Observer.Dispatch:output_type -> agent.DispatchResponse
-	47, // 82: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
-	49, // 83: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
-	63, // [63:84] is the sub-list for method output_type
-	42, // [42:63] is the sub-list for method input_type
+	46, // 60: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
+	48, // 61: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
+	26, // 62: agent.Deployments.Upload:output_type -> agent.UploadResponse
+	22, // 63: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
+	42, // 64: agent.Deployments.Cancel:output_type -> agent.CancelResponse
+	44, // 65: agent.Deployments.Logs:output_type -> agent.LogResponse
+	17, // 66: agent.Deployments.Watch:output_type -> agent.Message
+	26, // 67: agent.Quorum.Upload:output_type -> agent.UploadResponse
+	17, // 68: agent.Quorum.Watch:output_type -> agent.Message
+	28, // 69: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
+	22, // 70: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
+	30, // 71: agent.Quorum.Info:output_type -> agent.InfoResponse
+	42, // 72: agent.Quorum.Cancel:output_type -> agent.CancelResponse
+	32, // 73: agent.Quorum.History:output_type -> agent.HistoryResponse
+	34, // 74: agent.Agent.Connect:output_type -> agent.ConnectResponse
+	36, // 75: agent.Agent.Info:output_type -> agent.StatusResponse
+	38, // 76: agent.Agent.Deploy:output_type -> agent.DeployResponse
+	42, // 77: agent.Agent.Cancel:output_type -> agent.CancelResponse
+	40, // 78: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
+	44, // 79: agent.Agent.Logs:output_type -> agent.LogResponse
+	47, // 80: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
+	49, // 81: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
+	62, // [62:82] is the sub-list for method output_type
+	42, // [42:62] is the sub-list for method input_type
 	42, // [42:42] is the sub-list for extension type_name
 	42, // [42:42] is the sub-list for extension extendee
 	0,  // [0:42] is the sub-list for field type_name
@@ -3190,7 +3186,7 @@ func file_agent_proto_init() {
 			NumEnums:      9,
 			NumMessages:   41,
 			NumExtensions: 0,
-			NumServices:   6,
+			NumServices:   5,
 		},
 		GoTypes:           file_agent_proto_goTypes,
 		DependencyIndexes: file_agent_proto_depIdxs,

@@ -254,10 +254,6 @@ service Agent {
 
 message DispatchRequest { repeated Message messages = 1; }
 
-service Observer {
-  rpc Dispatch(DispatchRequest) returns (DispatchResponse) {}
-}
-
 message ArchiveRequest {}
 message ArchiveResponse {
   enum Info {
