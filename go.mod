@@ -12,6 +12,8 @@ require (
 	github.com/bits-and-blooms/bloom/v3 v3.7.0
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/egdaemon/gdx v0.0.0-20260824162813-84291833ef44
+	github.com/egdaemon/gdx/konggdx v0.0.0-20260824162813-84291833ef44
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-acme/lego/v4 v4.22.2
 	github.com/go-git/go-git/v5 v5.16.2
@@ -59,6 +61,7 @@ require (
 	atomicgo.dev/cursor v0.2.0 // indirect
 	atomicgo.dev/keyboard v0.2.9 // indirect
 	atomicgo.dev/schedule v0.1.0 // indirect
+	capnproto.org/go/capnp/v3 v3.1.0-alpha.2 // indirect
 	cloud.google.com/go/auth v0.24.1-0.20261001053825-dbc26066f70a // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.3.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
@@ -100,6 +103,7 @@ require (
 	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/cloudflare/circl v1.6.4 // indirect
+	github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 // indirect
 	github.com/containerd/console v1.0.3 // indirect
 	github.com/corpix/uarand v0.0.0-20170723150923-031be390f409 // indirect
 	github.com/cyphar/filepath-securejoin v0.7.0 // indirect

@@ -24,7 +24,7 @@ func Test(ctx context.Context, op eg.Op) error {
 	return eg.Perform(
 		ctx,
 		eg.Parallel(
-			shell.Op(shell.Newf("journalctl -f --user --since '-15min' | tee %s", egenv.CacheDirectory(egenv.RunID()+".log"))),
+			shell.Op(shell.Newf("journalctl -f --user --since '-15min' | tee %s", egenv.CacheDirectory(egenv.Pattern("run-%eg.run.id%.log")))),
 			egbug.DebugFailure(eg.Sequential(
 				shell.Op(
 					runtime.Newf("run0 -u egd -g egd -D %s go install github.com/letsencrypt/pebble/v2/...@latest", egenv.WorkingDirectory()).Privileged(),
