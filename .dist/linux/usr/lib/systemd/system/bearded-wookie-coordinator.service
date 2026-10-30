@@ -11,6 +11,7 @@ Restart=always
 Slice=bearded-wookie.slice
 ConfigurationDirectory=%N
 CacheDirectory=%N
+RuntimeDirectory=%p/%i
 # Load the environment variables specified by agent.env.
 EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
 EnvironmentFile=-/etc/bearded-wookie/default/agent.env

@@ -74,8 +74,12 @@ type discard struct {
 	discard string
 }
 
-// New journal stored in the given directory.
+// New journal stored in the given directory, anything already in the directory is removed.
 func New(dir string, options ...Option) (*Journal, error) {
+	if err := os.RemoveAll(dir); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, errors.WithStack(err)
 	}

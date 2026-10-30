@@ -1,6 +1,7 @@
 package daemons
 
 import (
+	"context"
 	"net"
 
 	"github.com/hashicorp/raft"
@@ -18,6 +19,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/userx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
@@ -31,10 +33,17 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		dlreg    = storage.New(storage.OptionProtocols(download))
 	)
 
-	if journald, err = journal.New(userx.DefaultCacheDirectory("journal.d")); err != nil {
+	if journald, err = journal.New(userx.DefaultRuntimeDirectory("journal.d")); err != nil {
 		return err
 	}
-	defer journald.Close()
+
+	// the journal serves for the lifetime of the daemon, Agent returns as soon as the servers are bound
+	// so it can't be closed on return. close it with the rest of the daemon.
+	dctx.Cleanup.Add(1)
+	context.AfterFunc(dctx.Context, func() {
+		defer dctx.Cleanup.Done()
+		errorsx.Log(errors.Wrap(journald.Close(), "journal shutdown failed"))
+	})
 
 	qdialer := dialers.NewQuorum(
 		dctx.Cluster,

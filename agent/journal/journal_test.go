@@ -110,6 +110,19 @@ var _ = Describe("Journal", func() {
 			Expect(j.Dispatch(context.Background(), v4("late", epoch))).ToNot(Succeed())
 		})
 
+		It("should start empty, discarding what a previous run left in the directory", func() {
+			Expect(j.Dispatch(context.Background(), v4("1", epoch), v4("2", epoch.Add(30*time.Second)))).To(Succeed())
+			Expect(j.Close()).To(Succeed())
+			Expect(segments(dir)).To(HaveLen(2))
+
+			restarted, err := journal.New(dir)
+			Expect(err).To(Succeed())
+			DeferCleanup(restarted.Close)
+
+			Expect(restarted.Segments()).To(BeEmpty())
+			Expect(segments(dir)).To(BeEmpty())
+		})
+
 		It("should journal hidden messages", func() {
 			m := v4("hidden", epoch)
 			m.Hidden = true

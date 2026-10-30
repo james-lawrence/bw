@@ -5,6 +5,8 @@ After=network.target
 [Service]
 Type=simple
 Restart=always
+# the agent keeps its journal and debug socket here, unique per service.
+RuntimeDirectory=%p/%i
 EnvironmentFile=-/etc/bearded-wookie-agent/default/agent.env
 Environment=SHELL=/bin/bash
 ExecStart=/usr/bin/bw agent --cluster-dns-enable --cluster-gcloud-enable --agent-p2p-alternates=127.0.0.1:2000

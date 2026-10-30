@@ -21,8 +21,8 @@ type Observer struct {
 }
 
 // Decode record the message in the journal; observers pull from it at their own pace.
-// hidden messages are recorded, they are filtered by the readers. messages replayed while the
-// WAL is recovering are not, they have already been journaled.
+// hidden messages are recorded, they are filtered by the readers. messages replayed while a snapshot
+// is restored are not, they are history (served by the History rpc) not events for watchers.
 func (t Observer) Decode(ctx TranscoderContext, m *agent.Message) error {
 	if ctx.State == StateRecovering {
 		return nil
