@@ -40,6 +40,7 @@ require (
 	github.com/pkg/profile v1.7.0
 	github.com/posener/complete v1.2.3
 	github.com/pterm/pterm v0.12.80
+	github.com/stretchr/testify v1.12.1
 	github.com/subosito/gotenv v1.6.0
 	github.com/traefik/yaegi v0.9.8
 	github.com/willabides/kongplete v0.4.0
