@@ -1,0 +1,33 @@
+# render with: `ansidrama record docs/demo/bw.toml`
+launch = "bash --norc --noprofile"
+cols = 100
+rows = 28
+font = "jetbrains"
+font_px = 18
+card_font_px = 44
+type_cs = 6
+out = "docs/demo/bw.webp"
+env = { COLORTERM = "truecolor", PS1 = "$ ", TERM = "xterm-256color" }
+quit_keys = ["C-d"]
+
+[chrome]
+style = "linux"
+title = "bw"
+padding = 14
+
+[[scene]]
+card = { lines = [
+  "Bearded Wookie",
+  "",
+  "configuration management",
+], fg = "#fef9c3", bg = "#111", bold = true }
+hold_cs = 200
+
+[[scene]]
+text = "bw --help"
+hold_cs = 30
+
+[[scene]]
+keys = ["Enter"]
+await = "usage"
+hold_cs = 400
