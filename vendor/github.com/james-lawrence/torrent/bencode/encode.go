@@ -8,22 +8,32 @@ import (
 	"sort"
 	"strconv"
 	"sync"
-
-	"github.com/anacrolix/missinggo"
 )
 
-func isEmptyValue(v reflect.Value) bool {
-	return missinggo.IsEmptyValue(v)
+func isEmptyValue(v reflect.Value) (r bool) {
+	// defer func() {
+	// 	log.Println("isEmptyValue type", v.Type(), v.Kind(), v.IsValid(), v.IsZero(), v, r)
+	// }()
+	switch v.Kind() {
+	case reflect.Func, reflect.Map, reflect.Slice:
+		return v.IsNil()
+	case reflect.Array:
+		z := true
+		for i := 0; i < v.Len(); i++ {
+			z = z && isEmptyValue(v.Index(i))
+		}
+		return z
+	}
+
+	return v.IsZero()
 }
 
-// Encoder for bencode
 type Encoder struct {
 	w       io.Writer
 	scratch [64]byte
 }
 
-// Encode the provided value into the encoders writer.
-func (e *Encoder) Encode(v interface{}) (err error) {
+func (e *Encoder) Encode(v any) (err error) {
 	if v == nil {
 		return
 	}
@@ -39,6 +49,7 @@ func (e *Encoder) Encode(v interface{}) (err error) {
 			}
 		}
 	}()
+
 	e.reflectValue(reflect.ValueOf(v))
 	return nil
 }
@@ -66,16 +77,18 @@ func (e *Encoder) writeString(s string) {
 }
 
 func (e *Encoder) reflectString(s string) {
-	b := strconv.AppendInt(e.scratch[:0], int64(len(s)), 10)
-	e.write(b)
-	e.writeString(":")
+	e.writeStringPrefix(int64(len(s)))
 	e.writeString(s)
 }
 
-func (e *Encoder) reflectByteSlice(s []byte) {
-	b := strconv.AppendInt(e.scratch[:0], int64(len(s)), 10)
+func (e *Encoder) writeStringPrefix(l int64) {
+	b := strconv.AppendInt(e.scratch[:0], l, 10)
 	e.write(b)
 	e.writeString(":")
+}
+
+func (e *Encoder) reflectByteSlice(s []byte) {
+	e.writeStringPrefix(int64(len(s)))
 	e.write(s)
 }
 
@@ -98,10 +111,9 @@ func (e *Encoder) reflectMarshaler(v reflect.Value) bool {
 	return true
 }
 
-var bigIntType = reflect.TypeOf(big.Int{})
+var bigIntType = reflect.TypeOf((*big.Int)(nil)).Elem()
 
 func (e *Encoder) reflectValue(v reflect.Value) {
-
 	if e.reflectMarshaler(v) {
 		return
 	}
@@ -113,6 +125,8 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 		e.writeString("e")
 		return
 	}
+
+	// log.Println("reflectValue type", v.Type(), v.Kind(), v.IsValid(), v.IsZero(), v)
 
 	switch v.Kind() {
 	case reflect.Bool:
@@ -135,13 +149,17 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 		e.reflectString(v.String())
 	case reflect.Struct:
 		e.writeString("d")
-		for _, ef := range encodeFields(v.Type()) {
-			f := v.Field(ef.i)
-			if ef.omitEmpty && isEmptyValue(f) {
+		for _, ef := range getEncodeFields(v.Type()) {
+			fieldValue := ef.i(v)
+			if !fieldValue.IsValid() {
+				continue
+			}
+
+			if ef.omitEmpty && isEmptyValue(fieldValue) {
 				continue
 			}
 			e.reflectString(ef.tag)
-			e.reflectValue(f)
+			e.reflectValue(fieldValue)
 		}
 		e.writeString("e")
 	case reflect.Map:
@@ -160,23 +178,8 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 			e.reflectValue(v.MapIndex(key))
 		}
 		e.writeString("e")
-	case reflect.Slice:
-		if v.Type().Elem().Kind() == reflect.Uint8 {
-			s := v.Bytes()
-			e.reflectByteSlice(s)
-			break
-		}
-		if v.IsNil() {
-			e.writeString("le")
-			break
-		}
-		fallthrough
-	case reflect.Array:
-		e.writeString("l")
-		for i, n := 0, v.Len(); i < n; i++ {
-			e.reflectValue(v.Index(i))
-		}
-		e.writeString("e")
+	case reflect.Slice, reflect.Array:
+		e.reflectSequence(v)
 	case reflect.Interface:
 		e.reflectValue(v.Elem())
 	case reflect.Ptr:
@@ -191,8 +194,39 @@ func (e *Encoder) reflectValue(v reflect.Value) {
 	}
 }
 
+func (e *Encoder) reflectSequence(v reflect.Value) {
+	// Use bencode string-type
+	if v.Type().Elem().Kind() == reflect.Uint8 {
+		if v.Kind() != reflect.Slice {
+			// Can't use []byte optimization
+			if !v.CanAddr() {
+				e.writeStringPrefix(int64(v.Len()))
+				for i := 0; i < v.Len(); i++ {
+					var b [1]byte
+					b[0] = byte(v.Index(i).Uint())
+					e.write(b[:])
+				}
+				return
+			}
+			v = v.Slice(0, v.Len())
+		}
+		s := v.Bytes()
+		e.reflectByteSlice(s)
+		return
+	}
+	if v.IsNil() {
+		e.writeString("le")
+		return
+	}
+	e.writeString("l")
+	for i, n := 0, v.Len(); i < n; i++ {
+		e.reflectValue(v.Index(i))
+	}
+	e.writeString("e")
+}
+
 type encodeField struct {
-	i         int
+	i         func(v reflect.Value) reflect.Value
 	tag       string
 	omitEmpty bool
 }
@@ -204,35 +238,54 @@ func (ef encodeFieldsSortType) Swap(i, j int)      { ef[i], ef[j] = ef[j], ef[i]
 func (ef encodeFieldsSortType) Less(i, j int) bool { return ef[i].tag < ef[j].tag }
 
 var (
-	typeCacheLock     sync.RWMutex
-	encodeFieldsCache = make(map[reflect.Type][]encodeField)
+	encodeFieldsCache sync.Map // map[reflect.Type][]encodeField
 )
 
-func encodeFields(t reflect.Type) []encodeField {
-	typeCacheLock.RLock()
-	fs, ok := encodeFieldsCache[t]
-	typeCacheLock.RUnlock()
+func getEncodeFields(t reflect.Type) []encodeField {
+	fsi, ok := encodeFieldsCache.Load(t)
 	if ok {
-		return fs
+		return fsi.([]encodeField)
 	}
+	fs := makeEncodeFields(t)
+	loaded, _ := encodeFieldsCache.LoadOrStore(t, fs)
+	return loaded.([]encodeField)
+}
 
-	typeCacheLock.Lock()
-	defer typeCacheLock.Unlock()
-	fs, ok = encodeFieldsCache[t]
-	if ok {
-		return fs
-	}
-
-	for i, n := 0, t.NumField(); i < n; i++ {
+func makeEncodeFields(t reflect.Type) (fs []encodeField) {
+	for _i, n := 0, t.NumField(); _i < n; _i++ {
+		i := _i
 		f := t.Field(i)
 		if f.PkgPath != "" {
 			continue
 		}
 		if f.Anonymous {
+			t := f.Type
+			if t.Kind() == reflect.Ptr {
+				t = t.Elem()
+			}
+			anonEFs := makeEncodeFields(t)
+			for aefi := range anonEFs {
+				anonEF := anonEFs[aefi]
+				bottomField := anonEF
+				bottomField.i = func(v reflect.Value) reflect.Value {
+					v = v.Field(i)
+					if v.Kind() == reflect.Ptr {
+						if v.IsNil() {
+							// This will skip serializing this value.
+							return reflect.Value{}
+						}
+						v = v.Elem()
+					}
+					return anonEF.i(v)
+				}
+				fs = append(fs, bottomField)
+			}
 			continue
 		}
 		var ef encodeField
-		ef.i = i
+		ef.i = func(v reflect.Value) reflect.Value {
+			return v.Field(i)
+		}
 		ef.tag = f.Name
 
 		tv := getTag(f.Tag)
@@ -247,6 +300,5 @@ func encodeFields(t reflect.Type) []encodeField {
 	}
 	fss := encodeFieldsSortType(fs)
 	sort.Sort(fss)
-	encodeFieldsCache[t] = fs
 	return fs
 }

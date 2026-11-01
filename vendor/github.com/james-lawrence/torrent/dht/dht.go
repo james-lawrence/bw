@@ -1,0 +1,255 @@
+package dht
+
+import (
+	"context"
+	_ "crypto/sha1"
+	"errors"
+	"iter"
+	"log"
+	"net"
+	"net/netip"
+	"time"
+
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/dht/krpc"
+	"github.com/james-lawrence/torrent/dht/transactions"
+)
+
+type logging interface {
+	Println(v ...any)
+	Printf(format string, v ...any)
+	Print(v ...any)
+}
+
+func defaultQueryResendDelay() time.Duration {
+	// This should be the highest reasonable UDP latency an end-user might have.
+	return 2 * time.Second
+}
+
+type transactionKey = transactions.Key
+
+type StartingNodesGetter func(ctx context.Context, dcache dnscacher) ([]Addr, error)
+
+// PeerAnnounce is notified of the peers that announce to the server. peer is the address the announcing
+// peer can be reached on: the address the announce came from, with the port it announced (the port
+// the announce came from when it asked for that with implied_port). portOk is false when the announce
+// did not include a usable port, in which case the port of peer is 0 and it cannot be connected to.
+type PeerAnnounce interface {
+	Announced(peerid int160.T, peer netip.AddrPort, portOk bool)
+}
+
+type HookQuery func(source netip.AddrPort, query *krpc.Msg) (propagate bool)
+type PeerAnnounceFn func(peerid int160.T, peer netip.AddrPort, portOk bool)
+
+func (t PeerAnnounceFn) Announced(peerid int160.T, peer netip.AddrPort, portOk bool) {
+	t(peerid, peer, portOk)
+}
+
+type PublicAddrPort func(ctx context.Context, sc *Server, q Binding, id int160.T, bestaddr netip.AddrPort, local net.PacketConn) (iter.Seq[netip.AddrPort], error)
+
+func PublicAddrPortFromPacketConn(ctx context.Context, sc *Server, q Binding, id int160.T, bestaddr netip.AddrPort, local net.PacketConn) (iter.Seq[netip.AddrPort], error) {
+	return func(yield func(netip.AddrPort) bool) {
+		if !yield(q.AddrPort()) {
+			return
+		}
+
+		// block until context cancels.
+		<-ctx.Done()
+	}, nil
+}
+
+type Option func(*Server)
+
+func OptionNodeID(id int160.T) Option {
+	return func(sc *Server) {
+		sc.id.Store(&id)
+	}
+}
+
+func OptionDynamicPort(fn PublicAddrPort) Option {
+	return func(sc *Server) {
+		sc.resolvepublicaddr = fn
+	}
+}
+
+func OptionComputeBestAddr(fn func(net.Addr) netip.AddrPort) Option {
+	return func(sc *Server) {
+		sc.computeBestAddr = fn
+	}
+}
+
+// OptionUPnP configures the server to use UPnP IGD port forwarding to resolve
+// its public address. IPv6 addresses fall back to AutoDetectIP because UPnP IGD
+// is an IPv4 NAT traversal protocol. IPv4-mapped IPv6 addresses (4-in-6) are
+// treated as IPv4 and still use UPnP.
+func OptionUPnP(sc *Server) {
+	sc.resolvepublicaddr = func(ctx context.Context, sc *Server, q Binding, id int160.T, bestaddr netip.AddrPort, local net.PacketConn) (iter.Seq[netip.AddrPort], error) {
+		if bestaddr.Addr().Unmap().Is6() {
+			return AutoDetectIP(ctx, sc, q, id, bestaddr, bestaddr.Port())
+		}
+
+		return UPnPPortForward(ctx, id.String(), bestaddr.Port(), bestaddr)
+	}
+}
+
+func OptionStaticPort(port uint16) Option {
+	return func(sc *Server) {
+		sc.resolvepublicaddr = func(ctx context.Context, sc *Server, q Binding, id int160.T, bestaddr netip.AddrPort, local net.PacketConn) (iter.Seq[netip.AddrPort], error) {
+			return AutoDetectIP(ctx, sc, q, id, bestaddr, port)
+		}
+	}
+}
+
+func OptionBootstrapNodesFn(fn StartingNodesGetter) Option {
+	return func(sc *Server) {
+		sc.bootstrap = append(sc.bootstrap, fn)
+	}
+}
+
+func OptionBootstrapGlobal(sc *Server) {
+	OptionBootstrapNodesFn(GlobalBootstrapAddrs)(sc)
+}
+
+func OptionBootstrapPeerFile(path string) Option {
+	return OptionBootstrapNodesFn(func(ctx context.Context, dcache dnscacher) (res []Addr, err error) {
+		ps, err := ReadNodesFromFile(path)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, p := range ps {
+			res = append(res, NewAddr(p.Addr.AddrPort))
+		}
+
+		return res, nil
+	})
+}
+
+func OptionBootstrapNodesNone(sc *Server) {
+	sc.bootstrap = nil
+}
+
+func OptionBootstrapAddrPort(addrs ...netip.AddrPort) Option {
+	return OptionBootstrapNodesFn(func(ctx context.Context, dcache dnscacher) (res []Addr, err error) {
+		res = make([]Addr, 0, len(addrs))
+		for _, p := range addrs {
+			res = append(res, NewAddr(p))
+		}
+		return res, nil
+	})
+}
+
+func OptionBootstrapFixedAddrs(addrs ...Addr) Option {
+	return OptionBootstrapNodesFn(func(ctx context.Context, dcache dnscacher) (res []Addr, err error) {
+		return addrs, nil
+	})
+}
+
+func OptionMuxer(m Muxer) Option {
+	return func(sc *Server) {
+		sc.mux = m
+	}
+}
+
+func OptionHostResolver(m dnscacher) Option {
+	return func(sc *Server) {
+		sc.dnscache = m
+	}
+}
+
+func OptionOnQuery(m HookQuery) Option {
+	return func(sc *Server) {
+		sc.hookQuery = m
+	}
+}
+
+// OptionOnAnnouncePeer registers a PeerAnnounce to be notified whenever a peer
+// successfully announces to this server. Equivalent to calling AttachAnnouncer
+// at construction time.
+func OptionOnAnnouncePeer(m PeerAnnounce) Option {
+	return func(sc *Server) {
+		sc.announceto = append(sc.announceto, m)
+	}
+}
+
+func OptionQueryResendDelay(d time.Duration) Option {
+	return func(s *Server) {
+		s.queryResendDelay = func() time.Duration { return d }
+	}
+}
+
+func OptionNoop(sc *Server) {}
+
+func OptionLogger(m logging) Option {
+	return func(sc *Server) {
+		sc.log = m
+	}
+}
+
+// ServerStats instance is returned by Server.Stats() and stores Server metrics
+type ServerStats struct {
+	// Count of nodes in the node table that responded to our last query or
+	// haven't yet been queried.
+	GoodNodes int
+	// Count of nodes in the node table.
+	Nodes int
+	// Transactions awaiting a response.
+	OutstandingTransactions int
+	// Individual announce_peer requests that got a success response.
+	SuccessfulOutboundAnnouncePeerQueries int64
+	// Nodes that have been blocked.
+	BadNodes                 uint
+	OutboundQueriesAttempted int64
+	// Local addresses the server's sockets are bound to.
+	BoundAddrs []netip.AddrPort
+	// Best-known public address across all bindings.
+	PublicAddr netip.AddrPort
+}
+
+type Peer = krpc.NodeAddr
+
+var DefaultGlobalBootstrapHostPorts = []string{
+	"router.utorrent.com:6881",
+	"router.bittorrent.com:6881",
+	"dht.transmissionbt.com:6881",
+	"dht.aelitis.com:6881",
+	"dht.libtorrent.org:25401",
+}
+
+// Returns the resolved addresses of the default global bootstrap nodes. Network is unused but was
+// historically passed by anacrolix/torrent.
+func GlobalBootstrapAddrs(ctx context.Context, dns dnscacher) ([]Addr, error) {
+	return ResolveHostPorts(ctx, dns, DefaultGlobalBootstrapHostPorts)
+}
+
+// Resolves host:port strings to dht.Addrs, using the dht DNS resolver cache. Suitable for use with
+// ServerConfig.BootstrapAddrs.
+func ResolveHostPorts(ctx context.Context, dns dnscacher, hostPorts []string) (addrs []Addr, err error) {
+	for _, s := range hostPorts {
+		host, port, err := net.SplitHostPort(s)
+		if err != nil {
+			log.Println("failed to split host:port", s, err)
+			continue
+		}
+
+		hostAddrs, err := dns.LookupHost(ctx, host)
+		if err != nil {
+			log.Println("failed to lookup host addresses", s, err)
+			continue
+		}
+		for _, a := range hostAddrs {
+			ua, err := net.ResolveUDPAddr("udp", net.JoinHostPort(a, port))
+			if err != nil {
+				log.Printf("error resolving %q: %v", a, err)
+				continue
+			}
+			addrs = append(addrs, NewAddr(ua.AddrPort()))
+		}
+	}
+
+	if len(addrs) == 0 {
+		return nil, errors.New("nothing resolved")
+	}
+
+	return addrs, nil
+}

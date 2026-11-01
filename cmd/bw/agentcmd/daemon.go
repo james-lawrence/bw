@@ -265,7 +265,7 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	go deployment.ResultBus(
 		dctx.Results,
 		syncAuthorizationsPostDeploy(dctx),
-		clearTorrents(tc),
+		clearTorrents(dctx, tc),
 	)
 
 	if err = daemons.Bootstrap(dctx, tc.Downloader()); err != nil {
@@ -275,7 +275,7 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	return nil
 }
 
-func clearTorrents(c storage.TorrentConfig) chan *deployment.DeployResult {
+func clearTorrents(dctx daemons.Context, c storage.TorrentConfig) chan *deployment.DeployResult {
 	var (
 		tcu storage.TorrentUtil
 		tdr = make(chan *deployment.DeployResult)
@@ -283,7 +283,7 @@ func clearTorrents(c storage.TorrentConfig) chan *deployment.DeployResult {
 
 	go func() {
 		for range tdr {
-			tcu.ClearTorrents(c)
+			tcu.ClearTorrents(dctx.Context, c, dctx.Config.KeepN)
 		}
 	}()
 

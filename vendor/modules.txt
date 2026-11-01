@@ -97,10 +97,10 @@ github.com/ProtonMail/go-crypto/openpgp/s2k
 github.com/ProtonMail/go-crypto/openpgp/slhdsa
 github.com/ProtonMail/go-crypto/openpgp/x25519
 github.com/ProtonMail/go-crypto/openpgp/x448
-# github.com/RoaringBitmap/roaring v1.9.1
-## explicit; go 1.14
-github.com/RoaringBitmap/roaring
-github.com/RoaringBitmap/roaring/internal
+# github.com/RoaringBitmap/roaring/v2 v2.27.0
+## explicit; go 1.24.0
+github.com/RoaringBitmap/roaring/v2
+github.com/RoaringBitmap/roaring/v2/internal
 # github.com/akutz/memconn v0.1.0
 ## explicit
 github.com/akutz/memconn
@@ -117,43 +117,20 @@ github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 ## explicit; go 1.15
 github.com/alecthomas/units
-# github.com/anacrolix/generics v0.0.0-20230113004304-d6428d516633
+# github.com/anacrolix/generics v0.2.0
 ## explicit; go 1.18
 github.com/anacrolix/generics
-# github.com/anacrolix/log v0.15.2
-## explicit; go 1.19
-github.com/anacrolix/log
 # github.com/anacrolix/missinggo v1.3.0
 ## explicit; go 1.16
-github.com/anacrolix/missinggo
-github.com/anacrolix/missinggo/bitmap
-github.com/anacrolix/missinggo/expect
-github.com/anacrolix/missinggo/httptoo
-github.com/anacrolix/missinggo/iter
-github.com/anacrolix/missinggo/mime
-github.com/anacrolix/missinggo/orderedmap
 github.com/anacrolix/missinggo/pproffd
-github.com/anacrolix/missinggo/prioritybitmap
 github.com/anacrolix/missinggo/pubsub
-github.com/anacrolix/missinggo/resource
 github.com/anacrolix/missinggo/slices
-github.com/anacrolix/missinggo/x
-# github.com/anacrolix/missinggo/v2 v2.6.0
+# github.com/anacrolix/multiless v0.4.0
 ## explicit; go 1.18
-github.com/anacrolix/missinggo/v2
-github.com/anacrolix/missinggo/v2/conntrack
-github.com/anacrolix/missinggo/v2/iter
-# github.com/anacrolix/multiless v0.3.0
-## explicit; go 1.13
 github.com/anacrolix/multiless
-# github.com/anacrolix/stm v0.2.0
-## explicit; go 1.13
+# github.com/anacrolix/stm v0.6.0
+## explicit; go 1.25
 github.com/anacrolix/stm
-github.com/anacrolix/stm/rate
-github.com/anacrolix/stm/stmutil
-# github.com/anacrolix/upnp v0.1.4
-## explicit; go 1.12
-github.com/anacrolix/upnp
 # github.com/armon/go-metrics v0.4.1
 ## explicit; go 1.12
 github.com/armon/go-metrics
@@ -321,13 +298,13 @@ github.com/aws/smithy-go/tracing
 github.com/aws/smithy-go/transport/http
 github.com/aws/smithy-go/transport/http/internal/io
 github.com/aws/smithy-go/waiter
-# github.com/benbjohnson/immutable v0.2.0
-## explicit; go 1.12
+# github.com/benbjohnson/immutable v0.4.3
+## explicit; go 1.18
 github.com/benbjohnson/immutable
-# github.com/bits-and-blooms/bitset v1.12.0
+# github.com/bits-and-blooms/bitset v1.25.0
 ## explicit; go 1.16
 github.com/bits-and-blooms/bitset
-# github.com/bits-and-blooms/bloom/v3 v3.7.0
+# github.com/bits-and-blooms/bloom/v3 v3.7.1
 ## explicit; go 1.16
 github.com/bits-and-blooms/bloom/v3
 # github.com/boltdb/bolt v1.3.1
@@ -403,7 +380,7 @@ github.com/davecgh/go-spew/spew
 # github.com/dustin/go-humanize v1.1.0
 ## explicit; go 1.21
 github.com/dustin/go-humanize
-# github.com/edsrzf/mmap-go v1.1.0
+# github.com/edsrzf/mmap-go v1.2.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
 # github.com/egdaemon/eg v0.0.0-20261030201623-bd74787ece93
@@ -742,9 +719,6 @@ github.com/hashicorp/raft-boltdb
 # github.com/hashicorp/vault/api v1.15.0
 ## explicit; go 1.21
 github.com/hashicorp/vault/api
-# github.com/huandu/xstrings v1.4.0
-## explicit; go 1.12
-github.com/huandu/xstrings
 # github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0
 ## explicit; go 1.17
 github.com/icrowley/fake
@@ -811,25 +785,57 @@ github.com/james-lawrence/genieql/internal/userx
 github.com/james-lawrence/genieql/internal/wasidialect
 github.com/james-lawrence/genieql/internal/wasix/ffierrors
 github.com/james-lawrence/genieql/internal/wasix/ffiguest
-# github.com/james-lawrence/torrent v0.0.0-20240404141246-7571207604a7
-## explicit; go 1.18
+# github.com/james-lawrence/torrent v0.0.0-20260920183043-a66f94c3283c
+## explicit; go 1.27.0
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode
+github.com/james-lawrence/torrent/bep0006
+github.com/james-lawrence/torrent/bep0009
+github.com/james-lawrence/torrent/bep0019
 github.com/james-lawrence/torrent/btprotocol
 github.com/james-lawrence/torrent/connections
-github.com/james-lawrence/torrent/dht/v2
-github.com/james-lawrence/torrent/dht/v2/krpc
+github.com/james-lawrence/torrent/cstate
+github.com/james-lawrence/torrent/dht
+github.com/james-lawrence/torrent/dht/bep44
+github.com/james-lawrence/torrent/dht/containers
+github.com/james-lawrence/torrent/dht/int160
+github.com/james-lawrence/torrent/dht/k-nearest-nodes
+github.com/james-lawrence/torrent/dht/krpc
+github.com/james-lawrence/torrent/dht/peer-store
+github.com/james-lawrence/torrent/dht/transactions
+github.com/james-lawrence/torrent/dht/traversal
+github.com/james-lawrence/torrent/dht/traversal2
+github.com/james-lawrence/torrent/dht/types
+github.com/james-lawrence/torrent/internal/asynccompute
+github.com/james-lawrence/torrent/internal/atomicx
+github.com/james-lawrence/torrent/internal/backoffx
+github.com/james-lawrence/torrent/internal/bitmapx
+github.com/james-lawrence/torrent/internal/bytesx
+github.com/james-lawrence/torrent/internal/chansync
+github.com/james-lawrence/torrent/internal/cryptox
+github.com/james-lawrence/torrent/internal/envx
 github.com/james-lawrence/torrent/internal/errorsx
+github.com/james-lawrence/torrent/internal/fnvx
+github.com/james-lawrence/torrent/internal/iox
+github.com/james-lawrence/torrent/internal/iterx
+github.com/james-lawrence/torrent/internal/langx
+github.com/james-lawrence/torrent/internal/multiless
 github.com/james-lawrence/torrent/internal/netx
-github.com/james-lawrence/torrent/internal/x/bitmapx
-github.com/james-lawrence/torrent/internal/x/bytesx
-github.com/james-lawrence/torrent/internal/x/stringsx
+github.com/james-lawrence/torrent/internal/rendezvous
+github.com/james-lawrence/torrent/internal/slicesx
+github.com/james-lawrence/torrent/internal/slogx
+github.com/james-lawrence/torrent/internal/stmutil
+github.com/james-lawrence/torrent/internal/timex
+github.com/james-lawrence/torrent/internal/userx
 github.com/james-lawrence/torrent/iplist
+github.com/james-lawrence/torrent/logonce
 github.com/james-lawrence/torrent/metainfo
 github.com/james-lawrence/torrent/mmap_span
 github.com/james-lawrence/torrent/mse
+github.com/james-lawrence/torrent/sockets
 github.com/james-lawrence/torrent/storage
 github.com/james-lawrence/torrent/tracker
+github.com/james-lawrence/torrent/upnp
 # github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
 ## explicit
 github.com/jbenet/go-context/io
@@ -971,14 +977,9 @@ github.com/pterm/pterm/internal
 # github.com/riywo/loginshell v0.0.0-20200815045211-7d26008be1ab
 ## explicit
 github.com/riywo/loginshell
-# github.com/rogpeppe/go-internal v1.16.0
-## explicit; go 1.25
 # github.com/ryanuber/go-glob v1.0.0
 ## explicit
 github.com/ryanuber/go-glob
-# github.com/ryszard/goskiplist v0.0.0-20150312221310-2dfbae5fcf46
-## explicit
-github.com/ryszard/goskiplist/skiplist
 # github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
 ## explicit
 github.com/sean-/seed
@@ -1021,9 +1022,9 @@ github.com/xo/terminfo
 # github.com/zieckey/goini v0.0.0-20240615065340-08ee21c836fb
 ## explicit; go 1.22.4
 github.com/zieckey/goini
-# go.etcd.io/bbolt v1.3.9
-## explicit; go 1.17
-go.etcd.io/bbolt
+# go.opencensus.io v0.24.0
+## explicit; go 1.13
+go.opencensus.io
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk

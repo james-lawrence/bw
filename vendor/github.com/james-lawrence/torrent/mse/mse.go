@@ -8,18 +8,65 @@ import (
 	"crypto/rc4"
 	"crypto/sha1"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"expvar"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
+	"iter"
+	"log"
 	"math"
 	"math/big"
+	"os"
 	"strconv"
 	"sync"
 
-	"github.com/bradfitz/iter"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/internal/errorsx"
+	"github.com/james-lawrence/torrent/metainfo"
 )
+
+func StaticSecrets(skeys ...[]byte) SecretKey {
+	return func(callback func(skey []byte) []byte) []byte {
+		for _, sk := range skeys {
+			if callback(sk) == nil {
+				continue
+			}
+			return sk
+		}
+		return nil
+	}
+}
+
+func DirectoryNameSecrets(dir string) iter.Seq[int160.T] {
+	return func(yield func(int160.T) bool) {
+		err := fs.WalkDir(os.DirFS(dir), ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			decoded, err := hex.DecodeString(d.Name())
+			if err != nil {
+				// if we fail to decode the directory name thats not really an issue. just skip it.
+				return nil
+			}
+
+			if !yield(int160.FromBytes(decoded)) {
+				return fs.SkipAll
+			}
+
+			if d.IsDir() {
+				return fs.SkipDir
+			}
+
+			return nil
+		})
+		if err != nil {
+			log.Println("failed to locate torrent for encryption", err)
+		}
+	}
+}
 
 const (
 	maxPadLen = 512
@@ -134,62 +181,60 @@ func (cr *cipherWriter) Write(b []byte) (n int, err error) {
 		}
 	}()
 	cr.c.XORKeyStream(be[:], b)
-	n, err = cr.w.Write(be[:len(b)])
-	if n != len(b) {
-		// The cipher will have advanced beyond the callers stream position.
-		// We can't use the cipher anymore.
-		cr.c = nil
+	if n, err = cr.w.Write(be[:len(b)]); err != nil {
+		return n, err
 	}
+
+	if n != len(b) {
+		panic(fmt.Sprintf("problem? %d != %d", n, len(b)))
+		// // The cipher will have advanced beyond the callers stream position.
+		// // We can't use the cipher anymore.
+		// cr.c = nil
+	}
+
 	if len(be) > len(cr.b) {
 		cr.b = be
 	}
 	return
 }
 
-func newX() big.Int {
-	var X big.Int
-	X.SetBytes(func() []byte {
-		var b [20]byte
-		_, err := rand.Read(b[:])
-		if err != nil {
-			panic(err)
-		}
-		return b[:]
-	}())
+func newX() (X big.Int) {
+	X.SetBytes(int160.Random().Bytes())
 	return X
-}
-
-func paddedLeft(b []byte, _len int) []byte {
-	if len(b) == _len {
-		return b
-	}
-	ret := make([]byte, _len)
-	if n := copy(ret[_len-len(b):], b); n != len(b) {
-		panic(n)
-	}
-	return ret
 }
 
 // Calculate, and send Y, our public key.
 func (h *handshake) postY(x *big.Int) error {
-	var y big.Int
+	var (
+		y   big.Int
+		buf [96]byte
+	)
 	y.Exp(&g, x, &p)
-	return h.postWrite(paddedLeft(y.Bytes(), 96))
+	y.FillBytes(buf[:])
+	return h.postWrite(buf[:])
 }
 
-func (h *handshake) establishS() error {
+func (h *handshake) establishS(pada []byte) error {
 	x := newX()
-	h.postY(&x)
+	if err := h.postY(&x); err != nil {
+		return errorsx.Wrap(err, "failed to write Y")
+	}
+
+	if err := h.postWrite(pada); err != nil {
+		return errorsx.Wrap(err, "failed to write pada")
+	}
+
 	var b [96]byte
 	_, err := io.ReadFull(h.conn, b[:])
 	if err != nil {
-		return fmt.Errorf("error reading Y: %s", err)
+		return errorsx.Wrapf(err, "error reading Y: %d", len(pada))
 	}
 	var Y, S big.Int
 	Y.SetBytes(b[:])
 	S.Exp(&Y, &x, &p)
-	sBytes := S.Bytes()
-	copy(h.s[96-len(sBytes):96], sBytes)
+	S.FillBytes(h.s[:])
+	// sBytes := S.Bytes()
+	// copy(h.s[96-len(sBytes):96], sBytes)
 	return nil
 }
 
@@ -209,10 +254,10 @@ func newPadLen() int64 {
 type handshake struct {
 	conn   io.ReadWriter
 	s      [96]byte
-	initer bool          // Whether we're initiating or receiving.
-	skeys  SecretKeyIter // Skeys we'll accept if receiving.
-	skey   []byte        // Skey we're initiating with.
-	ia     []byte        // Initial payload. Only used by the initiator.
+	initer bool      // Whether we're initiating or receiving.
+	skeys  SecretKey // Skeys we'll accept if receiving.
+	skey   []byte    // Skey we're initiating with.
+	ia     []byte    // Initial payload. Only used by the initiator.
 	// Return the bit for the crypto method the receiver wants to use.
 	chooseMethod CryptoSelector
 	// Sent to the receiver.
@@ -287,12 +332,10 @@ func (h *handshake) postWrite(b []byte) error {
 }
 
 func xor(dst, src []byte) (ret []byte) {
-	max := len(dst)
-	if max > len(src) {
-		max = len(src)
-	}
+	max := min(len(dst), len(src))
 	ret = make([]byte, 0, max)
-	for i := range iter.N(max) {
+
+	for i := range max {
 		ret = append(ret, dst[i]^src[i])
 	}
 	return
@@ -300,22 +343,22 @@ func xor(dst, src []byte) (ret []byte) {
 
 func marshal(w io.Writer, data ...interface{}) (err error) {
 	for _, data := range data {
-		err = binary.Write(w, binary.BigEndian, data)
-		if err != nil {
-			break
+		if err = binary.Write(w, binary.BigEndian, data); err != nil {
+			return err
 		}
 	}
-	return
+
+	return nil
 }
 
 func unmarshal(r io.Reader, data ...interface{}) (err error) {
 	for _, data := range data {
-		err = binary.Read(r, binary.BigEndian, data)
-		if err != nil {
-			break
+		if err = binary.Read(r, binary.BigEndian, data); err != nil {
+			return err
 		}
 	}
-	return
+
+	return nil
 }
 
 // Looking for b at the end of a.
@@ -374,13 +417,14 @@ func (h *handshake) initerSteps() (ret io.ReadWriter, selected CryptoMethod, err
 	buf := &bytes.Buffer{}
 	padLen := uint16(newPadLen())
 	if len(h.ia) > math.MaxUint16 {
-		err = errors.New("initial payload too large")
-		return
+		return nil, selected, errors.New("initial payload too large")
 	}
+
 	err = marshal(buf, vc[:], h.cryptoProvides, padLen, zeroPad[:padLen], uint16(len(h.ia)), h.ia)
 	if err != nil {
-		return
+		return nil, selected, err
 	}
+
 	e := h.newEncrypt(true)
 	be := make([]byte, buf.Len())
 	e.XORKeyStream(be, buf.Bytes())
@@ -391,38 +435,34 @@ func (h *handshake) initerSteps() (ret io.ReadWriter, selected CryptoMethod, err
 	// Read until the all zero VC. At this point we've only read the 96 byte
 	// public key, Y. There is potentially 512 byte padding, between us and
 	// the 8 byte verification constant.
-	err = readUntil(io.LimitReader(h.conn, 520), eVC[:])
-	if err != nil {
-		if err == io.EOF {
-			err = errors.New("failed to synchronize on VC")
-		} else {
-			err = fmt.Errorf("error reading until VC: %s", err)
-		}
-		return
+	if err = readUntil(io.LimitReader(h.conn, 520), eVC[:]); err == io.EOF {
+		return nil, selected, errors.New("failed to synchronize on VC")
+	} else if err != nil {
+		return nil, selected, errorsx.Wrap(err, "error reading until VC")
 	}
 	r := newCipherReader(bC, h.conn)
 	var method CryptoMethod
 	err = unmarshal(r, &method, &padLen)
 	if err != nil {
-		return
+		return nil, selected, err
 	}
-	_, err = io.CopyN(ioutil.Discard, r, int64(padLen))
+	_, err = io.CopyN(io.Discard, r, int64(padLen))
 	if err != nil {
-		return
+		return nil, selected, err
 	}
+
 	selected = method & h.cryptoProvides
 	switch selected {
 	case CryptoMethodRC4:
-		ret = readWriter{r, &cipherWriter{e, h.conn, nil}}
+		return readWriter{r, &cipherWriter{e, h.conn, nil}}, selected, nil
 	case CryptoMethodPlaintext:
-		ret = h.conn
+		return h.conn, selected, nil
 	default:
-		err = fmt.Errorf("receiver chose unsupported method: %x", method)
+		return nil, selected, fmt.Errorf("receiver chose unsupported method: %x", method)
 	}
-	return
 }
 
-var ErrNoSecretKeyMatch = errors.New("no skey matched")
+const ErrNoSecretKeyMatch = errorsx.String("no skey matched")
 
 func (h *handshake) receiverSteps() (ret io.ReadWriter, chosen CryptoMethod, err error) {
 	// There is up to 512 bytes of padding, then the 20 byte hash.
@@ -432,23 +472,21 @@ func (h *handshake) receiverSteps() (ret io.ReadWriter, chosen CryptoMethod, err
 		return ret, chosen, err
 	}
 
-	var b [20]byte
+	var b metainfo.Hash
 	if _, err = io.ReadFull(h.conn, b[:]); err != nil {
 		return ret, chosen, err
 	}
 
-	err = ErrNoSecretKeyMatch
-	h.skeys(func(skey []byte) bool {
-		if bytes.Equal(xor(hash(req2, skey), hash(req3, h.s[:])), b[:]) {
-			h.skey = skey
-			err = nil
-			return false
+	h.skey = h.skeys(func(skey []byte) []byte {
+		if !bytes.Equal(xor(hash(req2, skey), hash(req3, h.s[:])), b[:]) {
+			return nil
 		}
-		return true
+		return skey
 	})
-	if err != nil {
-		return ret, chosen, err
+	if h.skey == nil {
+		return ret, chosen, errorsx.WithStack(ErrNoSecretKeyMatch)
 	}
+
 	r := newCipherReader(newEncrypt(true, h.s[:], h.skey), h.conn)
 	var (
 		vc       [8]byte
@@ -461,7 +499,7 @@ func (h *handshake) receiverSteps() (ret io.ReadWriter, chosen CryptoMethod, err
 	}
 	cryptoProvidesCount.Add(strconv.FormatUint(uint64(provides), 16), 1)
 	chosen = h.chooseMethod(provides)
-	if _, err = io.CopyN(ioutil.Discard, r, int64(padLen)); err != nil {
+	if _, err = io.CopyN(io.Discard, r, int64(padLen)); err != nil {
 		return ret, chosen, err
 	}
 	var lenIA uint16
@@ -510,23 +548,21 @@ func (h *handshake) Do() (ret io.ReadWriter, method CryptoMethod, err error) {
 			err = h.writeErr
 		}
 	}()
-	err = h.establishS()
-	if err != nil {
-		err = fmt.Errorf("error while establishing secret: %s", err)
-		return
-	}
+
 	pad := make([]byte, newPadLen())
-	io.ReadFull(rand.Reader, pad)
-	err = h.postWrite(pad)
-	if err != nil {
-		return
+	if _, err = io.ReadFull(rand.Reader, pad); err != nil {
+		return nil, method, errorsx.Wrap(err, "error while generating padding")
 	}
+
+	if err = h.establishS(pad); err != nil {
+		return nil, method, errorsx.Wrap(err, "error while establishing secret")
+	}
+
 	if h.initer {
-		ret, method, err = h.initerSteps()
-	} else {
-		ret, method, err = h.receiverSteps()
+		return h.initerSteps()
 	}
-	return
+
+	return h.receiverSteps()
 }
 
 func InitiateHandshake(rw io.ReadWriter, skey []byte, initialPayload []byte, cryptoProvides CryptoMethod) (ret io.ReadWriter, method CryptoMethod, err error) {
@@ -541,7 +577,7 @@ func InitiateHandshake(rw io.ReadWriter, skey []byte, initialPayload []byte, cry
 	return h.Do()
 }
 
-func ReceiveHandshake(rw io.ReadWriter, skeys SecretKeyIter, selectCrypto CryptoSelector) (ret io.ReadWriter, method CryptoMethod, err error) {
+func ReceiveHandshake(rw io.ReadWriter, skeys SecretKey, selectCrypto CryptoSelector) (ret io.ReadWriter, method CryptoMethod, err error) {
 	h := handshake{
 		conn:         rw,
 		initer:       false,
@@ -551,9 +587,9 @@ func ReceiveHandshake(rw io.ReadWriter, skeys SecretKeyIter, selectCrypto Crypto
 	return h.Do()
 }
 
-// A function that given a function, calls it with secret keys until it
-// returns false or exhausted.
-type SecretKeyIter func(callback func(skey []byte) (more bool))
+// A function that returns whether a specific info hash is allowed to
+// be used for encryption.
+type SecretKey func(func(skey []byte) []byte) []byte
 
 func DefaultCryptoSelector(provided CryptoMethod) CryptoMethod {
 	// We prefer plaintext for performance reasons.

@@ -41,3 +41,33 @@ func ConvertToSliceOfAny[T any](ts []T) (ret []any) {
 	}
 	return
 }
+
+func ReverseSlice[T any](slice []T) {
+	for i := 0; i < len(slice)/2; i++ {
+		slice[i], slice[len(slice)-1-i] = slice[len(slice)-1-i], slice[i]
+	}
+}
+
+func SliceTake[T any](n int, slice []T) []T {
+	return slice[:Min(n, len(slice))]
+}
+
+func SliceDrop[T any](n int, slice []T) []T {
+	return slice[Min(n, len(slice)):]
+}
+
+func SliceGet[T any, I constraints.Integer](slice []T, index I) (ret Option[T]) {
+	if int(index) < len(slice) {
+		ret = Some(slice[index])
+	}
+	return
+}
+
+// Surely you should just pass iterator functions around instead. Go sux.
+func SliceMap[From, To any](froms []From, convert func(From) To) []To {
+	tos := make([]To, 0, len(froms))
+	for _, from := range froms {
+		tos = append(tos, convert(from))
+	}
+	return tos
+}

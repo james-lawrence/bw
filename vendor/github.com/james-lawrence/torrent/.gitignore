@@ -1,4 +1,7 @@
+.eg.cache
+.eg.workload
 .torrent.bolt.db
 seeds
 vendor
 *.iso
+*.patch

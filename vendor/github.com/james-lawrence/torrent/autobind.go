@@ -1,55 +1,88 @@
 package torrent
 
 import (
-	"context"
-	"net"
+	"cmp"
+	"errors"
+	"slices"
 
-	"github.com/pkg/errors"
+	"github.com/james-lawrence/torrent/dht"
+	"github.com/james-lawrence/torrent/internal/errorsx"
+	"github.com/james-lawrence/torrent/internal/langx"
+	"github.com/james-lawrence/torrent/internal/netx"
+	"github.com/james-lawrence/torrent/sockets"
 )
-
-type firewallCallback func(net.Addr) bool
-
-type dialer interface {
-	Dial(ctx context.Context, addr string) (net.Conn, error)
-}
-
-type socket interface {
-	net.Listener
-	dialer
-}
 
 // Binder binds network sockets to the client.
 type Binder interface {
 	// Bind to the given client if err is nil.
 	Bind(cl *Client, err error) (*Client, error)
+	Close() error
+}
+
+type BinderOption func(v *binder)
+
+// EnableDHT enables DHT.
+func BinderOptionDHT(d *dht.Server) BinderOption {
+	return func(v *binder) {
+		v.dht = d
+	}
 }
 
 // NewSocketsBind binds a set of sockets to the client.
 // it bypasses any disable checks (tcp,udp, ip4/6) from the configuration.
-func NewSocketsBind(s ...socket) Binder {
-	return socketsBind(s)
+func NewSocketsBind(s ...sockets.Socket) binder {
+	return binder{sockets: s}
 }
 
-type socketsBind []socket
+type binder struct {
+	dht     *dht.Server
+	sockets []sockets.Socket
+}
+
+func (t binder) Options(opts ...BinderOption) binder {
+	return langx.Clone(t, opts...)
+}
+
+func cmpSockets(a, b sockets.Socket) int {
+	ap, _ := netx.AddrPort(a.Addr())
+	bp, _ := netx.AddrPort(b.Addr())
+	return cmp.Compare(netx.AddrPortPriority(ap), netx.AddrPortPriority(bp))
+}
 
 // Bind the client to available networks. consumes the result of NewClient.
-func (t socketsBind) Bind(cl *Client, err error) (*Client, error) {
-
+func (t binder) Bind(cl *Client, err error) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
 
-	if len(t) == 0 {
+	slices.SortStableFunc(t.sockets, cmpSockets)
+
+	if len(t.sockets) == 0 {
 		cl.Close()
-		return nil, errors.Errorf("at least one socket is required")
+		return nil, errorsx.Errorf("at least one socket is required")
 	}
 
-	for _, s := range t {
+	for _, s := range t.sockets {
 		if err = cl.Bind(s); err != nil {
 			cl.Close()
 			return nil, err
 		}
+
+		if t.dht != nil {
+			if err = cl.BindDHT(t.dht, s); err != nil {
+				cl.Close()
+				return nil, err
+			}
+		}
 	}
 
 	return cl, nil
+}
+
+func (t binder) Close() (err error) {
+	for _, s := range t.sockets {
+		err = errors.Join(err, s.Close())
+	}
+
+	return err
 }

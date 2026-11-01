@@ -1,0 +1,90 @@
+package torrent
+
+import (
+	"context"
+	"errors"
+	"iter"
+
+	"github.com/james-lawrence/torrent/dht"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/internal/errorsx"
+	"github.com/james-lawrence/torrent/internal/iterx"
+)
+
+// traceDHTOutcome classifies the result of a dht announce without emitting the error text,
+// dht errors can carry the addresses of the remote nodes.
+func traceDHTOutcome(err error) string {
+	switch {
+	case err == nil:
+		return "ok"
+	case errors.Is(err, dht.ErrDHTNoInitialNodes):
+		return "no initial nodes"
+	case errors.Is(err, context.DeadlineExceeded):
+		return "deadline exceeded"
+	case errors.Is(err, context.Canceled):
+		return "canceled"
+	default:
+		return "failed"
+	}
+}
+
+func DHTAnnounceOnce(ctx context.Context, d *dht.Server, id int160.T) (err error) {
+	// log.Println("dht announced initiated", id, d.DynamicAddrPort())
+	// defer log.Println("dht announced completed", id, d.DynamicAddrPort())
+	announced, err := d.AnnounceTraversal(ctx, id, dht.AnnouncePeer(d, false))
+	if err != nil {
+		return errorsx.Wrapf(err, "dht failed to announce: %s", id)
+	}
+	defer announced.Close()
+
+	for {
+		select {
+		case pv := <-announced.Peers:
+			_ = pv
+			// log.Println("announce dht peers", id, len(pv.Peers), pv.Peers[:min(len(pv.Peers), 5)])
+			continue
+		case <-announced.Finished():
+			// log.Println("announce dht finished", id)
+			return nil
+		case <-ctx.Done():
+			return context.Cause(ctx)
+		}
+	}
+}
+
+type announceseq struct {
+	announced *dht.Announce
+	failed    error
+}
+
+func (t announceseq) Each(ctx context.Context) iter.Seq[dht.PeersValues] {
+	return func(yield func(dht.PeersValues) bool) {
+		defer t.announced.Close()
+		for {
+			select {
+			case pv := <-t.announced.Peers:
+				if !yield(pv) {
+					return
+				}
+			case <-t.announced.Finished():
+				return
+			case <-ctx.Done():
+				t.failed = context.Cause(ctx)
+				return
+			}
+		}
+	}
+}
+
+func (t *announceseq) Err() error {
+	return t.failed
+}
+
+func DHTAnnounce(ctx context.Context, d *dht.Server, id int160.T) (iterx.Seq[dht.PeersValues], error) {
+	announced, err := d.AnnounceTraversal(ctx, id, dht.AnnouncePeer(d, false))
+	if err != nil {
+		return nil, errorsx.Wrapf(err, "dht failed to announce: %s", id)
+	}
+
+	return &announceseq{announced: announced}, nil
+}

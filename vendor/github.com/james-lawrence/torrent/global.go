@@ -4,24 +4,16 @@ import (
 	"expvar"
 
 	pp "github.com/james-lawrence/torrent/btprotocol"
+	"github.com/james-lawrence/torrent/internal/bytesx"
 )
 
 const (
-	maxRequests      = 250    // Maximum pending requests we allow peers to send us.
-	defaultChunkSize = 0x4000 // 16KiB
+	defaultMaxEstablishedConns = 200
+	defaultChunkSize           = 16 * bytesx.KiB
+	maxRequestsGrace           = 5 // grace requests above the limit before we start rejecting
 )
 
-// These are our extended message IDs. Peers will use these values to
-// select which extension a message is intended for.
-const (
-	metadataExtendedID = iota + 1 // 0 is reserved for deleting keys
-	pexExtendedID
-)
-
-// PeerExtensionBits define what extensions are available.
-type PeerExtensionBits = pp.ExtensionBits
-
-func defaultPeerExtensionBytes() PeerExtensionBits {
+func defaultPeerExtensionBytes() pp.ExtensionBits {
 	return pp.NewExtensionBits(pp.ExtensionBitDHT, pp.ExtensionBitExtended, pp.ExtensionBitFast)
 }
 
@@ -30,26 +22,7 @@ func defaultPeerExtensionBytes() PeerExtensionBits {
 var (
 	metrics = expvar.NewMap("torrent")
 
-	peersAddedBySource = expvar.NewMap("peersAddedBySource")
-
-	pieceHashedCorrect    = expvar.NewInt("pieceHashedCorrect")
-	pieceHashedNotCorrect = expvar.NewInt("pieceHashedNotCorrect")
-
 	completedHandshakeConnectionFlags = expvar.NewMap("completedHandshakeConnectionFlags")
-	// Count of connections to peer with same client ID.
-	connsToSelf        = expvar.NewInt("connsToSelf")
-	receivedKeepalives = expvar.NewInt("receivedKeepalives")
-	postedKeepalives   = expvar.NewInt("postedKeepalives")
-	// Requests received for pieces we don't have.
-	requestsReceivedForMissingPieces = expvar.NewInt("requestsReceivedForMissingPieces")
-	requestedChunkLengths            = expvar.NewMap("requestedChunkLengths")
 
-	messageTypesReceived = expvar.NewMap("messageTypesReceived")
-
-	// Track the effectiveness of Torrent.connPieceInclinationPool.
-	pieceInclinationsReused = expvar.NewInt("pieceInclinationsReused")
-	pieceInclinationsNew    = expvar.NewInt("pieceInclinationsNew")
-	pieceInclinationsPut    = expvar.NewInt("pieceInclinationsPut")
-
-	concurrentChunkWrites = expvar.NewInt("torrentConcurrentChunkWrites")
+	requestedChunkLengths = expvar.NewMap("requestedChunkLengths")
 )

@@ -1,12 +1,12 @@
 package metainfo
 
 import (
-	"bytes"
 	"io"
 	"os"
 	"time"
 
 	"github.com/james-lawrence/torrent/bencode"
+	"github.com/james-lawrence/torrent/dht/int160"
 )
 
 type MetaInfo struct {
@@ -48,8 +48,12 @@ func (mi MetaInfo) UnmarshalInfo() (info Info, err error) {
 	return
 }
 
+func (mi MetaInfo) ID() int160.T {
+	return int160.New([]byte(mi.InfoBytes))
+}
+
 func (mi MetaInfo) HashInfoBytes() (infoHash Hash) {
-	return HashBytes(mi.InfoBytes)
+	return NewHashFromBytes(mi.InfoBytes)
 }
 
 // Encode to bencoded form.
@@ -96,14 +100,6 @@ func (mi *MetaInfo) NodeList() (ret []string) {
 }
 
 // Encode metainfo to store.
-func Encode(mi MetaInfo) (encoded []byte, err error) {
-	var (
-		buf = bytes.NewBufferString("")
-	)
-
-	if err = bencode.NewEncoder(buf).Encode(mi); err != nil {
-		return encoded, err
-	}
-
-	return buf.Bytes(), nil
+func Encode(mi any) (encoded []byte, err error) {
+	return bencode.Marshal(mi)
 }

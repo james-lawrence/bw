@@ -35,7 +35,6 @@ func Torrent(ctx Context) (tc storage.TorrentConfig, err error) {
 
 	opts := []storage.TorrentOption{
 		storage.TorrentOptionBind(b),
-		storage.TorrentOptionDHTPeers(ctx.Cluster),
 		storage.TorrentOptionDataDir(filepath.Join(ctx.Config.Root, bw.DirTorrents)),
 	}
 

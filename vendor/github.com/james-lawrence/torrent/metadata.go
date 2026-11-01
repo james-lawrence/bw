@@ -1,20 +1,43 @@
 package torrent
 
 import (
+	"io"
+	"math/rand/v2"
+	"os"
+	"strings"
 	"time"
 
-	"github.com/anacrolix/missinggo"
 	"github.com/james-lawrence/torrent/bencode"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/internal/bytesx"
+	"github.com/james-lawrence/torrent/internal/errorsx"
+	"github.com/james-lawrence/torrent/internal/slicesx"
 	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/james-lawrence/torrent/storage"
-	"github.com/pkg/errors"
+	"golang.org/x/exp/constraints"
 )
 
 // Option for the torrent.
 type Option func(*Metadata)
 
+// OptionTrackers add the trackers to the torrent.
+func OptionTrackers(trackers ...string) Option {
+	trackers = slicesx.Filter(func(v string) bool { return strings.TrimSpace(v) != "" }, trackers...)
+	return func(t *Metadata) {
+		t.Trackers = append(t.Trackers, trackers...)
+	}
+}
+
+func OptionPublicTrackers(private bool, trackers ...string) Option {
+	if private {
+		return OptionNoop
+	}
+
+	return OptionTrackers(trackers...)
+}
+
 // OptionTrackers set the trackers for the torrent.
-func OptionTrackers(trackers [][]string) Option {
+func OptionResetTrackers(trackers ...string) Option {
 	return func(t *Metadata) {
 		t.Trackers = trackers
 	}
@@ -42,9 +65,9 @@ func OptionInfo(i []byte) Option {
 }
 
 // OptionChunk sets the size of the chunks to use for outbound requests
-func OptionChunk(s int) Option {
+func OptionChunk[T constraints.Integer](s T) Option {
 	return func(t *Metadata) {
-		t.ChunkSize = s
+		t.ChunkSize = uint64(s)
 	}
 }
 
@@ -62,12 +85,15 @@ func OptionWebseeds(seeds []string) Option {
 	}
 }
 
+// OptionNoop does nothing, stand in during configurations.
+func OptionNoop(t *Metadata) {}
+
 // Metadata specifies the metadata of a torrent for adding to a client.
 // There are helpers for magnet URIs and torrent metainfo files.
 type Metadata struct {
 	// The tiered tracker URIs.
-	Trackers  [][]string
-	InfoHash  metainfo.Hash
+	Trackers  []string
+	ID        int160.T
 	InfoBytes []byte
 	// The name to use if the Name field from the Info isn't available.
 	DisplayName string
@@ -75,8 +101,18 @@ type Metadata struct {
 	DHTNodes    []string
 	// The chunk size to use for outbound requests. Defaults to 16KiB if not
 	// set.
-	ChunkSize int
+	ChunkSize uint64
 	Storage   storage.ClientImpl
+}
+
+// grabs random tracker from available.
+func (t Metadata) Announce() string {
+	max := len(t.Trackers)
+	if max == 0 {
+		return ""
+	}
+
+	return t.Trackers[rand.IntN(max)]
 }
 
 // Merge Metadata options into the current metadata.
@@ -88,70 +124,85 @@ func (t Metadata) Merge(options ...Option) Metadata {
 	return t
 }
 
-// New create a torrent from the metainfo.MetaInfo and any additional options.
+// New create a torrent from just a infohash and any additional options.
 func New(info metainfo.Hash, options ...Option) (t Metadata, err error) {
 	t = Metadata{
-		InfoHash: info,
+		ID:        int160.FromByteArray(info),
+		ChunkSize: defaultChunkSize,
 	}.Merge(options...)
 
 	return t, nil
 }
 
+// NewFromMetaInfoFile loads torrent info stored in a file.
+func NewFromInfoFile(path string, options ...Option) (t Metadata, err error) {
+	src, err := os.Open(path)
+	if err != nil {
+		return t, errorsx.Wrapf(err, "unable to load info from %s", path)
+	}
+	defer src.Close()
+
+	tinfo, err := metainfo.NewInfoFromReader(src)
+	if err != nil {
+		return t, errorsx.Wrapf(err, "unable to load info from %s", path)
+	}
+
+	t, err = NewFromInfo(tinfo, options...)
+	return t, errorsx.Wrapf(err, "unable to load info from %s", path)
+}
+
 // NewFromMetaInfoFile loads torrent metadata stored in a file.
 func NewFromMetaInfoFile(path string, options ...Option) (t Metadata, err error) {
+	src, err := os.Open(path)
+	if err != nil {
+		return t, errorsx.Wrapf(err, "unable to load metadata from %s", path)
+	}
+	defer src.Close()
+
+	t, err = NewFromMetaInfoReader(src)
+	return t, errorsx.Wrapf(err, "unable to load metadata from %s", path)
+}
+
+func NewFromMetaInfoReader(src io.Reader, options ...Option) (t Metadata, err error) {
 	var (
 		mi *metainfo.MetaInfo
 	)
 
-	if mi, err = metainfo.LoadFromFile(path); err != nil {
-		return t, err
+	if mi, err = metainfo.Load(src); err != nil {
+		return t, errorsx.Wrap(err, "unable to load metadata")
 	}
 
-	return NewFromMetaInfo(mi, options...)
+	if t, err = NewFromMetaInfo(mi, options...); err != nil {
+		return t, errorsx.Wrapf(err, "unable to load metadata")
+	}
+
+	return t, nil
 }
 
 // NewFromFile convience method to create a torrent directly from a file.
 func NewFromFile(path string, options ...Option) (t Metadata, err error) {
 	var (
 		encoded []byte
-		info    = metainfo.Info{PieceLength: missinggo.MiB}
 	)
 
-	if err = info.BuildFromFilePath(path); err != nil {
-		return t, errors.WithStack(err)
+	info, err := metainfo.NewFromPath(path, metainfo.OptionPieceLength(bytesx.MiB))
+	if err != nil {
+		return t, errorsx.Wrapf(err, "unable to load metadata from %s", path)
 	}
 
 	if encoded, err = bencode.Marshal(info); err != nil {
-		return t, errors.WithStack(err)
+		return t, errorsx.WithStack(err)
 	}
 
-	if t, err = New(metainfo.HashBytes(encoded), OptionInfo(encoded), OptionDisplayName(info.Name)); err != nil {
-		return t, errors.WithStack(err)
+	if t, err = New(metainfo.NewHashFromBytes(encoded), OptionInfo(encoded), OptionDisplayName(info.Name)); err != nil {
+		return t, errorsx.WithStack(err)
 	}
 
 	return t.Merge(options...), nil
 }
 
-// NewFromMagnet creates a torrent from a magnet uri.
-func NewFromMagnet(uri string) (t Metadata, err error) {
-	var (
-		m metainfo.Magnet
-	)
-
-	if m, err = metainfo.ParseMagnetURI(uri); err != nil {
-		return t, errors.WithStack(err)
-	}
-
-	return New(
-		m.InfoHash,
-		OptionDisplayName(m.DisplayName),
-		OptionTrackers([][]string{m.Trackers}),
-		OptionWebseeds(m.Params["ws"]),
-	)
-}
-
 // NewFromInfo creates a torrent from metainfo.Info
-func NewFromInfo(i metainfo.Info, options ...Option) (t Metadata, err error) {
+func NewFromInfo(i *metainfo.Info, options ...Option) (t Metadata, err error) {
 	var (
 		encoded []byte
 	)
@@ -161,8 +212,32 @@ func NewFromInfo(i metainfo.Info, options ...Option) (t Metadata, err error) {
 	}
 
 	return New(
-		metainfo.HashBytes(encoded),
-		append(options, OptionInfo(encoded))...,
+		metainfo.NewHashFromBytes(encoded),
+		append(options, OptionInfo(encoded), OptionDisplayName(i.Name))...,
+	)
+}
+
+// NewFromMagnet creates a torrent from a magnet uri.
+func NewFromMagnet(uri string, options ...Option) (t Metadata, err error) {
+	var (
+		m metainfo.Magnet
+	)
+
+	if m, err = metainfo.ParseMagnetURI(uri); err != nil {
+		return t, errorsx.WithStack(err)
+	}
+
+	options = append([]Option{
+		OptionDisplayName(m.DisplayName),
+		OptionTrackers(m.Trackers...),
+		OptionWebseeds(m.Params["ws"]),
+	},
+		options...,
+	)
+
+	return New(
+		m.InfoHash,
+		options...,
 	)
 }
 
@@ -176,10 +251,19 @@ func NewFromMetaInfo(mi *metainfo.MetaInfo, options ...Option) (t Metadata, err 
 		return t, err
 	}
 
+	trackers := make([]string, 0, 128)
+	for _, add := range mi.UpvertedAnnounceList() {
+		trackers = append(trackers, add...)
+	}
+
+	// handles weird bugs where info files have duplicate trackers.
+	// this isnt a bug in the library but in applications.
+	trackers = slicesx.Unique(strings.Compare, trackers...)
+
 	options = append([]Option{
 		OptionInfo(mi.InfoBytes),
 		OptionDisplayName(info.Name),
-		OptionTrackers(mi.UpvertedAnnounceList()),
+		OptionTrackers(trackers...),
 		OptionWebseeds(mi.UrlList),
 		OptionNodes(mi.NodeList()...),
 	},
@@ -195,8 +279,16 @@ func NewFromMetaInfo(mi *metainfo.MetaInfo, options ...Option) (t Metadata, err 
 // Metainfo generate metainfo from the metadata.
 func (t Metadata) Metainfo() metainfo.MetaInfo {
 	return metainfo.MetaInfo{
-		AnnounceList: make([][]string, 0),
 		InfoBytes:    t.InfoBytes,
 		CreationDate: time.Now().Unix(),
+		AnnounceList: metainfo.AnnounceList([][]string{t.Trackers}),
+	}
+}
+
+func NewMagnet(md Metadata) metainfo.Magnet {
+	return metainfo.Magnet{
+		DisplayName: md.DisplayName,
+		InfoHash:    md.ID.AsByteArray(),
+		Trackers:    md.Trackers,
 	}
 }

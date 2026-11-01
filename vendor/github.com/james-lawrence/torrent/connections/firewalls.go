@@ -1,11 +1,14 @@
 package connections
 
 import (
+	"encoding/binary"
 	"net"
+	"net/netip"
+	"sync"
 	"time"
 
 	"github.com/bits-and-blooms/bloom/v3"
-	"github.com/pkg/errors"
+	"github.com/james-lawrence/torrent/internal/errorsx"
 )
 
 // Firewall used to prevent connections.
@@ -22,6 +25,7 @@ type FirewallStateful interface {
 // NewBloomBanIP bans an IP address by adding to a bloom filter.
 func NewBloomBanIP(d time.Duration) *BloomBanIP {
 	return (&BloomBanIP{
+		m:        &sync.Mutex{},
 		duration: d,
 		banned:   bloom.NewWithEstimates(10000, 0.5),
 	}).reset()
@@ -30,26 +34,32 @@ func NewBloomBanIP(d time.Duration) *BloomBanIP {
 // BloomBanIP bans an IP address by adding it to a bloom filter.
 // BloomBanIP is stateful, and will track banned connections using a bloom filter.
 type BloomBanIP struct {
+	m           *sync.Mutex
 	duration    time.Duration
 	banned      *bloom.BloomFilter
 	bannedReset time.Time
 }
 
 func (t *BloomBanIP) reset() *BloomBanIP {
+	if time.Now().Before(t.bannedReset) {
+		return t
+	}
+
+	t.m.Lock()
+	defer t.m.Unlock()
+
 	t.banned.ClearAll()
 	t.bannedReset = time.Now().Add(t.duration)
 
 	return t
 }
 
-// Blocked prevents connections from IPv6 addresses.
+// Blocked prevents banned connections from connecting for any reason until the timeout passes
 func (t *BloomBanIP) Blocked(ip net.IP, p int) error {
-	if t.bannedReset.Before(time.Now()) {
-		t.reset()
-	}
+	t.reset()
 
-	if t.banned.Test(maskLower8Bits(ip)) {
-		return errors.Errorf("ip %s is banned", ip)
+	if t.banned.Test(bloomkey(ip, p)) {
+		return errorsx.Errorf("ip %s is banned", ip)
 	}
 
 	return nil
@@ -57,11 +67,39 @@ func (t *BloomBanIP) Blocked(ip net.IP, p int) error {
 
 // Inhibit ban an IP address within the smallest 8 bit range.
 func (t *BloomBanIP) Inhibit(ip net.IP, port int, cause error) {
-	if t.bannedReset.Before(time.Now()) {
-		t.reset()
+	t.reset()
+
+	t.banned.Add(bloomkey(ip, port))
+}
+
+// bloomkey derives the key an address is banned under. loopback addresses are
+// keyed by address and port: every peer on a loopback network shares a block,
+// and frequently the address itself, so banning the block would take out every
+// other local peer along with the offender. private addresses are keyed by the
+// exact address, anything else by the smallest 8 bit range.
+//
+// Blocked and Inhibit have to derive the key the same way, otherwise an
+// address is banned under one key and looked up under another.
+func bloomkey(ip net.IP, port int) []byte {
+	v16 := ip.To16()
+	if v16 == nil {
+		return maskLower8Bits(ip)
 	}
 
-	t.banned.Add(maskLower8Bits(ip))
+	// normalize before keying: the 4 byte and 4in6 forms of an address name
+	// the same peer, but they mask to different byte slices and a 4in6
+	// address reports neither loopback nor private.
+	addr := netip.AddrFrom16([16]byte(v16)).Unmap()
+	normalized := net.IP(addr.AsSlice())
+
+	switch {
+	case addr.IsLoopback():
+		return binary.BigEndian.AppendUint16(normalized, uint16(port))
+	case addr.IsPrivate():
+		return normalized
+	default:
+		return maskLower8Bits(normalized)
+	}
 }
 
 // BanIPv6 ban IPv6 addresses
@@ -70,7 +108,7 @@ type BanIPv6 struct{}
 // Blocked prevents connections from IPv6 addresses.
 func (BanIPv6) Blocked(ip net.IP, p int) error {
 	if len(ip) == net.IPv6len && ip.To4() == nil {
-		return errors.New("ipv6 disabled")
+		return errorsx.New("ipv6 disabled")
 	}
 
 	return nil
@@ -82,11 +120,11 @@ type BanIPv4 struct{}
 // Blocked prevents connections from IPv4 addresses.
 func (BanIPv4) Blocked(ip net.IP, port int) error {
 	if ip.To4() != nil {
-		return errors.New("ipv4 peers disabled")
+		return errorsx.New("ipv4 peers disabled")
 	}
 
 	if len(ip) == net.IPv4len {
-		return errors.New("ipv4 disabled")
+		return errorsx.New("ipv4 disabled")
 	}
 
 	return nil
@@ -95,10 +133,20 @@ func (BanIPv4) Blocked(ip net.IP, port int) error {
 // BanInvalidPort blocks connections with invalid port values.
 type BanInvalidPort struct{}
 
-// Blocked prevents connections from ipv4 addresses.
 func (BanInvalidPort) Blocked(ip net.IP, port int) error {
 	if port <= 0 {
-		return errors.New("invalid port")
+		return errorsx.New("invalid port")
+	}
+
+	return nil
+}
+
+type Private struct{}
+
+func (t Private) Blocked(ip net.IP, port int) error {
+	addr := netip.AddrFrom16([16]byte(ip.To16()))
+	if !addr.IsPrivate() {
+		return errorsx.Errorf("public network %s - %s", ip, addr)
 	}
 
 	return nil

@@ -2,19 +2,85 @@ package tracker
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
-	"net/http"
+	"math"
+	"net"
 	"net/url"
+	"time"
 
-	"github.com/james-lawrence/torrent/dht/v2/krpc"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/dht/krpc"
+	"github.com/james-lawrence/torrent/internal/langx"
+	"github.com/james-lawrence/torrent/internal/netx"
 )
+
+// https://www.bittorrent.org/beps/bep_0015.html
+
+const (
+	None      AnnounceEvent = iota
+	Completed               // The local peer just completed the torrent.
+	Started                 // The local peer has just resumed this torrent.
+	Stopped                 // The local peer is leaving the swarm.
+)
+
+type AnnounceOption func(*AnnounceRequest)
+
+func AnnounceOptionKey(ar *AnnounceRequest) {
+	ar.Key = int32(binary.BigEndian.Uint32(ar.PeerId[16:20]))
+}
+
+func AnnounceOptionUploaded(n int64) AnnounceOption {
+	return func(ar *AnnounceRequest) {
+		ar.Uploaded = n
+	}
+}
+
+func AnnounceOptionDownloaded(n int64) AnnounceOption {
+	return func(ar *AnnounceRequest) {
+		ar.Downloaded = n
+	}
+}
+
+func AnnounceOptionRemaining(n int64) AnnounceOption {
+	return func(ar *AnnounceRequest) {
+		ar.Left = n
+	}
+}
+
+func AnnounceOptionEventStarted(ar *AnnounceRequest) {
+	ar.Event = Started
+}
+
+func AnnounceOptionEventStopped(ar *AnnounceRequest) {
+	ar.Event = Stopped
+}
+
+func AnnounceOptionEventCompleted(ar *AnnounceRequest) {
+	ar.Event = Completed
+}
+
+func AnnounceOptionSeeding(ar *AnnounceRequest) {
+	ar.Left = 0
+}
+
+func NewAccounceRequest(id int160.T, port uint16, hash int160.T, options ...AnnounceOption) AnnounceRequest {
+	return langx.Clone(AnnounceRequest{
+		PeerId:   int160.ByteArray(id),
+		Port:     uint16(port),
+		InfoHash: int160.ByteArray(hash),
+		Event:    None,
+		Left:     math.MaxInt64,
+		NumWant:  -1,
+	}, options...)
+}
 
 // Marshalled as binary by the UDP client, so be careful making changes.
 type AnnounceRequest struct {
 	InfoHash   [20]byte
 	PeerId     [20]byte
 	Downloaded int64
-	Left       int64 // If less than 0, math.MaxInt64 will be used for HTTP trackers instead.
+	Left       int64 // math.MaxInt64 will be used by default
 	Uploaded   int64
 	// Apparently this is optional. None can be used for announces done at
 	// regular intervals.
@@ -39,44 +105,43 @@ func (e AnnounceEvent) String() string {
 	return []string{"empty", "completed", "started", "stopped"}[e]
 }
 
-const (
-	None      AnnounceEvent = iota
-	Completed               // The local peer just completed the torrent.
-	Started                 // The local peer has just resumed this torrent.
-	Stopped                 // The local peer is leaving the swarm.
-)
-
 var (
 	ErrBadScheme = errors.New("unknown scheme")
 )
 
 type Announce struct {
 	TrackerUrl string
-	Request    AnnounceRequest
-	HostHeader string
-	HTTPProxy  func(*http.Request) (*url.URL, error)
-	ServerName string
-	UserAgent  string
-	UdpNetwork string
+	// UdpNetwork string
+	UserAgent string
 	// If the port is zero, it's assumed to be the same as the Request.Port.
 	ClientIp4 krpc.NodeAddr
 	// If the port is zero, it's assumed to be the same as the Request.Port.
 	ClientIp6 krpc.NodeAddr
-	Context   context.Context
+	Dialer    netx.Dialer
 }
 
-func (me Announce) Do() (res AnnounceResponse, err error) {
+func (me Announce) ForTracker(uri string) Announce {
+	me.TrackerUrl = uri
+	return me
+}
+
+func (me Announce) Do(ctx context.Context, req AnnounceRequest) (res AnnounceResponse, err error) {
+	if me.Dialer == nil {
+		me.Dialer = &net.Dialer{
+			Timeout: 15 * time.Second,
+		}
+	}
+
 	_url, err := url.Parse(me.TrackerUrl)
 	if err != nil {
-		return
+		return res, err
 	}
 	switch _url.Scheme {
 	case "http", "https":
-		return announceHTTP(me, _url)
+		return announceHTTP(ctx, _url, req, me)
 	case "udp", "udp4", "udp6":
-		return announceUDP(me, _url)
+		return announceUDP(ctx, _url, req, me)
 	default:
-		err = ErrBadScheme
-		return
+		return res, ErrBadScheme
 	}
 }

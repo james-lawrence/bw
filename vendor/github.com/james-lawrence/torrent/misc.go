@@ -3,15 +3,15 @@ package torrent
 import (
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"net"
 	"time"
 
-	"github.com/anacrolix/missinggo/v2"
-	"golang.org/x/time/rate"
-
-	"github.com/james-lawrence/torrent/metainfo"
 	pp "github.com/james-lawrence/torrent/btprotocol"
+	"github.com/james-lawrence/torrent/internal/bytesx"
+	"github.com/james-lawrence/torrent/internal/netx"
+	"github.com/james-lawrence/torrent/metainfo"
 )
 
 type chunkSpec struct {
@@ -22,8 +22,11 @@ type request struct {
 	Digest   uint64
 	Index    pp.Integer
 	Reserved time.Time
-	Priority int
 	chunkSpec
+}
+
+func (r request) String() string {
+	return fmt.Sprintf("r(%d,%d,%d)", r.Index, r.Begin, r.Length)
 }
 
 func (r request) rDigest(i, b, l uint32) uint64 {
@@ -34,10 +37,6 @@ func (r request) rDigest(i, b, l uint32) uint64 {
 	digest := fnv.New64a()
 	digest.Write(bs)
 	return digest.Sum64()
-}
-
-func (r request) digest() uint64 {
-	return r.rDigest(uint32(r.Index), uint32(r.Begin), uint32(r.Length))
 }
 
 func (r request) ToMsg(mt pp.MessageType) pp.Message {
@@ -57,16 +56,6 @@ func newRequest(index, begin, length pp.Integer) request {
 	}
 }
 
-func newRequest2(index, begin, length pp.Integer, prio int) request {
-	return request{
-		Digest:    request{}.rDigest(uint32(index), uint32(begin), uint32(length)),
-		Index:     index,
-		Priority:  prio,
-		chunkSpec: chunkSpec{begin, length},
-		Reserved:  time.Now(),
-	}
-}
-
 func newRequestFromMessage(msg *pp.Message) request {
 	switch msg.Type {
 	case pp.Request, pp.Cancel, pp.Reject:
@@ -80,11 +69,7 @@ func newRequestFromMessage(msg *pp.Message) request {
 
 // The size in bytes of a metadata extension piece.
 func metadataPieceSize(totalSize int, piece int) int {
-	ret := totalSize - piece*(1<<14)
-	if ret > 1<<14 {
-		ret = 1 << 14
-	}
-	return ret
+	return min(totalSize-piece*(16*bytesx.KiB), 16*bytesx.KiB)
 }
 
 // Return the request that would include the given offset into the torrent data.
@@ -111,14 +96,6 @@ func torrentOffsetRequest(torrentLength, pieceSize, chunkSize, offset int64) (
 	return
 }
 
-func torrentRequestOffset(torrentLength, pieceSize int64, r request) (off int64) {
-	off = int64(r.Index)*pieceSize + int64(r.Begin)
-	if off < 0 || off >= torrentLength {
-		panic("invalid request")
-	}
-	return
-}
-
 func validateInfo(info *metainfo.Info) error {
 	if len(info.Pieces)%20 != 0 {
 		return errors.New("pieces has invalid length")
@@ -128,7 +105,7 @@ func validateInfo(info *metainfo.Info) error {
 			return errors.New("zero piece length")
 		}
 	} else {
-		if int((info.TotalLength()+info.PieceLength-1)/info.PieceLength) != info.NumPieces() {
+		if uint64((info.TotalLength()+info.PieceLength-1)/info.PieceLength) != info.NumPieces() {
 			return errors.New("piece count and file lengths are at odds")
 		}
 	}
@@ -143,54 +120,10 @@ func chunkIndexSpec(index pp.Integer, pieceLength, chunkSize pp.Integer) chunkSp
 	return ret
 }
 
-func connLessTrusted(l, r *connection) bool {
-	return l.trust().Less(r.trust())
-}
-
 func connIsIpv6(nc interface {
 	LocalAddr() net.Addr
 }) bool {
 	ra := nc.LocalAddr()
-	rip := missinggo.AddrIP(ra)
+	rip := netx.NetIPOrNil(ra)
 	return rip.To4() == nil && rip.To16() != nil
 }
-
-func clamp(min, value, max int64) int64 {
-	if min > max {
-		panic("harumph")
-	}
-	if value < min {
-		value = min
-	}
-	if value > max {
-		value = max
-	}
-	return value
-}
-
-func max(as ...int64) int64 {
-	ret := as[0]
-	for _, a := range as[1:] {
-		if a > ret {
-			ret = a
-		}
-	}
-	return ret
-}
-
-func min(as ...int64) int64 {
-	ret := as[0]
-	for _, a := range as[1:] {
-		if a < ret {
-			ret = a
-		}
-	}
-	return ret
-}
-
-var unlimited = rate.NewLimiter(rate.Inf, 0)
-
-type (
-	pieceIndex = int
-	IpPort     = missinggo.IpPort
-)

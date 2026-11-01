@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"io"
 
+	"github.com/james-lawrence/torrent/internal/errorsx"
 	"github.com/james-lawrence/torrent/mse"
-	"github.com/pkg/errors"
 )
 
 // EncryptionHandshake encrypt a net.Conn
 type EncryptionHandshake struct {
-	Keys               mse.SecretKeyIter
+	Keys               mse.SecretKey
 	mse.CryptoSelector // available crypto algorithms
 }
 
@@ -23,6 +23,11 @@ func (t EncryptionHandshake) Incoming(rw io.ReadWriter) (updated io.ReadWriter, 
 		io.Writer
 	}
 
+	// log.Println("encryption handshake initiated")
+	// defer func() {
+	// 	log.Println("encryption handshake completed", err)
+	// }()
+
 	var (
 		buf = bytes.NewBuffer(make([]byte, 0, 68))
 	)
@@ -30,12 +35,12 @@ func (t EncryptionHandshake) Incoming(rw io.ReadWriter) (updated io.ReadWriter, 
 	// read the bittorrent protocol magic string initially
 	// in case this connection is not an encrypted connection.
 	if _, err := io.CopyN(buf, rw, 20); err != nil {
-		return updated, updated, err
+		return nil, nil, errorsx.Wrap(err, "failed to read protocol")
 	} else if buf.String() == Protocol {
 		return rw, buffered{
 			Reader: io.MultiReader(bytes.NewBuffer(buf.Bytes()), rw),
 			Writer: rw,
-		}, errors.New("unencrypted connection detected")
+		}, errorsx.New("unencrypted connection detected")
 	}
 
 	teed := io.MultiReader(bytes.NewBuffer(buf.Bytes()), rw)

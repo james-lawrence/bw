@@ -6,6 +6,7 @@ import (
 	"io"
 	"reflect"
 	"sync/atomic"
+	"time"
 
 	pp "github.com/james-lawrence/torrent/btprotocol"
 )
@@ -24,6 +25,12 @@ type ConnStats struct {
 	BytesReadData       count
 	BytesReadUsefulData count
 
+	// Bytes confirmed via successful piece hash verification. Unlike
+	// BytesReadUsefulData (credited optimistically on receipt, before
+	// verification), this only increases once a piece's SHA1 matches - it is
+	// the value reported to trackers as BEP3 "downloaded".
+	BytesValidated count
+
 	ChunksWritten count
 
 	ChunksRead       count
@@ -38,6 +45,8 @@ type ConnStats struct {
 	// verification. Note that a connection may not have been the sole dirtier
 	// of a piece.
 	PiecesDirtiedBad count
+
+	DHTAnnounce count
 }
 
 // Copy returns a copy of the connection stats.
@@ -47,6 +56,14 @@ func (t *ConnStats) Copy() (ret ConnStats) {
 		reflect.ValueOf(&ret).Elem().Field(i).Addr().Interface().(*count).Add(n)
 	}
 	return
+}
+
+func (t ConnStats) ResetTransferMetrics() ConnStats {
+	t.BytesRead.n = 0
+	t.BytesReadData.n = 0
+	t.BytesWrittenData.n = 0
+	t.BytesWritten.n = 0
+	return t
 }
 
 type count struct {
@@ -63,6 +80,10 @@ func (t *count) Int64() int64 {
 	return atomic.LoadInt64(&t.n)
 }
 
+func (t *count) Uint64() uint64 {
+	return uint64(atomic.LoadInt64(&t.n))
+}
+
 func (t *count) String() string {
 	return fmt.Sprintf("%v", t.Int64())
 }
@@ -72,7 +93,6 @@ func (t *count) MarshalJSON() ([]byte, error) {
 }
 
 func (t *ConnStats) wroteMsg(msg *pp.Message) {
-	// TODO: Track messages and not just chunks.
 	switch msg.Type {
 	case pp.Piece:
 		t.ChunksWritten.Add(1)
@@ -90,14 +110,6 @@ func (t *ConnStats) readMsg(msg *pp.Message) {
 	}
 }
 
-func (t *ConnStats) incrementPiecesDirtiedGood() {
-	t.PiecesDirtiedGood.Add(1)
-}
-
-func (t *ConnStats) incrementPiecesDirtiedBad() {
-	t.PiecesDirtiedBad.Add(1)
-}
-
 func add(n int64, f func(*ConnStats) *count) func(*ConnStats) {
 	return func(cs *ConnStats) {
 		p := f(cs)
@@ -111,13 +123,14 @@ type connStatsReadWriter struct {
 }
 
 func (me connStatsReadWriter) Write(b []byte) (n int, err error) {
+	me.c.conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	n, err = me.rw.Write(b)
 	me.c.wroteBytes(int64(n))
-	return
+	return n, err
 }
 
 func (me connStatsReadWriter) Read(b []byte) (n int, err error) {
 	n, err = me.rw.Read(b)
 	me.c.readBytes(int64(n))
-	return
+	return n, err
 }

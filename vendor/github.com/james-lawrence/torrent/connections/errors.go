@@ -5,8 +5,8 @@ import (
 	"net"
 )
 
-// BannedConnectionError bans a connection.
-func BannedConnectionError(c net.Conn, cause error) error {
+// NewBanned bans a connection.
+func NewBanned(c net.Conn, silent bool, cause error) error {
 	return bannedConnection{
 		conn:  c,
 		cause: cause,
@@ -14,8 +14,9 @@ func BannedConnectionError(c net.Conn, cause error) error {
 }
 
 type bannedConnection struct {
-	conn  net.Conn
-	cause error
+	conn   net.Conn
+	cause  error
+	silent bool
 }
 
 func (t bannedConnection) Unwrap() error {
@@ -23,5 +24,5 @@ func (t bannedConnection) Unwrap() error {
 }
 
 func (t bannedConnection) Error() string {
-	return fmt.Sprintf("banned connection %s: %s", t.conn.RemoteAddr().String(), t.cause)
+	return fmt.Sprintf("banned connection %s - %s: %s", t.conn.LocalAddr().String(), t.conn.RemoteAddr().String(), t.cause)
 }

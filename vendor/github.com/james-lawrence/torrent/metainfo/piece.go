@@ -8,7 +8,7 @@ type Piece struct {
 type pieceIndex = int
 
 func (p Piece) Length() int64 {
-	if int(p.i) == p.Info.NumPieces()-1 {
+	if uint64(p.i) == p.Info.NumPieces()-1 {
 		return p.Info.TotalLength() - int64(p.i)*p.Info.PieceLength
 	}
 	return p.Info.PieceLength
@@ -19,6 +19,10 @@ func (p Piece) Offset() int64 {
 }
 
 func (p Piece) Hash() (ret Hash) {
+	if len(p.Info.Pieces) == 0 {
+		return ret
+	}
+
 	copy(ret[:], p.Info.Pieces[p.i*HashSize:(p.i+1)*HashSize])
 	return
 }

@@ -1,10 +1,14 @@
 package torrent
 
 import (
+	"log"
+	"net/netip"
 	"sync"
+	"time"
 
 	"github.com/anacrolix/multiless"
 	"github.com/google/btree"
+	"github.com/james-lawrence/torrent/internal/fnvx"
 )
 
 // Peers are stored with their priority at insertion. Their priority may
@@ -14,66 +18,192 @@ type prioritizedPeer struct {
 	p    Peer
 }
 
-func (me prioritizedPeer) Less(than btree.Item) bool {
-	other := than.(prioritizedPeer)
-	return multiless.New().Bool(
-		me.p.Trusted, other.p.Trusted).Uint32(
-		me.prio, other.prio,
+func priorityPeerCmp(a, b prioritizedPeer) bool {
+	return multiless.New().Uint64(
+		a.p.Attempts, b.p.Attempts, // prioritize peers we havent attempted before.
+	// ).Uint64(
+	// 	uint64(a.p.LastAttempt.UnixNano()), uint64(b.p.LastAttempt.UnixNano()), // prioritize peers we havent contacted recently
+	).Bool(
+		a.p.Trusted, b.p.Trusted,
+	).Uint32(
+		a.prio, b.prio,
+	).Uint32(
+		fnvx.Uint32(a.p.AddrPort.String()), fnvx.Uint32(b.p.AddrPort.String()),
+	).Uint32(
+		uint32(a.p.Port()), uint32(b.p.Port()),
 	).Less()
 }
 
 func newPeerPool(n int, prio func(Peer) peerPriority) peerPool {
 	return peerPool{
-		m:       &sync.Mutex{},
-		om:      btree.New(32),
-		getPrio: prio,
+		m:         &sync.RWMutex{},
+		untried:   btree.NewG(n, priorityPeerCmp),
+		attempted: btree.NewG(n, priorityPeerCmp),
+		available: btree.NewG(n, priorityPeerCmp),
+		loaned:    make(map[netip.AddrPort]Peer, 32),
+		getPrio:   prio,
+		nextswap:  time.Now().Add(time.Minute),
 	}
 }
 
 type peerPool struct {
-	m       *sync.Mutex
-	om      *btree.BTree
-	getPrio func(Peer) peerPriority
+	m         *sync.RWMutex
+	untried   *btree.BTreeG[prioritizedPeer]
+	attempted *btree.BTreeG[prioritizedPeer]
+	available *btree.BTreeG[prioritizedPeer]
+	loaned    map[netip.AddrPort]Peer
+	getPrio   func(Peer) peerPriority
+	nextswap  time.Time
+}
+
+func (t peerPool) prioritized(p Peer) prioritizedPeer {
+	return prioritizedPeer{prio: t.getPrio(p), p: p}
 }
 
 func (t *peerPool) Each(f func(Peer)) {
-	t.om.Ascend(func(i btree.Item) bool {
-		f(i.(prioritizedPeer).p)
+	t.m.RLock()
+	defer t.m.RUnlock()
+
+	t.untried.Ascend(func(item prioritizedPeer) bool {
+		f(item.p)
 		return true
 	})
+
+	t.attempted.Ascend(func(item prioritizedPeer) bool {
+		f(item.p)
+		return true
+	})
+
+	t.available.Ascend(func(item prioritizedPeer) bool {
+		f(item.p)
+		return true
+	})
+
+	for _, p := range t.loaned {
+		f(p)
+	}
+}
+
+func (t *peerPool) Stats() (pending, connecting int) {
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return t.untried.Len(), len(t.loaned)
 }
 
 func (t *peerPool) Len() int {
-	return t.om.Len()
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return t.untried.Len()
+}
+
+// Peer is returned to the pool
+func (t *peerPool) Attempted(p Peer, attempts uint64) {
+	if attempts > 3 {
+		return
+	}
+
+	t.m.Lock()
+	defer t.m.Unlock()
+	p.Attempts = attempts
+	delete(t.loaned, p.AddrPort)
+
+	if attempts == 0 {
+		t.available.ReplaceOrInsert(t.prioritized(p))
+		return
+	}
+
+	t.attempted.ReplaceOrInsert(t.prioritized(p))
+}
+
+func (t *peerPool) Loaned(p Peer) {
+	t.m.Lock()
+	defer t.m.Unlock()
+	t.loan(p)
+}
+
+// loan marks p as loaned. caller must hold t.m.
+func (t *peerPool) loan(p Peer) {
+	p.LastAttempt = time.Now()
+	t.loaned[p.AddrPort] = p
 }
 
 // Returns true if a peer is replaced.
 func (t *peerPool) Add(p Peer) bool {
 	t.m.Lock()
 	defer t.m.Unlock()
-	return t.om.ReplaceOrInsert(prioritizedPeer{t.getPrio(p), p}) != nil
+
+	prio := t.prioritized(p)
+
+	if exists := t.attempted.Has(prio); exists {
+		return exists
+	}
+
+	if exists := t.available.Has(prio); exists {
+		return exists
+	}
+
+	if _, exists := t.loaned[p.AddrPort]; exists {
+		return exists
+	}
+
+	if _, replaced := t.untried.ReplaceOrInsert(prio); replaced {
+		return replaced
+	}
+
+	return false
 }
 
 func (t *peerPool) DeleteMin() (ret prioritizedPeer, ok bool) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	i := t.om.DeleteMin()
-	if i == nil {
-		return ret, false
-	}
-
-	return i.(prioritizedPeer), true
+	return t.untried.DeleteMin()
 }
 
-func (t *peerPool) PopMax() (p Peer, ok bool) {
+// PopMax removes and returns the highest priority peer, atomically marking
+// it loaned in the same locked section - a peer must be reserved the
+// instant it's popped, not only once a later, separate Loaned call lands.
+// Without that, a peer added twice in quick succession (e.g. TuneClientPeer
+// adding the same AddrPort once per listener, since Autosocket binds uTP
+// and TCP to the same port number) can race: a second Add lands in the
+// window between the first pop and its caller getting around to calling
+// Loaned, finds the peer in none of attempted/available/loaned, and is
+// wrongly treated as a brand new peer - leading to two concurrent dials to
+// the same address.
+func (t *peerPool) PopMax() (p prioritizedPeer, ok bool) {
 	t.m.Lock()
 	defer t.m.Unlock()
 
-	i := t.om.DeleteMax()
-	if i == nil {
-		return p, false
+	if max, present := t.untried.DeleteMax(); present {
+		t.loan(max.p)
+		return max, present
 	}
 
-	return i.(prioritizedPeer).p, true
+	if max, present := t.available.DeleteMax(); present {
+		t.loan(max.p)
+		return max, present
+	}
+
+	if ts := time.Now(); t.nextswap.After(ts) {
+		return p, false
+	} else {
+		t.nextswap = ts.Add(time.Minute)
+	}
+
+	log.Println("returning moving failed to available")
+	for range 10 {
+		if item, ok := t.attempted.DeleteMax(); ok {
+			t.available.ReplaceOrInsert(item)
+			continue
+		}
+
+		break
+	}
+
+	if max, present := t.available.DeleteMax(); present {
+		t.loan(max.p)
+		return max, present
+	}
+
+	return p, false
 }

@@ -1,6 +1,10 @@
 package torrentx
 
-import "github.com/james-lawrence/torrent"
+import (
+	"errors"
+
+	"github.com/james-lawrence/torrent"
+)
 
 // NewMultibind bind each socket to the torrent client.
 func NewMultibind(binds ...torrent.Binder) Multibind {
@@ -19,4 +23,13 @@ func (t Multibind) Bind(cl *torrent.Client, err error) (*torrent.Client, error) 
 	}
 
 	return cl, nil
+}
+
+// Close each binder.
+func (t Multibind) Close() (err error) {
+	for _, b := range t {
+		err = errors.Join(err, b.Close())
+	}
+
+	return err
 }

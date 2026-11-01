@@ -1,16 +1,16 @@
 package storage
 
 import (
+	"context"
 	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/davecgh/go-spew/spew"
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/fsx"
+	"github.com/james-lawrence/bw/internal/iterx"
 	"github.com/james-lawrence/torrent"
-	"github.com/james-lawrence/torrent/dht/v2"
 	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/pkg/errors"
 )
@@ -18,43 +18,40 @@ import (
 // TorrentUtil utility functions for the torrent storage subsystem.
 type TorrentUtil struct{}
 
-// Bootstrap the torrent client
-func (TorrentUtil) Bootstrap(c *torrent.Client) {
-	var (
-		err   error
-		stats dht.TraversalStats
-	)
+// ClearTorrents periodically flushes torrents from storage based on whether or not
+// the deployment directory is still around.
+func (t TorrentUtil) ClearTorrents(ctx context.Context, c TorrentConfig, keepN int) {
+	debugx.Println("torrent data directory", c.dir)
+	dropped := 0
 
-	for _, s := range c.DhtServers() {
-		if stats, err = s.Bootstrap(); err != nil {
-			log.Println("failed to bootstrap dht server", err)
+	entries, err := os.ReadDir(c.dir)
+	if err != nil {
+		log.Println("unable to read torrent data directory", err)
+		return
+	}
+
+	paths := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if e.Type().IsRegular() {
+			paths = append(paths, filepath.Join(c.dir, e.Name()))
+		}
+	}
+
+	stale := fsx.KeepNewestN(keepN, iterx.Slice(paths...))
+	for path := range stale.Each(ctx) {
+		md, cause := torrent.NewFromFile(path)
+		if cause != nil {
+			log.Println("unable to load torrent", path, cause)
 			continue
 		}
 
-		log.Println("dht bootstrap stats", spew.Sdump(stats))
+		errorsx.Log(c.client.Stop(md))
+		errorsx.Log(os.Remove(path))
+		dropped = dropped + 1
 	}
-}
+	errorsx.Log(stale.Err())
 
-// ClearTorrents periodically flushes torrents from storage based on whether or not
-// the deployment directory is still around.
-func (TorrentUtil) ClearTorrents(c TorrentConfig) {
-	debugx.Println("torrent data directory", c.ClientConfig.DataDir)
-	deploysDir := filepath.Join(filepath.Dir(c.ClientConfig.DataDir), bw.DirDeploys)
-	dropped := 0
-	for _, tt := range c.client.Torrents() {
-		if info := tt.Info(); info != nil {
-			for _, tf := range tt.Files() {
-				deployDir := filepath.Join(deploysDir, tf.Path())
-				if _, cause := os.Stat(deployDir); os.IsNotExist(cause) {
-					c.client.Stop(tt.Metadata())
-					errorsx.Log(os.Remove(filepath.Join(c.ClientConfig.DataDir, tf.Path())))
-					dropped = dropped + 1
-				}
-			}
-		}
-	}
-
-	log.Println(dropped, "torrents dropped due to missing deploy directory")
+	log.Println(dropped, "torrents dropped, keeping the", keepN, "newest")
 }
 
 // PrintTorrentInfo prints information about the torrent cluster.
@@ -63,8 +60,7 @@ func (t TorrentUtil) PrintTorrentInfo(c TorrentConfig) {
 }
 
 func (TorrentUtil) printTorrentInfo(c *torrent.Client) {
-	c.WriteStatus(os.Stderr)
-	log.Println(len(c.Torrents()), "torrents running")
+	log.Println(c.String())
 }
 
 func (t TorrentUtil) loadDir(dir string, c *torrent.Client) error {
@@ -150,8 +146,5 @@ func (t TorrentUtil) loadTorrent(c *torrent.Client, path string) (m torrent.Meta
 }
 
 func (TorrentUtil) magnet(meta torrent.Metadata) metainfo.Magnet {
-	return metainfo.Magnet{
-		DisplayName: meta.DisplayName,
-		InfoHash:    meta.InfoHash,
-	}
+	return torrent.NewMagnet(meta)
 }

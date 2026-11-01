@@ -1,36 +1,59 @@
 package torrent
 
 import (
-	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"log"
+	"maps"
+	"math"
 	"net"
-	"net/http"
-	"net/url"
-	"strings"
-	stdsync "sync"
+	"net/netip"
+	"path/filepath"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/james-lawrence/torrent/connections"
-
-	"github.com/anacrolix/missinggo/slices"
-	"github.com/anacrolix/missinggo/v2"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/james-lawrence/torrent/dht/v2"
-	"github.com/james-lawrence/torrent/dht/v2/krpc"
-	"github.com/pkg/errors"
-	"golang.org/x/time/rate"
+	"github.com/james-lawrence/torrent/dht"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/dht/krpc"
+	"github.com/james-lawrence/torrent/sockets"
+	"github.com/james-lawrence/torrent/storage"
 
 	pp "github.com/james-lawrence/torrent/btprotocol"
 	"github.com/james-lawrence/torrent/internal/errorsx"
-	"github.com/james-lawrence/torrent/internal/x/stringsx"
+	"github.com/james-lawrence/torrent/internal/langx"
+	"github.com/james-lawrence/torrent/internal/netx"
 	"github.com/james-lawrence/torrent/metainfo"
-	"github.com/james-lawrence/torrent/storage"
 )
+
+type ClientOperation func(*Client) error
+
+func ClientOperationClearIdleTorrents(idle func(Stats) bool) ClientOperation {
+	return func(c *Client) error {
+		log.Println("clearing idle torrents initiated")
+		defer log.Println("clearing idle torrents completed")
+
+		c.torrents._mu.Lock()
+		cpy := make(map[int160.T]*torrent, len(c.torrents.torrents))
+		maps.Copy(cpy, c.torrents.torrents)
+		c.torrents._mu.Unlock()
+
+		for id, t := range cpy {
+			if !idle(t.Stats()) {
+				continue
+			}
+
+			errorsx.Log(errorsx.Wrapf(c.Stop(t.md), "failed to shutdown idle torrent: %s", id))
+		}
+
+		return nil
+	}
+}
 
 // Client contain zero or more Torrents. A Client manages a blocklist, the
 // TCP/UDP protocol ports, and DHT as desired.
@@ -39,248 +62,183 @@ type Client struct {
 	// 64-bit alignment of fields. See #262.
 	stats ConnStats
 
-	// locking counts, TODO remove these.
-	lcount uint64
-	ucount uint64
-
-	_mu    *stdsync.RWMutex
-	event  stdsync.Cond
+	_mu    *sync.RWMutex
 	closed chan struct{}
 
 	config *ClientConfig
 
-	peerID         PeerID
-	defaultStorage *storage.Client
-	onClose        []func()
-	conns          []socket
-	dhtServers     []*dht.Server
+	onClose []func()
+	conns   []sockets.Socket
+	// the addresses conns listen on, recorded as sockets bind so dialing our
+	// own address is rejected before it reaches the self connection detection
+	// in outgoingConnection - which bans the address it dialed, taking every
+	// other peer sharing it down with it.
+	self *connections.BloomBanIP
+	dht  *dht.Server
 
-	extensionBytes  pp.ExtensionBits // Our BitTorrent protocol extension bytes, sent in our BT handshakes.
-	torrents        map[metainfo.Hash]*torrent
-	dialRateLimiter *rate.Limiter
+	dialing  *netx.RacingDialer
+	torrents *memoryseeding
 }
 
-type ipStr string
-
-// Start the specified torrent.
-// Start adds starts up the torrent within the client downloading the missing pieces
-// as needed. if you want to wait until the torrent is completed use Download.
-func (cl *Client) Start(t Metadata) (dl Torrent, added bool, err error) {
-	return cl.start(t)
-}
-
-// MaybeStart is a convience method that consumes the return types of the torrent
-// creation methods: New, NewFromFile, etc. it is all respects identical to the Start
-// method.
-func (cl *Client) MaybeStart(t Metadata, failed error) (dl Torrent, added bool, err error) {
-	if failed != nil {
-		return dl, false, failed
-	}
-	return cl.start(t)
-}
-
-func (cl *Client) start(t Metadata) (dlt *torrent, added bool, err error) {
-	if dlt = cl.lookup(t); dlt != nil {
-		return dlt, false, cl.merge(dlt, t)
+// Modify an already running torrent, returns an error if torrent isnt already running.
+// if you want to start OR modify just use the standard Start function.
+func (cl *Client) Modify(ctx context.Context, md Metadata, options ...Tuner) (err error) {
+	dlt, cached, err := cl.torrents.Load(md.ID, cl.newTorrent, options...)
+	if errorsx.Ignore(err, fs.ErrNotExist) != nil {
+		return err
 	}
 
-	cl.lock()
-	dlt = cl.newTorrent(t)
-	cl.unlock()
+	if !cached {
+		return fmt.Errorf("torrent not available")
+	}
 
-	cl.merge(dlt, t)
+	if err = dlt.Tune(options...); err != nil {
+		return err
+	}
 
-	cl.lock()
-	defer cl.unlock()
-
-	cl.eachDhtServer(func(s *dht.Server) {
-		go dlt.dhtAnnouncer(s)
-	})
-	cl.torrents[t.InfoHash] = dlt
-
-	dlt.updateWantPeersEvent()
-	// Tickle Client.waitAccept, new torrent may want conns.
-	cl.event.Broadcast()
-
-	return dlt, true, nil
+	return nil
 }
 
-func (cl *Client) download(ctx context.Context, m Metadata, options ...Tuner) (t *torrent, err error) {
-	if t, _, err = cl.start(m); err != nil {
-		return t, err
+// Query torrent info from the dht
+func (cl *Client) Info(ctx context.Context, m Metadata, options ...Tuner) (i *metainfo.Info, err error) {
+	var (
+		t     *torrent
+		added bool
+	)
+
+	if t, added, err = cl.start(m); err != nil {
+		return nil, err
+	} else if added {
+		defer cl.Stop(m)
 	}
 
 	t.Tune(options...)
 
 	select {
 	case <-t.GotInfo():
+		tmp := t.Info()
+		if tmp == nil {
+			// only path for this to occurr.
+			return nil, ErrTorrentClosed()
+		}
+
+		return tmp, cl.Stop(m)
 	case <-ctx.Done():
-		return t, ctx.Err()
+		return nil, ctx.Err()
 	}
-
-	return t, nil
 }
 
-// Download the specified torrent.
-// Download differs from Start in that it blocks until the metadata is downloaded and returns a
-// valid reader for use.
-func (cl *Client) Download(ctx context.Context, m Metadata, options ...Tuner) (r Reader, err error) {
-	var (
-		dlt *torrent
-	)
-
-	if dlt, err = cl.download(ctx, m, options...); err != nil {
-		return r, err
+// Start the specified torrent.
+// Start adds starts up the torrent within the client downloading the missing pieces
+// as needed. if you want to wait until the torrent is completed use Download.
+func (cl *Client) Start(t Metadata, options ...Tuner) (dl Torrent, added bool, err error) {
+	dl, added, err = cl.start(t, options...)
+	if err != nil {
+		return dl, added, err
 	}
 
-	return dlt.NewReader(), nil
+	return dl, added, nil
 }
 
-// DownloadInto downloads the torrent into the provided destination. see Download for more information.
-// TODO: context timeout only applies to fetching metadata, not the entire download.
-func (cl *Client) DownloadInto(ctx context.Context, m Metadata, dst io.Writer, options ...Tuner) (err error) {
-	var (
-		dlt *torrent
-	)
-
-	if dlt, err = cl.download(ctx, m, options...); err != nil {
-		return err
+// MaybeStart is a convience method that consumes the return types of the torrent
+// creation methods: New, NewFromFile, etc. it is all respects identical to the Start
+// method.
+func (cl *Client) MaybeStart(t Metadata, failed error, options ...Tuner) (dl Torrent, added bool, err error) {
+	if failed != nil {
+		return dl, false, failed
 	}
 
-	// copy into the destination
-	// TODO: wrap the destination in a context writer to timeout the copy
-	if n, err := io.Copy(dst, dlt.NewReader()); err != nil {
-		return err
-	} else if n != dlt.Length() {
-		return errors.Errorf("download failed, missing data %d != %d", n, dlt.Length())
+	dl, added, err = cl.start(t, options...)
+	if err != nil {
+		return dl, added, err
 	}
 
-	return nil
+	return dl, added, nil
+}
+
+func (cl *Client) newTorrent(md Metadata, options ...Tuner) *torrent {
+	return newTorrent(cl, md, options...)
+}
+
+func (cl *Client) start(md Metadata, options ...Tuner) (dlt *torrent, added bool, err error) {
+	dlt, cached, err := cl.torrents.Load(md.ID, cl.newTorrent, tuneMerge(md), langx.ComposeErr(options...))
+	if errorsx.Ignore(err, fs.ErrNotExist) != nil {
+		return nil, false, err
+	}
+
+	if !cached {
+		if dlt, err = cl.torrents.Insert(md, cl.newTorrent, tuneMerge(md), langx.ComposeErr(options...)); err != nil {
+			return nil, false, err
+		}
+	}
+
+	// a torrent that is already loaded may have been loaded by a peer or dht announce to seed it,
+	// only the first Start counts as adding it. it is also the one that sets up the announcing.
+	if !dlt.started.CompareAndSwap(false, true) {
+		return dlt, false, nil
+	}
+
+	cl.AddDHTNodes(dlt.md.DHTNodes)
+
+	cl.lock()
+	defer cl.unlock()
+
+	go dlt.dhtAnnouncer(cl.dht)
+	dlt.updateWantPeersEvent()
+
+	return dlt, true, nil
 }
 
 // Stop the specified torrent, this halts all network activity around the torrent
 // for this client.
 func (cl *Client) Stop(t Metadata) (err error) {
-	return cl.dropTorrent(t.InfoHash)
+	return cl.torrents.Drop(t.ID)
 }
 
-func (cl *Client) merge(old *torrent, updated Metadata) (err error) {
-	if updated.DisplayName != "" {
-		old.SetDisplayName(updated.DisplayName)
-	}
-
-	if updated.ChunkSize != 0 {
-		old.setChunkSize(pp.Integer(updated.ChunkSize))
-	}
-
-	old.addTrackers(updated.Trackers)
-	old.lockedOpenNewConns()
-	cl.event.Broadcast()
-
-	return nil
-}
-
-func (cl *Client) lookup(t Metadata) *torrent {
-	cl.lock()
-	defer cl.unlock()
-
-	if dl, ok := cl.torrents[t.InfoHash]; ok {
-		return dl
-	}
-
-	return nil
-}
-
-// PeerID ...
-func (cl *Client) PeerID() PeerID {
-	return cl.peerID
-}
-
-// LocalPort returns the local port being listened on.
-// WARNING: this method can panic.
+// LocalPort16 returns the local port being listened on.
 // this is method is odd given a client can be attached to multiple ports on different
 // listeners.
-func (cl *Client) LocalPort() (port int) {
-	cl.eachListener(func(l socket) bool {
-		_port := missinggo.AddrPort(l.Addr())
-		if _port == 0 {
+func (cl *Client) LocalPort16() (port uint16) {
+	if port = cl.dht.DynamicAddrPort().Port(); port > 0 {
+		return port
+	}
+
+	cl.eachListener(func(l sockets.Socket) bool {
+		addr, err := netx.AddrPort(l.Addr())
+		if err != nil {
+			log.Println("unable to determine port from listener", err)
+			return false
+		}
+		if addr.Port() == 0 {
 			panic(l)
 		}
 		if port == 0 {
-			port = _port
-		} else if port != _port {
-			panic("mismatched ports")
+			port = addr.Port()
 		}
 		return true
 	})
-	return
-}
 
-func writeDhtServerStatus(w io.Writer, s *dht.Server) {
-	dhtStats := s.Stats()
-	fmt.Fprintf(w, "\t# Nodes: %d (%d good, %d banned)\n", dhtStats.Nodes, dhtStats.GoodNodes, dhtStats.BadNodes)
-	fmt.Fprintf(w, "\tServer ID: %x\n", s.ID())
-	fmt.Fprintf(w, "\tAnnounces: %d\n", dhtStats.SuccessfulOutboundAnnouncePeerQueries)
-	fmt.Fprintf(w, "\tOutstanding transactions: %d\n", dhtStats.OutstandingTransactions)
-}
-
-// WriteStatus writes out a human readable status of the client, such as for writing to a
-// HTTP status page.
-func (cl *Client) WriteStatus(_w io.Writer) {
-	cl.rLock()
-	defer cl.rUnlock()
-	w := bufio.NewWriter(_w)
-	defer w.Flush()
-	fmt.Fprintf(w, "Listen port: %d\n", cl.LocalPort())
-	fmt.Fprintf(w, "Peer ID: %+q\n", cl.PeerID())
-	fmt.Fprintf(w, "Announce key: %x\n", cl.announceKey())
-	cl.eachDhtServer(func(s *dht.Server) {
-		fmt.Fprintf(w, "%s DHT server at %s:\n", s.Addr().Network(), s.Addr().String())
-		writeDhtServerStatus(w, s)
-	})
-	spew.Fdump(w, &cl.stats)
-	fmt.Fprintf(w, "# Torrents: %d\n", len(cl.torrentsAsSlice()))
-	fmt.Fprintln(w)
-	for _, t := range slices.Sort(cl.torrentsAsSlice(), func(l, r Torrent) bool {
-		return l.Metadata().InfoHash.AsString() < r.Metadata().InfoHash.AsString()
-	}).([]Torrent) {
-		metadata := t.Metadata()
-		if metadata.DisplayName == "" {
-			fmt.Fprint(w, "<unknown name>")
-		} else {
-			fmt.Fprint(w, metadata.DisplayName)
-		}
-		fmt.Fprint(w, "\n")
-
-		if t, ok := t.(*torrent); ok {
-			t.writeStatus(w)
-		}
-		fmt.Fprintln(w)
-	}
-}
-
-func (cl *Client) announceKey() int32 {
-	return int32(binary.BigEndian.Uint32(cl.peerID[16:20]))
+	return port
 }
 
 // NewClient create a new client from the provided config. nil is acceptable.
 func NewClient(cfg *ClientConfig) (_ *Client, err error) {
 	if cfg == nil {
-		cfg = NewDefaultClientConfig()
-	}
-
-	if cfg.HTTPProxy == nil && cfg.ProxyURL != "" {
-		if fixedURL, err := url.Parse(cfg.ProxyURL); err == nil {
-			cfg.HTTPProxy = http.ProxyURL(fixedURL)
-		}
+		rootdir := filepath.Join(".", "torrents")
+		cfg = NewDefaultClientConfig(
+			metadatafilestore{root: rootdir},
+			storage.NewFile(rootdir),
+		)
 	}
 
 	cl := &Client{
-		config:          cfg,
-		closed:          make(chan struct{}),
-		torrents:        make(map[metainfo.Hash]*torrent),
-		dialRateLimiter: rate.NewLimiter(10, 10),
-		_mu:             &stdsync.RWMutex{},
+		config:   cfg,
+		closed:   make(chan struct{}),
+		torrents: NewCache(cfg.defaultMetadata, NewBitmapCache(cfg.defaultCacheDirectory)),
+		_mu:      &sync.RWMutex{},
+		dialing:  netx.NewRacing(cfg.dialPoolSize),
+		// our own addresses do not stop being ours, so this never expires.
+		self: connections.NewBloomBanIP(math.MaxInt64),
 	}
 
 	defer func() {
@@ -289,54 +247,7 @@ func NewClient(cfg *ClientConfig) (_ *Client, err error) {
 		}
 	}()
 
-	cl.extensionBytes = defaultPeerExtensionBytes()
-	cl.event.L = cl.locker()
-	storageImpl := cfg.DefaultStorage
-	if storageImpl == nil {
-		// We'd use mmap but HFS+ doesn't support sparse files.
-		storageImpl = storage.NewFile(cfg.DataDir)
-		cl.onClose = append(cl.onClose, func() {
-			if err := storageImpl.Close(); err != nil {
-				cl.config.errors().Println(errors.Wrap(err, "error closing default storage"))
-			}
-		})
-	}
-	cl.defaultStorage = storage.NewClient(storageImpl)
-
-	o := copy(cl.peerID[:], stringsx.Default(cfg.PeerID, cfg.Bep20))
-	if _, err = rand.Read(cl.peerID[o:]); err != nil {
-		return nil, errors.Wrap(err, "error generating peer id")
-	}
-
 	return cl, nil
-}
-
-func (cl *Client) newDhtServer(conn net.PacketConn) (s *dht.Server, err error) {
-	cfg := dht.ServerConfig{
-		Conn:           conn,
-		OnAnnouncePeer: cl.onDHTAnnouncePeer,
-		PublicIP: func() net.IP {
-			if connIsIpv6(conn) && cl.config.PublicIP6 != nil {
-				return cl.config.PublicIP6
-			}
-			return cl.config.PublicIP4
-		}(),
-		StartingNodes:      cl.config.DhtStartingNodes,
-		ConnectionTracking: cl.config.ConnTracker,
-		OnQuery:            cl.config.DHTOnQuery,
-	}
-
-	if s, err = dht.NewServer(&cfg); err != nil {
-		return s, err
-	}
-	go func() {
-		ts, err := s.Bootstrap()
-		if err != nil {
-			cl.config.errors().Println(errors.Wrap(err, "error bootstrapping dht"))
-		}
-		cl.config.debug().Printf("%v completed bootstrap (%v)\n", s, ts)
-	}()
-	return s, nil
 }
 
 // Config underlying configuration for the client.
@@ -345,43 +256,41 @@ func (cl *Client) Config() *ClientConfig {
 }
 
 // Bind the socket to this client.
-func (cl *Client) Bind(s socket) (err error) {
-	if err = cl.bindDHT(s); err != nil {
-		return err
-	}
-
-	go cl.forwardPort()
+func (cl *Client) Bind(s sockets.Socket) (err error) {
 	go cl.acceptConnections(s)
 
 	cl.lock()
+	if addr, cause := netx.AddrPort(s.Addr()); cause != nil {
+		log.Println("unable to record listener address, dials to it will not be recognized as ourselves", cause)
+	} else {
+		cl.self.Inhibit(selfip(addr), int(addr.Port()), errorsx.New("listening on this address"))
+	}
 	cl.conns = append(cl.conns, s)
 	cl.unlock()
 
 	return nil
 }
 
-func (cl *Client) bindDHT(s socket) (err error) {
+func (cl *Client) BindDHT(d *dht.Server, s sockets.Socket) (err error) {
 	var (
 		ok bool
 		pc net.PacketConn
 	)
 
-	if cl.config.NoDHT {
-		return nil
-	}
-
 	if pc, ok = s.(net.PacketConn); !ok {
+		cl.config.debug().Println("dht bind ignored: not a packet conn")
 		return nil
 	}
 
-	ds, err := cl.newDhtServer(pc)
-	if err != nil {
-		return err
-	}
+	cl.config.debug().Printf("binding dht server to client %p - %v\n", d, pc.LocalAddr())
+	cl.lock()
+	// the check above isnt entirely sufficient to prevent changing the dht.
+	// take the first non-nil of the the two once the lock is acquired.
+	cl.dht = langx.FirstNonZero(cl.dht, d)
+	cl.unlock()
 
-	cl.dhtServers = append(cl.dhtServers, ds)
-
-	return nil
+	d.AttachAnnouncer(dht.PeerAnnounceFn(cl.onDHTAnnouncePeer))
+	return d.Serve(context.Background(), pc)
 }
 
 // Closed returns a channel to detect when the client is closed.
@@ -391,64 +300,58 @@ func (cl *Client) Closed() <-chan struct{} {
 	return cl.closed
 }
 
-func (cl *Client) eachDhtServer(f func(*dht.Server)) {
-	for _, ds := range cl.dhtServers {
-		f(ds)
-	}
-}
-
+// closeSockets closes every socket and waits for them to finish. sockets can be slow to close (uTP gives
+// the closing packets of its connections time to leave), so they are closed concurrently.
 func (cl *Client) closeSockets() {
-	cl.eachListener(func(l socket) bool {
-		l.Close()
+	var wg sync.WaitGroup
+
+	cl.eachListener(func(l sockets.Socket) bool {
+		wg.Go(func() {
+			l.Close()
+		})
+
 		return true
 	})
-	cl.conns = nil
+
+	wg.Wait()
+}
+
+func (cl *Client) Tune(ops ...ClientOperation) error {
+	for _, op := range ops {
+		if err := op(cl); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Close stops the client. All connections to peers are closed and all activity will
 // come to a halt.
-func (cl *Client) Close() {
+func (cl *Client) Close() error {
 	select {
 	case <-cl.closed:
 	default:
 		close(cl.closed)
 	}
-	cl.eachDhtServer(func(s *dht.Server) { s.Close() })
+	if cl.dht != nil {
+		cl.dht.DetachAnnouncer(dht.PeerAnnounceFn(cl.onDHTAnnouncePeer))
+	}
+
+	// torrents close first so their connections can flush their closing packets, closing the
+	// sockets first leaves peers holding connections to us until they time out.
+	err := cl.torrents.Close()
 	cl.closeSockets()
 
-	for _, t := range cl.torrents {
-		t.close()
+	if err != nil {
+		return errorsx.Wrap(err, "unable to close torrents")
 	}
 
 	for _, f := range cl.onClose {
 		f()
 	}
-	cl.event.Broadcast()
-}
 
-func (cl *Client) wantConns() bool {
-	for _, t := range cl.torrents {
-		if t.wantConns() {
-			return true
-		}
-	}
-	return false
-}
-
-func (cl *Client) waitAccept() {
-	for {
-		select {
-		case <-cl.closed:
-			return
-		default:
-		}
-
-		if cl.wantConns() {
-			return
-		}
-
-		cl.event.Wait()
-	}
+	return nil
 }
 
 func (cl *Client) acceptConnections(l net.Listener) {
@@ -468,7 +371,13 @@ func (cl *Client) acceptConnections(l net.Listener) {
 		}
 
 		if conn, err = cl.config.Handshaker.Accept(l); err != nil {
-			cl.config.debug().Println(errors.Wrap(err, "error accepting connection"))
+			cl.config.debug().Println(errorsx.Wrap(err, "error accepting connection"))
+			continue
+		}
+
+		if !cl.config.acceptRateLimiter.Allow() {
+			cl.config.debug().Println("rejecting connection due to rate limits")
+			conn.Close()
 			continue
 		}
 
@@ -480,142 +389,67 @@ func (cl *Client) incomingConnection(nc net.Conn) {
 	defer nc.Close()
 	if tc, ok := nc.(*net.TCPConn); ok {
 		tc.SetLinger(0)
+		tc.SetKeepAlive(true)
 	}
 
-	c := cl.newConnection(nc, false, missinggo.IpPortFromNetAddr(nc.RemoteAddr()))
+	addrport, err := netx.AddrPort(nc.RemoteAddr())
+	if err != nil {
+		log.Println("ignoring incoming connection", err)
+		return
+	}
+
+	c := cl.newConnection(nc, false, addrport)
 	c.Discovery = peerSourceIncoming
 	cl.runReceivedConn(c)
 }
 
-// Torrent returns a handle to the given torrent, if it's present in the client.
-func (cl *Client) Torrent(ih metainfo.Hash) (t Torrent, ok bool) {
-	cl.lock()
-	defer cl.unlock()
-	t, ok = cl.torrents[ih]
-	return
-}
-
-func (cl *Client) torrent(ih metainfo.Hash) *torrent {
-	return cl.torrents[ih]
-}
-
-func reducedDialTimeout(minDialTimeout, max time.Duration, halfOpenLimit int, pendingPeers int) (ret time.Duration) {
-	ret = max / time.Duration((pendingPeers+halfOpenLimit)/halfOpenLimit)
-	if ret < minDialTimeout {
-		ret = minDialTimeout
-	}
-	return
-}
-
-// Returns a connection over UTP or TCP, whichever is first to connect.
-func (cl *Client) dialFirst(ctx context.Context, addr string) (conn net.Conn, err error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	cl.lock()
-	conns := make([]socket, len(cl.conns))
-	left := copy(conns, cl.conns)
-	_ = left
-	cl.unlock()
-
-	if len(conns) == 0 {
-		return nil, errors.Errorf("unable to dial due to no servers")
-	}
-
-	for _, s := range conns {
-		if conn, err = cl.dial(ctx, s, addr); err == nil {
-			return conn, nil
-		}
-	}
-
-	return nil, err
-
-	// type dialResult struct {
-	// 	Conn net.Conn
-	// 	cause error
-	// }
-	// resCh := make(chan dialResult, left)
-	// for _, cs := range conns {
-	// 	go func(cs socket) {
-	// 		conn, err := cl.dial(ctx, cs, addr)
-	// 		log.Printf("dial result: %T - %s\n", conn, err)
-	// 		resCh <- dialResult{
-	// 			Conn:  conn,
-	// 			cause: err,
-	// 		}
-	// 	}(cs)
-	// }
-
-	// // Wait for a successful connection.
-	// for ; left > 0 && res.Conn == nil; left-- {
-	// 	res = <-resCh
-	// }
-
-	// // There are still incompleted dials.
-	// if left > 0 {
-	// 	go func() {
-	// 		for ; left > 0; left-- {
-	// 			conn := (<-resCh).Conn
-	// 			if conn != nil {
-	// 				conn.Close()
-	// 			}
-	// 		}
-	// 	}()
-	// }
-
-	// return res.Conn, res.cause
-}
-
-func (cl *Client) dial(ctx context.Context, d dialer, addr string) (c net.Conn, err error) {
-	// Try to avoid committing to a dial if the context is complete as it's difficult to determine
-	// which dial errors allow us to forget the connection tracking entry handle.
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	if c, err = d.Dial(ctx, addr); c == nil || err != nil {
-		return nil, errorsx.Compact(err, ctx.Err(), errors.New("net.Conn missing (nil)"))
-	}
-
-	// This is a bit optimistic, but it looks non-trivial to thread this through the proxy code. Set
-	// it now in case we close the connection forthwith.
-	if tc, ok := c.(*net.TCPConn); ok {
-		tc.SetLinger(0)
-	}
-
-	return closeWrapper{
-		Conn:   c,
-		closer: c.Close,
-	}, nil
-}
-
-func forgettableDialError(err error) bool {
-	return strings.Contains(err.Error(), "no suitable address found")
+func reducedDialTimeout(minDialTimeout, maximum time.Duration, halfOpenLimit int, pendingPeers int) (ret time.Duration) {
+	ret = maximum / time.Duration((pendingPeers+halfOpenLimit)/halfOpenLimit)
+	return max(ret, minDialTimeout)
 }
 
 // Returns nil connection and nil error if no connection could be established
 // for valid reasons.
-func (cl *Client) establishOutgoingConnEx(ctx context.Context, t *torrent, addr IpPort, obfuscatedHeader bool) (c *connection, err error) {
+func (cl *Client) establishOutgoingConnEx(ctx context.Context, t *torrent, addr netip.AddrPort, obfuscatedHeader bool) (c *connection, err error) {
 	var (
 		nc net.Conn
 	)
 
-	dialCtx, dcancel := context.WithTimeout(ctx, t.dialTimeout())
-	defer dcancel()
-
-	if nc, err = cl.dialFirst(dialCtx, addr.String()); err != nil {
-		return nil, err
+	cl.lock()
+	conns := make([]netx.DialableNetwork, 0, len(cl.conns))
+	for _, c := range cl.conns {
+		conns = append(conns, c)
 	}
+	cl.unlock()
+
+	if len(conns) == 0 {
+		return nil, errorsx.Errorf("unable to dial due to no servers")
+	}
+
+	if err = cl.config.dialRateLimiter.Wait(ctx); err != nil {
+		return nil, errorsx.Wrap(err, "dial rate limit failed")
+	}
+
+	if nc, err = cl.dialing.Dial(ctx, t.dialTimeout(), addr.String(), conns...); err != nil {
+		return nil, errorsx.Wrap(err, "dialing failed")
+	}
+
 	defer func() {
-		if err != nil {
-			nc.Close()
+		if err == nil {
+			return
 		}
+
+		errorsx.Log(nc.Close())
 	}()
 
-	dl := time.Now().Add(cl.config.HandshakesTimeout)
-	ctx, cancel := context.WithDeadline(ctx, dl)
-	defer cancel()
+	// This is a bit optimistic, but it looks non-trivial to thread this through the proxy code. Set
+	// it now in case we close the connection forthwith.
+	if tc, ok := nc.(*net.TCPConn); ok {
+		tc.SetLinger(0)
+		tc.SetKeepAlive(true)
+	}
 
+	dl := time.Now().Add(cl.config.handshakesTimeout)
 	if err = nc.SetDeadline(dl); err != nil {
 		return nil, err
 	}
@@ -624,50 +458,67 @@ func (cl *Client) establishOutgoingConnEx(ctx context.Context, t *torrent, addr 
 	c.headerEncrypted = obfuscatedHeader
 
 	if err = cl.initiateHandshakes(c, t); err != nil {
-		return nil, err
+		return nil, errorsx.Wrap(err, "handshake failed")
 	}
 
-	return c, err
+	return c, nil
 }
 
 // Returns nil connection and nil error if no connection could be established
 // for valid reasons.
-func (cl *Client) establishOutgoingConn(ctx context.Context, t *torrent, addr IpPort) (c *connection, err error) {
+func (cl *Client) establishOutgoingConn(ctx context.Context, t *torrent, addr netip.AddrPort) (c *connection, err error) {
+	defer func() {
+		if err == nil {
+			return
+		}
+
+		err = errorsx.Wrapf(err, "outgoing conn failed %s - %s - %v - %v", t.md.ID, t.md.DisplayName, cl.dht.AddrPort(addr), addr)
+		if cause := errorsx.Ignore(err, context.DeadlineExceeded); cause != nil {
+			cl.config.debug().Println(cause)
+		}
+	}()
+
 	obfuscatedHeaderFirst := cl.config.HeaderObfuscationPolicy.Preferred
 	if c, err = cl.establishOutgoingConnEx(ctx, t, addr, obfuscatedHeaderFirst); err == nil {
 		return c, nil
 	}
 
-	if cl.config.HeaderObfuscationPolicy.RequirePreferred {
+	if cl.config.HeaderObfuscationPolicy.Required {
 		// We should have just tried with the preferred header obfuscation. If it was required,
 		// there's nothing else to try.
 		return c, err
 	}
+
+	// the retry replaces the error, keep the reason the first attempt failed.
+	cl.config.debug().Printf("outgoing connection attempt failed (obfuscated=%t), retrying with obfuscated=%t: %s - %v\n", obfuscatedHeaderFirst, !obfuscatedHeaderFirst, addr, err)
 
 	// Try again with encryption if we didn't earlier, or without if we did.
 	if c, err = cl.establishOutgoingConnEx(ctx, t, addr, !obfuscatedHeaderFirst); err != nil {
 		return c, err
 	}
 
-	return c, err
+	return c, nil
 }
 
 // Called to dial out and run a connection. The addr we're given is already
 // considered half-open.
-func (cl *Client) outgoingConnection(ctx context.Context, t *torrent, addr IpPort, ps peerSource, trusted bool) {
+func (cl *Client) outgoingConnection(ctx context.Context, t *torrent, p Peer) (err error) {
 	var (
-		c   *connection
-		err error
+		c       *connection
+		ps      = p.Source
+		trusted = p.Trusted
 	)
 
-	cl.dialRateLimiter.Wait(ctx)
+	defer func() {
+		err = errorsx.StdlibTimeout(err, 3*time.Second, syscall.ECONNRESET)
+		if err != nil {
+			t.peers.Attempted(p, p.Attempts+1)
+		}
+	}()
 
-	if c, err = cl.establishOutgoingConn(ctx, t, addr); err != nil {
-		t.noLongerHalfOpen(addr.String())
-		cl.config.debug().Println(errors.Wrapf(err, "error establishing connection to %v", addr))
-		return
+	if c, err = cl.establishOutgoingConn(ctx, t, p.AddrPort); err != nil {
+		return errorsx.Wrapf(err, "returning error establishing connection to %v", p.AddrPort)
 	}
-	t.noLongerHalfOpen(addr.String())
 
 	c.Discovery = ps
 	c.trusted = trusted
@@ -675,51 +526,35 @@ func (cl *Client) outgoingConnection(ctx context.Context, t *torrent, addr IpPor
 	// Since the remote address is almost never the same as the local bind address
 	// due to network topologies (NAT, LAN, WAN) we have to detect this situation
 	// from the origin of the connection and ban the address we connected to.
-	if c.PeerID == cl.peerID {
-		cl.config.Handshaker.Release(
+	remoteAddrPort, _ := netx.AddrPort(c.conn.RemoteAddr())
+	if c.PeerID == cl.dht.ID(remoteAddrPort) {
+		cause := connections.NewBanned(
 			c.conn,
-			connections.BannedConnectionError(
-				c.conn,
-				errors.Errorf("detected connection to self - banning %s", c.conn.RemoteAddr().String()),
-			),
+			true,
+			errorsx.Errorf("detected connection to self - %s vs %s - %s", c.PeerID, cl.dht.ID(remoteAddrPort), c.conn.RemoteAddr().String()),
 		)
-		return
+		_ = cl.config.Handshaker.Release(
+			c.conn,
+			cause,
+		)
+		return cause
 	}
 
-	cl.runHandshookConn(c, t)
-	t.deleteConnection(c)
-	t.event.Broadcast()
-	cl.event.Broadcast()
-}
+	t.peers.Attempted(p, 0)
+	defer t.deleteConnection(c)
 
-// The port number for incoming peer connections. 0 if the client isn't
-// listening.
-func (cl *Client) incomingPeerPort() int {
-	return cl.LocalPort()
+	return RunHandshookConn(c, t)
 }
 
 // Calls f with any secret keys.
-func (cl *Client) forSkeys(f func([]byte) bool) {
-	cl.lock()
-	defer cl.unlock()
-	if false { // Emulate the bug from #114
-		var firstIh metainfo.Hash
-		for ih := range cl.torrents {
-			firstIh = ih
-			break
-		}
-		for range cl.torrents {
-			if !f(firstIh[:]) {
-				break
-			}
-		}
-		return
-	}
-	for ih := range cl.torrents {
-		if !f(ih[:]) {
-			break
+func (cl *Client) forSkeys(cb func(skey []byte) []byte) []byte {
+	for skey := range cl.torrents.Each() {
+		if b := skey.Bytes(); cb(b) != nil {
+			return b
 		}
 	}
+
+	return nil
 }
 
 func (cl *Client) initiateHandshakes(c *connection, t *torrent) (err error) {
@@ -732,25 +567,28 @@ func (cl *Client) initiateHandshakes(c *connection, t *torrent) (err error) {
 		rw, c.cryptoMethod, err = pp.EncryptionHandshake{
 			Keys:           cl.forSkeys,
 			CryptoSelector: cl.config.CryptoSelector,
-		}.Outgoing(rw, t.infoHash[:], cl.config.CryptoProvides)
+		}.Outgoing(rw, t.md.ID.Bytes(), cl.config.CryptoProvides)
 
 		if err != nil {
-			return errors.Wrap(err, "encryption handshake failed")
+			return errorsx.Wrapf(err, "encryption handshake failed: %s", t.md.ID)
 		}
 	}
 	c.setRW(rw)
 
+	outgoingRemote, _ := netx.AddrPort(c.conn.RemoteAddr())
 	ebits, info, err := pp.Handshake{
-		PeerID: cl.peerID,
-		Bits:   cl.extensionBytes,
-	}.Outgoing(c.rw(), t.infoHash)
+		PeerID: cl.dht.ID(outgoingRemote).AsByteArray(),
+		Bits:   cl.config.extensionbits,
+	}.Outgoing(c.rw(), t.md.ID.AsByteArray())
 
 	if err != nil {
-		return errors.Wrap(err, "bittorrent protocol handshake failure")
+		return errorsx.Wrapf(err, "bittorrent protocol handshake failure: %s", t.md.ID)
 	}
 
+	cl.config.debug().Println("initiated outgoing connection", cl.dht.ID(outgoingRemote), "->", int160.FromByteArray(info.PeerID))
+
 	c.PeerExtensionBytes = ebits
-	c.PeerID = info.PeerID
+	c.PeerID = int160.FromByteArray(info.PeerID)
 	c.completedHandshake = time.Now()
 
 	return nil
@@ -760,125 +598,75 @@ func (cl *Client) initiateHandshakes(c *connection, t *torrent) (err error) {
 func (cl *Client) receiveHandshakes(c *connection) (t *torrent, err error) {
 	var (
 		buffered io.ReadWriter
-		rw       io.ReadWriter
 	)
-
-	rw = c.rw()
 
 	encryption := pp.EncryptionHandshake{
 		Keys:           cl.forSkeys,
 		CryptoSelector: cl.config.CryptoSelector,
 	}
 
-	if rw, buffered, err = encryption.Incoming(rw); err != nil && cl.config.HeaderObfuscationPolicy.RequirePreferred {
-		return t, errors.Wrap(err, "connection does not have the required header obfuscation")
+	if _, buffered, err = encryption.Incoming(c.rw()); errors.Is(err, io.EOF) {
+		cl.config.debug().Println("encryption handshake timedout", err)
+		return nil, errorsx.Timedout(err, 0)
+	} else if err != nil && cl.config.HeaderObfuscationPolicy.Required {
+		return t, errorsx.Wrap(err, "connection does not have the required header obfuscation")
+	} else if err != nil && buffered == nil {
+		cl.config.debug().Println("encryption handshake", err)
+		// detect stblib timeouts like io.Timeout.
+		return nil, errorsx.StdlibTimeout(err, 0)
 	} else if err != nil {
-		cl.config.debug().Println("encryption handshake failed", err)
+		cl.config.debug().Println("encryption handshake", err)
 	}
 
+	incomingRemote, _ := netx.AddrPort(c.conn.RemoteAddr())
 	ebits, info, err := pp.Handshake{
-		PeerID: cl.peerID,
-		Bits:   cl.extensionBytes,
+		PeerID: cl.dht.ID(incomingRemote).AsByteArray(),
+		Bits:   cl.config.extensionbits,
 	}.Incoming(buffered)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "invalid handshake failed")
+		return nil, connections.NewBanned(c.conn, true, errorsx.Wrap(err, "invalid handshake"))
 	}
 
+	// cl.config.debug().Println("received incoming connection", int160.FromByteArray(info.PeerID), "->", int160.FromByteArray(cl.config.localID), c.remoteAddr)
+
 	c.PeerExtensionBytes = ebits
-	c.PeerID = info.PeerID
+	c.PeerID = int160.FromByteArray(info.PeerID)
 	c.completedHandshake = time.Now()
 
-	cl.lock()
-	t = cl.torrents[info.Hash]
-	cl.unlock()
-
-	if t == nil {
-		return nil, errors.New("received handshake for an unavailable torrent")
+	t, _, err = cl.torrents.Load(int160.FromByteArray(info.Hash), cl.newTorrent)
+	if err != nil {
+		return nil, err
 	}
 
 	return t, nil
 }
 
 func (cl *Client) runReceivedConn(c *connection) {
-	if err := c.conn.SetDeadline(time.Now().Add(cl.config.HandshakesTimeout)); err != nil {
-		cl.config.errors().Println(errors.Wrap(err, "failed setting handshake deadline"))
+	var (
+		timedout errorsx.Timeout
+	)
+
+	if err := c.conn.SetDeadline(time.Now().Add(cl.config.handshakesTimeout)); err != nil {
+		cl.config.errors().Println(errorsx.Wrap(err, "failed setting handshake deadline"))
 		return
 	}
 
 	t, err := cl.receiveHandshakes(c)
-	if err != nil {
-		cl.config.debug().Println(errors.Wrap(err, "error during handshake"))
-		cl.config.Handshaker.Release(c.conn, connections.BannedConnectionError(c.conn, err))
-		return
-	}
-
-	cl.runHandshookConn(c, t)
-}
-
-func (cl *Client) runHandshookConn(c *connection, t *torrent) {
-	c.setTorrent(t)
-
-	c.conn.SetWriteDeadline(time.Time{})
-	c.r = deadlineReader{c.conn, c.r}
-	completedHandshakeConnectionFlags.Add(c.connectionFlags(), 1)
-
-	if err := t.addConnection(c); err != nil {
-		cl.config.debug().Println(errors.Wrap(err, "error adding connection"))
-		return
-	}
-
-	defer t.event.Broadcast()
-	defer t.dropConnection(c)
-	c.sendInitialMessages(cl, t)
-	go c.writer(10 * time.Second)
-
-	if err := c.mainReadLoop(); err != nil {
+	if errors.As(err, &timedout) {
+		cl.config.debug().Printf("received connection timeout %T - %v - %v\n", err, err, cl.config.handshakesTimeout)
 		cl.config.Handshaker.Release(c.conn, err)
-		cl.config.debug().Println(errors.Wrap(err, "error during main read loop"))
-	}
-}
-
-func (cl *Client) dhtPort() (ret uint16) {
-	cl.eachDhtServer(func(s *dht.Server) {
-		ret = uint16(missinggo.AddrPort(s.Addr()))
-	})
-	return
-}
-
-func (cl *Client) haveDhtServer() (ret bool) {
-	cl.eachDhtServer(func(_ *dht.Server) {
-		ret = true
-	})
-	return
-}
-
-// Return a Torrent ready for insertion into a Client.
-func (cl *Client) newTorrent(src Metadata) (t *torrent) {
-	if src.ChunkSize == 0 {
-		src.ChunkSize = defaultChunkSize
+		return
 	}
 
-	t = newTorrent(cl, src)
-	t.digests = newDigests(
-		func(idx int) *Piece { return t.piece(idx) },
-		func(idx int, cause error) {
-			if err := t.pieceHashed(idx, cause); err != nil {
-				cl.config.debug().Println(err)
-			}
-			t.updatePieceCompletion(idx)
-			t.publishPieceChange(idx)
-			t.updatePiecePriority(idx)
+	if err != nil {
+		cl.config.Handshaker.Release(c.conn, errorsx.Wrap(err, "error during handshake"))
+		return
+	}
 
-			t.event.Broadcast()
-			cl.event.Broadcast()
-		},
-	)
-	t.setInfoBytes(src.InfoBytes)
-	t.addTrackers(src.Trackers)
-	cl.AddDHTNodes(src.DHTNodes)
-
-	return t
+	if err := RunHandshookConn(c, t); err != nil {
+		cl.config.debug().Printf("received connection failed %T - %v\n", err, err)
+	}
 }
 
 // Handle a file-like handle to some torrent data resource.
@@ -889,126 +677,61 @@ type Handle interface {
 	io.ReaderAt
 }
 
-func (cl *Client) dropTorrent(infoHash metainfo.Hash) (err error) {
-	cl.lock()
-	defer cl.unlock()
-
-	t, ok := cl.torrents[infoHash]
-	if !ok {
-		return fmt.Errorf("no such torrent")
-	}
-	err = t.close()
-	delete(cl.torrents, infoHash)
-	return err
-}
-
-func (cl *Client) allTorrentsCompleted() bool {
-	for _, t := range cl.torrents {
-		if !t.haveInfo() {
-			return false
-		}
-		if !t.haveAllPieces() {
-			return false
-		}
-	}
-	return true
-}
-
-// WaitAll returns true when all torrents are completely downloaded and false if the
-// client is stopped before that.
-func (cl *Client) WaitAll() bool {
-	cl.lock()
-	defer cl.unlock()
-
-	for !cl.allTorrentsCompleted() {
-		select {
-		case <-cl.closed:
-			return false
-		default:
-		}
-
-		cl.event.Wait()
-	}
-
-	return true
-}
-
-// Torrents returns handles to all the torrents loaded in the Client.
-func (cl *Client) Torrents() []Torrent {
-	cl.lock()
-	defer cl.unlock()
-	return cl.torrentsAsSlice()
-}
-
-func (cl *Client) torrentsAsSlice() (ret []Torrent) {
-	for _, t := range cl.torrents {
-		ret = append(ret, t)
-	}
-	return
-}
-
-// DhtServers returns the set of DHT servers.
-func (cl *Client) DhtServers() []*dht.Server {
-	return cl.dhtServers
-}
-
 // AddDHTNodes adds nodes to the DHT servers.
 func (cl *Client) AddDHTNodes(nodes []string) {
 	for _, n := range nodes {
-		hmp := missinggo.SplitHostMaybePort(n)
-		ip := net.ParseIP(hmp.Host)
-		if ip == nil {
-			cl.config.info().Printf("refusing to add DHT node with invalid IP: %q\n", hmp.Host)
+		addrport, err := netip.ParseAddrPort(n)
+		if err != nil {
+			cl.config.info().Printf("refusing to add DHT node with invalid IP: %q - %v\n", addrport.Addr(), err)
 			continue
 		}
+
 		ni := krpc.NodeInfo{
-			Addr: krpc.NodeAddr{
-				IP:   ip,
-				Port: hmp.Port,
-			},
+			Addr: krpc.NewNodeAddrFromAddrPort(addrport),
 		}
-		cl.eachDhtServer(func(s *dht.Server) {
-			s.AddNode(ni)
-		})
+		cl.dht.AddNode(ni)
 	}
 }
 
-func (cl *Client) newConnection(nc net.Conn, outgoing bool, remoteAddr IpPort) (c *connection) {
-	c = newConnection(nc, outgoing, remoteAddr)
+func (cl *Client) newConnection(nc net.Conn, outgoing bool, remoteAddr netip.AddrPort) (c *connection) {
+	c = newConnection(cl.config, nc, outgoing, remoteAddr, &cl.config.extensionbits, cl.LocalPort16(), cl.dht.AddrPort(remoteAddr))
 	c.setRW(connStatsReadWriter{nc, c})
 	c.r = &rateLimitedReader{
 		l: cl.config.DownloadRateLimiter,
 		r: c.r,
 	}
-	cl.config.debug().Printf("initialized with remote %v (outgoing=%t)\n", remoteAddr, outgoing)
-	return
+
+	if nc != nil {
+		cl.config.debug().Printf("initialized with remote %v|%v %v (outgoing=%t)\n", cl.dht.DynamicAddrPort(), nc.LocalAddr(), remoteAddr, outgoing)
+	}
+
+	return c
 }
 
-func (cl *Client) onDHTAnnouncePeer(ih metainfo.Hash, ip net.IP, port int, portOk bool) {
-	cl.config.DHTAnnouncePeer(ih, ip, port, portOk)
-	cl.lock()
-	defer cl.unlock()
-	t := cl.torrent(ih)
-	if t == nil {
+func (cl *Client) onDHTAnnouncePeer(id int160.T, peer netip.AddrPort, portOk bool) {
+	// a peer that did not announce a usable port cannot be connected to.
+	if !portOk {
 		return
 	}
-	t.addPeers([]Peer{{
-		IP:     ip,
-		Port:   port,
-		Source: peerSourceDhtAnnouncePeer,
-	}})
-}
 
-func firstNotNil(ips ...net.IP) net.IP {
-	for _, ip := range ips {
-		if ip != nil {
-			return ip
-		}
+	cl.lock()
+	defer cl.unlock()
+
+	t, _, err := cl.torrents.Load(id, cl.newTorrent)
+	if err != nil {
+		log.Println("unable to load torrent for peer announce", err)
+		return
 	}
-	return nil
+
+	t.addPeers(NewPeerDeprecated(
+		int160.Zero(),
+		net.IP(peer.Addr().AsSlice()),
+		peer.Port(),
+		PeerOptionSource(peerSourceDhtAnnouncePeer),
+	))
 }
 
-func (cl *Client) eachListener(f func(socket) bool) {
+func (cl *Client) eachListener(f func(sockets.Socket) bool) {
 	for _, s := range cl.conns {
 		if !f(s) {
 			break
@@ -1017,50 +740,82 @@ func (cl *Client) eachListener(f func(socket) bool) {
 }
 
 func (cl *Client) findListener(f func(net.Listener) bool) (ret net.Listener) {
-	cl.eachListener(func(l socket) bool {
+	cl.eachListener(func(l sockets.Socket) bool {
 		ret = l
 		return !f(l)
 	})
 	return
 }
 
-func (cl *Client) publicIP(peer net.IP) net.IP {
+func (cl *Client) publicIP(peer netip.Addr) netip.Addr {
 	// TODO: Use BEP 10 to determine how peers are seeing us.
-	if peer.To4() != nil {
-		return firstNotNil(
-			cl.config.PublicIP4,
-			cl.findListenerIP(func(ip net.IP) bool { return ip.To4() != nil }),
+	if peer.Is4() {
+		return netx.FirstAddrOrZero(
+			cl.findListenerIP(func(ip netip.Addr) bool { return ip.Is4() && ip.IsValid() }),
+			cl.dht.DynamicAddrPort().Addr(),
 		)
 	}
 
-	return firstNotNil(
-		cl.config.PublicIP6,
-		cl.findListenerIP(func(ip net.IP) bool { return ip.To4() == nil }),
+	return netx.FirstAddrOrZero(
+		cl.findListenerIP(func(ip netip.Addr) bool { return ip.Is6() && ip.IsValid() }),
+		cl.dht.DynamicAddrPort().Addr(),
 	)
 }
 
-func (cl *Client) findListenerIP(f func(net.IP) bool) net.IP {
+func (cl *Client) findListenerIP(f func(netip.Addr) bool) netip.Addr {
 	l := cl.findListener(func(l net.Listener) bool {
-		return f(missinggo.AddrIP(l.Addr()))
+		addr, err := netx.AddrPort(l.Addr())
+		if err != nil {
+			log.Println("invalid listener", err)
+			return false
+		}
+		return f(addr.Addr())
 	})
 
 	if l == nil {
-		return nil
+		log.Println("unable to determine listener address/port - no listener found")
+		return netip.Addr{}
 	}
 
-	return missinggo.AddrIP(l.Addr())
+	addr, err := netx.AddrPort(l.Addr())
+	if err != nil {
+		log.Println("unable to determine listener address/port", err)
+		return netip.Addr{}
+	}
+
+	return addr.Addr()
 }
 
 // Our IP as a peer should see it.
-func (cl *Client) publicAddr(peer net.IP) IpPort {
-	return IpPort{IP: cl.publicIP(peer), Port: uint16(cl.incomingPeerPort())}
+func (cl *Client) publicAddr(peer netip.AddrPort) netip.AddrPort {
+	return netip.AddrPortFrom(
+		cl.publicIP(peer.Addr()),
+		cl.LocalPort16(),
+	)
+}
+
+// selfip normalizes an address into the form the self filter is keyed by. a
+// 4in6 address and its unmapped form mask to different byte slices, so both
+// Inhibit and Blocked have to agree on which of the two they use.
+func selfip(addr netip.AddrPort) net.IP {
+	return net.IP(addr.Addr().Unmap().AsSlice())
+}
+
+// listening reports whether addr is one of the addresses this client is
+// listening on, i.e. whether dialing it would connect us to ourselves. peers
+// gossiped over PEX routinely include the address of the client being
+// gossiped to, so this is consulted on every dial - the addresses are held in
+// a filter populated as sockets bind rather than rediscovered by walking the
+// sockets each time.
+func (cl *Client) listening(addr netip.AddrPort) bool {
+	return cl.self.Blocked(selfip(addr), int(addr.Port())) != nil
 }
 
 // ListenAddrs addresses currently being listened to.
 func (cl *Client) ListenAddrs() (ret []net.Addr) {
 	cl.lock()
 	defer cl.unlock()
-	cl.eachListener(func(l socket) bool {
+	cl.eachListener(func(l sockets.Socket) bool {
 		ret = append(ret, l.Addr())
 		return true
 	})
@@ -1097,28 +852,6 @@ func (cl *Client) unlock() {
 	// l2.Output(2, fmt.Sprintf("%p unlock completed - %d", cl, updated))
 }
 
-func (cl *Client) locker() stdsync.Locker {
-	return clientLocker{cl}
-}
-
 func (cl *Client) String() string {
 	return fmt.Sprintf("<%[1]T %[1]p>", cl)
-}
-
-type clientLocker struct {
-	*Client
-}
-
-func (cl clientLocker) Lock() {
-	// updated := atomic.AddUint64(&cl.lcount, 1)
-	// l2.Output(2, fmt.Sprintf("%p lock initiated - %d", cl.Client, updated))
-	cl._mu.Lock()
-	// l2.Output(2, fmt.Sprintf("%p lock completed - %d", cl.Client, updated))
-}
-
-func (cl clientLocker) Unlock() {
-	// updated := atomic.AddUint64(&cl.ucount, 1)
-	// l2.Output(2, fmt.Sprintf("%p unlock initiated - %d", cl.Client, updated))
-	cl._mu.Unlock()
-	// l2.Output(2, fmt.Sprintf("%p unlock completed - %d", cl.Client, updated))
 }

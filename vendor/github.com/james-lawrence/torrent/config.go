@@ -5,45 +5,47 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"runtime"
 	"time"
 
+	pp "github.com/james-lawrence/torrent/btprotocol"
 	"github.com/james-lawrence/torrent/connections"
-
-	"github.com/anacrolix/missinggo/v2/conntrack"
-	"github.com/james-lawrence/torrent/dht/v2"
-	"github.com/james-lawrence/torrent/dht/v2/krpc"
-	"github.com/james-lawrence/torrent/metainfo"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/dht/krpc"
+	"github.com/james-lawrence/torrent/internal/bytesx"
+	"github.com/james-lawrence/torrent/internal/netx"
+	"github.com/james-lawrence/torrent/internal/userx"
+	"github.com/james-lawrence/torrent/storage"
+	"github.com/james-lawrence/torrent/tracker"
+	"golang.org/x/exp/constraints"
 	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/torrent/mse"
-	"github.com/james-lawrence/torrent/storage"
 )
 
 // DefaultHTTPUserAgent ...
-const DefaultHTTPUserAgent = "Go-Torrent/1.0"
+const DefaultHTTPUserAgent = "Ghost-Torrent/1.0"
 
 // ClientConfig not safe to modify this after it's given to a Client.
 type ClientConfig struct {
-	// Store torrent file data in this directory unless .DefaultStorage is
-	// specified.
-	DataDir string `long:"data-dir" description:"directory to store downloaded torrent data"`
+	defaultCacheDirectory string
+	defaultStorage        storage.ClientImpl
+	defaultMetadata       MetadataStore
+	extensionbits         pp.ExtensionBits // Our BitTorrent protocol extension bytes, sent in the BT handshakes.
 
-	NoDefaultPortForwarding bool
-	UpnpID                  string
-	// Don't announce to trackers. This only leaves DHT to discover peers.
-	DisableTrackers bool `long:"disable-trackers"`
-	DisablePEX      bool `long:"disable-pex"`
+	UpnpID string
 
-	// Don't create a DHT.
-	NoDHT            bool `long:"disable-dht"`
-	DhtStartingNodes dht.StartingNodesGetter
-	// Never send chunks to peers.
-	NoUpload bool `long:"no-upload"`
-	// Disable uploading even when it isn't fair.
-	DisableAggressiveUpload bool `long:"disable-aggressive-upload"`
-	// Upload even after there's nothing in it for us. By default uploading is
-	// not altruistic, we'll only upload to encourage the peer to reciprocate.
+	// Upload even after there's nothing in it for us.
 	Seed bool `long:"seed"`
+
+	// how long a torrent may go without activity before it is unloaded from memory.
+	// zero disables idle unloading.
+	idleTimeout time.Duration
+
+	// how often connections send keepalives. a connection that has sent nothing for two intervals
+	// is dropped.
+	keepAliveTimeout time.Duration
+
 	// Only applies to chunks uploaded to peers, to maintain responsiveness
 	// communicating local Client state to peers. Each limiter token
 	// represents one byte. The Limiter's burst must be large enough to fit a
@@ -57,29 +59,27 @@ type ClientConfig struct {
 	// TorrentSpec.ChunkSize).
 	DownloadRateLimiter *rate.Limiter
 
-	// User-provided Client peer ID. If not present, one is generated automatically.
-	PeerID string
+	maximumOutstandingRequests int
 
-	// Called to instantiate storage for each added torrent. Builtin backends
-	// are in the storage package. If not set, the "file" implementation is
-	// used.
-	DefaultStorage storage.ClientImpl
+	// Rate limit connection dialing
+	dialRateLimiter *rate.Limiter
+	// Number of dialing routines to run.
+	dialPoolSize uint16
+
+	// rate limit for accepting connections
+	acceptRateLimiter *rate.Limiter
 
 	HeaderObfuscationPolicy HeaderObfuscationPolicy
+
 	// The crypto methods to offer when initiating connections with header obfuscation.
 	CryptoProvides mse.CryptoMethod
 	// Chooses the crypto method to use when receiving connections with header obfuscation.
 	CryptoSelector mse.CryptoSelector
 
-	// Sets usage of Socks5 Proxy. Authentication should be included in the url if needed.
-	// Examples: socks5://demo:demo@192.168.99.100:1080
-	// 			 http://proxy.domain.com:3128
-	ProxyURL string
-
-	DisableIPv4Peers bool
-	Logger           logger // standard logging for errors, defaults to stderr
-	Warn             logger // warn logging
-	Debug            logger // debug logging, defaults to discard
+	Error  logging // standard logging for errors, defaults to stderr
+	Warn   logging // warn logging
+	Logger logging // informational logging
+	Debug  logging // debug logging, defaults to discard
 
 	// HTTPProxy defines proxy for HTTP requests.
 	// Format: func(*Request) (*url.URL, error),
@@ -92,18 +92,18 @@ type ClientConfig struct {
 	// Updated occasionally to when there's been some changes to client
 	// behaviour in case other clients are assuming anything of us. See also
 	// `bep20`.
-	ExtendedHandshakeClientVersion string
+	extendedHandshakeClientVersion string
 	// Peer ID client identifier prefix. We'll update this occasionally to
 	// reflect changes to client behaviour that other clients may depend on.
 	// Also see `extendedHandshakeClientVersion`.
-	Bep20 string
+	bep20 string
 
 	// Peer dial timeout to use when there are limited peers.
 	NominalDialTimeout time.Duration
 	// Minimum peer dial timeout to use (even if we have lots of peers).
-	MinDialTimeout             time.Duration
-	EstablishedConnsPerTorrent int
-	HalfOpenConnsPerTorrent    int
+	MinDialTimeout          time.Duration
+	halfOpenConnsPerTorrent int
+
 	// Maximum number of peer addresses in reserve.
 	TorrentPeersHighWater int
 	// Minumum number of peers before effort is made to obtain more peers.
@@ -112,50 +112,89 @@ type ClientConfig struct {
 	// Limit how long handshake can take. This is to reduce the lingering
 	// impact of a few bad apples. 4s loses 1% of successful handshakes that
 	// are obtained with 60s timeout, and 5% of unsuccessful handshakes.
-	HandshakesTimeout time.Duration
+	handshakesTimeout time.Duration
 
-	// The IP addresses as our peers should see them. May differ from the
-	// local interfaces due to NAT or other network configurations.
-	PublicIP4 net.IP
-	PublicIP6 net.IP
+	dialer netx.Dialer
 
-	DisableAcceptRateLimiting bool
 	// Don't add connections that have the same peer ID as an existing
 	// connection for a given Torrent.
 	dropDuplicatePeerIds bool
 
-	ConnTracker *conntrack.Instance
+	Handshaker connections.Handshaker
 
-	connections.Handshaker
-
-	// OnQuery hook func
-	DHTOnQuery      func(query *krpc.Msg, source net.Addr) (propagate bool)
-	DHTAnnouncePeer func(ih metainfo.Hash, ip net.IP, port int, portOk bool)
+	ConnectionClosed func(ih int160.T, stats ConnStats, remaining int)
+	extensions       map[pp.ExtensionName]pp.ExtensionNumber
 }
 
-func (cfg *ClientConfig) errors() llog {
-	return llog{logger: cfg.Logger}
+func (cfg *ClientConfig) extension(id pp.ExtensionName) pp.ExtensionNumber {
+	return cfg.extensions[id]
 }
 
-func (cfg *ClientConfig) warn() llog {
-	return llog{logger: cfg.Warn}
+func (cfg *ClientConfig) Storage() storage.ClientImpl {
+	return cfg.defaultStorage
 }
 
-func (cfg *ClientConfig) info() llog {
-	return llog{logger: cfg.Logger}
+func (cfg *ClientConfig) AnnounceRequest(s *Client) tracker.Announce {
+	return tracker.Announce{
+		UserAgent: cfg.HTTPUserAgent,
+		ClientIp4: krpc.NewNodeAddrFromAddrPort(s.dht.DynamicAddrPort()),
+		ClientIp6: krpc.NewNodeAddrFromAddrPort(s.dht.DynamicAddrPort()),
+		Dialer:    cfg.dialer,
+	}
 }
 
-func (cfg *ClientConfig) debug() llog {
-	return llog{logger: cfg.Debug}
+func (cfg *ClientConfig) errors() logging {
+	return cfg.Error
+}
+
+func (cfg *ClientConfig) warn() logging {
+	return cfg.Warn
+}
+
+func (cfg *ClientConfig) info() logging {
+	return cfg.Logger
+}
+
+func (cfg *ClientConfig) debug() logging {
+	return cfg.Debug
 }
 
 // ClientConfigOption options for the client configuration
 type ClientConfigOption func(*ClientConfig)
 
+// useful for default noop configurations.
+func ClientConfigNoop(c *ClientConfig) {}
+
+func ClientConfigCompose(options ...ClientConfigOption) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		for _, opt := range options {
+			opt(cc)
+		}
+	}
+}
+
+func ClientConfigDialer(d netx.Dialer) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.dialer = d
+	}
+}
+
+func ClientConfigDialRateLimit(l *rate.Limiter) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.dialRateLimiter = l
+	}
+}
+
 // ClientConfigInfoLogger set the info logger
-func ClientConfigInfoLogger(l *log.Logger) ClientConfigOption {
+func ClientConfigInfoLogger(l logging) ClientConfigOption {
 	return func(c *ClientConfig) {
 		c.Logger = l
+	}
+}
+
+func ClientConfigDebugLogger(l logging) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.Debug = l
 	}
 }
 
@@ -166,38 +205,225 @@ func ClientConfigSeed(b bool) ClientConfigOption {
 	}
 }
 
+// ClientConfigIdleTimeout unload torrents from memory once they have had no activity for
+// the given duration. a seeding torrent with connections is never idle. the torrent remains
+// on disk and is reloaded when a peer connects. zero disables idle unloading.
+func ClientConfigIdleTimeout(d time.Duration) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.idleTimeout = d
+	}
+}
+
+// ClientConfigKeepAlive how often connections send keepalives, a connection that has sent nothing
+// for two intervals is considered dead and dropped. peers should be configured to match, a peer with a
+// longer interval is dropped while quiet. defaults to 10 seconds.
+func ClientConfigKeepAlive(d time.Duration) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.keepAliveTimeout = d
+	}
+}
+
+func ClientConfigStorage(s storage.ClientImpl) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.defaultStorage = s
+	}
+}
+
+func ClientConfigStorageDir(dir string) ClientConfigOption {
+	return func(c *ClientConfig) {
+		c.defaultStorage = storage.NewFile(dir)
+		c.defaultMetadata = NewMetadataCache(dir)
+	}
+}
+
+func ClientConfigHTTPUserAgent(s string) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.HTTPUserAgent = s
+	}
+}
+
+func ClientConfigConnectionClosed(fn func(ih int160.T, stats ConnStats, remaining int)) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.ConnectionClosed = fn
+	}
+}
+
+func ClientConfigEnableEncryption(cc *ClientConfig) {
+	cc.HeaderObfuscationPolicy = HeaderObfuscationPolicy{
+		Preferred: true,
+		Required:  false,
+	}
+}
+
+func ClientConfigFirewall(fw connections.FirewallStateful) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.Handshaker = connections.NewHandshaker(fw)
+	}
+}
+
+func ClientConfigPEX(b bool) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		if b {
+			cc.extensions[pp.ExtensionNamePex] = pp.PEXExtendedID
+		} else {
+			delete(cc.extensions, pp.ExtensionNamePex)
+		}
+	}
+}
+
+func ClientConfigMetadata(b bool) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		if b {
+			cc.extensions[pp.ExtensionNameMetadata] = pp.MetadataExtendedID
+		} else {
+			delete(cc.extensions, pp.ExtensionNameMetadata)
+		}
+	}
+}
+
+func ClientConfigExtension(name pp.ExtensionName) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		var (
+			maxid pp.ExtensionNumber = pp.ExtendedIdMax - 1
+		)
+
+		for _, id := range cc.extensions {
+			maxid = max(maxid, id)
+		}
+
+		cc.extensions[name] = maxid + 1
+	}
+}
+
+// change what extension bits are set.
+func ClientConfigExtensionBits(bits ...uint) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.extensionbits = pp.NewExtensionBits(bits...)
+	}
+}
+func ClientConfigMaxOutstandingRequests(n int) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.maximumOutstandingRequests = n
+	}
+}
+
+func ClientConfigCacheDirectory(s string) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.defaultCacheDirectory = s
+	}
+}
+
+// specify dialing timeouts healthy timeout for when the the torrent has sufficient peers connected.
+// and starving when it lacks peers. defaults are 4 and 16 respectively. generally, when starving
+// you'll want to be more forgiving and set a larger timeout.
+func ClientConfigDialTimeouts(healthy, starving time.Duration) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.NominalDialTimeout = starving
+		cc.MinDialTimeout = healthy
+	}
+}
+
+// specify the number of routines for dialing peers
+func ClientConfigDialPoolSize[T constraints.Integer](n T) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.dialPoolSize = max(uint16(n), 1)
+	}
+}
+
+// specify the low and high watermarks for torrent peering
+func ClientConfigPeerLimits[T constraints.Integer](low, high T) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.TorrentPeersLowWater = int(low)
+		cc.TorrentPeersHighWater = int(high)
+	}
+}
+
+// specify the limit to the number of peers a torrent will attempt to connect to concurrently.
+func ClientConfigMaxConnecting[T constraints.Integer](connecting T) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.halfOpenConnsPerTorrent = int(connecting)
+		log.Println("returning setting Maximum number of half open", connecting)
+	}
+}
+
+// specify the global capacity for uploading pieces to peers.
+func ClientConfigUploadLimit(l *rate.Limiter) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.UploadRateLimiter = l
+	}
+}
+
+// specify the global capacity for downloading pieces from peers.
+func ClientConfigDownloadLimit(l *rate.Limiter) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.DownloadRateLimiter = l
+	}
+}
+
+// specify the global capacity for accepting inbound connections
+func ClientConfigAcceptLimit(l *rate.Limiter) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.acceptRateLimiter = l
+	}
+}
+
+// peer id prefix for BEP20 implementation.
+func ClientConfigIDPrefix(prefix string) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.bep20 = prefix
+	}
+}
+
+// how long we should wait for handshakes
+func ClientConfigHandshakeTimeout(d time.Duration) ClientConfigOption {
+	return func(cc *ClientConfig) {
+		cc.handshakesTimeout = d
+	}
+}
+
 // NewDefaultClientConfig default client configuration.
-func NewDefaultClientConfig(options ...ClientConfigOption) *ClientConfig {
+func NewDefaultClientConfig(mdstore MetadataStore, store storage.ClientImpl, options ...ClientConfigOption) *ClientConfig {
 	cc := &ClientConfig{
+		defaultCacheDirectory:          userx.DefaultCacheDirectory("torrents"),
+		defaultMetadata:                mdstore,
+		defaultStorage:                 store,
+		extensionbits:                  defaultPeerExtensionBytes(),
 		HTTPUserAgent:                  DefaultHTTPUserAgent,
-		ExtendedHandshakeClientVersion: "go.torrent dev 20181121",
-		Bep20:                          "-GT0002-",
-		UpnpID:                         "james-lawrence/torrent",
-		NominalDialTimeout:             20 * time.Second,
-		MinDialTimeout:                 3 * time.Second,
-		EstablishedConnsPerTorrent:     200,
-		HalfOpenConnsPerTorrent:        25,
-		TorrentPeersHighWater:          500,
-		TorrentPeersLowWater:           50,
-		HandshakesTimeout:              4 * time.Second,
-		DhtStartingNodes:               dht.GlobalBootstrapAddrs,
-		UploadRateLimiter:              unlimited,
-		DownloadRateLimiter:            unlimited,
-		ConnTracker:                    conntrack.NewInstance(),
-		DisableAcceptRateLimiting:      true,
+		extendedHandshakeClientVersion: "ghost.torrent dev 2025",
+		bep20:                          "-GT0002-",
+		UpnpID:                         "ghost.torrent",
+		maximumOutstandingRequests:     2048,
+		NominalDialTimeout:             16 * time.Second,
+		MinDialTimeout:                 4 * time.Second,
+		halfOpenConnsPerTorrent:        64,
+		TorrentPeersHighWater:          64,
+		TorrentPeersLowWater:           16,
+		handshakesTimeout:              4 * time.Second,
+		keepAliveTimeout:               10 * time.Second,
+		UploadRateLimiter:              rate.NewLimiter(rate.Limit(128*bytesx.MiB), bytesx.MiB),
+		DownloadRateLimiter:            rate.NewLimiter(rate.Limit(256*bytesx.MiB), bytesx.MiB),
+		dialRateLimiter:                rate.NewLimiter(rate.Limit(32), 128),
+		acceptRateLimiter:              rate.NewLimiter(rate.Limit(runtime.NumCPU()), runtime.NumCPU()),
+		dialPoolSize:                   uint16(runtime.NumCPU()),
+		dialer:                         &net.Dialer{Timeout: 15 * time.Second},
 		HeaderObfuscationPolicy: HeaderObfuscationPolicy{
-			Preferred:        true,
-			RequirePreferred: false,
+			Preferred: false,
+			Required:  false,
 		},
-		CryptoSelector:  mse.DefaultCryptoSelector,
-		CryptoProvides:  mse.AllSupportedCrypto,
-		Logger:          log.New(log.Writer(), "[torrent] ", log.Flags()),
-		Warn:            discard{},
-		Debug:           discard{},
-		DHTAnnouncePeer: func(ih metainfo.Hash, ip net.IP, port int, portOk bool) {},
+		CryptoSelector:   mse.DefaultCryptoSelector,
+		CryptoProvides:   mse.AllSupportedCrypto,
+		Logger:           discard{},
+		Warn:             discard{},
+		Debug:            discard{},
+		Error:            log.Default(),
+		ConnectionClosed: func(t int160.T, stats ConnStats, remaining int) {},
 		Handshaker: connections.NewHandshaker(
 			connections.AutoFirewall(),
 		),
+		extensions: map[pp.ExtensionName]pp.ExtensionNumber{
+			pp.ExtensionNameMetadata: pp.MetadataExtendedID,
+			pp.ExtensionNamePex:      pp.PEXExtendedID,
+		},
 	}
 
 	for _, opt := range options {
@@ -209,6 +435,6 @@ func NewDefaultClientConfig(options ...ClientConfigOption) *ClientConfig {
 
 // HeaderObfuscationPolicy ...
 type HeaderObfuscationPolicy struct {
-	RequirePreferred bool // Whether the value of Preferred is a strict requirement.
-	Preferred        bool // Whether header obfuscation is preferred.
+	Required  bool // Whether the value of Preferred is a strict requirement.
+	Preferred bool // Whether header obfuscation is preferred.
 }

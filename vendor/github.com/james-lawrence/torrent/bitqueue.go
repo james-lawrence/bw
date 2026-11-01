@@ -3,11 +3,11 @@ package torrent
 import (
 	"sync"
 
-	"github.com/RoaringBitmap/roaring"
+	"github.com/RoaringBitmap/roaring/v2"
 )
 
-func newBitQueue() bitQueue {
-	return bitQueue{
+func newBitQueue() *bitQueue {
+	return &bitQueue{
 		mu: &sync.RWMutex{},
 		RB: roaring.NewBitmap(),
 	}
@@ -16,6 +16,12 @@ func newBitQueue() bitQueue {
 type bitQueue struct {
 	mu *sync.RWMutex
 	RB *roaring.Bitmap
+}
+
+func (t bitQueue) Count() (i int) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	return int(t.RB.GetCardinality())
 }
 
 func (t bitQueue) Pop() (i int, ok bool) {
@@ -37,4 +43,11 @@ func (t bitQueue) Push(i int) {
 	defer t.mu.Unlock()
 
 	t.RB.AddInt(i)
+}
+
+func (t bitQueue) PushBitmap(o *roaring.Bitmap) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	t.RB.Or(o)
 }

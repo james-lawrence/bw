@@ -3,8 +3,6 @@ package torrent
 import (
 	"strings"
 
-	"github.com/anacrolix/missinggo/bitmap"
-
 	"github.com/james-lawrence/torrent/metainfo"
 )
 
@@ -15,7 +13,6 @@ type File struct {
 	offset int64
 	length int64
 	fi     metainfo.FileInfo
-	prio   piecePriority
 }
 
 // Torrent returns the associated torrent
@@ -60,20 +57,23 @@ func (f *File) bytesLeft() (left int64) {
 	firstPieceIndex := f.firstPieceIndex()
 	endPieceIndex := f.endPieceIndex() - 1
 
-	dup := bitmap.Bitmap{RB: f.t.chunks.completed.Clone()}
-	bitmap.Flip(dup, firstPieceIndex+1, endPieceIndex).IterTyped(func(piece int) bool {
-		if piece >= endPieceIndex {
+	dup := f.t.chunks.Clone(f.t.chunks.completed)
+	dup.Flip(firstPieceIndex+1, endPieceIndex)
+	dup.Iterate(func(piece uint32) bool {
+		if uint64(piece) >= endPieceIndex {
 			return false
 		}
-		if piece > firstPieceIndex {
+		if uint64(piece) > firstPieceIndex {
 			left += pieceSize
 		}
 		return true
 	})
-	if !f.t.pieceComplete(firstPieceIndex) {
+
+	if !f.t.chunks.ChunksComplete(uint64(firstPieceIndex)) {
 		left += pieceSize - (f.offset % pieceSize)
 	}
-	if !f.t.pieceComplete(endPieceIndex) {
+
+	if !f.t.chunks.ChunksComplete(uint64(endPieceIndex)) {
 		left += (f.offset + f.length) % pieceSize
 	}
 	return
@@ -90,40 +90,6 @@ func (f *File) DisplayPath() string {
 
 }
 
-// FilePieceState the download status of a piece that comprises part of a File.
-type FilePieceState struct {
-	Bytes int64 // Bytes within the piece that are part of this File.
-	PieceState
-}
-
-// State of pieces in this file.
-func (f *File) State() (ret []FilePieceState) {
-	f.t.rLock()
-	defer f.t.rUnlock()
-	pieceSize := int64(f.t.usualPieceSize())
-	off := f.offset % pieceSize
-	remaining := f.length
-	for i := pieceIndex(f.offset / pieceSize); ; i++ {
-		if remaining == 0 {
-			break
-		}
-		len1 := pieceSize - off
-		if len1 > remaining {
-			len1 = remaining
-		}
-		ps := f.t.pieceState(i)
-		ret = append(ret, FilePieceState{len1, ps})
-		off = 0
-		remaining -= len1
-	}
-	return
-}
-
-// Download requests that all pieces containing data in the file be downloaded.
-func (f *File) Download() {
-	f.SetPriority(PiecePriorityNormal)
-}
-
 func byteRegionExclusivePieces(off, size, pieceSize int64) (begin, end int) {
 	begin = int((off + pieceSize - 1) / pieceSize)
 	end = int((off + size) / pieceSize)
@@ -133,46 +99,26 @@ func byteRegionExclusivePieces(off, size, pieceSize int64) (begin, end int) {
 // NewReader returns a reader for the file.
 func (f *File) NewReader() Reader {
 	tr := reader{
-		mu:        f.t.locker(),
-		t:         f.t,
-		readahead: 5 * 1024 * 1024,
-		offset:    f.Offset(),
-		length:    f.Length(),
+		TorrentImpl: f.t.Storage(),
+		offset:      f.Offset(),
+		length:      f.Length(),
 	}
-	f.t.addReader(&tr)
+
 	return &tr
 }
 
-// SetPriority the minimum priority for pieces in the File.
-func (f *File) SetPriority(prio piecePriority) {
-	f.t.lock()
-	defer f.t.unlock()
-	if prio == f.prio {
-		return
-	}
-	f.prio = prio
-	f.t.updatePiecePriorities(f.firstPieceIndex(), f.endPieceIndex())
-}
-
-// Priority per File.SetPriority.
-func (f *File) Priority() piecePriority {
-	f.t.lock()
-	defer f.t.unlock()
-	return f.prio
-}
-
 // Returns the index of the first piece containing data for the file.
-func (f *File) firstPieceIndex() pieceIndex {
+func (f *File) firstPieceIndex() uint64 {
 	if f.t.usualPieceSize() == 0 {
 		return 0
 	}
-	return pieceIndex(f.offset / int64(f.t.usualPieceSize()))
+	return uint64(f.offset / int64(f.t.usualPieceSize()))
 }
 
 // Returns the index of the piece after the last one containing data for the file.
-func (f *File) endPieceIndex() pieceIndex {
+func (f *File) endPieceIndex() uint64 {
 	if f.t.usualPieceSize() == 0 {
 		return 0
 	}
-	return pieceIndex((f.offset + f.length + int64(f.t.usualPieceSize()) - 1) / int64(f.t.usualPieceSize()))
+	return uint64((f.offset + f.length + int64(f.t.usualPieceSize()) - 1) / int64(f.t.usualPieceSize()))
 }

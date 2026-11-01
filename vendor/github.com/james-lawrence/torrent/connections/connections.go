@@ -2,6 +2,7 @@ package connections
 
 import (
 	"errors"
+	"log"
 	"net"
 
 	"github.com/james-lawrence/torrent/internal/netx"
@@ -43,6 +44,7 @@ func (t handshaker) Accept(l net.Listener) (c net.Conn, err error) {
 		}
 
 		if err = t.Firewall.Blocked(rip, port); err != nil {
+			log.Println("connection blocked", rip, port, err)
 			conn.Close()
 			continue
 		}
@@ -62,6 +64,9 @@ func (t handshaker) Release(conn net.Conn, cause error) (err error) {
 	}
 
 	if banned := new(bannedConnection); errors.As(cause, banned) {
+		if !banned.silent {
+			log.Println(cause)
+		}
 		t.Firewall.Inhibit(rip, port, cause)
 	}
 

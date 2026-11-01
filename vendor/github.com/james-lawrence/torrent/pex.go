@@ -1,11 +1,12 @@
 package torrent
 
 import (
+	"net/netip"
 	"sync"
 	"time"
 
-	"github.com/james-lawrence/torrent/dht/v2/krpc"
 	pp "github.com/james-lawrence/torrent/btprotocol"
+	"github.com/james-lawrence/torrent/dht/krpc"
 )
 
 func newPex() *pex {
@@ -21,7 +22,7 @@ type pex struct {
 	conns map[*connection]time.Time
 }
 
-func (t *pex) snapshot() *pp.PexMsg {
+func (t *pex) snapshot(c0 *connection) *pp.PexMsg {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
@@ -30,27 +31,39 @@ func (t *pex) snapshot() *pp.PexMsg {
 	}
 
 	tx := &pp.PexMsg{}
-	nodeAddr := func(addr IpPort) krpc.NodeAddr {
-		ip := addr.IP
-		if ip4 := ip.To4(); ip4 != nil {
-			ip = ip4
-		}
-		return krpc.NodeAddr{IP: ip, Port: int(addr.Port)}
-	}
 
 	n := 0
 	for c := range t.conns {
+		if c == c0 {
+			continue
+		}
+
 		if n > 25 {
 			break
 		}
 
-		addr := c.remoteIPPort()
+		// remoteAddr is only trustworthy as a listening address for
+		// connections we dialed - we dialed that exact address. For an
+		// incoming connection, remoteAddr is the peer's ephemeral outgoing
+		// source port for this socket, not their listening port; the real
+		// listening port can only come from what they told us in their
+		// extension handshake. A peer that never announced one must be
+		// omitted, not reported with a wrong address.
+		addr := c.remoteAddr
+		if !c.outgoing {
+			listenPort := c.peerListenPort()
+			if listenPort == 0 {
+				continue
+			}
+			addr = netip.AddrPortFrom(addr.Addr(), listenPort)
+		}
+
 		f := c.pexPeerFlags()
 		if c.ipv6() {
-			tx.Added6 = append(tx.Added6, nodeAddr(addr))
+			tx.Added6 = append(tx.Added6, krpc.NewNodeAddrFromAddrPort(addr))
 			tx.Added6Flags = append(tx.Added6Flags, f)
 		} else {
-			tx.Added = append(tx.Added, nodeAddr(addr))
+			tx.Added = append(tx.Added, krpc.NewNodeAddrFromAddrPort(addr))
 			tx.AddedFlags = append(tx.AddedFlags, f)
 		}
 

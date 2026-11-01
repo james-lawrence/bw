@@ -15,42 +15,36 @@ func (h Hash) Bytes() []byte {
 	return h[:]
 }
 
-func (h Hash) AsString() string {
-	return string(h[:])
-}
-
 func (h Hash) String() string {
-	return h.HexString()
-}
-
-func (h Hash) HexString() string {
 	return fmt.Sprintf("%x", h[:])
 }
 
-func (h *Hash) FromHexString(s string) (err error) {
+func fromHexString(s string) (h Hash, err error) {
 	if len(s) != 2*HashSize {
-		err = fmt.Errorf("hash hex string has bad length: %d", len(s))
-		return
+		return h, fmt.Errorf("hash hex string has bad length: %d", len(s))
 	}
+
 	n, err := hex.Decode(h[:], []byte(s))
 	if err != nil {
-		return
+		return h, err
 	}
+
 	if n != HashSize {
-		panic(n)
+		return h, fmt.Errorf("hash size to short %d != %d", n, HashSize)
 	}
-	return
+
+	return h, nil
 }
 
 func NewHashFromHex(s string) (h Hash) {
-	err := h.FromHexString(s)
+	h, err := fromHexString(s)
 	if err != nil {
 		panic(err)
 	}
-	return
+	return h
 }
 
-func HashBytes(b []byte) (ret Hash) {
+func NewHashFromBytes(b []byte) (ret Hash) {
 	hasher := sha1.New()
 	hasher.Write(b)
 	copy(ret[:], hasher.Sum(nil))

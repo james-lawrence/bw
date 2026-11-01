@@ -1,15 +1,14 @@
 package torrent
 
 import (
-	"fmt"
-	"net"
+	"github.com/james-lawrence/torrent/internal/errorsx"
 )
 
-// banned represents a banned peer.
-type banned struct {
-	IP net.IP
+func ErrTorrentClosed() error {
+	return errorsx.New("torrent closed")
 }
 
-func (t banned) Error() string {
-	return fmt.Sprintf("banned peer: %v", t.IP)
-}
+const (
+	ErrTorrentNotActive                     = errorsx.String("torrent not active")
+	ErrTorrentAttemptedToPersistNilMetadata = errorsx.String("cannot persist torrent metadata when missing info")
+)

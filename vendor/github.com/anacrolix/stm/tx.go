@@ -1,30 +1,42 @@
 package stm
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 	"unsafe"
 )
 
+type txVar interface {
+	getValue() *atomicValue[VarValue]
+	changeValue(any)
+	getWatchers() *sync.Map
+	getLock() *sync.Mutex
+}
+
 // A Tx represents an atomic transaction.
 type Tx struct {
-	reads  map[*Var]uint64
-	writes map[*Var]interface{}
-	locks  []*sync.Mutex
-	mu     sync.Mutex
-	cond   sync.Cond
+	reads          map[txVar]VarValue
+	writes         map[txVar]any
+	watching       map[txVar]struct{}
+	locks          txLocks
+	mu             sync.Mutex
+	cond           sync.Cond
+	waiting        bool
+	completed      bool
+	tries          int
+	numRetryValues int
 }
 
 // Check that none of the logged values have changed since the transaction began.
-func (tx *Tx) verify() bool {
-	for v, version := range tx.reads {
-		changed := v.loadState().version != version
-		if changed {
-			return false
+func (tx *Tx) inputsChanged() bool {
+	for v, read := range tx.reads {
+		if read.Changed(v.getValue().Load()) {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 // Writes the values in the transaction log to their respective Vars.
@@ -34,47 +46,77 @@ func (tx *Tx) commit() {
 	}
 }
 
+func (tx *Tx) updateWatchers() {
+	for v := range tx.watching {
+		if _, ok := tx.reads[v]; !ok {
+			delete(tx.watching, v)
+			v.getWatchers().Delete(tx)
+		}
+	}
+	for v := range tx.reads {
+		if _, ok := tx.watching[v]; !ok {
+			v.getWatchers().Store(tx, nil)
+			tx.watching[v] = struct{}{}
+		}
+	}
+}
+
 // wait blocks until another transaction modifies any of the Vars read by tx.
 func (tx *Tx) wait() {
-	for v := range tx.reads {
-		v.watchers.Store(tx, nil)
+	if len(tx.reads) == 0 {
+		panic("not waiting on anything")
 	}
+	tx.updateWatchers()
 	tx.mu.Lock()
-	for tx.verify() {
+	firstWait := true
+	for !tx.inputsChanged() {
+		if !firstWait {
+			expvars.Add("wakes for unchanged versions", 1)
+		}
 		expvars.Add("waits", 1)
+		tx.waiting = true
+		tx.cond.Broadcast()
 		tx.cond.Wait()
+		tx.waiting = false
+		firstWait = false
 	}
 	tx.mu.Unlock()
-	for v := range tx.reads {
-		v.watchers.Delete(tx)
-	}
 }
 
 // Get returns the value of v as of the start of the transaction.
-func (tx *Tx) Get(v *Var) interface{} {
+func (v *Var[T]) Get(tx *Tx) T {
 	// If we previously wrote to v, it will be in the write log.
 	if val, ok := tx.writes[v]; ok {
-		return val
+		return fromAny[T](val)
 	}
-	state := v.loadState()
 	// If we haven't previously read v, record its version
-	if _, ok := tx.reads[v]; !ok {
-		tx.reads[v] = state.version
+	vv, ok := tx.reads[v]
+	if !ok {
+		vv = v.getValue().Load()
+		tx.reads[v] = vv
 	}
-	return state.val
+	return fromAny[T](vv.Get())
 }
 
 // Set sets the value of a Var for the lifetime of the transaction.
-func (tx *Tx) Set(v *Var, val interface{}) {
+func (v *Var[T]) Set(tx *Tx, val T) {
 	if v == nil {
 		panic("nil Var")
 	}
 	tx.writes[v] = val
 }
 
-// Retry aborts the transaction and retries it when a Var changes.
-func (tx *Tx) Retry() {
-	panic(Retry)
+type txProfileValue struct {
+	*Tx
+	int
+}
+
+// Retry aborts the transaction and retries it when a Var changes. You can return from this method
+// to satisfy return values, but it should never actually return anything as it panics internally.
+func (tx *Tx) Retry() struct{} {
+	retries.Add(txProfileValue{tx, tx.numRetryValues}, 1)
+	tx.numRetryValues++
+	panic(retry)
 }
 
 // Assert is a helper function that retries a transaction if the condition is
@@ -86,17 +128,30 @@ func (tx *Tx) Assert(p bool) {
 }
 
 func (tx *Tx) reset() {
-	for k := range tx.reads {
-		delete(tx.reads, k)
-	}
-	for k := range tx.writes {
-		delete(tx.writes, k)
-	}
+	tx.mu.Lock()
+	clear(tx.reads)
+	clear(tx.writes)
+	tx.mu.Unlock()
+	tx.removeRetryProfiles()
 	tx.resetLocks()
 }
 
+func (tx *Tx) removeRetryProfiles() {
+	for tx.numRetryValues > 0 {
+		tx.numRetryValues--
+		retries.Remove(txProfileValue{tx, tx.numRetryValues})
+	}
+}
+
 func (tx *Tx) recycle() {
-	txPool.Put(tx)
+	for v := range tx.watching {
+		delete(tx.watching, v)
+		v.getWatchers().Delete(tx)
+	}
+	tx.removeRetryProfiles()
+	// I don't think we can reuse Txs, because the "completed" field should/needs to be set
+	// indefinitely after use.
+	//txPool.Put(tx)
 }
 
 func (tx *Tx) lockAllVars() {
@@ -107,12 +162,12 @@ func (tx *Tx) lockAllVars() {
 }
 
 func (tx *Tx) resetLocks() {
-	tx.locks = tx.locks[:0]
+	tx.locks.clear()
 }
 
 func (tx *Tx) collectReadLocks() {
 	for v := range tx.reads {
-		tx.locks = append(tx.locks, &v.mu)
+		tx.locks.append(v.getLock())
 	}
 }
 
@@ -120,29 +175,46 @@ func (tx *Tx) collectAllLocks() {
 	tx.collectReadLocks()
 	for v := range tx.writes {
 		if _, ok := tx.reads[v]; !ok {
-			tx.locks = append(tx.locks, &v.mu)
+			tx.locks.append(v.getLock())
 		}
 	}
 }
 
 func (tx *Tx) sortLocks() {
-	sort.Slice(tx.locks, func(i, j int) bool {
-		return uintptr(unsafe.Pointer(tx.locks[i])) < uintptr(unsafe.Pointer(tx.locks[j]))
-	})
+	tx.locks.sort()
 }
 
 func (tx *Tx) lock() {
-	for _, l := range tx.locks {
+	for _, l := range tx.locks.mus {
 		l.Lock()
 	}
 }
 
 func (tx *Tx) unlock() {
-	for _, l := range tx.locks {
+	for _, l := range tx.locks.mus {
 		l.Unlock()
 	}
 }
 
 func (tx *Tx) String() string {
 	return fmt.Sprintf("%[1]T %[1]p", tx)
+}
+
+type txLocks struct {
+	mus []*sync.Mutex
+}
+
+// Sorts the locks by address, to establish a consistent acquisition order across transactions.
+func (me *txLocks) sort() {
+	slices.SortFunc(me.mus, func(i, j *sync.Mutex) int {
+		return cmp.Compare(uintptr(unsafe.Pointer(i)), uintptr(unsafe.Pointer(j)))
+	})
+}
+
+func (me *txLocks) clear() {
+	me.mus = me.mus[:0]
+}
+
+func (me *txLocks) append(mu *sync.Mutex) {
+	me.mus = append(me.mus, mu)
 }

@@ -3,10 +3,13 @@ package torrent
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"net"
+	"net/netip"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/james-lawrence/torrent/internal/errorsx"
 )
 
 var table = crc32.MakeTable(crc32.Castagnoli)
@@ -33,7 +36,7 @@ func mask(prefix, bytes int) net.IPMask {
 	for i := range ret {
 		ret[i] = 0x55
 	}
-	for i := 0; i < prefix; i++ {
+	for i := range prefix {
 		ret[i] = 0xff
 	}
 	return ret
@@ -45,32 +48,41 @@ func ipv6Mask(a, b net.IP) net.IPMask {
 			return mask(i, 16)
 		}
 	}
+
 	panic(fmt.Sprintf("%s %s", a, b))
 }
 
-func bep40PriorityBytes(a, b IpPort) ([]byte, error) {
-	if a.IP.Equal(b.IP) {
+func bep40PriorityBytes(a, b netip.AddrPort) ([]byte, error) {
+	if a.Addr() == b.Addr() {
 		var ret [4]byte
-		binary.BigEndian.PutUint16(ret[0:2], a.Port)
-		binary.BigEndian.PutUint16(ret[2:4], b.Port)
+		binary.BigEndian.PutUint16(ret[0:2], a.Port())
+		binary.BigEndian.PutUint16(ret[2:4], b.Port())
 		return ret[:], nil
 	}
-	if a4, b4 := a.IP.To4(), b.IP.To4(); a4 != nil && b4 != nil {
-		m := ipv4Mask(a.IP, b.IP)
-		return append(a4.Mask(m), b4.Mask(m)...), nil
+
+	if a.Addr().Unmap().Is4() && b.Addr().Unmap().Is4() {
+		aip := net.IP(a.Addr().AsSlice())
+		bip := net.IP(b.Addr().AsSlice())
+		m := ipv4Mask(aip, bip)
+		return append(aip.Mask(m), bip.Mask(m)...), nil
 	}
-	if a6, b6 := a.IP.To16(), b.IP.To16(); a6 != nil && b6 != nil {
-		m := ipv6Mask(a.IP, b.IP)
-		return append(a6.Mask(m), b6.Mask(m)...), nil
+
+	if a.Addr().Is6() || b.Addr().Is6() {
+		aip := a.Addr().As16()
+		bip := b.Addr().As16()
+		m := ipv6Mask(aip[:], bip[:])
+		return append(net.IP(aip[:]).Mask(m), net.IP(bip[:]).Mask(m)...), nil
 	}
-	return nil, errors.New("incomparable IPs")
+
+	return nil, fmt.Errorf("incomparable IPs: %v vs %v", spew.Sdump(a), spew.Sdump(b))
 }
 
-func bep40Priority(a, b IpPort) (peerPriority, error) {
+func bep40Priority(a, b netip.AddrPort) (peerPriority, error) {
 	bs, err := bep40PriorityBytes(a, b)
 	if err != nil {
 		return 0, err
 	}
+
 	i := len(bs) / 2
 	_a, _b := bs[:i], bs[i:]
 	if bytes.Compare(_a, _b) > 0 {
@@ -79,7 +91,8 @@ func bep40Priority(a, b IpPort) (peerPriority, error) {
 	return crc32.Checksum(bs, table), nil
 }
 
-func bep40PriorityIgnoreError(a, b IpPort) peerPriority {
-	prio, _ := bep40Priority(a, b)
+func bep40PriorityIgnoreError(a, b netip.AddrPort) peerPriority {
+	prio, err := bep40Priority(a, b)
+	errorsx.Log(errorsx.Wrap(err, "failed to calculate priority"))
 	return prio
 }

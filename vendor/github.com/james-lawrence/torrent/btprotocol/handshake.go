@@ -6,7 +6,8 @@ import (
 	"io"
 	"unicode"
 
-	"github.com/pkg/errors"
+	"github.com/james-lawrence/torrent/dht/int160"
+	"github.com/james-lawrence/torrent/internal/errorsx"
 )
 
 func debug(in []byte) (r string) {
@@ -52,7 +53,6 @@ func (t HandshakeMessage) WriteTo(dst io.Writer) (n int64, err error) {
 
 	written := copy(buf[:20], []byte(Protocol))
 	written += copy(buf[20:28], t.Extensions[:])
-	// log.Println("WRITING HANDSHAKE MESSAGE", debug(buf))
 	nw, err := dst.Write(buf)
 	return int64(nw), err
 }
@@ -69,11 +69,11 @@ func (t *HandshakeMessage) ReadFrom(src io.Reader) (n int64, err error) {
 	}
 
 	if read != len(buf) {
-		return int64(read), errors.Errorf("invalid handshake invalid length")
+		return int64(read), errorsx.New("invalid handshake invalid length")
 	}
 
 	if !bytes.HasPrefix(buf, []byte(Protocol)) {
-		return int64(read), errors.Errorf("unexpected protocol string %s:%s", Protocol, string(buf))
+		return int64(read), errorsx.Errorf("unexpected protocol string %x != %x", buf, Protocol)
 	}
 
 	copy(t.Extensions[:], buf[20:])
@@ -111,7 +111,7 @@ func (t *HandshakeInfoMessage) ReadFrom(src io.Reader) (n int64, err error) {
 	}
 
 	if read != len(buf) {
-		return int64(read), errors.Errorf("invalid handshake invalid length")
+		return int64(read), errorsx.Errorf("invalid handshake invalid length")
 	}
 
 	copy(t.Hash[:], buf[:20])
@@ -123,8 +123,8 @@ func (t *HandshakeInfoMessage) ReadFrom(src io.Reader) (n int64, err error) {
 // Extension bits for bittorrent protocol
 const (
 	ExtensionBitDHT      uint = 0  // http://www.bittorrent.org/beps/bep_0005.html
-	ExtensionBitExtended      = 20 // http://www.bittorrent.org/beps/bep_0010.html
-	ExtensionBitFast          = 2  // http://www.bittorrent.org/beps/bep_0006.html
+	ExtensionBitFast     uint = 2  // http://www.bittorrent.org/beps/bep_0006.html
+	ExtensionBitExtended uint = 20 // http://www.bittorrent.org/beps/bep_0010.html
 )
 
 // ExtensionBits used by the Handshake to determine capabilities of a peer.
@@ -168,6 +168,16 @@ func (pex ExtensionBits) GetBit(bit uint) bool {
 	return pex[7-bit/8]&(1<<(bit%8)) != 0
 }
 
+func (pex ExtensionBits) Supported(rpex ExtensionBits, bits ...uint) bool {
+	for _, b := range bits {
+		if !(pex.GetBit(b) && rpex.GetBit(b)) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Handshake ...
 type Handshake struct {
 	Bits   ExtensionBits
@@ -177,36 +187,37 @@ type Handshake struct {
 // Outgoing handshake, used to establish a connection to a peer.
 func (t Handshake) Outgoing(sock io.ReadWriter, hash [20]byte) (resbits ExtensionBits, res HandshakeInfoMessage, err error) {
 	var (
+		pid = int160.FromByteArray(t.PeerID) //.Prefix([]byte("-GT2025-"))
 		msg = HandshakeMessage{
 			Extensions: t.Bits,
 		}
 		peering = HandshakeInfoMessage{
-			PeerID: t.PeerID,
+			PeerID: pid.AsByteArray(),
 			Hash:   hash,
 		}
 	)
 
 	if _, err := msg.WriteTo(sock); err != nil {
-		return resbits, res, err
+		return resbits, res, errorsx.Wrap(err, "failed to send handshake")
 	}
 
 	if _, err := peering.WriteTo(sock); err != nil {
-		return resbits, res, err
+		return resbits, res, errorsx.Wrap(err, "failed to send handshake info")
 	}
 
 	if _, err := msg.ReadFrom(sock); err != nil {
-		return resbits, res, err
+		return resbits, res, errorsx.Wrapf(err, "failed to read handshake: %s - %s", t.Bits, int160.FromByteArray(hash))
 	}
 
 	if _, err := res.ReadFrom(sock); err != nil {
-		return resbits, res, err
+		return resbits, res, errorsx.Wrap(err, "failed to read handshake info")
 	}
 
-	if bytes.Compare(res.Hash[:], hash[:]) != 0 {
-		return resbits, res, errors.New("invalid handshake - mismatched hash")
+	if !bytes.Equal(res.Hash[:], hash[:]) {
+		return resbits, res, errorsx.New("invalid handshake - mismatched hash")
 	}
 
-	return msg.Extensions, res, err
+	return msg.Extensions, res, nil
 }
 
 // Incoming handshake, used to accept a connection from a peer.
@@ -217,6 +228,10 @@ func (t Handshake) Incoming(sock io.ReadWriter) (pbits ExtensionBits, pinfo Hand
 			Extensions: t.Bits,
 		}
 	)
+
+	if sock == nil {
+		panic("incoming socket should never be nil")
+	}
 
 	if _, err := pmsg.ReadFrom(sock); err != nil {
 		return pbits, pinfo, err
