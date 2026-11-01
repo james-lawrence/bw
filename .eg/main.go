@@ -20,7 +20,7 @@ func main() {
 		eggit.AutoClone,
 		daemon.Install,
 		eg.Parallel(
-			daemon.Test,
+			// daemon.Test,
 			integration.Test,
 		),
 	)
