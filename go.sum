@@ -425,8 +425,8 @@ github.com/ianlancetaylor/demangle v0.0.0-20210905161508-09a460cdf81d/go.mod h1:
 github.com/ianlancetaylor/demangle v0.0.0-20230524184225-eabc099b10ab/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
 github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0 h1:ufr2e4uIgz/Ft0RPudkFMyVrp77buvTFxqoDvwNGVSk=
 github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0/go.mod h1:dQ6TM/OGAe+cMws81eTe4Btv1dKxfPZ2CX+YaAFAPN4=
-github.com/james-lawrence/torrent v0.0.0-20260920183043-a66f94c3283c h1:oq6Jpji3lUwsUiUFd95rAxnz7lStTHlfPTEYOINf8Es=
-github.com/james-lawrence/torrent v0.0.0-20260920183043-a66f94c3283c/go.mod h1:6tm6XRlI4f50t1VqEcn0QyXCgmEZ6wg0afHB9Ohc1Gs=
+github.com/james-lawrence/torrent v0.0.0-20261101173747-cbc13a0f84cb h1:qJEHCQzPZes+a+7vfiU/INVoqPKUCqxuxCjUsvIA/ZE=
+github.com/james-lawrence/torrent v0.0.0-20261101173747-cbc13a0f84cb/go.mod h1:6tm6XRlI4f50t1VqEcn0QyXCgmEZ6wg0afHB9Ohc1Gs=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=

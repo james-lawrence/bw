@@ -20,7 +20,7 @@ func Test(ctx context.Context, op eg.Op) error {
 		GRPCStatus() *status.Status
 	}
 
-	runtime := eggolang.Runtime().Environ("BW_LOGS_VERBOSE", "4")
+	runtime := eggolang.Runtime()
 
 	return eg.Perform(
 		ctx,
