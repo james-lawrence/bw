@@ -85,6 +85,7 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 		deployments.DeployOptionFilter(filter),
 		deployments.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployments.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
+		deployments.DeployOptionAttempts(dopts.Attempts),
 		deployments.DeployOptionTimeout(time.Duration(dopts.Timeout)),
 		deployments.DeployOptionHeartbeatFrequency(time.Duration(dopts.Heartbeat)),
 		deployments.DeployOptionMonitor(deployments.NewMonitor(

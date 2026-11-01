@@ -94,6 +94,14 @@ func DeployOptionIgnoreFailures(ignore bool) Option {
 	}
 }
 
+// DeployOptionAttempts set the number of attempts a single node is given before it is considered failed.
+// values less than 1 are treated as 1.
+func DeployOptionAttempts(n int64) Option {
+	return func(d *Deploy) {
+		d.worker.attempts = max(n, 1)
+	}
+}
+
 // DeployOptionTimeout set the timeout for the entire workload. if the deploy takes longer than
 // the provided timeout + the grace period then give up and consider it failed.
 func DeployOptionTimeout(t time.Duration) Option {
@@ -127,6 +135,7 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 			local:       p,
 			completed:   new(int64),
 			failed:      new(int64),
+			attempts:    1,
 			timeout:     bw.DefaultDeployTimeout,
 			graceperiod: time.Minute,
 			heartbeat:   5 * time.Second,
@@ -175,6 +184,7 @@ type worker struct {
 	completed      *int64
 	failed         *int64
 	ignoreFailures bool
+	attempts       int64
 	timeout        time.Duration
 	graceperiod    time.Duration
 	heartbeat      time.Duration
@@ -234,7 +244,26 @@ func (t worker) deployTo(ctx context.Context, peer *agent.Peer) error {
 		defer log.Println("deploy to", peer.Ip, "completed")
 	}
 
-	if _, err := t.deploy.Visit(ctx, peer); err != nil {
+	// only dispatching the deploy is retried. once the task has been reported the monitor owns the
+	// node, and it expects exactly one report per node.
+	var err error
+	for attempt := int64(1); attempt <= max(t.attempts, 1); attempt++ {
+		if _, err = t.deploy.Visit(ctx, peer); err == nil {
+			break
+		}
+
+		if attempt < t.attempts {
+			log.Printf("deploy to %s failed, attempt %d/%d: %v\n", peer.Ip, attempt, t.attempts, err)
+			select {
+			case <-ctx.Done():
+				t.report(ctx, nil)
+				return errors.Wrapf(ctx.Err(), "failed to deploy to: %s", peer.Ip)
+			case <-time.After(time.Second):
+			}
+		}
+	}
+
+	if err != nil {
 		t.report(ctx, nil)
 		return errors.Wrapf(err, "failed to deploy to: %s", peer.Ip)
 	}

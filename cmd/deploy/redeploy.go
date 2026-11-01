@@ -149,6 +149,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		Concurrency:       max,
 		Timeout:           int64(config.Deployment.Timeout),
 		Heartbeat:         int64(gctx.Heartbeat),
+		Attempts:          gctx.Attempts,
 		IgnoreFailures:    gctx.Lenient,
 		SilenceDeployLogs: gctx.Silent,
 	}
@@ -159,7 +160,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		return cause
 	}
 
-	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d), deployID(%s)", max, bw.RandomID(archive.DeploymentID)))
+	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d) attempts(%d), deployID(%s)", max, dopts.Attempts, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, archive, peers...); cause != nil {
 		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
 	}

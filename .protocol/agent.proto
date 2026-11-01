@@ -123,6 +123,8 @@ message DeployOptions {
   bool silenceDeployLogs = 5;
   // heartbeat frequency.
   int64 heartbeat = 6;
+  // number of attempts a single node is given before it is considered failed. defaults to 1.
+  int64 attempts = 7;
 }
 
 message DeployCommand {

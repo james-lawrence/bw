@@ -1284,7 +1284,9 @@ type DeployOptions struct {
 	// silence the deploy logging.
 	SilenceDeployLogs bool `protobuf:"varint,5,opt,name=silenceDeployLogs,proto3" json:"silenceDeployLogs,omitempty"`
 	// heartbeat frequency.
-	Heartbeat     int64 `protobuf:"varint,6,opt,name=heartbeat,proto3" json:"heartbeat,omitempty"`
+	Heartbeat int64 `protobuf:"varint,6,opt,name=heartbeat,proto3" json:"heartbeat,omitempty"`
+	// number of attempts a single node is given before it is considered failed. defaults to 1.
+	Attempts      int64 `protobuf:"varint,7,opt,name=attempts,proto3" json:"attempts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1350,6 +1352,13 @@ func (x *DeployOptions) GetSilenceDeployLogs() bool {
 func (x *DeployOptions) GetHeartbeat() int64 {
 	if x != nil {
 		return x.Heartbeat
+	}
+	return 0
+}
+
+func (x *DeployOptions) GetAttempts() int64 {
+	if x != nil {
+		return x.Attempts
 	}
 	return 0
 }
@@ -2943,13 +2952,14 @@ const file_agent_proto_rawDesc = "" +
 	"\x0fLogHistoryEvent\x10\x06\x12\x13\n" +
 	"\x0fDeployHeartbeat\x10\a\x12\x0f\n" +
 	"\vUploadEvent\x10\bB\a\n" +
-	"\x05Event\"\xbf\x01\n" +
+	"\x05Event\"\xdb\x01\n" +
 	"\rDeployOptions\x12 \n" +
 	"\vconcurrency\x18\x02 \x01(\x03R\vconcurrency\x12\x18\n" +
 	"\atimeout\x18\x03 \x01(\x03R\atimeout\x12&\n" +
 	"\x0eignoreFailures\x18\x04 \x01(\bR\x0eignoreFailures\x12,\n" +
 	"\x11silenceDeployLogs\x18\x05 \x01(\bR\x11silenceDeployLogs\x12\x1c\n" +
-	"\theartbeat\x18\x06 \x01(\x03R\theartbeat\"\x84\x02\n" +
+	"\theartbeat\x18\x06 \x01(\x03R\theartbeat\x12\x1a\n" +
+	"\battempts\x18\a \x01(\x03R\battempts\"\x84\x02\n" +
 	"\rDeployCommand\x126\n" +
 	"\acommand\x18\x01 \x01(\x0e2\x1c.agent.DeployCommand.CommandR\acommand\x12(\n" +
 	"\aarchive\x18\x02 \x01(\v2\x0e.agent.ArchiveR\aarchive\x12\x1c\n" +

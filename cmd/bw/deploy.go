@@ -29,6 +29,7 @@ type DeployCluster struct {
 	Names       []*regexp.Regexp `name:"name" help:"regex to match names against"`
 	IPs         []net.IP         `name:"ip" help:"match against the provided IP addresses"`
 	Concurrency int64            `name:"concurrency" help:"number of nodes allowed to deploy simultaneously"`
+	Attempts    int64            `name:"attempts" help:"number of attempts a single node is given before it is considered failed" default:"1"`
 }
 
 type cmdDeployEnvironment struct {
@@ -58,6 +59,7 @@ func (t cmdDeployEnvironment) Run(ctx *cmdopts.Global) error {
 		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 		Concurrency: t.Concurrency,
+		Attempts:    t.Attempts,
 		Insecure:    t.Insecure,
 		Heartbeat:   t.Heartbeat,
 		Lenient:     t.Lenient,
@@ -97,6 +99,7 @@ func (t cmdDeployRedeploy) Run(ctx *cmdopts.Global) error {
 		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
 		Concurrency: t.Concurrency,
+		Attempts:    t.Attempts,
 		Insecure:    t.Insecure,
 		Lenient:     t.Lenient,
 		Heartbeat:   t.Heartbeat,
