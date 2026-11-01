@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -141,8 +142,9 @@ func latest(last *agent.Message, messages ...*agent.Message) *agent.Message {
 }
 
 // slice returns the messages after last. when last isn't in the history and a deployment
-// is being monitored the history since the latest begin is returned instead; replaying
-// it is safe because commands for other deployments are ignored.
+// is being monitored the history since that deployment's begin is returned instead.
+// history from other deployments, including everything before the monitored deployment's
+// id is known (e.g. while the archive is uploading), is never replayed.
 func (t cState) slice(last *agent.Message, messages ...*agent.Message) []*agent.Message {
 	if last != nil {
 		for idx, m := range messages {
@@ -156,13 +158,27 @@ func (t cState) slice(last *agent.Message, messages ...*agent.Message) []*agent.
 		return []*agent.Message{}
 	}
 
-	for idx := len(messages) - 1; idx >= 0; idx-- {
-		if m := messages[idx]; m.Type == agent.Message_DeployCommandEvent && m.GetDeployCommand().Command == agent.DeployCommand_Begin {
+	id := t.deploymentID.Load()
+	if id == nil {
+		return []*agent.Message{}
+	}
+
+	for idx, m := range slices.Backward(messages) {
+		if m.Type != agent.Message_DeployCommandEvent {
+			continue
+		}
+
+		if d := m.GetDeployCommand(); d.Command == agent.DeployCommand_Begin && d.Archive != nil && bytes.Equal(d.Archive.DeploymentID, *id) {
 			return messages[idx:]
 		}
 	}
 
-	return messages
+	if last != nil {
+		// the deployment was already being followed but its begin has left the history.
+		return messages
+	}
+
+	return []*agent.Message{}
 }
 
 func consume(c consumer, messages ...*agent.Message) consumer {

@@ -180,6 +180,15 @@ var _ = Describe("Log Deploy", func() {
 			),
 		),
 		Entry(
+			"history of only a previous deployment is ignored",
+			true, false,
+			agent.NewLogHistoryFromMessages(
+				agent.NewPeer("local"),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+				agent.NewDeployCommand(agent.NewPeer("node1"), &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+			),
+		),
+		Entry(
 			"first connect without a monitored deployment ignores the history",
 			false, false,
 			agent.NewLogHistoryFromMessages(
@@ -210,6 +219,25 @@ var _ = Describe("Log Deploy", func() {
 		ctx, failed := context.WithCancelCause(ctx)
 		Deploy(ctx, failed, nil, buf)
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+	})
+
+	It("should ignore the history until the deployment id is known", func() {
+		node := agent.NewPeer("node1")
+		buf := make(chan *agent.Message, 2)
+		buf <- agent.NewConnectionLog(agent.NewPeer("local"), agent.ConnectionEvent_Connected, "connected")
+		buf <- agent.NewLogHistoryFromMessages(
+			agent.NewPeer("local"),
+			agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+			agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("previous")}, Options: &agent.DeployOptions{}}),
+		)
+
+		ctx, timeout := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		// the id is only stored once the archive has been uploaded.
+		Deploy(ctx, failed, nil, buf, OptionDeployment(new(atomic.Pointer[[]byte])))
+		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
 	})
 
 	It("should resume history replay across consecutive reconnects", func() {
