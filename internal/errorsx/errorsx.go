@@ -27,6 +27,17 @@ func Wrapf(err error, format string, args ...any) error {
 	return fmt.Errorf("%s: %w", fmt.Sprintf(format, args...), err)
 }
 
+// Is reports whether any error in cause's tree matches any of the protos, according to errors.Is.
+func Is(cause error, protos ...error) bool {
+	for _, proto := range protos {
+		if errors.Is(cause, proto) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Compact returns the first error in the set, if any.
 func Compact(errs ...error) error {
 	for _, err := range errs {
@@ -107,6 +118,7 @@ func (t String) Error() string {
 
 // Timeout error.
 type Timeout interface {
+	error
 	Timedout() time.Duration
 }
 

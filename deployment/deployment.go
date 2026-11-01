@@ -302,19 +302,3 @@ func (t DeployResult) complete() *agent.Deploy {
 type dispatcher interface {
 	Dispatch(context.Context, ...*agent.Message) error
 }
-
-// heartbeat emits a heartbeat every period until the context is done. the context ending, either
-// from completion or its deadline, is the expected way for the heartbeat to stop and isn't reported.
-func heartbeat(ctx context.Context, local *agent.Peer, period time.Duration, d dispatcher) {
-	t := time.NewTicker(period)
-	defer t.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-			errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
-		}
-	}
-}

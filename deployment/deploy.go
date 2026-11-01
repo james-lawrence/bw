@@ -3,13 +3,14 @@ package deployment
 import (
 	"context"
 	"log"
-	"sync"
+	"math"
 	"sync/atomic"
 	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
+	"github.com/james-lawrence/bw/internal/asynccompute"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/timex"
@@ -120,8 +121,6 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:           make(chan func(context.Context) error),
-			wait:        new(sync.WaitGroup),
 			check:       constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
 			deploy:      OperationFunc(loggingDeploy),
 			dispatcher:  di,
@@ -168,8 +167,6 @@ func newPending(p *agent.Peer, d time.Duration) *pending {
 }
 
 type worker struct {
-	c              chan func(context.Context) error
-	wait           *sync.WaitGroup
 	local          *agent.Peer
 	dispatcher     dispatcher
 	monitor        monitor
@@ -184,67 +181,75 @@ type worker struct {
 	queue          chan *pending
 }
 
-func (t worker) work(ctx context.Context) {
-	defer t.wait.Done()
-	for op := range t.c {
-		// Stop deployment when a single node fails.
-		if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
-			errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
-			continue
-		}
-
-		if err := op(ctx); err != nil {
-			log.Println(err)
-			atomic.AddInt64(t.failed, 1)
-			errorsx.Log(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
-		} else {
-			errorsx.Log(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
-		}
-	}
-}
-
-func (t worker) Complete(ctx context.Context) (int64, bool) {
-	t.wait.Wait()
-	failures := atomic.LoadInt64(t.failed)
-	failed := ctx.Err()
-	errorsx.Log(errorsx.Wrap(failed, "failure detected"))
-	return failures, t.ignoreFailures || (failures == 0 && failed == nil)
-}
-
-func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
-	task := newPending(peer, t.timeout)
-	perform := func(deadline context.Context) error {
-		if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
-			log.Println("deploy to", peer.Ip, "initiated")
-			defer log.Println("deploy to", peer.Ip, "completed")
-		}
-
-		if _, err := t.deploy.Visit(deadline, peer); err != nil {
-			return errors.Wrapf(err, "failed to deploy to: %s", peer.Ip)
-		}
-
-		// send the task to be monitored.
-		select {
-		case t.queue <- task:
-		case <-deadline.Done():
-			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Ip)
-		}
-
-		select {
-		case <-deadline.Done():
-			return errors.Wrapf(deadline.Err(), "failed to deploy to: %s", peer.Ip)
-		case cause := <-task.done:
-			return errors.Wrapf(cause, "failed to deploy to: %s", peer.Ip)
-		}
+// work deploys to the peer and records the result, it never fails the pool. failures are tracked
+// by the worker so they can be reported as a count.
+func (t worker) work(ctx context.Context, peer *agent.Peer) error {
+	// Stop deployment when a single node fails.
+	if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
+		t.report(ctx, nil)
+		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+		return nil
 	}
 
-	select {
-	case t.c <- perform:
-	case <-ctx.Done():
-		return ctx.Err()
+	if err := t.deployTo(ctx, peer); err != nil {
+		log.Println(err)
+		atomic.AddInt64(t.failed, 1)
+		errorsx.Log(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
+	} else {
+		errorsx.Log(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 	}
 
 	return nil
+}
+
+// Complete reports the number of failed nodes and whether the deploy is considered a success.
+// a deploy whose context has ended is never a success, nodes may not have been attempted.
+func (t worker) Complete(ctx context.Context) (int64, bool) {
+	failures := atomic.LoadInt64(t.failed)
+	if cause := ctx.Err(); cause != nil {
+		errorsx.Log(errorsx.Wrap(cause, "deploy did not complete"))
+		return failures, false
+	}
+
+	return failures, t.ignoreFailures || failures == 0
+}
+
+// report the node to the monitor, every node reports exactly once so the monitor knows when the
+// workload is complete. a nil task is a node that doesn't need to be monitored. returns false
+// if the context ended before the report was delivered.
+func (t worker) report(ctx context.Context, task *pending) bool {
+	select {
+	case t.queue <- task:
+		return true
+	case <-ctx.Done():
+		return false
+	}
+}
+
+func (t worker) deployTo(ctx context.Context, peer *agent.Peer) error {
+	task := newPending(peer, t.timeout)
+
+	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+		log.Println("deploy to", peer.Ip, "initiated")
+		defer log.Println("deploy to", peer.Ip, "completed")
+	}
+
+	if _, err := t.deploy.Visit(ctx, peer); err != nil {
+		t.report(ctx, nil)
+		return errors.Wrapf(err, "failed to deploy to: %s", peer.Ip)
+	}
+
+	// send the task to be monitored.
+	if !t.report(ctx, task) {
+		return errors.Wrapf(ctx.Err(), "failed to deploy to: %s", peer.Ip)
+	}
+
+	select {
+	case <-ctx.Done():
+		return errors.Wrapf(ctx.Err(), "failed to deploy to: %s", peer.Ip)
+	case cause := <-task.done:
+		return errors.Wrapf(cause, "failed to deploy to: %s", peer.Ip)
+	}
 }
 
 // Deploy - handles a deployment.
@@ -263,60 +268,53 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes)))))
 
-	concurrency := t.partitioner.Partition(len(nodes))
-	for range concurrency {
-		t.worker.wait.Add(1)
-		go t.worker.work(ctx)
-	}
-
 	initial := make(chan *pending, len(nodes))
 	for _, n := range nodes {
 		initial <- newPending(n, t.timeout)
 	}
 	close(initial)
 
-	go heartbeat(ctx, t.worker.local, t.worker.heartbeat, t.dispatcher)
+	heartbeat := MonitorTicklerHeartbeat(t.worker.local, t.dispatcher, t.worker.heartbeat)
 
-	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
-		switch errors.Cause(failure).(type) {
-		case errorsx.Timeout:
-			errorsx.Log(
-				agentutil.Dispatch(
-					ctx,
-					t.dispatcher,
-					agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"),
-				),
-			)
-			return 0, false
-		default:
-		}
+	if failure := t.monitor.Await(ctx, initial, len(nodes), t.dispatcher, c, t.worker.check, heartbeat); errorsx.Is(failure, context.DeadlineExceeded) {
+		// the deploy's context has ended, the notification must not depend on it.
+		errorsx.Log(
+			agentutil.Dispatch(
+				context.WithoutCancel(ctx),
+				t.dispatcher,
+				agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"),
+			),
+		)
+		return 0, false
 	}
 
 	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying")))
 
-	go func() {
-		for _, peer := range nodes {
-			errorsx.Log(t.worker.DeployTo(ctx, peer))
-		}
+	concurrency := min(max(t.partitioner.Partition(len(nodes)), 1), math.MaxUint16)
+	pool := asynccompute.New(
+		t.worker.work,
+		asynccompute.Workers[*agent.Peer](uint16(concurrency)),
+		// every node fits in the backlog so queueing never blocks on the workers.
+		asynccompute.Backlog[*agent.Peer](uint16(min(len(nodes), math.MaxUint16))),
+	)
 
-		close(t.c)
-		t.wait.Wait()
-		close(t.queue)
-	}()
+	for _, peer := range nodes {
+		errorsx.Log(pool.Run(ctx, peer))
+	}
 
 	failure := errorsx.Ignore(
-		t.worker.monitor.Await(ctx, t.queue, t.dispatcher, c, t.worker.check),
+		t.worker.monitor.Await(ctx, t.queue, len(nodes), t.dispatcher, c, t.worker.check, heartbeat),
 		context.Canceled,
 	)
-	if failure != nil {
-		switch errors.Cause(failure).(type) {
-		case errorsx.Timeout:
-			errorsx.Log(
-				agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete")),
-			)
-		default:
-		}
+
+	if errorsx.Is(failure, context.DeadlineExceeded) {
+		errorsx.Log(
+			agentutil.Dispatch(context.WithoutCancel(ctx), t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete")),
+		)
 	}
+
+	// the workers must be done before reporting, the monitor can return early when the context ends.
+	errorsx.Log(asynccompute.Shutdown(ctx, pool))
 
 	return t.worker.Complete(ctx)
 }

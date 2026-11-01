@@ -331,5 +331,6 @@ var _ = Describe("Deploy", func() {
 		}()
 
 		Eventually(result, 5*time.Second).Should(Receive(BeFalse()))
+		Expect(events.logs()).To(ContainElement(ContainSubstring("timed out while waiting for nodes to complete")))
 	})
 })

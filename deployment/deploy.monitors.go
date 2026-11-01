@@ -12,12 +12,15 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"golang.org/x/time/rate"
 )
 
 // monitors monitor a peers deployment to determine success or failures.
 type monitor interface {
-	Await(ctx context.Context, q chan *pending, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error
+	// Await monitors the pending nodes until the expected number of reports have been received
+	// and every reported node has completed. a nil report is a node that doesn't need monitoring.
+	Await(ctx context.Context, q chan *pending, expected int, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error
 }
 
 func NewMonitor(ticklers ...MonitorTickler) Monitor {
@@ -48,32 +51,60 @@ func MonitorTicklerRate(r *rate.Limiter) MonitorTickler {
 	}
 }
 
+// MonitorTicklerHeartbeat emits a heartbeat every period while the monitor is running. the context
+// ending, either from completion or its deadline, is the expected way for it to stop.
+func MonitorTicklerHeartbeat(local *agent.Peer, d dispatcher, period time.Duration) MonitorTickler {
+	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
+		t := time.NewTicker(period)
+		defer t.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
+			}
+		}
+	}
+}
+
 func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler {
 	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
 		events := make(chan *agent.Message, 100)
 		go agentutil.WatchEvents(ctx, l, d, events)
-		for {
-			select {
-			case m := <-events:
-				switch evt := m.Event.(type) {
-				case *agent.Message_Deploy:
-					switch evt.Deploy.Stage {
-					case agent.Deploy_Completed, agent.Deploy_Failed:
-						if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
-							log.Printf("initiating event driven healthcheck %T - %s\n", evt, evt.Deploy.Stage)
-						}
-						tickle.Signal()
-					default:
-					}
-				case *agent.Message_Membership:
-					if evt.Membership == agent.Message_Departed {
-						departed <- m.Peer
-					}
-				default:
-				}
-			case <-ctx.Done():
+		tickleOnEvents(ctx, events, tickle, departed)
+	}
+}
+
+// tickleOnEvents triggers healthchecks when a node finishes deploying and reports the nodes that
+// departed the cluster. returns when the context is done or the events are exhausted.
+func tickleOnEvents(ctx context.Context, events <-chan *agent.Message, tickle *sync.Cond, departed chan *agent.Peer) {
+	for {
+		select {
+		case m, ok := <-events:
+			if !ok {
 				return
 			}
+
+			switch evt := m.Event.(type) {
+			case *agent.Message_Deploy:
+				switch evt.Deploy.Stage {
+				case agent.Deploy_Completed, agent.Deploy_Failed:
+					if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
+						log.Printf("initiating event driven healthcheck %T - %s\n", evt, evt.Deploy.Stage)
+					}
+					tickle.Signal()
+				default:
+				}
+			case *agent.Message_Membership:
+				if evt.Membership == agent.Message_Departed {
+					departed <- m.Peer
+				}
+			default:
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }
@@ -101,7 +132,11 @@ func (t Monitor) tickler(ctx context.Context, tickle *sync.Cond, q chan struct{}
 	}
 }
 
-func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error {
+func (t Monitor) Await(ctx context.Context, q chan *pending, expected int, d dispatcher, c cluster, check operation, additional ...MonitorTickler) error {
+	if expected <= 0 {
+		return nil
+	}
+
 	ctx, done := context.WithCancel(ctx)
 	defer done()
 
@@ -114,6 +149,7 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 	departedchan := make(chan *agent.Peer)
 	performcheck := make(chan struct{})
 	outstanding := make([]*pending, 0, 128)
+	received := 0
 	tickle := sync.NewCond(&sync.Mutex{})
 	checker := newChecker(ctx, check)
 	defer checker.Close()
@@ -136,7 +172,15 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, d dispatcher, c clu
 				continue
 			}
 
-			outstanding = append(outstanding, task)
+			if received++; received >= expected {
+				// every node has reported, nothing more will be monitored.
+				q = nil
+			}
+
+			if task != nil {
+				outstanding = append(outstanding, task)
+			}
+
 			tickle.Signal()
 		case p := <-departedchan:
 			departed[p.Name] = p
