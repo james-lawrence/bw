@@ -3,6 +3,7 @@ package iox
 import (
 	"io"
 	"os"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 )
@@ -32,6 +33,22 @@ func (t errReader) Read([]byte) (int, error) {
 // ErrReader returns an io.Reader that returns the provided error.
 func ErrReader(err error) io.Reader {
 	return errReader{err}
+}
+
+type countingReader struct {
+	io.Reader
+	n *atomic.Uint64
+}
+
+func (t countingReader) Read(p []byte) (int, error) {
+	n, err := t.Reader.Read(p)
+	t.n.Add(uint64(n))
+	return n, err
+}
+
+// ReaderCounting wraps r, adding the number of bytes read to n.
+func ReaderCounting(r io.Reader, n *atomic.Uint64) io.Reader {
+	return countingReader{Reader: r, n: n}
 }
 
 // Rewind an io.Seeker

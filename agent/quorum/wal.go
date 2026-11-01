@@ -73,6 +73,13 @@ func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
 		return err
 	}
 
+	if m.Type == agent.Message_UploadEvent {
+		// upload progress is client local, it must never be sent through the quorum.
+		err = errors.Errorf("upload progress must not be replicated: %s", m.Id)
+		log.Println(err)
+		return err
+	}
+
 	if err = t.c.Decode(ctx, m); err != nil {
 		return err
 	}

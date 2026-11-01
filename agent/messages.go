@@ -144,6 +144,19 @@ func NewDeployHeartbeat(p *Peer) *Message {
 	}, stamp))
 }
 
+// NewUploadProgress reports how much of the archive the client has uploaded.
+// it is client local and must never be dispatched, the quorum's WAL rejects it.
+func NewUploadProgress(p *Peer, bytes, total uint64) *Message {
+	return new(langx.Clone(Message{
+		Type:      Message_UploadEvent,
+		Ephemeral: true,
+		Peer:      p,
+		Event: &Message_Upload{
+			Upload: &UploadProgress{Bytes: bytes, Total: total},
+		},
+	}, stamp))
+}
+
 // PeerEvent ...
 func PeerEvent(p *Peer) *Message {
 	return new(langx.Clone(Message{

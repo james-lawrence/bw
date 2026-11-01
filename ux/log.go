@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -130,7 +131,7 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 func latest(last *agent.Message, messages ...*agent.Message) *agent.Message {
 	for _, m := range messages {
 		switch m.Type {
-		case agent.Message_LogEvent, agent.Message_LogHistoryEvent, agent.Message_DeployHeartbeat:
+		case agent.Message_LogEvent, agent.Message_LogHistoryEvent, agent.Message_DeployHeartbeat, agent.Message_UploadEvent:
 		default:
 			last = m
 		}
@@ -237,6 +238,8 @@ func (t cState) relevant(m *agent.Message) bool {
 
 func (t cState) print(m *agent.Message) {
 	switch evt := m.Event.(type) {
+	case *agent.Message_Upload:
+		t.printUploadProgress(m, evt.Upload)
 	case *agent.Message_Int:
 		switch m.Type {
 		case agent.Message_PeersCompletedEvent:
@@ -296,6 +299,32 @@ func (t cState) print(m *agent.Message) {
 	default:
 		t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 	}
+}
+
+// printUploadProgress renders a single line progress bar. the trailing carriage return leaves the cursor
+// at the start of the line so the next update, or the next message, replaces the bar. the erase line clears
+// anything left over from a previous write.
+func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
+	const width = 30
+
+	pct := min(100, u.Bytes*100/max(1, u.Total))
+
+	filled := int(pct) * width / 100
+	fmt.Fprintf(
+		t.Logger.Writer(),
+		"\x1b[2K%s%s - INFO - uploading archive [%s%s] %3d%% (%s / %s)\r",
+		t.Logger.Prefix(),
+		messagePrefix(m),
+		strings.Repeat("#", filled),
+		strings.Repeat("-", width-filled),
+		pct,
+		humanBytes(u.Bytes),
+		humanBytes(u.Total),
+	)
+}
+
+func humanBytes(b uint64) string {
+	return fmt.Sprintf("%.1f MiB", float64(b)/(1<<20))
 }
 
 func (t cState) printDeployCommand(m *agent.Message) {

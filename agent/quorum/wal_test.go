@@ -193,3 +193,15 @@ var _ = DescribeTable(
 		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 	),
 )
+
+var _ = Describe("WAL", func() {
+	It("should reject upload progress messages", func() {
+		mobs, err := journal.New(GinkgoT().TempDir())
+		Expect(err).To(Succeed())
+		wal := NewWAL(NewTranscoder(newDeployment(nil), NewObserver(mobs)))
+
+		raw, err := proto.Marshal(agent.NewUploadProgress(p, 1, 2))
+		Expect(err).To(Succeed())
+		Expect(wal.decode(wal.ctx, raw)).ToNot(Succeed())
+	})
+})

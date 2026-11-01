@@ -67,6 +67,7 @@ func TestMessageIdMatchesTimestamp(t *testing.T) {
 		"LogError":           agent.LogError(p, errors.New("failure")),
 		"NewConnectionLog":   agent.NewConnectionLog(p, agent.ConnectionEvent_Connected, "connected"),
 		"NewDeployHeartbeat": agent.NewDeployHeartbeat(p),
+		"NewUploadProgress":  agent.NewUploadProgress(p, 1, 2),
 		"PeerEvent":          agent.PeerEvent(p),
 		"NodeEvent":          agent.NodeEvent(p, agent.Message_NodeEvent(0)),
 		"PeersFoundEvent":    agent.PeersFoundEvent(p, 1),

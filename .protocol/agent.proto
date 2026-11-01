@@ -62,6 +62,12 @@ message ConnectionEvent {
 
 message DeployHeartbeat {}
 
+// progress of the client uploading the archive to the cluster.
+message UploadProgress {
+  uint64 bytes = 1;
+  uint64 total = 2;
+}
+
 // Represents every message sent between nodes. effectively describes all
 // possible events we may want to act upon.
 message Message {
@@ -78,6 +84,7 @@ message Message {
     PeersCompletedEvent = 5;
     LogHistoryEvent = 6;
     DeployHeartbeat = 7;
+    UploadEvent = 8;
   }
 
   string id = 9;
@@ -101,6 +108,7 @@ message Message {
     LogHistoryEvent history = 11;
     ConnectionEvent connection = 12;
     DeployHeartbeat heartbeat = 13;
+    UploadProgress upload = 14;
   }
 }
 

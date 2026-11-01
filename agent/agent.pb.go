@@ -159,7 +159,7 @@ func (x Message_NodeEvent) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Message_NodeEvent.Descriptor instead.
 func (Message_NodeEvent) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{8, 0}
+	return file_agent_proto_rawDescGZIP(), []int{9, 0}
 }
 
 type Message_Type int32
@@ -173,6 +173,7 @@ const (
 	Message_PeersCompletedEvent Message_Type = 5
 	Message_LogHistoryEvent     Message_Type = 6
 	Message_DeployHeartbeat     Message_Type = 7
+	Message_UploadEvent         Message_Type = 8
 )
 
 // Enum value maps for Message_Type.
@@ -186,6 +187,7 @@ var (
 		5: "PeersCompletedEvent",
 		6: "LogHistoryEvent",
 		7: "DeployHeartbeat",
+		8: "UploadEvent",
 	}
 	Message_Type_value = map[string]int32{
 		"PeerEvent":           0,
@@ -196,6 +198,7 @@ var (
 		"PeersCompletedEvent": 5,
 		"LogHistoryEvent":     6,
 		"DeployHeartbeat":     7,
+		"UploadEvent":         8,
 	}
 )
 
@@ -223,7 +226,7 @@ func (x Message_Type) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Message_Type.Descriptor instead.
 func (Message_Type) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{8, 1}
+	return file_agent_proto_rawDescGZIP(), []int{9, 1}
 }
 
 type DeployCommand_Command int32
@@ -278,7 +281,7 @@ func (x DeployCommand_Command) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DeployCommand_Command.Descriptor instead.
 func (DeployCommand_Command) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{10, 0}
+	return file_agent_proto_rawDescGZIP(), []int{11, 0}
 }
 
 type Deploy_Stage int32
@@ -327,7 +330,7 @@ func (x Deploy_Stage) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use Deploy_Stage.Descriptor instead.
 func (Deploy_Stage) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{11, 0}
+	return file_agent_proto_rawDescGZIP(), []int{12, 0}
 }
 
 type InfoResponse_Mode int32
@@ -373,7 +376,7 @@ func (x InfoResponse_Mode) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use InfoResponse_Mode.Descriptor instead.
 func (InfoResponse_Mode) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{21, 0}
+	return file_agent_proto_rawDescGZIP(), []int{22, 0}
 }
 
 type ArchiveResponse_Info int32
@@ -419,7 +422,7 @@ func (x ArchiveResponse_Info) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ArchiveResponse_Info.Descriptor instead.
 func (ArchiveResponse_Info) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{38, 0}
+	return file_agent_proto_rawDescGZIP(), []int{39, 0}
 }
 
 type ClusterWatchEvents_Event int32
@@ -468,7 +471,7 @@ func (x ClusterWatchEvents_Event) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ClusterWatchEvents_Event.Descriptor instead.
 func (ClusterWatchEvents_Event) EnumDescriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{40, 0}
+	return file_agent_proto_rawDescGZIP(), []int{41, 0}
 }
 
 type Archive struct {
@@ -954,6 +957,59 @@ func (*DeployHeartbeat) Descriptor() ([]byte, []int) {
 	return file_agent_proto_rawDescGZIP(), []int{7}
 }
 
+// progress of the client uploading the archive to the cluster.
+type UploadProgress struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Bytes         uint64                 `protobuf:"varint,1,opt,name=bytes,proto3" json:"bytes,omitempty"`
+	Total         uint64                 `protobuf:"varint,2,opt,name=total,proto3" json:"total,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadProgress) Reset() {
+	*x = UploadProgress{}
+	mi := &file_agent_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadProgress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadProgress) ProtoMessage() {}
+
+func (x *UploadProgress) ProtoReflect() protoreflect.Message {
+	mi := &file_agent_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadProgress.ProtoReflect.Descriptor instead.
+func (*UploadProgress) Descriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *UploadProgress) GetBytes() uint64 {
+	if x != nil {
+		return x.Bytes
+	}
+	return 0
+}
+
+func (x *UploadProgress) GetTotal() uint64 {
+	if x != nil {
+		return x.Total
+	}
+	return 0
+}
+
 // Represents every message sent between nodes. effectively describes all
 // possible events we may want to act upon.
 type Message struct {
@@ -978,6 +1034,7 @@ type Message struct {
 	//	*Message_History
 	//	*Message_Connection
 	//	*Message_Heartbeat
+	//	*Message_Upload
 	Event         isMessage_Event `protobuf_oneof:"Event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -985,7 +1042,7 @@ type Message struct {
 
 func (x *Message) Reset() {
 	*x = Message{}
-	mi := &file_agent_proto_msgTypes[8]
+	mi := &file_agent_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -997,7 +1054,7 @@ func (x *Message) String() string {
 func (*Message) ProtoMessage() {}
 
 func (x *Message) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[8]
+	mi := &file_agent_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1010,7 +1067,7 @@ func (x *Message) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Message.ProtoReflect.Descriptor instead.
 func (*Message) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{8}
+	return file_agent_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Message) GetId() string {
@@ -1143,6 +1200,15 @@ func (x *Message) GetHeartbeat() *DeployHeartbeat {
 	return nil
 }
 
+func (x *Message) GetUpload() *UploadProgress {
+	if x != nil {
+		if x, ok := x.Event.(*Message_Upload); ok {
+			return x.Upload
+		}
+	}
+	return nil
+}
+
 type isMessage_Event interface {
 	isMessage_Event()
 }
@@ -1183,6 +1249,10 @@ type Message_Heartbeat struct {
 	Heartbeat *DeployHeartbeat `protobuf:"bytes,13,opt,name=heartbeat,proto3,oneof"`
 }
 
+type Message_Upload struct {
+	Upload *UploadProgress `protobuf:"bytes,14,opt,name=upload,proto3,oneof"`
+}
+
 func (*Message_None) isMessage_Event() {}
 
 func (*Message_Int) isMessage_Event() {}
@@ -1200,6 +1270,8 @@ func (*Message_History) isMessage_Event() {}
 func (*Message_Connection) isMessage_Event() {}
 
 func (*Message_Heartbeat) isMessage_Event() {}
+
+func (*Message_Upload) isMessage_Event() {}
 
 type DeployOptions struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1219,7 +1291,7 @@ type DeployOptions struct {
 
 func (x *DeployOptions) Reset() {
 	*x = DeployOptions{}
-	mi := &file_agent_proto_msgTypes[9]
+	mi := &file_agent_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1231,7 +1303,7 @@ func (x *DeployOptions) String() string {
 func (*DeployOptions) ProtoMessage() {}
 
 func (x *DeployOptions) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[9]
+	mi := &file_agent_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1244,7 +1316,7 @@ func (x *DeployOptions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployOptions.ProtoReflect.Descriptor instead.
 func (*DeployOptions) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{9}
+	return file_agent_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeployOptions) GetConcurrency() int64 {
@@ -1294,7 +1366,7 @@ type DeployCommand struct {
 
 func (x *DeployCommand) Reset() {
 	*x = DeployCommand{}
-	mi := &file_agent_proto_msgTypes[10]
+	mi := &file_agent_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1306,7 +1378,7 @@ func (x *DeployCommand) String() string {
 func (*DeployCommand) ProtoMessage() {}
 
 func (x *DeployCommand) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[10]
+	mi := &file_agent_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1319,7 +1391,7 @@ func (x *DeployCommand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployCommand.ProtoReflect.Descriptor instead.
 func (*DeployCommand) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{10}
+	return file_agent_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *DeployCommand) GetCommand() DeployCommand_Command {
@@ -1363,7 +1435,7 @@ type Deploy struct {
 
 func (x *Deploy) Reset() {
 	*x = Deploy{}
-	mi := &file_agent_proto_msgTypes[11]
+	mi := &file_agent_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1375,7 +1447,7 @@ func (x *Deploy) String() string {
 func (*Deploy) ProtoMessage() {}
 
 func (x *Deploy) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[11]
+	mi := &file_agent_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1388,7 +1460,7 @@ func (x *Deploy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Deploy.ProtoReflect.Descriptor instead.
 func (*Deploy) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{11}
+	return file_agent_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *Deploy) GetStage() Deploy_Stage {
@@ -1438,7 +1510,7 @@ type DeployCommandRequest struct {
 
 func (x *DeployCommandRequest) Reset() {
 	*x = DeployCommandRequest{}
-	mi := &file_agent_proto_msgTypes[12]
+	mi := &file_agent_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1450,7 +1522,7 @@ func (x *DeployCommandRequest) String() string {
 func (*DeployCommandRequest) ProtoMessage() {}
 
 func (x *DeployCommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[12]
+	mi := &file_agent_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1463,7 +1535,7 @@ func (x *DeployCommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployCommandRequest.ProtoReflect.Descriptor instead.
 func (*DeployCommandRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{12}
+	return file_agent_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeployCommandRequest) GetArchive() *Archive {
@@ -1502,7 +1574,7 @@ type DeployCommandResult struct {
 
 func (x *DeployCommandResult) Reset() {
 	*x = DeployCommandResult{}
-	mi := &file_agent_proto_msgTypes[13]
+	mi := &file_agent_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1514,7 +1586,7 @@ func (x *DeployCommandResult) String() string {
 func (*DeployCommandResult) ProtoMessage() {}
 
 func (x *DeployCommandResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[13]
+	mi := &file_agent_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1527,7 +1599,7 @@ func (x *DeployCommandResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployCommandResult.ProtoReflect.Descriptor instead.
 func (*DeployCommandResult) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{13}
+	return file_agent_proto_rawDescGZIP(), []int{14}
 }
 
 type Log struct {
@@ -1539,7 +1611,7 @@ type Log struct {
 
 func (x *Log) Reset() {
 	*x = Log{}
-	mi := &file_agent_proto_msgTypes[14]
+	mi := &file_agent_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1551,7 +1623,7 @@ func (x *Log) String() string {
 func (*Log) ProtoMessage() {}
 
 func (x *Log) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[14]
+	mi := &file_agent_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1564,7 +1636,7 @@ func (x *Log) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Log.ProtoReflect.Descriptor instead.
 func (*Log) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{14}
+	return file_agent_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *Log) GetLog() string {
@@ -1584,7 +1656,7 @@ type UploadMetadata struct {
 
 func (x *UploadMetadata) Reset() {
 	*x = UploadMetadata{}
-	mi := &file_agent_proto_msgTypes[15]
+	mi := &file_agent_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1596,7 +1668,7 @@ func (x *UploadMetadata) String() string {
 func (*UploadMetadata) ProtoMessage() {}
 
 func (x *UploadMetadata) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[15]
+	mi := &file_agent_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1609,7 +1681,7 @@ func (x *UploadMetadata) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadMetadata.ProtoReflect.Descriptor instead.
 func (*UploadMetadata) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{15}
+	return file_agent_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *UploadMetadata) GetBytes() uint64 {
@@ -1641,7 +1713,7 @@ type UploadChunk struct {
 
 func (x *UploadChunk) Reset() {
 	*x = UploadChunk{}
-	mi := &file_agent_proto_msgTypes[16]
+	mi := &file_agent_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1653,7 +1725,7 @@ func (x *UploadChunk) String() string {
 func (*UploadChunk) ProtoMessage() {}
 
 func (x *UploadChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[16]
+	mi := &file_agent_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1666,7 +1738,7 @@ func (x *UploadChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadChunk.ProtoReflect.Descriptor instead.
 func (*UploadChunk) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{16}
+	return file_agent_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *UploadChunk) GetData() []byte {
@@ -1733,7 +1805,7 @@ type UploadResponse struct {
 
 func (x *UploadResponse) Reset() {
 	*x = UploadResponse{}
-	mi := &file_agent_proto_msgTypes[17]
+	mi := &file_agent_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1745,7 +1817,7 @@ func (x *UploadResponse) String() string {
 func (*UploadResponse) ProtoMessage() {}
 
 func (x *UploadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[17]
+	mi := &file_agent_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1758,7 +1830,7 @@ func (x *UploadResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UploadResponse.ProtoReflect.Descriptor instead.
 func (*UploadResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{17}
+	return file_agent_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *UploadResponse) GetArchive() *Archive {
@@ -1778,7 +1850,7 @@ type WatchRequest struct {
 
 func (x *WatchRequest) Reset() {
 	*x = WatchRequest{}
-	mi := &file_agent_proto_msgTypes[18]
+	mi := &file_agent_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1790,7 +1862,7 @@ func (x *WatchRequest) String() string {
 func (*WatchRequest) ProtoMessage() {}
 
 func (x *WatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[18]
+	mi := &file_agent_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1803,7 +1875,7 @@ func (x *WatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WatchRequest.ProtoReflect.Descriptor instead.
 func (*WatchRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{18}
+	return file_agent_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *WatchRequest) GetCursor() []byte {
@@ -1821,7 +1893,7 @@ type DispatchResponse struct {
 
 func (x *DispatchResponse) Reset() {
 	*x = DispatchResponse{}
-	mi := &file_agent_proto_msgTypes[19]
+	mi := &file_agent_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1833,7 +1905,7 @@ func (x *DispatchResponse) String() string {
 func (*DispatchResponse) ProtoMessage() {}
 
 func (x *DispatchResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[19]
+	mi := &file_agent_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1846,7 +1918,7 @@ func (x *DispatchResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchResponse.ProtoReflect.Descriptor instead.
 func (*DispatchResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{19}
+	return file_agent_proto_rawDescGZIP(), []int{20}
 }
 
 type InfoRequest struct {
@@ -1857,7 +1929,7 @@ type InfoRequest struct {
 
 func (x *InfoRequest) Reset() {
 	*x = InfoRequest{}
-	mi := &file_agent_proto_msgTypes[20]
+	mi := &file_agent_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1869,7 +1941,7 @@ func (x *InfoRequest) String() string {
 func (*InfoRequest) ProtoMessage() {}
 
 func (x *InfoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[20]
+	mi := &file_agent_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1882,7 +1954,7 @@ func (x *InfoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfoRequest.ProtoReflect.Descriptor instead.
 func (*InfoRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{20}
+	return file_agent_proto_rawDescGZIP(), []int{21}
 }
 
 type InfoResponse struct {
@@ -1898,7 +1970,7 @@ type InfoResponse struct {
 
 func (x *InfoResponse) Reset() {
 	*x = InfoResponse{}
-	mi := &file_agent_proto_msgTypes[21]
+	mi := &file_agent_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1910,7 +1982,7 @@ func (x *InfoResponse) String() string {
 func (*InfoResponse) ProtoMessage() {}
 
 func (x *InfoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[21]
+	mi := &file_agent_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1923,7 +1995,7 @@ func (x *InfoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InfoResponse.ProtoReflect.Descriptor instead.
 func (*InfoResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{21}
+	return file_agent_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *InfoResponse) GetMode() InfoResponse_Mode {
@@ -1969,7 +2041,7 @@ type HistoryRequest struct {
 
 func (x *HistoryRequest) Reset() {
 	*x = HistoryRequest{}
-	mi := &file_agent_proto_msgTypes[22]
+	mi := &file_agent_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1981,7 +2053,7 @@ func (x *HistoryRequest) String() string {
 func (*HistoryRequest) ProtoMessage() {}
 
 func (x *HistoryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[22]
+	mi := &file_agent_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1994,7 +2066,7 @@ func (x *HistoryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HistoryRequest.ProtoReflect.Descriptor instead.
 func (*HistoryRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{22}
+	return file_agent_proto_rawDescGZIP(), []int{23}
 }
 
 type HistoryResponse struct {
@@ -2006,7 +2078,7 @@ type HistoryResponse struct {
 
 func (x *HistoryResponse) Reset() {
 	*x = HistoryResponse{}
-	mi := &file_agent_proto_msgTypes[23]
+	mi := &file_agent_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2018,7 +2090,7 @@ func (x *HistoryResponse) String() string {
 func (*HistoryResponse) ProtoMessage() {}
 
 func (x *HistoryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[23]
+	mi := &file_agent_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2031,7 +2103,7 @@ func (x *HistoryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HistoryResponse.ProtoReflect.Descriptor instead.
 func (*HistoryResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{23}
+	return file_agent_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *HistoryResponse) GetMessages() []*Message {
@@ -2049,7 +2121,7 @@ type ConnectRequest struct {
 
 func (x *ConnectRequest) Reset() {
 	*x = ConnectRequest{}
-	mi := &file_agent_proto_msgTypes[24]
+	mi := &file_agent_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2061,7 +2133,7 @@ func (x *ConnectRequest) String() string {
 func (*ConnectRequest) ProtoMessage() {}
 
 func (x *ConnectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[24]
+	mi := &file_agent_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2074,7 +2146,7 @@ func (x *ConnectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectRequest.ProtoReflect.Descriptor instead.
 func (*ConnectRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{24}
+	return file_agent_proto_rawDescGZIP(), []int{25}
 }
 
 type ConnectResponse struct {
@@ -2086,7 +2158,7 @@ type ConnectResponse struct {
 
 func (x *ConnectResponse) Reset() {
 	*x = ConnectResponse{}
-	mi := &file_agent_proto_msgTypes[25]
+	mi := &file_agent_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2098,7 +2170,7 @@ func (x *ConnectResponse) String() string {
 func (*ConnectResponse) ProtoMessage() {}
 
 func (x *ConnectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[25]
+	mi := &file_agent_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2111,7 +2183,7 @@ func (x *ConnectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ConnectResponse.ProtoReflect.Descriptor instead.
 func (*ConnectResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{25}
+	return file_agent_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ConnectResponse) GetQuorum() []*Peer {
@@ -2129,7 +2201,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_agent_proto_msgTypes[26]
+	mi := &file_agent_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2141,7 +2213,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[26]
+	mi := &file_agent_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2226,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{26}
+	return file_agent_proto_rawDescGZIP(), []int{27}
 }
 
 type StatusResponse struct {
@@ -2167,7 +2239,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_agent_proto_msgTypes[27]
+	mi := &file_agent_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2179,7 +2251,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[27]
+	mi := &file_agent_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2192,7 +2264,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{27}
+	return file_agent_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *StatusResponse) GetPeer() *Peer {
@@ -2220,7 +2292,7 @@ type DeployRequest struct {
 
 func (x *DeployRequest) Reset() {
 	*x = DeployRequest{}
-	mi := &file_agent_proto_msgTypes[28]
+	mi := &file_agent_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2232,7 +2304,7 @@ func (x *DeployRequest) String() string {
 func (*DeployRequest) ProtoMessage() {}
 
 func (x *DeployRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[28]
+	mi := &file_agent_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2245,7 +2317,7 @@ func (x *DeployRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployRequest.ProtoReflect.Descriptor instead.
 func (*DeployRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{28}
+	return file_agent_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *DeployRequest) GetArchive() *Archive {
@@ -2278,7 +2350,7 @@ type DeployResponse struct {
 
 func (x *DeployResponse) Reset() {
 	*x = DeployResponse{}
-	mi := &file_agent_proto_msgTypes[29]
+	mi := &file_agent_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2290,7 +2362,7 @@ func (x *DeployResponse) String() string {
 func (*DeployResponse) ProtoMessage() {}
 
 func (x *DeployResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[29]
+	mi := &file_agent_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2303,7 +2375,7 @@ func (x *DeployResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeployResponse.ProtoReflect.Descriptor instead.
 func (*DeployResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{29}
+	return file_agent_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *DeployResponse) GetDeploy() *Deploy {
@@ -2321,7 +2393,7 @@ type ShutdownRequest struct {
 
 func (x *ShutdownRequest) Reset() {
 	*x = ShutdownRequest{}
-	mi := &file_agent_proto_msgTypes[30]
+	mi := &file_agent_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2333,7 +2405,7 @@ func (x *ShutdownRequest) String() string {
 func (*ShutdownRequest) ProtoMessage() {}
 
 func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[30]
+	mi := &file_agent_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2346,7 +2418,7 @@ func (x *ShutdownRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownRequest.ProtoReflect.Descriptor instead.
 func (*ShutdownRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{30}
+	return file_agent_proto_rawDescGZIP(), []int{31}
 }
 
 type ShutdownResponse struct {
@@ -2357,7 +2429,7 @@ type ShutdownResponse struct {
 
 func (x *ShutdownResponse) Reset() {
 	*x = ShutdownResponse{}
-	mi := &file_agent_proto_msgTypes[31]
+	mi := &file_agent_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2369,7 +2441,7 @@ func (x *ShutdownResponse) String() string {
 func (*ShutdownResponse) ProtoMessage() {}
 
 func (x *ShutdownResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[31]
+	mi := &file_agent_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2382,7 +2454,7 @@ func (x *ShutdownResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShutdownResponse.ProtoReflect.Descriptor instead.
 func (*ShutdownResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{31}
+	return file_agent_proto_rawDescGZIP(), []int{32}
 }
 
 type CancelRequest struct {
@@ -2394,7 +2466,7 @@ type CancelRequest struct {
 
 func (x *CancelRequest) Reset() {
 	*x = CancelRequest{}
-	mi := &file_agent_proto_msgTypes[32]
+	mi := &file_agent_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2406,7 +2478,7 @@ func (x *CancelRequest) String() string {
 func (*CancelRequest) ProtoMessage() {}
 
 func (x *CancelRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[32]
+	mi := &file_agent_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2419,7 +2491,7 @@ func (x *CancelRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelRequest.ProtoReflect.Descriptor instead.
 func (*CancelRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{32}
+	return file_agent_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *CancelRequest) GetInitiator() string {
@@ -2437,7 +2509,7 @@ type CancelResponse struct {
 
 func (x *CancelResponse) Reset() {
 	*x = CancelResponse{}
-	mi := &file_agent_proto_msgTypes[33]
+	mi := &file_agent_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2449,7 +2521,7 @@ func (x *CancelResponse) String() string {
 func (*CancelResponse) ProtoMessage() {}
 
 func (x *CancelResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[33]
+	mi := &file_agent_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2462,7 +2534,7 @@ func (x *CancelResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelResponse.ProtoReflect.Descriptor instead.
 func (*CancelResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{33}
+	return file_agent_proto_rawDescGZIP(), []int{34}
 }
 
 type LogRequest struct {
@@ -2475,7 +2547,7 @@ type LogRequest struct {
 
 func (x *LogRequest) Reset() {
 	*x = LogRequest{}
-	mi := &file_agent_proto_msgTypes[34]
+	mi := &file_agent_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2487,7 +2559,7 @@ func (x *LogRequest) String() string {
 func (*LogRequest) ProtoMessage() {}
 
 func (x *LogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[34]
+	mi := &file_agent_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2500,7 +2572,7 @@ func (x *LogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
 func (*LogRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{34}
+	return file_agent_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *LogRequest) GetDeploymentID() []byte {
@@ -2526,7 +2598,7 @@ type LogResponse struct {
 
 func (x *LogResponse) Reset() {
 	*x = LogResponse{}
-	mi := &file_agent_proto_msgTypes[35]
+	mi := &file_agent_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2538,7 +2610,7 @@ func (x *LogResponse) String() string {
 func (*LogResponse) ProtoMessage() {}
 
 func (x *LogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[35]
+	mi := &file_agent_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2551,7 +2623,7 @@ func (x *LogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogResponse.ProtoReflect.Descriptor instead.
 func (*LogResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{35}
+	return file_agent_proto_rawDescGZIP(), []int{36}
 }
 
 func (x *LogResponse) GetContent() []byte {
@@ -2570,7 +2642,7 @@ type DispatchRequest struct {
 
 func (x *DispatchRequest) Reset() {
 	*x = DispatchRequest{}
-	mi := &file_agent_proto_msgTypes[36]
+	mi := &file_agent_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2582,7 +2654,7 @@ func (x *DispatchRequest) String() string {
 func (*DispatchRequest) ProtoMessage() {}
 
 func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[36]
+	mi := &file_agent_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2595,7 +2667,7 @@ func (x *DispatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DispatchRequest.ProtoReflect.Descriptor instead.
 func (*DispatchRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{36}
+	return file_agent_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *DispatchRequest) GetMessages() []*Message {
@@ -2613,7 +2685,7 @@ type ArchiveRequest struct {
 
 func (x *ArchiveRequest) Reset() {
 	*x = ArchiveRequest{}
-	mi := &file_agent_proto_msgTypes[37]
+	mi := &file_agent_proto_msgTypes[38]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2625,7 +2697,7 @@ func (x *ArchiveRequest) String() string {
 func (*ArchiveRequest) ProtoMessage() {}
 
 func (x *ArchiveRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[37]
+	mi := &file_agent_proto_msgTypes[38]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2638,7 +2710,7 @@ func (x *ArchiveRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveRequest.ProtoReflect.Descriptor instead.
 func (*ArchiveRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{37}
+	return file_agent_proto_rawDescGZIP(), []int{38}
 }
 
 type ArchiveResponse struct {
@@ -2651,7 +2723,7 @@ type ArchiveResponse struct {
 
 func (x *ArchiveResponse) Reset() {
 	*x = ArchiveResponse{}
-	mi := &file_agent_proto_msgTypes[38]
+	mi := &file_agent_proto_msgTypes[39]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2663,7 +2735,7 @@ func (x *ArchiveResponse) String() string {
 func (*ArchiveResponse) ProtoMessage() {}
 
 func (x *ArchiveResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[38]
+	mi := &file_agent_proto_msgTypes[39]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2676,7 +2748,7 @@ func (x *ArchiveResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ArchiveResponse.ProtoReflect.Descriptor instead.
 func (*ArchiveResponse) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{38}
+	return file_agent_proto_rawDescGZIP(), []int{39}
 }
 
 func (x *ArchiveResponse) GetInfo() ArchiveResponse_Info {
@@ -2703,7 +2775,7 @@ type ClusterWatchRequest struct {
 
 func (x *ClusterWatchRequest) Reset() {
 	*x = ClusterWatchRequest{}
-	mi := &file_agent_proto_msgTypes[39]
+	mi := &file_agent_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2715,7 +2787,7 @@ func (x *ClusterWatchRequest) String() string {
 func (*ClusterWatchRequest) ProtoMessage() {}
 
 func (x *ClusterWatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[39]
+	mi := &file_agent_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2728,7 +2800,7 @@ func (x *ClusterWatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterWatchRequest.ProtoReflect.Descriptor instead.
 func (*ClusterWatchRequest) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{39}
+	return file_agent_proto_rawDescGZIP(), []int{40}
 }
 
 type ClusterWatchEvents struct {
@@ -2741,7 +2813,7 @@ type ClusterWatchEvents struct {
 
 func (x *ClusterWatchEvents) Reset() {
 	*x = ClusterWatchEvents{}
-	mi := &file_agent_proto_msgTypes[40]
+	mi := &file_agent_proto_msgTypes[41]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2753,7 +2825,7 @@ func (x *ClusterWatchEvents) String() string {
 func (*ClusterWatchEvents) ProtoMessage() {}
 
 func (x *ClusterWatchEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_agent_proto_msgTypes[40]
+	mi := &file_agent_proto_msgTypes[41]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2766,7 +2838,7 @@ func (x *ClusterWatchEvents) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClusterWatchEvents.ProtoReflect.Descriptor instead.
 func (*ClusterWatchEvents) Descriptor() ([]byte, []int) {
-	return file_agent_proto_rawDescGZIP(), []int{40}
+	return file_agent_proto_rawDescGZIP(), []int{41}
 }
 
 func (x *ClusterWatchEvents) GetEvent() ClusterWatchEvents_Event {
@@ -2830,7 +2902,10 @@ const file_agent_proto_rawDesc = "" +
 	"\x04Type\x12\x10\n" +
 	"\fDisconnected\x10\x00\x12\r\n" +
 	"\tConnected\x10\x01\"\x11\n" +
-	"\x0fDeployHeartbeat\"\x95\x06\n" +
+	"\x0fDeployHeartbeat\"<\n" +
+	"\x0eUploadProgress\x12\x14\n" +
+	"\x05bytes\x18\x01 \x01(\x04R\x05bytes\x12\x14\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total\"\xd7\x06\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\t \x01(\tR\x02id\x12\x1d\n" +
 	"\tephemeral\x18\xe6\a \x01(\bR\tephemeral\x12\x17\n" +
@@ -2852,11 +2927,12 @@ const file_agent_proto_rawDesc = "" +
 	"\n" +
 	"connection\x18\f \x01(\v2\x16.agent.ConnectionEventH\x00R\n" +
 	"connection\x126\n" +
-	"\theartbeat\x18\r \x01(\v2\x16.agent.DeployHeartbeatH\x00R\theartbeat\"%\n" +
+	"\theartbeat\x18\r \x01(\v2\x16.agent.DeployHeartbeatH\x00R\theartbeat\x12/\n" +
+	"\x06upload\x18\x0e \x01(\v2\x15.agent.UploadProgressH\x00R\x06upload\"%\n" +
 	"\tNodeEvent\x12\n" +
 	"\n" +
 	"\x06Joined\x10\x00\x12\f\n" +
-	"\bDeparted\x10\x01\"\xa4\x01\n" +
+	"\bDeparted\x10\x01\"\xb5\x01\n" +
 	"\x04Type\x12\r\n" +
 	"\tPeerEvent\x10\x00\x12\f\n" +
 	"\bLogEvent\x10\x01\x12\x16\n" +
@@ -2865,7 +2941,8 @@ const file_agent_proto_rawDesc = "" +
 	"\x0fPeersFoundEvent\x10\x04\x12\x17\n" +
 	"\x13PeersCompletedEvent\x10\x05\x12\x13\n" +
 	"\x0fLogHistoryEvent\x10\x06\x12\x13\n" +
-	"\x0fDeployHeartbeat\x10\aB\a\n" +
+	"\x0fDeployHeartbeat\x10\a\x12\x0f\n" +
+	"\vUploadEvent\x10\bB\a\n" +
 	"\x05Event\"\xbf\x01\n" +
 	"\rDeployOptions\x12 \n" +
 	"\vconcurrency\x18\x02 \x01(\x03R\vconcurrency\x12\x18\n" +
@@ -3015,7 +3092,7 @@ func file_agent_proto_rawDescGZIP() []byte {
 }
 
 var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
-var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_agent_proto_goTypes = []any{
 	(Peer_State)(0),               // 0: agent.Peer.State
 	(ConnectionEvent_Type)(0),     // 1: agent.ConnectionEvent.Type
@@ -3034,128 +3111,130 @@ var file_agent_proto_goTypes = []any{
 	(*LogHistoryEvent)(nil),       // 14: agent.LogHistoryEvent
 	(*ConnectionEvent)(nil),       // 15: agent.ConnectionEvent
 	(*DeployHeartbeat)(nil),       // 16: agent.DeployHeartbeat
-	(*Message)(nil),               // 17: agent.Message
-	(*DeployOptions)(nil),         // 18: agent.DeployOptions
-	(*DeployCommand)(nil),         // 19: agent.DeployCommand
-	(*Deploy)(nil),                // 20: agent.Deploy
-	(*DeployCommandRequest)(nil),  // 21: agent.DeployCommandRequest
-	(*DeployCommandResult)(nil),   // 22: agent.DeployCommandResult
-	(*Log)(nil),                   // 23: agent.Log
-	(*UploadMetadata)(nil),        // 24: agent.UploadMetadata
-	(*UploadChunk)(nil),           // 25: agent.UploadChunk
-	(*UploadResponse)(nil),        // 26: agent.UploadResponse
-	(*WatchRequest)(nil),          // 27: agent.WatchRequest
-	(*DispatchResponse)(nil),      // 28: agent.DispatchResponse
-	(*InfoRequest)(nil),           // 29: agent.InfoRequest
-	(*InfoResponse)(nil),          // 30: agent.InfoResponse
-	(*HistoryRequest)(nil),        // 31: agent.HistoryRequest
-	(*HistoryResponse)(nil),       // 32: agent.HistoryResponse
-	(*ConnectRequest)(nil),        // 33: agent.ConnectRequest
-	(*ConnectResponse)(nil),       // 34: agent.ConnectResponse
-	(*StatusRequest)(nil),         // 35: agent.StatusRequest
-	(*StatusResponse)(nil),        // 36: agent.StatusResponse
-	(*DeployRequest)(nil),         // 37: agent.DeployRequest
-	(*DeployResponse)(nil),        // 38: agent.DeployResponse
-	(*ShutdownRequest)(nil),       // 39: agent.ShutdownRequest
-	(*ShutdownResponse)(nil),      // 40: agent.ShutdownResponse
-	(*CancelRequest)(nil),         // 41: agent.CancelRequest
-	(*CancelResponse)(nil),        // 42: agent.CancelResponse
-	(*LogRequest)(nil),            // 43: agent.LogRequest
-	(*LogResponse)(nil),           // 44: agent.LogResponse
-	(*DispatchRequest)(nil),       // 45: agent.DispatchRequest
-	(*ArchiveRequest)(nil),        // 46: agent.ArchiveRequest
-	(*ArchiveResponse)(nil),       // 47: agent.ArchiveResponse
-	(*ClusterWatchRequest)(nil),   // 48: agent.ClusterWatchRequest
-	(*ClusterWatchEvents)(nil),    // 49: agent.ClusterWatchEvents
+	(*UploadProgress)(nil),        // 17: agent.UploadProgress
+	(*Message)(nil),               // 18: agent.Message
+	(*DeployOptions)(nil),         // 19: agent.DeployOptions
+	(*DeployCommand)(nil),         // 20: agent.DeployCommand
+	(*Deploy)(nil),                // 21: agent.Deploy
+	(*DeployCommandRequest)(nil),  // 22: agent.DeployCommandRequest
+	(*DeployCommandResult)(nil),   // 23: agent.DeployCommandResult
+	(*Log)(nil),                   // 24: agent.Log
+	(*UploadMetadata)(nil),        // 25: agent.UploadMetadata
+	(*UploadChunk)(nil),           // 26: agent.UploadChunk
+	(*UploadResponse)(nil),        // 27: agent.UploadResponse
+	(*WatchRequest)(nil),          // 28: agent.WatchRequest
+	(*DispatchResponse)(nil),      // 29: agent.DispatchResponse
+	(*InfoRequest)(nil),           // 30: agent.InfoRequest
+	(*InfoResponse)(nil),          // 31: agent.InfoResponse
+	(*HistoryRequest)(nil),        // 32: agent.HistoryRequest
+	(*HistoryResponse)(nil),       // 33: agent.HistoryResponse
+	(*ConnectRequest)(nil),        // 34: agent.ConnectRequest
+	(*ConnectResponse)(nil),       // 35: agent.ConnectResponse
+	(*StatusRequest)(nil),         // 36: agent.StatusRequest
+	(*StatusResponse)(nil),        // 37: agent.StatusResponse
+	(*DeployRequest)(nil),         // 38: agent.DeployRequest
+	(*DeployResponse)(nil),        // 39: agent.DeployResponse
+	(*ShutdownRequest)(nil),       // 40: agent.ShutdownRequest
+	(*ShutdownResponse)(nil),      // 41: agent.ShutdownResponse
+	(*CancelRequest)(nil),         // 42: agent.CancelRequest
+	(*CancelResponse)(nil),        // 43: agent.CancelResponse
+	(*LogRequest)(nil),            // 44: agent.LogRequest
+	(*LogResponse)(nil),           // 45: agent.LogResponse
+	(*DispatchRequest)(nil),       // 46: agent.DispatchRequest
+	(*ArchiveRequest)(nil),        // 47: agent.ArchiveRequest
+	(*ArchiveResponse)(nil),       // 48: agent.ArchiveResponse
+	(*ClusterWatchRequest)(nil),   // 49: agent.ClusterWatchRequest
+	(*ClusterWatchEvents)(nil),    // 50: agent.ClusterWatchEvents
 }
 var file_agent_proto_depIdxs = []int32{
 	11, // 0: agent.Archive.peer:type_name -> agent.Peer
 	0,  // 1: agent.Peer.Status:type_name -> agent.Peer.State
-	17, // 2: agent.LogHistoryEvent.messages:type_name -> agent.Message
+	18, // 2: agent.LogHistoryEvent.messages:type_name -> agent.Message
 	1,  // 3: agent.ConnectionEvent.state:type_name -> agent.ConnectionEvent.Type
 	3,  // 4: agent.Message.type:type_name -> agent.Message.Type
 	11, // 5: agent.Message.peer:type_name -> agent.Peer
-	23, // 6: agent.Message.log:type_name -> agent.Log
-	19, // 7: agent.Message.deployCommand:type_name -> agent.DeployCommand
-	20, // 8: agent.Message.deploy:type_name -> agent.Deploy
+	24, // 6: agent.Message.log:type_name -> agent.Log
+	20, // 7: agent.Message.deployCommand:type_name -> agent.DeployCommand
+	21, // 8: agent.Message.deploy:type_name -> agent.Deploy
 	2,  // 9: agent.Message.membership:type_name -> agent.Message.NodeEvent
 	14, // 10: agent.Message.history:type_name -> agent.LogHistoryEvent
 	15, // 11: agent.Message.connection:type_name -> agent.ConnectionEvent
 	16, // 12: agent.Message.heartbeat:type_name -> agent.DeployHeartbeat
-	4,  // 13: agent.DeployCommand.command:type_name -> agent.DeployCommand.Command
-	9,  // 14: agent.DeployCommand.archive:type_name -> agent.Archive
-	18, // 15: agent.DeployCommand.options:type_name -> agent.DeployOptions
-	5,  // 16: agent.Deploy.stage:type_name -> agent.Deploy.Stage
-	9,  // 17: agent.Deploy.archive:type_name -> agent.Archive
-	18, // 18: agent.Deploy.options:type_name -> agent.DeployOptions
-	9,  // 19: agent.DeployCommandRequest.archive:type_name -> agent.Archive
-	18, // 20: agent.DeployCommandRequest.options:type_name -> agent.DeployOptions
-	11, // 21: agent.DeployCommandRequest.peers:type_name -> agent.Peer
-	24, // 22: agent.UploadChunk.metadata:type_name -> agent.UploadMetadata
-	9,  // 23: agent.UploadResponse.archive:type_name -> agent.Archive
-	6,  // 24: agent.InfoResponse.mode:type_name -> agent.InfoResponse.Mode
-	19, // 25: agent.InfoResponse.deploying:type_name -> agent.DeployCommand
-	19, // 26: agent.InfoResponse.deployed:type_name -> agent.DeployCommand
-	11, // 27: agent.InfoResponse.leader:type_name -> agent.Peer
-	11, // 28: agent.InfoResponse.quorum:type_name -> agent.Peer
-	17, // 29: agent.HistoryResponse.messages:type_name -> agent.Message
-	11, // 30: agent.ConnectResponse.quorum:type_name -> agent.Peer
-	11, // 31: agent.StatusResponse.peer:type_name -> agent.Peer
-	20, // 32: agent.StatusResponse.deployments:type_name -> agent.Deploy
-	9,  // 33: agent.DeployRequest.archive:type_name -> agent.Archive
-	18, // 34: agent.DeployRequest.options:type_name -> agent.DeployOptions
-	20, // 35: agent.DeployResponse.deploy:type_name -> agent.Deploy
-	11, // 36: agent.LogRequest.peer:type_name -> agent.Peer
-	17, // 37: agent.DispatchRequest.messages:type_name -> agent.Message
-	7,  // 38: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
-	20, // 39: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
-	8,  // 40: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
-	11, // 41: agent.ClusterWatchEvents.node:type_name -> agent.Peer
-	25, // 42: agent.Deployments.Upload:input_type -> agent.UploadChunk
-	21, // 43: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
-	41, // 44: agent.Deployments.Cancel:input_type -> agent.CancelRequest
-	43, // 45: agent.Deployments.Logs:input_type -> agent.LogRequest
-	27, // 46: agent.Deployments.Watch:input_type -> agent.WatchRequest
-	25, // 47: agent.Quorum.Upload:input_type -> agent.UploadChunk
-	27, // 48: agent.Quorum.Watch:input_type -> agent.WatchRequest
-	45, // 49: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
-	21, // 50: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
-	29, // 51: agent.Quorum.Info:input_type -> agent.InfoRequest
-	41, // 52: agent.Quorum.Cancel:input_type -> agent.CancelRequest
-	31, // 53: agent.Quorum.History:input_type -> agent.HistoryRequest
-	33, // 54: agent.Agent.Connect:input_type -> agent.ConnectRequest
-	35, // 55: agent.Agent.Info:input_type -> agent.StatusRequest
-	37, // 56: agent.Agent.Deploy:input_type -> agent.DeployRequest
-	41, // 57: agent.Agent.Cancel:input_type -> agent.CancelRequest
-	39, // 58: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
-	43, // 59: agent.Agent.Logs:input_type -> agent.LogRequest
-	46, // 60: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
-	48, // 61: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
-	26, // 62: agent.Deployments.Upload:output_type -> agent.UploadResponse
-	22, // 63: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
-	42, // 64: agent.Deployments.Cancel:output_type -> agent.CancelResponse
-	44, // 65: agent.Deployments.Logs:output_type -> agent.LogResponse
-	17, // 66: agent.Deployments.Watch:output_type -> agent.Message
-	26, // 67: agent.Quorum.Upload:output_type -> agent.UploadResponse
-	17, // 68: agent.Quorum.Watch:output_type -> agent.Message
-	28, // 69: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
-	22, // 70: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
-	30, // 71: agent.Quorum.Info:output_type -> agent.InfoResponse
-	42, // 72: agent.Quorum.Cancel:output_type -> agent.CancelResponse
-	32, // 73: agent.Quorum.History:output_type -> agent.HistoryResponse
-	34, // 74: agent.Agent.Connect:output_type -> agent.ConnectResponse
-	36, // 75: agent.Agent.Info:output_type -> agent.StatusResponse
-	38, // 76: agent.Agent.Deploy:output_type -> agent.DeployResponse
-	42, // 77: agent.Agent.Cancel:output_type -> agent.CancelResponse
-	40, // 78: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
-	44, // 79: agent.Agent.Logs:output_type -> agent.LogResponse
-	47, // 80: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
-	49, // 81: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
-	62, // [62:82] is the sub-list for method output_type
-	42, // [42:62] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	17, // 13: agent.Message.upload:type_name -> agent.UploadProgress
+	4,  // 14: agent.DeployCommand.command:type_name -> agent.DeployCommand.Command
+	9,  // 15: agent.DeployCommand.archive:type_name -> agent.Archive
+	19, // 16: agent.DeployCommand.options:type_name -> agent.DeployOptions
+	5,  // 17: agent.Deploy.stage:type_name -> agent.Deploy.Stage
+	9,  // 18: agent.Deploy.archive:type_name -> agent.Archive
+	19, // 19: agent.Deploy.options:type_name -> agent.DeployOptions
+	9,  // 20: agent.DeployCommandRequest.archive:type_name -> agent.Archive
+	19, // 21: agent.DeployCommandRequest.options:type_name -> agent.DeployOptions
+	11, // 22: agent.DeployCommandRequest.peers:type_name -> agent.Peer
+	25, // 23: agent.UploadChunk.metadata:type_name -> agent.UploadMetadata
+	9,  // 24: agent.UploadResponse.archive:type_name -> agent.Archive
+	6,  // 25: agent.InfoResponse.mode:type_name -> agent.InfoResponse.Mode
+	20, // 26: agent.InfoResponse.deploying:type_name -> agent.DeployCommand
+	20, // 27: agent.InfoResponse.deployed:type_name -> agent.DeployCommand
+	11, // 28: agent.InfoResponse.leader:type_name -> agent.Peer
+	11, // 29: agent.InfoResponse.quorum:type_name -> agent.Peer
+	18, // 30: agent.HistoryResponse.messages:type_name -> agent.Message
+	11, // 31: agent.ConnectResponse.quorum:type_name -> agent.Peer
+	11, // 32: agent.StatusResponse.peer:type_name -> agent.Peer
+	21, // 33: agent.StatusResponse.deployments:type_name -> agent.Deploy
+	9,  // 34: agent.DeployRequest.archive:type_name -> agent.Archive
+	19, // 35: agent.DeployRequest.options:type_name -> agent.DeployOptions
+	21, // 36: agent.DeployResponse.deploy:type_name -> agent.Deploy
+	11, // 37: agent.LogRequest.peer:type_name -> agent.Peer
+	18, // 38: agent.DispatchRequest.messages:type_name -> agent.Message
+	7,  // 39: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
+	21, // 40: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
+	8,  // 41: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
+	11, // 42: agent.ClusterWatchEvents.node:type_name -> agent.Peer
+	26, // 43: agent.Deployments.Upload:input_type -> agent.UploadChunk
+	22, // 44: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
+	42, // 45: agent.Deployments.Cancel:input_type -> agent.CancelRequest
+	44, // 46: agent.Deployments.Logs:input_type -> agent.LogRequest
+	28, // 47: agent.Deployments.Watch:input_type -> agent.WatchRequest
+	26, // 48: agent.Quorum.Upload:input_type -> agent.UploadChunk
+	28, // 49: agent.Quorum.Watch:input_type -> agent.WatchRequest
+	46, // 50: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
+	22, // 51: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
+	30, // 52: agent.Quorum.Info:input_type -> agent.InfoRequest
+	42, // 53: agent.Quorum.Cancel:input_type -> agent.CancelRequest
+	32, // 54: agent.Quorum.History:input_type -> agent.HistoryRequest
+	34, // 55: agent.Agent.Connect:input_type -> agent.ConnectRequest
+	36, // 56: agent.Agent.Info:input_type -> agent.StatusRequest
+	38, // 57: agent.Agent.Deploy:input_type -> agent.DeployRequest
+	42, // 58: agent.Agent.Cancel:input_type -> agent.CancelRequest
+	40, // 59: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
+	44, // 60: agent.Agent.Logs:input_type -> agent.LogRequest
+	47, // 61: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
+	49, // 62: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
+	27, // 63: agent.Deployments.Upload:output_type -> agent.UploadResponse
+	23, // 64: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
+	43, // 65: agent.Deployments.Cancel:output_type -> agent.CancelResponse
+	45, // 66: agent.Deployments.Logs:output_type -> agent.LogResponse
+	18, // 67: agent.Deployments.Watch:output_type -> agent.Message
+	27, // 68: agent.Quorum.Upload:output_type -> agent.UploadResponse
+	18, // 69: agent.Quorum.Watch:output_type -> agent.Message
+	29, // 70: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
+	23, // 71: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
+	31, // 72: agent.Quorum.Info:output_type -> agent.InfoResponse
+	43, // 73: agent.Quorum.Cancel:output_type -> agent.CancelResponse
+	33, // 74: agent.Quorum.History:output_type -> agent.HistoryResponse
+	35, // 75: agent.Agent.Connect:output_type -> agent.ConnectResponse
+	37, // 76: agent.Agent.Info:output_type -> agent.StatusResponse
+	39, // 77: agent.Agent.Deploy:output_type -> agent.DeployResponse
+	43, // 78: agent.Agent.Cancel:output_type -> agent.CancelResponse
+	41, // 79: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
+	45, // 80: agent.Agent.Logs:output_type -> agent.LogResponse
+	48, // 81: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
+	50, // 82: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
+	63, // [63:83] is the sub-list for method output_type
+	43, // [43:63] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -3163,7 +3242,7 @@ func file_agent_proto_init() {
 	if File_agent_proto != nil {
 		return
 	}
-	file_agent_proto_msgTypes[8].OneofWrappers = []any{
+	file_agent_proto_msgTypes[9].OneofWrappers = []any{
 		(*Message_None)(nil),
 		(*Message_Int)(nil),
 		(*Message_Log)(nil),
@@ -3173,8 +3252,9 @@ func file_agent_proto_init() {
 		(*Message_History)(nil),
 		(*Message_Connection)(nil),
 		(*Message_Heartbeat)(nil),
+		(*Message_Upload)(nil),
 	}
-	file_agent_proto_msgTypes[16].OneofWrappers = []any{
+	file_agent_proto_msgTypes[17].OneofWrappers = []any{
 		(*UploadChunk_None)(nil),
 		(*UploadChunk_Metadata)(nil),
 	}
@@ -3184,7 +3264,7 @@ func file_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
 			NumEnums:      9,
-			NumMessages:   41,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   5,
 		},

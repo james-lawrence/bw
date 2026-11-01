@@ -179,6 +179,9 @@ func Into(gctx *Context) error {
 
 	events <- agent.LogEvent(local, "archive upload initiated")
 	err = grpcx.Retry(gctx.Context, func() error {
+		uploaded, completed := Progress(gctx.Context, local, events, dstinfo.Size())
+		defer func() { completed(err) }()
+
 		if _, err = dst.Seek(0, io.SeekStart); err != nil {
 			events <- agent.LogError(local, errors.Wrap(err, "archive creation failed"))
 			events <- agent.LogEvent(local, "deployment failed")
@@ -190,7 +193,7 @@ func Into(gctx *Context) error {
 			Vcscommit: commitish,
 		}
 
-		if darchive, err = client.Upload(gctx.Context, &meta, dst); errors.Is(err, io.EOF) {
+		if darchive, err = client.Upload(gctx.Context, &meta, iox.ReaderCounting(dst, uploaded)); errors.Is(err, io.EOF) {
 			// occassionally we'll run into an EOF, due to server restarts, or random network failures. ceorce
 			// the io.EOF error into a grpc codes.Unavailable error so the retry takes hold.
 			return status.Error(codes.Unavailable, err.Error())
@@ -199,6 +202,7 @@ func Into(gctx *Context) error {
 			events <- agent.LogEvent(local, "deployment failed")
 			return err
 		}
+
 		return nil
 	}, codes.Unavailable)
 
