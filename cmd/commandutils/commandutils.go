@@ -198,8 +198,8 @@ func ReadConfiguration(environment string) (config agent.ConfigClient, err error
 // ClusterJoin connects to a cluster.
 func ClusterJoin(ctx context.Context, conf agent.Config, c clustering.Joiner, defaultPeers ...clustering.Source) (err error) {
 	if envx.Boolean(false, bw.EnvLogsVerbose) {
-		log.Println("connecting to cluster")
-		defer log.Println("connection to cluster complete")
+		log.Println("cluster connection initiated")
+		defer log.Println("cluster connection completed")
 	}
 
 	joins := clustering.BootstrapOptionJoinStrategy(clustering.MinimumPeers(conf.MinimumNodes))

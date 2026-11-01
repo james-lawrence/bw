@@ -109,7 +109,7 @@ func Into(gctx *Context) error {
 		agent.PeerOptionName("local"),
 	)
 
-	events <- agent.LogEvent(local, "connecting to cluster")
+	events <- agent.LogEvent(local, "cluster connection initiated")
 	var (
 		debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
 		debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
@@ -147,7 +147,7 @@ func Into(gctx *Context) error {
 
 	client = agent.NewDeployConn(conn)
 
-	events <- agent.LogEvent(local, "connected to cluster")
+	events <- agent.LogEvent(local, "cluster connection completed")
 
 	deployspace := config.Deployspace()
 	if err = os.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {

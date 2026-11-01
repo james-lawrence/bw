@@ -79,7 +79,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	events <- agent.LogEvent(local, "connecting to cluster")
+	events <- agent.LogEvent(local, "cluster connection initiated")
 	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		ux.OptionDeployment(monitored),
 	)
 
-	events <- agent.LogEvent(local, "connected to cluster")
+	events <- agent.LogEvent(local, "cluster connection completed")
 	go func() {
 		<-gctx.Context.Done()
 		if err = client.Close(); err != nil {
