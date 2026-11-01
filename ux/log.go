@@ -17,8 +17,10 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/logrusorgru/aurora"
+	"github.com/mattn/go-runewidth"
 )
 
 // Option ...
@@ -53,6 +55,13 @@ func OptionLogger(l *log.Logger) Option {
 	}
 }
 
+// OptionIconography sets the rune used to fill the upload progress bar.
+func OptionIconography(r rune) Option {
+	return func(cs *cState) {
+		cs.iconography = r
+	}
+}
+
 func OptionDebug(b bool) Option {
 	return func(cs *cState) {
 		cs.debug = b
@@ -64,6 +73,7 @@ func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers
 	var (
 		s = deploying{
 			cState: cState{
+				iconography:    envx.Rune('#', bw.EnvUploadSparkles),
 				cached:         cached,
 				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
@@ -84,6 +94,7 @@ func Logging(ctx context.Context, failed context.CancelCauseFunc, cached *dialer
 	var (
 		s = tail{
 			cState: cState{
+				iconography:    envx.Rune('#', bw.EnvUploadSparkles),
 				cached:         cached,
 				heartbeat:      time.Minute,
 				connection:     &agent.ConnectionEvent{},
@@ -200,6 +211,7 @@ func consume(c consumer, messages ...*agent.Message) consumer {
 }
 
 type cState struct {
+	iconography    rune
 	cached         *dialers.Cached
 	connection     *agent.ConnectionEvent
 	deploymentID   *atomic.Pointer[[]byte]
@@ -338,13 +350,16 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 	}
 
 	filled := int(pct) * width / 100
+	// the empty cells match the display width of the iconography (e.g. emoji are two columns wide),
+	// so the bar doesn't change width as it fills.
+	cell := max(1, runewidth.RuneWidth(t.iconography))
 	fmt.Fprintf(
 		t.Logger.Writer(),
 		"\x1b[2K%s%s - INFO - archive upload [%s%s] %3d%% (%s / %s)%s",
 		t.Logger.Prefix(),
 		messagePrefix(m),
-		strings.Repeat("#", filled),
-		strings.Repeat("-", width-filled),
+		strings.Repeat(string(t.iconography), filled),
+		strings.Repeat("-", (width-filled)*cell),
 		pct,
 		humanBytes(u.Bytes),
 		humanBytes(u.Total),

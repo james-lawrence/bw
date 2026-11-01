@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"log"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -242,6 +243,24 @@ var _ = Describe("Log Deploy", func() {
 		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
 	})
 
+	It("should fill the upload progress bar with # by default", func() {
+		node := agent.NewPeer("node1")
+		buf := make(chan *agent.Message, 3)
+		buf <- agent.NewUploadProgress(node, 1<<20, 2<<20)
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}})
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: []byte("ours")}, Options: &agent.DeployOptions{}})
+
+		output := bytes.NewBuffer(nil)
+		ctx, timeout := context.WithTimeout(context.Background(), time.Second)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+
+		Expect(output.String()).To(ContainSubstring("archive upload [" + strings.Repeat("#", 15) + strings.Repeat("-", 15) + "]  50%"))
+	})
+
 	It("should keep the completed upload progress", func() {
 		node := agent.NewPeer("node1")
 		archive := &agent.Archive{DeploymentID: []byte("ours")}
@@ -263,6 +282,28 @@ var _ = Describe("Log Deploy", func() {
 		Expect(output.String()).To(ContainSubstring(" 50% (1.0 MiB / 2.0 MiB)\r"))
 		Expect(output.String()).To(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\n"))
 		Expect(output.String()).ToNot(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\r"))
+	})
+
+	It("should fill the upload progress bar with sparkles", func() {
+		node := agent.NewPeer("node1")
+		archive := &agent.Archive{DeploymentID: []byte("ours")}
+		buf := make(chan *agent.Message, 4)
+		buf <- agent.NewUploadProgress(node, 1<<20, 2<<20)
+		buf <- agent.NewUploadProgress(node, 2<<20, 2<<20)
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: archive, Options: &agent.DeployOptions{}})
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: &agent.DeployOptions{}})
+
+		output := bytes.NewBuffer(nil)
+		ctx, timeout := context.WithTimeout(context.Background(), time.Second)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)), OptionIconography('✨'))
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+
+		// half way is 15 of the 30 cells filled, each empty cell is two dashes to match the width of the sparkle.
+		Expect(output.String()).To(ContainSubstring("archive upload [" + strings.Repeat("✨", 15) + strings.Repeat("--", 15) + "]  50%"))
+		Expect(output.String()).To(ContainSubstring("archive upload [" + strings.Repeat("✨", 30) + "] 100%"))
 	})
 
 	It("should resume history replay across consecutive reconnects", func() {

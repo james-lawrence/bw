@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/pkg/errors"
 )
 
@@ -26,7 +27,7 @@ func Boolean(fallback bool, keys ...string) bool {
 
 // String retrieve a string value from the environment, checks each key in order
 // first string found is returned.
-func String(fallback string, keys ...string) string {
+func String[T ~string | ~rune](fallback T, keys ...string) string {
 	for _, k := range keys {
 		s := strings.TrimSpace(os.Getenv(k))
 		if s != "" {
@@ -34,7 +35,20 @@ func String(fallback string, keys ...string) string {
 		}
 	}
 
-	return fallback
+	return string(fallback)
+}
+
+// Rune retrieve a string value from the environment, checks each key in order
+// first string found is returned.
+func Rune[T ~rune](fallback T, keys ...string) rune {
+	for _, k := range keys {
+		s := strings.TrimSpace(os.Getenv(k))
+		if s != "" {
+			return langx.FirstNonZero([]rune(s)...)
+		}
+	}
+
+	return rune(fallback)
 }
 
 // Duration retrieves a time.Duration from the environment, checks each key in order
