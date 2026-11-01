@@ -1,7 +1,9 @@
 package ux_test
 
 import (
+	"bytes"
 	"context"
+	"log"
 	"sync/atomic"
 	"time"
 
@@ -238,6 +240,29 @@ var _ = Describe("Log Deploy", func() {
 		// the id is only stored once the archive has been uploaded.
 		Deploy(ctx, failed, nil, buf, OptionDeployment(new(atomic.Pointer[[]byte])))
 		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
+	})
+
+	It("should keep the completed upload progress", func() {
+		node := agent.NewPeer("node1")
+		archive := &agent.Archive{DeploymentID: []byte("ours")}
+		buf := make(chan *agent.Message, 4)
+		buf <- agent.NewUploadProgress(node, 1<<20, 2<<20)
+		buf <- agent.NewUploadProgress(node, 2<<20, 2<<20)
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: archive, Options: &agent.DeployOptions{}})
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: &agent.DeployOptions{}})
+
+		output := bytes.NewBuffer(nil)
+		ctx, timeout := context.WithTimeout(context.Background(), time.Second)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+
+		// in progress updates are replaced by the next update, the completed one remains.
+		Expect(output.String()).To(ContainSubstring(" 50% (1.0 MiB / 2.0 MiB)\r"))
+		Expect(output.String()).To(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\n"))
+		Expect(output.String()).ToNot(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\r"))
 	})
 
 	It("should resume history replay across consecutive reconnects", func() {

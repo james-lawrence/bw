@@ -46,6 +46,13 @@ func OptionDeployment(id *atomic.Pointer[[]byte]) Option {
 	}
 }
 
+// OptionLogger sets the logger used to display messages.
+func OptionLogger(l *log.Logger) Option {
+	return func(cs *cState) {
+		cs.Logger = l
+	}
+}
+
 func OptionDebug(b bool) Option {
 	return func(cs *cState) {
 		cs.debug = b
@@ -319,16 +326,21 @@ func (t cState) print(m *agent.Message) {
 
 // printUploadProgress renders a single line progress bar. the trailing carriage return leaves the cursor
 // at the start of the line so the next update, or the next message, replaces the bar. the erase line clears
-// anything left over from a previous write.
+// anything left over from a previous write. the completed bar ends with a newline so it remains.
 func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 	const width = 30
 
 	pct := min(100, u.Bytes*100/max(1, u.Total))
 
+	end := "\r"
+	if pct >= 100 {
+		end = "\n"
+	}
+
 	filled := int(pct) * width / 100
 	fmt.Fprintf(
 		t.Logger.Writer(),
-		"\x1b[2K%s%s - INFO - uploading archive [%s%s] %3d%% (%s / %s)\r",
+		"\x1b[2K%s%s - INFO - uploading archive [%s%s] %3d%% (%s / %s)%s",
 		t.Logger.Prefix(),
 		messagePrefix(m),
 		strings.Repeat("#", filled),
@@ -336,6 +348,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 		pct,
 		humanBytes(u.Bytes),
 		humanBytes(u.Total),
+		end,
 	)
 }
 
