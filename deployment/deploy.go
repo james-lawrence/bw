@@ -14,10 +14,7 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
-	"golang.org/x/time/rate"
 )
-
-const deployGracePeriod = time.Minute
 
 // partitioner determines the number of nodes to simultaneously deploy to
 // based on the total number of nodes.
@@ -96,19 +93,18 @@ func DeployOptionIgnoreFailures(ignore bool) Option {
 	}
 }
 
-// DeployOptionTimeoutGrace set the timeout for each deployment. if it takes longer than
-// the provided timeout + a small grace period then give up and consider it failed.
-func DeployOptionTimeoutGrace(t time.Duration) Option {
-	return func(d *Deploy) {
-		d.worker.timeout = t + deployGracePeriod
-	}
-}
-
-// DeployOptionTimeout set the timeout for each deployment. if it takes longer than
-// the provided timeout + a small grace period then give up and consider it failed.
+// DeployOptionTimeout set the timeout for the entire workload. if the deploy takes longer than
+// the provided timeout + the grace period then give up and consider it failed.
 func DeployOptionTimeout(t time.Duration) Option {
 	return func(d *Deploy) {
 		d.worker.timeout = t
+	}
+}
+
+// DeployOptionGracePeriod set the grace period added to the timeout of the entire workload.
+func DeployOptionGracePeriod(t time.Duration) Option {
+	return func(d *Deploy) {
+		d.worker.graceperiod = t
 	}
 }
 
@@ -124,17 +120,18 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 	d := Deploy{
 		filter: AlwaysMatch,
 		worker: worker{
-			c:          make(chan func(context.Context) error),
-			wait:       new(sync.WaitGroup),
-			check:      constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
-			deploy:     OperationFunc(loggingDeploy),
-			dispatcher: di,
-			local:      p,
-			completed:  new(int64),
-			failed:     new(int64),
-			timeout:    bw.DefaultDeployTimeout + deployGracePeriod,
-			heartbeat:  5 * time.Second,
-			queue:      make(chan *pending),
+			c:           make(chan func(context.Context) error),
+			wait:        new(sync.WaitGroup),
+			check:       constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
+			deploy:      OperationFunc(loggingDeploy),
+			dispatcher:  di,
+			local:       p,
+			completed:   new(int64),
+			failed:      new(int64),
+			timeout:     bw.DefaultDeployTimeout,
+			graceperiod: time.Minute,
+			heartbeat:   5 * time.Second,
+			queue:       make(chan *pending),
 		},
 		partitioner: bw.ConstantPartitioner(1),
 	}
@@ -182,6 +179,7 @@ type worker struct {
 	failed         *int64
 	ignoreFailures bool
 	timeout        time.Duration
+	graceperiod    time.Duration
 	heartbeat      time.Duration
 	queue          chan *pending
 }
@@ -205,10 +203,12 @@ func (t worker) work(ctx context.Context) {
 	}
 }
 
-func (t worker) Complete() (int64, bool) {
+func (t worker) Complete(ctx context.Context) (int64, bool) {
 	t.wait.Wait()
 	failures := atomic.LoadInt64(t.failed)
-	return failures, t.ignoreFailures || failures == 0
+	failed := ctx.Err()
+	errorsx.Log(errorsx.Wrap(failed, "failure detected"))
+	return failures, t.ignoreFailures || (failures == 0 && failed == nil)
 }
 
 func (t worker) DeployTo(ctx context.Context, peer *agent.Peer) error {
@@ -257,14 +257,14 @@ type Deploy struct {
 // Deploy deploy to the cluster. returns deployment results.
 // failed nodes and if it was considered a success.
 func (t Deploy) Deploy(c cluster) (int64, bool) {
-	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+deployGracePeriod)
+	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+t.worker.graceperiod)
 	defer done()
 
 	nodes := ApplyFilter(t.filter, c.Peers()...)
 	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersFoundEvent(t.worker.local, int64(len(nodes)))))
 
 	concurrency := t.partitioner.Partition(len(nodes))
-	for i := 0; i < concurrency; i++ {
+	for range concurrency {
 		t.worker.wait.Add(1)
 		go t.worker.work(ctx)
 	}
@@ -275,7 +275,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 	}
 	close(initial)
 
-	go heartbeat(ctx, t.worker.local, rate.Every(t.worker.heartbeat), t.dispatcher)
+	go heartbeat(ctx, t.worker.local, t.worker.heartbeat, t.dispatcher)
 
 	if failure := t.monitor.Await(ctx, initial, t.dispatcher, c, t.worker.check); failure != nil {
 		switch errors.Cause(failure).(type) {
@@ -318,7 +318,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		}
 	}
 
-	return t.worker.Complete()
+	return t.worker.Complete(ctx)
 }
 
 // ApplyFilter applies the filter to the set of peers.

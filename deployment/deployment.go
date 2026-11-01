@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"golang.org/x/time/rate"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -304,16 +303,18 @@ type dispatcher interface {
 	Dispatch(context.Context, ...*agent.Message) error
 }
 
-func heartbeat(ctx context.Context, local *agent.Peer, freq rate.Limit, d dispatcher) {
-	var (
-		err error
-	)
+// heartbeat emits a heartbeat every period until the context is done. the context ending, either
+// from completion or its deadline, is the expected way for the heartbeat to stop and isn't reported.
+func heartbeat(ctx context.Context, local *agent.Peer, period time.Duration, d dispatcher) {
+	t := time.NewTicker(period)
+	defer t.Stop()
 
-	l := rate.NewLimiter(freq, 1)
-
-	for err = l.Wait(ctx); err == nil; err = l.Wait(ctx) {
-		errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
+		}
 	}
-
-	errorsx.Log(errors.Wrap(err, "heartbeat ending"))
 }

@@ -7,6 +7,26 @@ import (
 	"time"
 )
 
+// Wrap annotates err with the message, the result can be unwrapped to the original error.
+// returns nil if err is nil.
+func Wrap(err error, message string) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s: %w", message, err)
+}
+
+// Wrapf annotates err with the formatted message, the result can be unwrapped to the original error.
+// returns nil if err is nil.
+func Wrapf(err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, args...), err)
+}
+
 // Compact returns the first error in the set, if any.
 func Compact(errs ...error) error {
 	for _, err := range errs {
