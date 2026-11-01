@@ -340,7 +340,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 	filled := int(pct) * width / 100
 	fmt.Fprintf(
 		t.Logger.Writer(),
-		"\x1b[2K%s%s - INFO - uploading archive [%s%s] %3d%% (%s / %s)%s",
+		"\x1b[2K%s%s - INFO - archive upload [%s%s] %3d%% (%s / %s)%s",
 		t.Logger.Prefix(),
 		messagePrefix(m),
 		strings.Repeat("#", filled),

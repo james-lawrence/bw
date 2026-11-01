@@ -178,7 +178,6 @@ func Into(gctx *Context) error {
 		return nil
 	}
 
-	events <- agent.LogEvent(local, "archive upload initiated")
 	err = grpcx.Retry(gctx.Context, func() error {
 		uploaded, completed := Progress(gctx.Context, local, events, dstinfo.Size())
 		defer func() { completed(err) }()
@@ -212,7 +211,7 @@ func Into(gctx *Context) error {
 	}
 
 	monitored.Store(&darchive.DeploymentID)
-	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: who(%s) location(%s)", displayname, darchive.Location))
+	events <- agent.LogEvent(local, fmt.Sprintf("archive upload completed: location(%s)", darchive.Location))
 
 	max := gctx.Concurrency
 	if gctx.Concurrency == 0 {
