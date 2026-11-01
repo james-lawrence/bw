@@ -22,6 +22,7 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/logx"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
@@ -77,7 +78,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload sto
 		),
 	)
 
-	r := Quorum{
+	r := langx.Clone(Quorum{
 		deployment:            deployment,
 		ConnectableDispatcher: cd,
 		wal:                   &wal,
@@ -91,11 +92,7 @@ func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload sto
 		disconnected:          make(chan struct{}),
 		history:               history,
 		leadershipTransfer:    leadershipTransfer,
-	}
-
-	for _, opt := range options {
-		opt(&r)
-	}
+	}, options...)
 
 	return r
 }
@@ -119,10 +116,19 @@ type Quorum struct {
 
 // Observe observes a raft cluster and updates the quorum state.
 func (t *Quorum) Observe(events chan raft.Observation) {
+	monitor := newApplyMonitor(t, func() *agent.Peer {
+		if t.proxy().State() != raft.Leader {
+			return nil
+		}
+
+		return t.c.Local()
+	})
+	defer func() { errorsx.Log(monitor.Close()) }()
+
 	go t.rp.Overlay(
 		t.c,
 		raftutil.ProtocolOptionStateMachine(func() raft.FSM {
-			return t.wal
+			return newMonitoredWAL(t.wal, monitor)
 		}),
 		raftutil.ProtocolOptionObservers(
 			t.leadershipTransfer.NewRaftObserver(),

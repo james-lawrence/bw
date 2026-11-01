@@ -2,7 +2,12 @@ package quorum
 
 import (
 	"bytes"
+	"context"
 	"io"
+	"sync"
+	"time"
+
+	"github.com/hashicorp/raft"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/journal"
@@ -64,7 +69,7 @@ func snapshotRestore(w WAL, buff io.ReadWriter, commands ...*agent.Message) erro
 	}
 
 	for _, cmd := range cmds {
-		if err := w.decode(w.ctx, cmd); err != nil {
+		if _, err := w.decode(w.ctx, cmd); err != nil {
 			return err
 		}
 	}
@@ -202,6 +207,60 @@ var _ = Describe("WAL", func() {
 
 		raw, err := proto.Marshal(agent.NewUploadProgress(p, 1, 2))
 		Expect(err).To(Succeed())
-		Expect(wal.decode(wal.ctx, raw)).ToNot(Succeed())
+		_, derr := wal.decode(wal.ctx, raw)
+		Expect(derr).To(HaveOccurred())
+	})
+
+	Describe("slow apply", func() {
+		It("should report the first slow apply and the max duration of a deploy", func() {
+			d := &recordingDispatcher{}
+			monitor := newApplyMonitor(d, func() *agent.Peer { return p })
+			monitor.threshold = 10 * time.Millisecond
+			w := NewWAL(slowTranscoder{delay: 20 * time.Millisecond})
+			wal := newMonitoredWAL(&w, monitor)
+
+			apply := func(m *agent.Message) {
+				raw, err := proto.Marshal(m)
+				Expect(err).To(Succeed())
+				Expect(wal.Apply(&raft.Log{Type: raft.LogCommand, Data: raw})).To(BeNil())
+			}
+
+			apply(agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
+			apply(agent.LogEvent(p, "a"))
+			apply(agent.LogEvent(p, "b"))
+			Eventually(d.all).Should(HaveLen(1))
+			Expect(d.all()[0].GetLog().GetLog()).To(ContainSubstring("WARN - fsm apply exceeded"))
+
+			apply(agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Done}))
+			Eventually(d.all).Should(HaveLen(2))
+			Expect(d.all()[1].GetLog().GetLog()).To(ContainSubstring("fsm apply max duration"))
+		})
 	})
 })
+
+type slowTranscoder struct{ delay time.Duration }
+
+func (t slowTranscoder) Decode(TranscoderContext, *agent.Message) error {
+	time.Sleep(t.delay)
+	return nil
+}
+
+func (t slowTranscoder) Encode(io.Writer) error { return nil }
+
+type recordingDispatcher struct {
+	m    sync.Mutex
+	msgs []*agent.Message
+}
+
+func (t *recordingDispatcher) Dispatch(_ context.Context, ms ...*agent.Message) error {
+	t.m.Lock()
+	defer t.m.Unlock()
+	t.msgs = append(t.msgs, ms...)
+	return nil
+}
+
+func (t *recordingDispatcher) all() []*agent.Message {
+	t.m.Lock()
+	defer t.m.Unlock()
+	return append([]*agent.Message(nil), t.msgs...)
+}

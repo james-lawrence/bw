@@ -54,8 +54,16 @@ func PeersCompletedEvent(p *Peer, n int64) *Message {
 	return integerEvent(p, Message_PeersCompletedEvent, n)
 }
 
+// MessageOption modifies a message as it is created.
+type MessageOption func(*Message)
+
+// MessageOptionEphemeral marks the message as ephemeral, it is not recorded in the write ahead log.
+func MessageOptionEphemeral(m *Message) {
+	m.Ephemeral = true
+}
+
 // LogEvent create a log event message.
-func LogEvent(p *Peer, s string) *Message {
+func LogEvent(p *Peer, s string, options ...MessageOption) *Message {
 	return new(langx.Clone(Message{
 		Type: Message_LogEvent,
 		Peer: p,
@@ -64,7 +72,7 @@ func LogEvent(p *Peer, s string) *Message {
 				Log: s,
 			},
 		},
-	}, stamp))
+	}, stamp, langx.Compose(options...)))
 }
 
 // NewTLSCertificates ...

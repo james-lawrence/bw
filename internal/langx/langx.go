@@ -70,6 +70,15 @@ func MustZero[T any](v T, err error) T {
 	return v
 }
 
+// Compose the options into a single option, applied in order.
+func Compose[T any, Y ~func(*T)](options ...Y) func(*T) {
+	return func(v *T) {
+		for _, opt := range options {
+			opt(v)
+		}
+	}
+}
+
 func Clone[T any, Y ~func(*T)](v T, options ...Y) T {
 	dup := v
 	for _, opt := range options {

@@ -49,50 +49,54 @@ type WAL struct {
 // ApplyFuture returned by Raft.Apply method if that
 // method was called on the same Raft node as the FSM.
 func (t *WAL) Apply(l *raft.Log) interface{} {
-	switch l.Type {
-	case raft.LogBarrier:
-		log.Println("barrier invoked", l.Index, l.Term)
-	case raft.LogCommand:
-		if err := t.decode(t.ctx, l.Data); err != nil {
-			return err
-		}
-	case raft.LogNoop:
-		log.Println("noop invoked", l.Index, l.Term)
+	if _, err := t.ApplyLog(l); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (t *WAL) decode(ctx TranscoderContext, buf []byte) error {
-	var (
-		err error
-		m   *agent.Message
-	)
+// ApplyLog applies the log entry, returning the message it carried, if any.
+func (t *WAL) ApplyLog(l *raft.Log) (m *agent.Message, err error) {
+	switch l.Type {
+	case raft.LogBarrier:
+		log.Println("barrier invoked", l.Index, l.Term)
+		return nil, nil
+	case raft.LogCommand:
+		return t.decode(t.ctx, l.Data)
+	case raft.LogNoop:
+		log.Println("noop invoked", l.Index, l.Term)
+		return nil, nil
+	default:
+		return nil, nil
+	}
+}
 
+func (t *WAL) decode(ctx TranscoderContext, buf []byte) (m *agent.Message, err error) {
 	if m, err = commandToMessage(buf); err != nil {
-		return err
+		return nil, err
 	}
 
 	if m.Type == agent.Message_UploadEvent {
 		// upload progress is client local, it must never be sent through the quorum.
 		err = errors.Errorf("upload progress must not be replicated: %s", m.Id)
 		log.Println(err)
-		return err
+		return nil, err
 	}
 
 	if err = t.c.Decode(ctx, m); err != nil {
-		return err
+		return nil, err
 	}
 
 	if m.Ephemeral {
-		return nil
+		return m, nil
 	}
 
 	t.m.Lock()
 	t.logs = append(t.logs, m)
 	t.m.Unlock()
 
-	return nil
+	return m, nil
 }
 
 // Snapshot is used to support log compaction. This call should
@@ -135,7 +139,7 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	}
 
 	for encoded, err = decodeRaw(o); err == nil; encoded, err = decodeRaw(o) {
-		if err = t.decode(t.ctx, encoded); err != nil {
+		if _, err = t.decode(t.ctx, encoded); err != nil {
 			log.Println("decode event failure", err)
 			return errors.WithStack(err)
 		}
