@@ -3,6 +3,7 @@ package iox_test
 import (
 	"errors"
 	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,5 +63,48 @@ func TestStallWriter(t *testing.T) {
 		w := iox.NewStallWriter(io.Discard, time.Minute, errStalled, func(err error) { got = err })
 		require.NoError(t, w.CloseWithError(io.ErrClosedPipe))
 		require.ErrorIs(t, got, io.ErrClosedPipe)
+	})
+}
+
+// blockingReader blocks reads until closed.
+type blockingReader struct {
+	closed chan struct{}
+}
+
+func (t blockingReader) Read([]byte) (int, error) {
+	<-t.closed
+	return 0, io.ErrClosedPipe
+}
+
+func (t blockingReader) Close() error {
+	close(t.closed)
+	return nil
+}
+
+func TestStalledReader(t *testing.T) {
+	t.Run("read fails with the cause when it blocks", func(t *testing.T) {
+		r := iox.NewStalledReader(blockingReader{closed: make(chan struct{})}, 20*time.Millisecond, errStalled, nil)
+
+		_, err := r.Read(make([]byte, 1))
+		require.ErrorIs(t, err, errStalled)
+	})
+
+	t.Run("does not fire while reads progress", func(t *testing.T) {
+		r := iox.NewStalledReader(strings.NewReader("aaaaa"), 50*time.Millisecond, errStalled, nil)
+		defer r.Close()
+
+		for range 5 {
+			time.Sleep(20 * time.Millisecond)
+			_, err := r.Read(make([]byte, 1))
+			require.NoError(t, err)
+		}
+	})
+
+	t.Run("cancel is called on stall", func(t *testing.T) {
+		var got error
+		r := iox.NewStalledReader(blockingReader{closed: make(chan struct{})}, 20*time.Millisecond, errStalled, func(err error) { got = err })
+
+		_, _ = r.Read(make([]byte, 1))
+		require.ErrorIs(t, got, errStalled)
 	})
 }

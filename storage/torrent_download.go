@@ -56,16 +56,7 @@ func peersToNode(peers ...*agent.Peer) (r []torrent.Peer) {
 }
 
 func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.ReadCloser) {
-	var (
-		err      error
-		metadata torrent.Metadata
-	)
-
-	if metadata, err = torrent.NewFromMagnet(archive.Location); err != nil {
-		return newErrReader(errors.WithStack(err))
-	}
-
-	dl, _, err := t.client.Start(metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...))
+	metadata, err := torrent.NewFromMagnet(archive.Location)
 	if err != nil {
 		return newErrReader(errors.WithStack(err))
 	}
@@ -73,10 +64,46 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 	pr, pw := io.Pipe()
 
 	go func() {
-		// fail the download when no progress has been made, replaces a fixed timeout.
-		ctx, cancel := context.WithCancelCause(ctx)
-		w := iox.NewStallWriter(pw, 16*time.Second, ErrDownloadStalled, cancel)
-		w.CloseWithError(errorsx.From(torrent.DownloadInto(ctx, w, dl)))
+		var pos int64
+
+		// restart stalled downloads until the context is cancelled.
+		for ctx.Err() == nil {
+			var dl torrent.Torrent
+
+			if dl, _, err = t.client.Start(metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...)); err != nil {
+				break
+			}
+
+			// no metadata within the window is a stall as well (e.g. no reachable peers).
+			mctx, cancel := context.WithTimeoutCause(ctx, 16*time.Second, ErrDownloadStalled)
+			rc := torrent.Downloader(mctx, dl)
+			cancel()
+
+			// a restarted torrent replays from the start, continue from what the consumer already has.
+			if _, err = rc.Seek(pos, io.SeekStart); err == nil {
+				var n int64
+
+				// fail the attempt when no progress has been made, replaces a fixed timeout.
+				sr := iox.NewStalledReader(rc, 16*time.Second, ErrDownloadStalled, nil)
+				stop := context.AfterFunc(ctx, func() { sr.Close() })
+				n, err = io.Copy(pw, sr)
+				stop()
+				sr.Close()
+				pos += n
+			}
+
+			if !errors.Is(err, ErrDownloadStalled) {
+				break
+			}
+
+			t.client.Stop(metadata)
+		}
+
+		if ctx.Err() != nil {
+			err = context.Cause(ctx)
+		}
+
+		pw.CloseWithError(err)
 	}()
 
 	return pr
