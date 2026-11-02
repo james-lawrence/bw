@@ -428,8 +428,8 @@ github.com/ianlancetaylor/demangle v0.0.0-20210905161508-09a460cdf81d/go.mod h1:
 github.com/ianlancetaylor/demangle v0.0.0-20230524184225-eabc099b10ab/go.mod h1:gx7rwoVhcfuVKG5uya9Hs3Sxj7EIvldVofAWIUtGouw=
 github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0 h1:ufr2e4uIgz/Ft0RPudkFMyVrp77buvTFxqoDvwNGVSk=
 github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0/go.mod h1:dQ6TM/OGAe+cMws81eTe4Btv1dKxfPZ2CX+YaAFAPN4=
-github.com/james-lawrence/torrent v0.0.0-20261102045439-b32db93377d6 h1:ugENU7ARE2dAOHOeaJMNFwUjisiUwCogd32Lwf1ZWfg=
-github.com/james-lawrence/torrent v0.0.0-20261102045439-b32db93377d6/go.mod h1:6tm6XRlI4f50t1VqEcn0QyXCgmEZ6wg0afHB9Ohc1Gs=
+github.com/james-lawrence/torrent v0.0.0-20261102132315-acc9a79e0150 h1:Sz49jwQ39EyT3JzXvfUvXzEk1NxzaWqYqNxFi05tVtI=
+github.com/james-lawrence/torrent v0.0.0-20261102132315-acc9a79e0150/go.mod h1:oEekomvYzdOI9abxAM6O9sTipe297Hcg74oRjPgEOT8=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 h1:BQSFePA1RWJOlocH6Fxy8MmwDt+yVQYULKfN0RoTN8A=
 github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99/go.mod h1:1lJo3i6rXxKeerYnT8Nvf0QmHCRC1n8sfWVwXF2Frvo=
 github.com/jmespath/go-jmespath v0.4.0 h1:BEgLn5cpjn8UN1mAw4NjwDrS35OdebyEtFe+9YPoQUg=
@@ -685,8 +685,8 @@ go.opentelemetry.io/otel/sdk/metric v1.47.0 h1:lfISg2j93VT6yqdk9OfUaZmw/GfcZqCCV
 go.opentelemetry.io/otel/sdk/metric v1.47.0/go.mod h1:ypLp+mW1Nt2x+Szt3b5/i1syodyts49lMOwxpDI3VGw=
 go.opentelemetry.io/otel/trace v1.47.0 h1:JOjX/Oci8K94QHddo+bbfya/Ai/nf6/dt9ZfrFNWSrM=
 go.opentelemetry.io/otel/trace v1.47.0/go.mod h1:jNaSLa2PZEYFG6fRjJABAu+bw4FS08uDmPg28lTghu0=
-go.yaml.in/yaml/v3 v3.0.5 h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=
-go.yaml.in/yaml/v3 v3.0.5/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
+go.yaml.in/yaml/v3 v3.0.6 h1:zcDfvjXEqTQmpjniUBLc91xYJMB2c4QOFxEF/LCEckM=
+go.yaml.in/yaml/v3 v3.0.6/go.mod h1:HVTZu1O7/Vkt2N+BFy8Zza+lnLsABggaTM2ZpNIGuKg=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=
 golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=

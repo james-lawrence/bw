@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20250113192317-e8660f88bcc9
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0
-	github.com/james-lawrence/torrent v0.0.0-20261102045439-b32db93377d6
+	github.com/james-lawrence/torrent v0.0.0-20261102132315-acc9a79e0150
 	github.com/joho/godotenv v1.5.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
@@ -166,7 +166,7 @@ require (
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
