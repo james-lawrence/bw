@@ -120,8 +120,8 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 
 	defer o.Close()
 
-	log.Output(1, fmt.Sprintln("WAL restoring"))
-	defer log.Output(1, fmt.Sprintln("WAL restored"))
+	log.Output(1, fmt.Sprintln("--------------- WAL restore initiated -------------"))
+	defer log.Output(1, fmt.Sprintln("--------------- WAL restore completed -------------"))
 
 	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
 	defer atomic.SwapInt64(&t.innerstate.ctx.State, StateHealthy)
