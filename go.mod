@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/raft-boltdb v0.0.0-20250113192317-e8660f88bcc9
 	github.com/hashicorp/vault/api v1.15.0
 	github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0
-	github.com/james-lawrence/torrent v0.0.0-20261102132315-acc9a79e0150
+	github.com/james-lawrence/torrent v0.0.0-20261103050457-294b8a5cff75
 	github.com/joho/godotenv v1.5.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
