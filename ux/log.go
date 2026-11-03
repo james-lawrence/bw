@@ -381,7 +381,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 	cell := max(1, runewidth.RuneWidth(t.iconography))
 	fmt.Fprintf(
 		t.Logger.Writer(),
-		"\x1b[2K%s%s - INFO - archive upload [%s%s] %3d%% (%s / %s)%s",
+		"\x1b[2K%s%s - INFO - archive upload [%s%s] %3d%% (%s / %s) (%s)%s",
 		t.Logger.Prefix(),
 		messagePrefix(m),
 		strings.Repeat(string(t.iconography), filled),
@@ -389,6 +389,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 		pct,
 		bytesx.Human(u.Bytes),
 		bytesx.Human(u.Total),
+		time.Since(t.started).Round(time.Second),
 		langx.Autoderef(t.uploadcompleted),
 	)
 }

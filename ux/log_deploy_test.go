@@ -308,9 +308,9 @@ var _ = Describe("Log Deploy", func() {
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 
 		// in progress updates are replaced by the next update, the completed one remains.
-		Expect(output.String()).To(ContainSubstring(" 50% (1.0 MiB / 2.0 MiB)\r"))
-		Expect(output.String()).To(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\n"))
-		Expect(output.String()).ToNot(ContainSubstring("100% (2.0 MiB / 2.0 MiB)\r"))
+		Expect(output.String()).To(MatchRegexp(` 50% \(1\.0 MiB / 2\.0 MiB\) \([0-9a-z.]+\)\r`))
+		Expect(output.String()).To(MatchRegexp(`100% \(2\.0 MiB / 2\.0 MiB\) \([0-9a-z.]+\)\n`))
+		Expect(output.String()).ToNot(MatchRegexp(`100% \(2\.0 MiB / 2\.0 MiB\) \([0-9a-z.]+\)\r`))
 	})
 
 	It("should fill the upload progress bar with sparkles", func() {
