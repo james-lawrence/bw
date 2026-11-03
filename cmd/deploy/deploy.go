@@ -198,8 +198,6 @@ func Into(gctx *Context) error {
 			// the io.EOF error into a grpc codes.Unavailable error so the retry takes hold.
 			return status.Error(codes.Unavailable, err.Error())
 		} else if err != nil {
-			events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
-			events <- agent.LogEvent(local, "deployment failed")
 			return err
 		}
 
@@ -207,6 +205,8 @@ func Into(gctx *Context) error {
 	}, codes.Unavailable)
 
 	if err != nil {
+		events <- agent.LogError(local, errors.Wrap(err, "archive upload failed"))
+		events <- agent.LogEvent(local, "deployment failed")
 		return err
 	}
 
