@@ -12,6 +12,7 @@ require (
 	github.com/bits-and-blooms/bloom/v3 v3.7.1
 	github.com/coreos/go-systemd/v22 v22.7.0
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/dustin/go-humanize v1.1.0
 	github.com/egdaemon/gdx v0.0.0-20260824162813-84291833ef44
 	github.com/egdaemon/gdx/konggdx v0.0.0-20260824162813-84291833ef44
 	github.com/fsnotify/fsnotify v1.10.1

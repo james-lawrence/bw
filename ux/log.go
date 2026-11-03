@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/internal/bytesx"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/stringsx"
@@ -386,14 +387,10 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 		strings.Repeat(string(t.iconography), filled),
 		strings.Repeat("-", (width-filled)*cell),
 		pct,
-		humanBytes(u.Bytes),
-		humanBytes(u.Total),
+		bytesx.Human(u.Bytes),
+		bytesx.Human(u.Total),
 		langx.Autoderef(t.uploadcompleted),
 	)
-}
-
-func humanBytes(b uint64) string {
-	return fmt.Sprintf("%.1f MiB", float64(b)/(1<<20))
 }
 
 func (t cState) printDeployCommand(m *agent.Message) {
