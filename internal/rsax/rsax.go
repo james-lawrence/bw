@@ -25,6 +25,11 @@ func AutoBits() int {
 	return defaultBits
 }
 
+// smallest number of bits rsa allows you to generate with
+func UnsafeBits() int {
+	return 1024
+}
+
 // Auto generates a RSA key using package defined defaults.
 func Auto() (pkey []byte, err error) {
 	return Generate(defaultBits)

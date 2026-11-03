@@ -80,8 +80,8 @@ func NewAutoSigner(comment string) (s Signer, err error) {
 	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.Auto)
 }
 
-func NewDeterministicSigner(seed []byte, comment string) (s Signer, err error) {
-	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.AutoDeterministic(seed))
+func NewDeterministicSigner(kgen keyGen, comment string) (s Signer, err error) {
+	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, kgen)
 }
 
 // AutoSignerInfo returns the fingerprint and authorized ssh key.

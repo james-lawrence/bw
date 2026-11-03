@@ -4,17 +4,14 @@ package main
 import (
 	"context"
 	"log"
-	"net"
 	"os"
 	"path/filepath"
-	"reflect"
 	"sync"
 	"syscall"
 
 	"github.com/alecthomas/kong"
 	"github.com/egdaemon/gdx"
 	"github.com/egdaemon/gdx/konggdx"
-	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/autocomplete"
 	"github.com/james-lawrence/bw/cmd/bw/agentcmd"
@@ -56,35 +53,22 @@ func gdxSocket() string {
 // can apply the flags and environment onto it. options are appended last, tests use them to override the
 // kong.Vars or exit behavior without touching the real filesystem.
 func newcmdroot(c *cli, defaults *agent.Config, options ...kong.Option) *kong.Kong {
+
 	return kong.Must(
 		c,
 		append([]kong.Option{
 			kong.Name("bw"),
 			kong.Description("user frontend to bearded-wookie"),
+			cmdopts.Vars(*defaults),
 			kong.Vars{
-				"vars_bw_default_env_name":                         bw.DefaultEnvironmentName,
-				"vars_bw_default_deployspace_directory":            bw.DefaultDeployspaceDir,
-				"vars_bw_default_deployspace_config_directory":     bw.DefaultDeployspaceConfigDir,
-				"vars_bw_default_agent_configuration_location":     bw.DefaultLocation(filepath.Join(bw.DefaultEnvironmentName, bw.DefaultAgentConfig), ""),
-				"vars_bw_default_agent_address":                    defaults.P2PBind.String(),
-				"vars_gdx_socket":                                  gdxSocket(),
-				"vars_gdx_default_output":                          "-",
-				"env_bw_agent_bind_primary":                        bw.EnvAgentP2PBind,
-				"env_bw_agent_bind_advertised":                     bw.EnvAgentP2PAdvertised,
-				"env_bw_agent_bind_secondary":                      bw.EnvAgentP2PAlternatesBind,
-				"env_bw_agent_bootstrap_static":                    bw.EnvAgentClusterBootstrap,
-				"env_bw_agent_bootstrap_p2p_enabled":               bw.EnvAgentClusterEnableP2P,
-				"env_bw_agent_bootstrap_dns_enabled":               bw.EnvAgentClusterEnableDNS,
-				"env_bw_agent_bootstrap_aws_autoscaling_enabled":   bw.EnvAgentClusterEnableAWSAutoscaling,
-				"env_bw_agent_bootstrap_gcloud_taget_pool_enabled": bw.EnvAgentClusterEnableGoogleCloudPool,
+				"vars_gdx_socket":         gdxSocket(),
+				"vars_gdx_default_output": "-",
 			},
 			kong.UsageOnError(),
 			kong.Bind(&c.Global),
 			kong.Bind(defaults),
 			kong.BindTo(c.Context, (*context.Context)(nil)), // konggdx commands take a plain context.
-			kong.TypeMapper(reflect.TypeOf(&net.IP{}), kong.MapperFunc(cmdopts.ParseIP)),
-			kong.TypeMapper(reflect.TypeOf(&net.TCPAddr{}), kong.MapperFunc(cmdopts.ParseTCPAddr)),
-			kong.TypeMapper(reflect.TypeOf([]*net.TCPAddr(nil)), kong.MapperFunc(cmdopts.ParseTCPAddrArray)),
+			cmdopts.Mappers(),
 		}, options...)...,
 	)
 }

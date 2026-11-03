@@ -1,0 +1,367 @@
+package envx_test
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+	"testing/iotest"
+
+	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/stretchr/testify/require"
+)
+
+func TestBuilder(t *testing.T) {
+	t.Run("Setenv", func(t *testing.T) {
+		t.Run("set_existing_variable", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.Setenv("KEY1", "new_val"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=new_val", "KEY2=val2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("set_non_existing_variable", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1")
+			require.NoError(t, b.Setenv("KEY2", "new_val"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=val1"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("set_variable_in_empty_builder", func(t *testing.T) {
+			b := envx.Build()
+			require.NoError(t, b.Setenv("KEY1", "new_val"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("set_variable_with_multiple_occurrences", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2", "KEY1=val1_again")
+			require.NoError(t, b.Setenv("KEY1", "new_val"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=new_val", "KEY1=new_val", "KEY2=val2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("set_variable_with_empty_value", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1")
+			require.NoError(t, b.Setenv("KEY1", ""))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1="}
+			require.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("Unsetenv", func(t *testing.T) {
+		t.Run("unset_existing_variable", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.Unsetenv("KEY1"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY2=val2"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("unset_non_existing_variable", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.Unsetenv("KEY3"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=val1", "KEY2=val2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("unset_from_empty_builder", func(t *testing.T) {
+			b := envx.Build()
+			require.NoError(t, b.Unsetenv("KEY1"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("unset_variable_with_multiple_occurrences", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2", "KEY1=val1_again")
+			require.NoError(t, b.Unsetenv("KEY1"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY2=val2"}
+			require.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("Drop", func(t *testing.T) {
+		t.Run("drop_single_key", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "C=3")
+			b.Drop("B")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=1", "C=3"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("drop_multiple_keys", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "C=3", "D=4")
+			b.Drop("A", "C")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"B=2", "D=4"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("drop_non_existent_key", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2")
+			b.Drop("C")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=1", "B=2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("drop_all_keys", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2")
+			b.Drop("A", "B")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("drop_from_empty_builder", func(t *testing.T) {
+			b := envx.Build()
+			b.Drop("A")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("drop_handles_duplicates", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "A=3")
+			b.Drop("A")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"B=2"}
+			require.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("Append", func(t *testing.T) {
+		t.Run("append_to_existing_key", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.Append("KEY1", "val2", ":"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=val1:val2", "KEY2=val2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("append_to_missing_key_adds_it", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1")
+			require.NoError(t, b.Append("KEY2", "val2", ":"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=val1", "KEY2=val2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("append_to_empty_builder_adds_key", func(t *testing.T) {
+			b := envx.Build()
+			require.NoError(t, b.Append("KEY1", "val1", ":"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=val1"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("append_uses_separator", func(t *testing.T) {
+			b := envx.Build().FromEnviron("PATH=/usr/bin")
+			require.NoError(t, b.Append("PATH", "/usr/local/bin", ":"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"PATH=/usr/bin:/usr/local/bin"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("append_to_key_with_empty_value", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=")
+			require.NoError(t, b.Append("KEY1", "val1", ":"))
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"KEY1=:val1"}
+			require.Equal(t, expected, actual)
+		})
+	})
+
+	t.Run("CopyTo", func(t *testing.T) {
+		t.Run("writes_variables_to_writer", func(t *testing.T) {
+			var buf bytes.Buffer
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.CopyTo(&buf))
+			require.Equal(t, "KEY1=val1\nKEY2=val2\n", buf.String())
+		})
+
+		t.Run("empty_builder_writes_nothing", func(t *testing.T) {
+			var buf bytes.Buffer
+			b := envx.Build()
+			require.NoError(t, b.CopyTo(&buf))
+			require.Empty(t, buf.String())
+		})
+
+		t.Run("returns_failed_set_by_from_path", func(t *testing.T) {
+			tmpFile, err := os.CreateTemp(t.TempDir(), "unreadable.*")
+			require.NoError(t, err)
+			tmpFile.Close()
+			require.NoError(t, os.Chmod(tmpFile.Name(), 0000))
+
+			var buf bytes.Buffer
+			b := envx.Build().FromPath(tmpFile.Name())
+			require.ErrorIs(t, b.CopyTo(&buf), os.ErrPermission)
+		})
+
+		t.Run("reads_vars_from_reader", func(t *testing.T) {
+			var buf bytes.Buffer
+			b := envx.Build().FromReader(strings.NewReader("KEY1=val1\nKEY2=val2\n"))
+			require.NoError(t, b.CopyTo(&buf))
+			require.Equal(t, "KEY1=val1\nKEY2=val2\n", buf.String())
+		})
+
+		t.Run("reader_failure_propagates_via_copy_to", func(t *testing.T) {
+			var buf bytes.Buffer
+			b := envx.Build().FromReader(iotest.ErrReader(os.ErrNotExist))
+			require.ErrorIs(t, b.CopyTo(&buf), os.ErrNotExist)
+		})
+	})
+
+	t.Run("WriteTo", func(t *testing.T) {
+		t.Run("writes_variables_to_file", func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "env")
+			b := envx.Build().FromEnviron("KEY1=val1", "KEY2=val2")
+			require.NoError(t, b.WriteTo(path))
+			data, err := os.ReadFile(path)
+			require.NoError(t, err)
+			require.Equal(t, "KEY1=val1\nKEY2=val2\n", string(data))
+		})
+
+		t.Run("returns_failed_set_by_from_path", func(t *testing.T) {
+			tmpFile, err := os.CreateTemp(t.TempDir(), "unreadable.*")
+			require.NoError(t, err)
+			tmpFile.Close()
+			require.NoError(t, os.Chmod(tmpFile.Name(), 0000))
+
+			b := envx.Build().FromPath(tmpFile.Name())
+			require.ErrorIs(t, b.WriteTo(filepath.Join(t.TempDir(), "env")), os.ErrPermission)
+		})
+
+		t.Run("returns_error_for_invalid_output_path", func(t *testing.T) {
+			b := envx.Build().FromEnviron("KEY1=val1")
+			require.ErrorIs(t, b.WriteTo("/nonexistent/dir/env"), os.ErrNotExist)
+		})
+	})
+
+	t.Run("Only", func(t *testing.T) {
+		t.Run("only_keeps_specified_keys", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "C=3")
+			b.Only("A", "C")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=1", "C=3"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("only_with_non_existent_key", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2")
+			b.Only("A", "C")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=1"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("only_with_empty_key_list", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2")
+			b.Only()
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("only_on_empty_builder", func(t *testing.T) {
+			b := envx.Build()
+			b.Only("A")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			require.Empty(t, actual)
+		})
+
+		t.Run("only_handles_duplicates", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "A=3")
+			b.Only("A")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=3"}
+			require.Equal(t, expected, actual)
+		})
+
+		t.Run("only_keeps_all_keys", func(t *testing.T) {
+			b := envx.Build().FromEnviron("A=1", "B=2", "A=3")
+			b.Only("A", "B")
+			actual, err := b.Environ()
+			require.NoError(t, err)
+			expected := []string{"A=3", "B=2"}
+			sort.Strings(actual)
+			sort.Strings(expected)
+			require.Equal(t, expected, actual)
+		})
+	})
+}
+
+func TestBuilderSources(t *testing.T) {
+	t.Run("var", func(t *testing.T) {
+		env, err := envx.Build().Var("A", "1").Environ()
+		require.NoError(t, err)
+		require.Equal(t, []string{"A=1"}, env)
+	})
+
+	t.Run("from env keeps set keys and omits missing", func(t *testing.T) {
+		t.Setenv("ENVX_BUILDER_SET", "v")
+		env, err := envx.Build().FromEnv("ENVX_BUILDER_SET", "ENVX_BUILDER_MISSING").Environ()
+		require.NoError(t, err)
+		require.Equal(t, []string{"ENVX_BUILDER_SET=v"}, env)
+	})
+
+	t.Run("from path ignores missing files", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "env")
+		env, err := envx.Build().FromPath(filepath.Join(t.TempDir(), "missing"), path).Environ()
+		require.NoError(t, err)
+		require.Empty(t, env)
+
+		require.NoError(t, os.WriteFile(path, []byte("A=\"1\"\nmalformed\nB=2\n"), 0600))
+		env, err = envx.Build().FromPath(path).Environ()
+		require.NoError(t, err)
+		require.Equal(t, []string{"A=1", "B=2"}, env)
+	})
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
+	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/vcsinfo"
@@ -77,7 +78,7 @@ func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 
 	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
 
-	if _, err = notary.NewDeterministicSigner(seed, stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
+	if _, err = notary.NewDeterministicSigner(rsax.AutoDeterministic(seed), stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
 		return err
 	}
 
