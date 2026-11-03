@@ -3,6 +3,7 @@
 package certificatecache
 
 import (
+	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -137,18 +138,8 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err 
 	}
 
 	go func() {
-		for {
-			certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
-			if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
-				log.Println("next refresh", certpath, due)
-			}
-			time.Sleep(due)
-
-			if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
-				errorsx.Log(errors.Wrap(err, "failed to refresh credentials"))
-				continue
-			}
-		}
+		certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
+		certbackgroundrefresh(context.Background(), certpath, r, due, futureoffset)
 	}()
 
 	return nil
@@ -173,7 +164,7 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	// iteration where it'll use the certicates actual expiration to compute the next iteration.
 	if _, err = os.Stat(certpath); os.IsNotExist(err) {
 		log.Println("forcing refresh due to missing certificate", certpath)
-		return due, r.Refresh()
+		r.Refresh()
 	}
 
 	if expiration, err = expiredCert(certpath); err != nil {
@@ -193,6 +184,34 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	}
 
 	return due, nil
+}
+
+func certbackgroundrefresh(ctx context.Context, certpath string, r refresher, due, futureoffset time.Duration) {
+	for {
+		var (
+			err error
+		)
+
+		if envx.Boolean(false, bw.EnvLogsTLS, bw.EnvLogsVerbose) {
+			log.Println("next refresh", certpath, due)
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(due):
+		}
+
+		// select picks randomly when both are ready, ensure cancellation wins.
+		if ctx.Err() != nil {
+			return
+		}
+
+		if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
+			errorsx.Log(errors.Wrap(err, "failed to refresh credentials"))
+			continue
+		}
+	}
 }
 
 // returns the expiration of the certificate at the given path.
