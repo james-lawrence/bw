@@ -306,6 +306,28 @@ var _ = Describe("Log Deploy", func() {
 		Expect(output.String()).To(ContainSubstring("archive upload [" + strings.Repeat("✨", 30) + "] 100%"))
 	})
 
+	It("should only print the completed upload progress once", func() {
+		node := agent.NewPeer("node1")
+		archive := &agent.Archive{DeploymentID: []byte("ours")}
+		buf := make(chan *agent.Message, 8)
+		buf <- agent.NewUploadProgress(node, 1<<20, 2<<20)
+		buf <- agent.NewUploadProgress(node, 2<<20, 2<<20)
+		buf <- agent.NewUploadProgress(node, 2<<20, 2<<20)
+		buf <- agent.NewUploadProgress(node, 2<<20, 2<<20)
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: archive, Options: &agent.DeployOptions{}})
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive, Options: &agent.DeployOptions{}})
+
+		output := bytes.NewBuffer(nil)
+		ctx, timeout := context.WithTimeout(context.Background(), time.Second)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
+
+		Expect(strings.Count(output.String(), "] 100%")).To(Equal(1))
+	})
+
 	It("should resume history replay across consecutive reconnects", func() {
 		local := agent.NewPeer("local")
 		node := agent.NewPeer("node1")

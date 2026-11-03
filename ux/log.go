@@ -18,9 +18,15 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/internal/envx"
+	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/logrusorgru/aurora"
 	"github.com/mattn/go-runewidth"
+)
+
+const (
+	uploading = "\r"
+	uploaded  = "\n"
 )
 
 // Option ...
@@ -73,14 +79,15 @@ func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers
 	var (
 		s = deploying{
 			cState: cState{
-				iconography:    envx.Rune('#', bw.EnvUploadSparkles),
-				cached:         cached,
-				heartbeat:      time.Minute,
-				connection:     &agent.ConnectionEvent{},
-				FailureDisplay: FailureDisplayNoop{},
-				au:             aurora.NewAurora(true),
-				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
-				failed:         failed,
+				iconography:     envx.Rune('#', bw.EnvUploadSparkles),
+				cached:          cached,
+				heartbeat:       time.Minute,
+				connection:      &agent.ConnectionEvent{},
+				FailureDisplay:  FailureDisplayNoop{},
+				au:              aurora.NewAurora(true),
+				Logger:          log.New(os.Stderr, "[CLIENT] ", 0),
+				failed:          failed,
+				uploadcompleted: new(uploading),
 			}.merge(options...),
 		}
 	)
@@ -211,17 +218,18 @@ func consume(c consumer, messages ...*agent.Message) consumer {
 }
 
 type cState struct {
-	iconography    rune
-	cached         *dialers.Cached
-	connection     *agent.ConnectionEvent
-	deploymentID   *atomic.Pointer[[]byte]
-	deploying      *bool
-	FailureDisplay failureDisplay
-	Logger         *log.Logger
-	au             aurora.Aurora
-	heartbeat      time.Duration
-	debug          bool
-	failed         context.CancelCauseFunc
+	iconography     rune
+	cached          *dialers.Cached
+	connection      *agent.ConnectionEvent
+	deploymentID    *atomic.Pointer[[]byte]
+	deploying       *bool
+	FailureDisplay  failureDisplay
+	Logger          *log.Logger
+	au              aurora.Aurora
+	heartbeat       time.Duration
+	debug           bool
+	failed          context.CancelCauseFunc
+	uploadcompleted *string
 }
 
 func (t cState) merge(options ...Option) cState {
@@ -344,9 +352,12 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 
 	pct := min(100, u.Bytes*100/max(1, u.Total))
 
-	end := "\r"
-	if pct >= 100 {
-		end = "\n"
+	if *t.uploadcompleted == uploaded {
+		return
+	} else if pct >= 100 {
+		*t.uploadcompleted = uploaded
+	} else {
+		*t.uploadcompleted = uploading
 	}
 
 	filled := int(pct) * width / 100
@@ -363,7 +374,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 		pct,
 		humanBytes(u.Bytes),
 		humanBytes(u.Total),
-		end,
+		langx.Autoderef(t.uploadcompleted),
 	)
 }
 
