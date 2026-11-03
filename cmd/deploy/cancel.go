@@ -80,10 +80,5 @@ func Cancel(gctx *Context) (err error) {
 
 	events <- agent.LogEvent(local, "deploy cancelled")
 
-	<-dctx.Done()
-	if cause := context.Cause(dctx); errorsx.Ignore(cause, context.Canceled) != nil {
-		return cause
-	}
-
 	return nil
 }
