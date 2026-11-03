@@ -120,8 +120,8 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 
 	defer o.Close()
 
-	log.Output(1, fmt.Sprintln("--------------- WAL restore initiated -------------"))
-	defer log.Output(1, fmt.Sprintln("--------------- WAL restore completed -------------"))
+	log.Output(1, fmt.Sprintln("--------------- restore initiated -------------"))
+	defer log.Output(1, fmt.Sprintln("--------------- restore completed -------------"))
 
 	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
 	defer atomic.SwapInt64(&t.innerstate.ctx.State, StateHealthy)
@@ -168,8 +168,8 @@ func (t *walSnapshot) Persist(sink raft.SnapshotSink) (err error) {
 		i   int
 	)
 
-	log.Println("persist invoked")
-	defer log.Println("persist completed")
+	log.Println("--------------- persist initiated -------------")
+	defer log.Println("--------------- persist completed -------------")
 	for i, msg = range t.wal.logs[:t.max] {
 		switch msg.GetType() {
 		// whenever we encounter a deploy command event reset the state,
