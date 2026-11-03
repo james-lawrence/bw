@@ -21,6 +21,9 @@ const (
 	defaultBits = 4096 // 4096 bit keysize, reasonable default.
 )
 
+// KeyGen generates a pem encoded RSA private key.
+type KeyGen func() ([]byte, error)
+
 func AutoBits() int {
 	return defaultBits
 }

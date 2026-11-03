@@ -12,6 +12,7 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/systemx"
+	"github.com/james-lawrence/bw/internal/userx"
 )
 
 // ConfigClientOption options for the client configuration.
@@ -163,6 +164,7 @@ func NewConfig(options ...ConfigOption) Config {
 	c := Config{
 		Name:              systemx.HostnameOrLocalhost(),
 		Root:              bw.DefaultCacheDirectory(),
+		RuntimeDirectory:  userx.DefaultRuntimeDirectory(),
 		KeepN:             3,
 		SnapshotFrequency: time.Hour,
 		MinimumNodes:      3,
@@ -244,6 +246,7 @@ type bootstrap struct {
 type Config struct {
 	Name              string
 	Root              string        // root directory to store long term data.
+	RuntimeDirectory  string        `yaml:"runtimeDirectory"` // directory to store data that only lives as long as the agent, e.g.) journal and the p2p key.
 	KeepN             int           `yaml:"keepN"`
 	MinimumNodes      int           `yaml:"minimumNodes"`
 	Bootstrap         bootstrap     `yaml:"bootstrap"`

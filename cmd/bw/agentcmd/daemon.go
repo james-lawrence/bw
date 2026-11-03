@@ -24,7 +24,6 @@ import (
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/internal/tlsx"
-	"github.com/james-lawrence/bw/internal/userx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
@@ -113,7 +112,7 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		return err
 	}
 
-	if localpriv, err = rsax.CachedAutoDeterministic([]byte(envx.String(systemx.MachineID(), bw.EnvAgentClusterPeerIDSeed)), userx.DefaultRuntimeDirectory(bw.DefaultAgentNotaryKey)); err != nil {
+	if localpriv, err = rsax.CachedAutoDeterministic([]byte(envx.String(systemx.MachineID(), bw.EnvAgentClusterPeerIDSeed)), filepath.Join(config.RuntimeDirectory, bw.DefaultAgentNotaryKey)); err != nil {
 		return err
 	}
 

@@ -46,8 +46,6 @@ func (t ErrUnauthorizedKey) Format(s fmt.State, verb rune) {
 	}
 }
 
-type keyGen func() ([]byte, error)
-
 // PublicKeyPath generates the path to the public key on disk for
 // a client.
 func PublicKeyPath() string {
@@ -80,7 +78,7 @@ func NewAutoSigner(comment string) (s Signer, err error) {
 	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, rsax.Auto)
 }
 
-func NewDeterministicSigner(kgen keyGen, comment string) (s Signer, err error) {
+func NewDeterministicSigner(kgen rsax.KeyGen, comment string) (s Signer, err error) {
 	return newAutoSignerPath(bw.DefaultUserDirLocation(bw.DefaultNotaryKey), comment, kgen)
 }
 
@@ -102,7 +100,7 @@ func AutoSignerInfo() (fp string, pub []byte, err error) {
 	return sshx.FingerprintSHA256(ssh.MarshalAuthorizedKey(pubk)), encoded, nil
 }
 
-func newAutoSignerPath(location string, comment string, kgen keyGen) (s Signer, err error) {
+func newAutoSignerPath(location string, comment string, kgen rsax.KeyGen) (s Signer, err error) {
 	var (
 		encoded    []byte
 		pubencoded []byte

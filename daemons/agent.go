@@ -3,6 +3,7 @@ package daemons
 import (
 	"context"
 	"net"
+	"path/filepath"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
@@ -20,7 +21,6 @@ import (
 	"github.com/james-lawrence/bw/certificatecache"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/userx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/storage"
 )
@@ -33,7 +33,7 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		dlreg    = storage.New(storage.OptionProtocols(download))
 	)
 
-	if journald, err = journal.New(userx.DefaultRuntimeDirectory("journal.d")); err != nil {
+	if journald, err = journal.New(filepath.Join(dctx.Config.RuntimeDirectory, "journal.d")); err != nil {
 		return err
 	}
 
