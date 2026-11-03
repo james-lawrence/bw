@@ -61,6 +61,14 @@ func OptionLogger(l *log.Logger) Option {
 	}
 }
 
+// OptionStarted sets when the client started, history older than this is never replayed for
+// a deployment that was already being followed. defaults to the time the monitor was created.
+func OptionStarted(t time.Time) Option {
+	return func(cs *cState) {
+		cs.started = t
+	}
+}
+
 // OptionIconography sets the rune used to fill the upload progress bar.
 func OptionIconography(r rune) Option {
 	return func(cs *cState) {
@@ -87,6 +95,7 @@ func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers
 				au:              aurora.NewAurora(true),
 				Logger:          log.New(os.Stderr, "[CLIENT] ", 0),
 				failed:          failed,
+				started:         time.Now(),
 				uploadcompleted: new(uploading),
 			}.merge(options...),
 		}
@@ -109,6 +118,7 @@ func Logging(ctx context.Context, failed context.CancelCauseFunc, cached *dialer
 				au:             aurora.NewAurora(true),
 				Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
 				failed:         failed,
+				started:        time.Now(),
 			}.merge(options...),
 		}
 	)
@@ -199,8 +209,11 @@ func (t cState) slice(last *agent.Message, messages ...*agent.Message) []*agent.
 	}
 
 	if last != nil {
-		// the deployment was already being followed but its begin has left the history.
-		return messages
+		// the deployment was already being followed but its begin has left the history. anything from
+		// before this client started belongs to a previous deployment.
+		return slices.DeleteFunc(slices.Clone(messages), func(m *agent.Message) bool {
+			return agent.MessageTime(m).Before(t.started)
+		})
 	}
 
 	return []*agent.Message{}
@@ -230,6 +243,7 @@ type cState struct {
 	debug           bool
 	failed          context.CancelCauseFunc
 	uploadcompleted *string
+	started         time.Time
 }
 
 func (t cState) merge(options ...Option) cState {

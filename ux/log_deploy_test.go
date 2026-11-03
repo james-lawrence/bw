@@ -12,6 +12,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/contextx"
 	"github.com/james-lawrence/bw/internal/errorsx"
@@ -139,7 +140,7 @@ var _ = Describe("Log Deploy", func() {
 
 	DescribeTable("should replay history when the last message is unknown",
 		func(monitored bool, finished bool, messages ...*agent.Message) {
-			options := []Option{}
+			options := []Option{OptionStarted(time.Now().Add(-time.Hour))}
 			if monitored {
 				id := []byte("ours")
 				deploymentID := new(atomic.Pointer[[]byte])
@@ -201,6 +202,34 @@ var _ = Describe("Log Deploy", func() {
 			),
 		),
 	)
+
+	It("should not replay history from before the client started when the last message is unknown", func() {
+		node := agent.NewPeer("node1")
+		stale := func(m *agent.Message) *agent.Message {
+			past := time.Now().Add(-time.Hour)
+			m.Id, m.Ts = uuid.Must(uuid.NewV7AtTime(past)).String(), past.UnixNano()
+			return m
+		}
+
+		id := []byte("ours")
+		deploymentID := new(atomic.Pointer[[]byte])
+		deploymentID.Store(&id)
+
+		buf := make(chan *agent.Message, 3)
+		buf <- agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{DeploymentID: id}, Options: &agent.DeployOptions{}})
+		// a completion from before the client started would finish the monitor if it were replayed.
+		buf <- agent.NewLogHistoryFromMessages(
+			agent.NewPeer("local"),
+			stale(agent.NewDeployCommand(node, &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: &agent.Archive{DeploymentID: id}, Options: &agent.DeployOptions{}})),
+		)
+
+		ctx, timeout := context.WithTimeout(context.Background(), 200*time.Millisecond)
+		defer timeout()
+		ctx = contextx.NewWaitGroup(ctx)
+		ctx, failed := context.WithCancelCause(ctx)
+		Deploy(ctx, failed, nil, buf, OptionDeployment(deploymentID))
+		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
+	})
 
 	It("should resume history replay from the last message before a heartbeat", func() {
 		local := agent.NewPeer("local")
