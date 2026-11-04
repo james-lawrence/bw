@@ -152,7 +152,7 @@ func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaul
 			c *grpc.ClientConn
 		)
 
-		if c, err = dialers.NewDirect(agent.RPCAddress(n)).Dial(d.Defaults()...); err != nil {
+		if c, err = dialers.NewDirect(agent.RPCAddress(n)).DialContext(ctx, d.Defaults()...); err != nil {
 			return _d, err
 		}
 		defer c.Close()

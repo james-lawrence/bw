@@ -71,7 +71,7 @@ func (t Notary) Refresh() (err error) {
 		InsecureSkipVerify: t.Insecure,
 	}
 
-	d, err := dialers.DefaultDialer(t.Address, tlsx.NewDialer(c), grpc.WithPerRPCCredentials(ss))
+	d, err := dialers.EndpointDialer(t.Address, tlsx.NewDialer(c), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}

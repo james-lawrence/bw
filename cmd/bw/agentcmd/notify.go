@@ -72,7 +72,7 @@ func (t *Notify) Run(ctx *cmdopts.Global, aconfig *agent.Config) (err error) {
 		log.Println(spew.Sdump(n))
 	}
 
-	d, err := dialers.DefaultDialer(agent.P2PRawAddress(config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	d, err := dialers.EndpointDialer(agent.P2PRawAddress(config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}

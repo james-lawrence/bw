@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
@@ -304,16 +303,12 @@ func (t cState) print(m *agent.Message) {
 		case agent.Message_PeersCompletedEvent:
 			// Do nothing.
 		case agent.Message_PeersFoundEvent:
-			t.Logger.Printf(
-				"%s - INFO  - located %d peers\n",
-				messagePrefix(m),
-				m.GetInt(),
-			)
+			t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_DEBUG, fmt.Sprintf("located %d peers", m.GetInt()))))
 		default:
-			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
+			t.Logger.Println(typographyunexpectmsg(t.au, m))
 		}
 	case *agent.Message_Log:
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, evt))
+		t.Logger.Println(typographymsg(t.au, m, evt))
 	case *agent.Message_DeployCommand:
 		t.printDeployCommand(m)
 	case *agent.Message_Deploy:
@@ -325,7 +320,7 @@ func (t cState) print(m *agent.Message) {
 				return agent.Log_INFO
 			}
 		}(evt.Deploy.Stage)
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, loglevel, fmt.Sprintf("%s %s", evt.Deploy.Stage, bw.RandomID(evt.Deploy.Archive.DeploymentID)))))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, loglevel, fmt.Sprintf("%s %s", evt.Deploy.Stage, bw.RandomID(evt.Deploy.Archive.DeploymentID)))))
 	case *agent.Message_Membership:
 		t.Logger.Println(
 			t.au.Yellow(
@@ -347,12 +342,12 @@ func (t cState) print(m *agent.Message) {
 			evt.Connection.State,
 			evt.Connection.Description,
 		)
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_DEBUG, msg)))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_DEBUG, msg)))
 		t.connection.State = evt.Connection.State
 	case *agent.Message_Heartbeat:
 		slogx.With(t.Logger).If(t.debug).Printf("%s - %s\n", messagePrefix(m), m.Type)
 	default:
-		t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
+		t.Logger.Println(typographyunexpectmsg(t.au, m))
 	}
 }
 
@@ -395,21 +390,21 @@ func (t cState) printDeployCommand(m *agent.Message) {
 	d := m.GetDeployCommand()
 	switch d.Command {
 	case agent.DeployCommand_Begin:
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_USER, "deployment initiated")))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_USER, "deployment initiated")))
 	case agent.DeployCommand_Done:
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_USER, "deployment completed")))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_USER, "deployment completed")))
 	case agent.DeployCommand_Failed:
 		did := ""
 		if d.Archive != nil {
 			did = bw.RandomID(d.Archive.DeploymentID).String()
 		}
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_ERROR, fmt.Sprintf("deployment failed - %s", did))))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_ERROR, fmt.Sprintf("deployment failed - %s", did))))
 	case agent.DeployCommand_Cancel:
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment cancelled by %s", stringsx.DefaultIfBlank(d.Initiator, "agent")))))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment cancelled by %s", stringsx.First(d.Initiator, "agent")))))
 	case agent.DeployCommand_Restart:
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment restarted by %s", stringsx.DefaultIfBlank(d.Initiator, "agent")))))
+		t.Logger.Println(typographymsg(t.au, m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment restarted by %s", stringsx.First(d.Initiator, "agent")))))
 	default:
-		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
+		t.Logger.Println(typographyunexpectmsg(t.au, m))
 	}
 }
 
@@ -448,7 +443,7 @@ func (t deploying) Consume(m *agent.Message) consumer {
 			agent.DeployCommand_Failed:
 			return nil
 		default:
-			// log.Println("unhandled deploy command", m.GetDeployCommand().Command)
+			// t.Logger.Println(typographyunexpectmsg(t.au, m))
 		}
 	case agent.Message_DeployEvent:
 		d := m.GetDeploy()

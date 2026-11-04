@@ -82,7 +82,7 @@ func (t LogDispatcher) Dispatch(_ context.Context, ms ...*agent.Message) error {
 }
 
 // NewDispatcher create a message dispatcher from the cluster and credentials.
-func NewDispatcher(d dialers.ContextDialer) *Dispatcher {
+func NewDispatcher(d dialers.T) *Dispatcher {
 	return &Dispatcher{
 		dialer: d,
 		m:      &sync.Mutex{},
@@ -91,7 +91,7 @@ func NewDispatcher(d dialers.ContextDialer) *Dispatcher {
 
 // Dispatcher - dispatches messages.
 type Dispatcher struct {
-	dialer dialers.ContextDialer
+	dialer dialers.T
 	c      *grpc.ClientConn
 	m      *sync.Mutex
 }

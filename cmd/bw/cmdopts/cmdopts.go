@@ -161,7 +161,7 @@ func p2ppeering(c agent.Config) (s clustering.Source, err error) {
 		return nil, err
 	}
 
-	d, err = dialers.DefaultDialer(address, tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	d, err = dialers.EndpointDialer(address, tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return nil, err
 	}

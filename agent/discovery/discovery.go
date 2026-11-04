@@ -57,7 +57,7 @@ func Snapshot(address string, options ...grpc.DialOption) (nodes []*memberlist.N
 		s  Discovery_AgentsClient
 	)
 
-	if cc, err = dialers.NewDirect(address).Dial(options...); err != nil {
+	if cc, err = dialers.NewDirect(address).DialContext(context.Background(), options...); err != nil {
 		return nodes, err
 	}
 	defer cc.Close()

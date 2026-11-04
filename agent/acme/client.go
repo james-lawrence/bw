@@ -35,7 +35,6 @@ func NewChallenger(p *agent.Peer, r rendezvous, cache DiskCache, d dialers.Defau
 		local:                p,
 		rendezvous:           r,
 		dialer:               d,
-		qd:                   qdialer,
 		dispatcher:           agentutil.NewDispatcher(qdialer),
 		cache:                cache,
 		minimumCacheDuration: envx.Duration(30*24*time.Hour, bw.EnvAgentCachedTLSCertificateMinimum),
@@ -47,7 +46,6 @@ type Challenger struct {
 	local *agent.Peer
 	rendezvous
 	dialer               dialers.Defaults
-	qd                   dialers.Quorum
 	dispatcher           agent.Dispatcher
 	cache                DiskCache
 	minimumCacheDuration time.Duration

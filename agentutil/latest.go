@@ -97,7 +97,7 @@ func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z *agent.Deploy, er
 		client agent.Client
 	)
 
-	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
+	if conn, err = dialers.NewQuorum(c, d.Defaults()...).DialContext(context.Background()); err != nil {
 		return z, err
 	}
 	defer conn.Close()
@@ -132,7 +132,7 @@ func QuorumLatestDeployment(c cluster, d dialers.Defaulted) (z *agent.Deploy, er
 }
 
 // LocalLatestDeployment determines the latest successful local deployment.
-func LocalLatestDeployment(d dialers.ContextDialer) (a *agent.Deploy, err error) {
+func LocalLatestDeployment(d dialers.T) (a *agent.Deploy, err error) {
 	var (
 		c *grpc.ClientConn
 	)

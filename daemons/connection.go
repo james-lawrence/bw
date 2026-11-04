@@ -50,8 +50,9 @@ type connection struct {
 }
 
 // Connect returning just a single client to the caller.
-func Connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
-	return connect(ctx, config, ss, options...)
+func Connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (_d dialers.Direct, c clustering.Rendezvous, err error) {
+	d, c, err := connect(ctx, config, ss, options...)
+	return dialers.NewDirect(agent.URIDiscovery(config.Address), d.Defaults()...), c, err
 }
 
 // ConnectClientUntilSuccess continuously tries to make a connection until successful.
@@ -60,15 +61,16 @@ func ConnectClientUntilSuccess(
 	config agent.ConfigClient,
 	ss notary.Signer,
 	options ...grpc.DialOption,
-) (d dialers.Direct, c clustering.Rendezvous, err error) {
+) (_d dialers.Direct, c clustering.Rendezvous, err error) {
 	for i := 0; ; i++ {
+		var d dialers.Defaults
 		if d, c, err = connect(ctx, config, ss, options...); err == nil {
-			return d, c, err
+			return dialers.NewDirect(agent.URIDiscovery(config.Address), d.Defaults()...), c, err
 		}
 
 		select {
 		case <-ctx.Done():
-			return d, c, ctx.Err()
+			return _d, c, ctx.Err()
 		default:
 		}
 
@@ -79,7 +81,7 @@ func ConnectClientUntilSuccess(
 }
 
 // connect discovers the current nodes in the cluster, generating a static cluster for use by the agents to perform work.
-func connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Direct, c clustering.Rendezvous, err error) {
+func connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, options ...grpc.DialOption) (d dialers.Defaults, c clustering.Rendezvous, err error) {
 	var (
 		dd        dialers.Defaults
 		nodes     []*memberlist.Node
@@ -99,7 +101,7 @@ func connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, o
 		),
 	}
 
-	if dd, err = dialers.DefaultDialer(
+	if dd, err = dialers.EndpointDialer(
 		config.Address,
 		di,
 		options...,
@@ -125,8 +127,8 @@ func connect(ctx context.Context, config agent.ConfigClient, ss notary.Signer, o
 	})
 
 	if len(c.Members()) == 0 {
-		return d, c, errors.New("no agents found")
+		return dd, c, errors.New("no agents found")
 	}
 
-	return dialers.NewDirect(agent.URIDiscovery(config.Address), dd.Defaults()...), c, err
+	return dd, c, err
 }

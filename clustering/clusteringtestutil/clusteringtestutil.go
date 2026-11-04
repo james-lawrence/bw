@@ -50,7 +50,7 @@ func NewPeerFromConfig(config *memberlist.Config, options ...clustering.Option) 
 	// for this use case.
 	// transport := network.NewTransport()
 	transport, err := memberlist.NewNetTransport(&memberlist.NetTransportConfig{
-		BindAddrs: []string{stringsx.DefaultIfBlank(config.BindAddr, "127.0.0.1")},
+		BindAddrs: []string{stringsx.First(config.BindAddr, "127.0.0.1")},
 		BindPort:  config.BindPort,
 	})
 	if err != nil {

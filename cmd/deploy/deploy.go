@@ -14,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/archive"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/rendezvous"
@@ -25,6 +26,7 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/iox"
+	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/james-lawrence/bw/vcsinfo"
@@ -59,7 +61,6 @@ func Into(gctx *Context) error {
 		err       error
 		dst       *os.File
 		dstinfo   os.FileInfo
-		conn      *grpc.ClientConn
 		d         dialers.Defaults
 		client    agent.DeployClient
 		config    agent.ConfigClient
@@ -107,10 +108,10 @@ func Into(gctx *Context) error {
 
 	local := agent.NewPeerZero()
 
-	events <- agent.LogDebug(local, "cluster connection initiated")
 	var (
 		debugopt1 grpc.DialOption = grpc.EmptyDialOption{}
 		debugopt2 grpc.DialOption = grpc.EmptyDialOption{}
+		connwatch grpc.DialOption = agentutil.NewConnWatcher(gctx.Context, events)
 	)
 
 	if gctx.Debug || gctx.Verbose || envx.Boolean(false, bw.EnvLogsGRPC, bw.EnvLogsVerbose) {
@@ -122,7 +123,7 @@ func Into(gctx *Context) error {
 		return errors.Wrap(err, "unable to connect to cluster")
 	}
 
-	qd := dialers.NewQuorum(c, d.Defaults()...)
+	qd := dialers.NewQuorum(c, d.Defaults(connwatch)...)
 
 	dctx, failurefn := context.WithCancelCause(gctx.Context)
 	defer failurefn(nil)
@@ -134,7 +135,7 @@ func Into(gctx *Context) error {
 		ux.OptionDeployment(monitored),
 	)
 
-	conn = grpcx.UntilSuccess(gctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
+	conn := grpcx.UntilSuccess(gctx.Context, func(ictx context.Context) (*grpc.ClientConn, error) {
 		return qd.DialContext(ictx)
 	})
 
@@ -144,8 +145,6 @@ func Into(gctx *Context) error {
 	}()
 
 	client = agent.NewDeployConn(conn)
-
-	events <- agent.LogDebug(local, "cluster connection completed")
 
 	deployspace := config.Deployspace()
 	if err = os.WriteFile(filepath.Join(deployspace, bw.EnvFile), []byte(config.Environment), 0600); err != nil {
@@ -239,7 +238,25 @@ func Into(gctx *Context) error {
 		return cause
 	}
 
-	events <- agent.LogUser(local, fmt.Sprintf("deployment: by(%s) concurrency(%d) attempts(%d) timeout(%s), deployID(%s)", displayname, max, dopts.Attempts, config.Deployment.Timeout, bw.RandomID(darchive.DeploymentID)))
+	events <- agent.LogUser(
+		local,
+		fmt.Sprintf(
+			"deployment: by(%s) - id(%s) - commit(%s)",
+			displayname,
+			bw.RandomID(darchive.DeploymentID),
+			stringsx.First(darchive.Commit, commitish),
+		),
+	)
+	events <- agent.LogDebug(
+		local,
+		fmt.Sprintf(
+			"concurrency(%d) attempts(%d) timeout(%s)",
+			dopts.Concurrency,
+			dopts.Attempts,
+			config.Deployment.Timeout,
+		),
+	)
+
 	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, darchive, peers...); cause != nil {
 		events <- agent.LogError(local, errors.Wrap(cause, "deploy failed"))
 		events <- agent.DeployEventFailed(local, displayname, &dopts, darchive, cause)

@@ -20,11 +20,6 @@ type Direct struct {
 	defaults []grpc.DialOption
 }
 
-// Dial given the options
-func (t Direct) Dial(options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
-	return t.DialContext(context.Background(), options...)
-}
-
 // DialContext given the context and options
 func (t Direct) DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
 	return grpc.DialContext(ctx, t.address, t.Defaults(options...)...)
@@ -32,5 +27,5 @@ func (t Direct) DialContext(ctx context.Context, options ...grpc.DialOption) (c 
 
 // Defaults return the defaults for this dialer.
 func (t Direct) Defaults(options ...grpc.DialOption) Defaulted {
-	return append(t.defaults, options...)
+	return NewDefaults(t.defaults...).Defaults(options...)
 }

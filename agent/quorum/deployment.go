@@ -117,7 +117,7 @@ func (t *deployment) deploy(ctx context.Context, dialer dialers.Defaults, by str
 	)
 
 	qd := dialers.NewQuorum(t.c, dialer.Defaults()...)
-	if conn, err = qd.DialContext(ctx, dialer.Defaults()...); err != nil {
+	if conn, err = qd.DialContext(ctx); err != nil {
 		return err
 	}
 

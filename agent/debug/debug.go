@@ -36,7 +36,7 @@ func NewService(a auth) *Service {
 		auth:      a,
 		profiling: &atomicx.Bool{},
 		stoppable: profilex.Noop(),
-		tmpdir:    path.Join(stringsx.DefaultIfBlank(os.Getenv("CACHE_DIR"), os.TempDir()), "profiling"),
+		tmpdir:    path.Join(stringsx.First(os.Getenv("CACHE_DIR"), os.TempDir()), "profiling"),
 	}
 }
 

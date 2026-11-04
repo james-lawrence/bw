@@ -74,7 +74,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 		return err
 	}
 
-	d, err := dialers.DefaultDialer(agent.P2PRawAddress(t.config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
+	d, err := dialers.EndpointDialer(agent.P2PRawAddress(t.config.Peer()), tlsx.NewDialer(tlsconfig), grpc.WithPerRPCCredentials(ss))
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (t *cmdDNS) exec(ctx *kingpin.ParseContext) (err error) {
 			t.region,
 			dns.Route53OptionCommon(
 				dns.OptionTTL(t.config.DNSBind.TTL),
-				dns.OptionFQDN(stringsx.DefaultIfBlank(t.hostname, t.config.ServerName)),
+				dns.OptionFQDN(stringsx.First(t.hostname, t.config.ServerName)),
 				dns.OptionMaximumNodes(t.config.MinimumNodes),
 			),
 		),

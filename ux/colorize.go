@@ -8,7 +8,17 @@ import (
 	"github.com/logrusorgru/aurora"
 )
 
-func formatlog(au aurora.Aurora, pattern string, m *agent.Message, evt *agent.Message_Log) aurora.Value {
+const defaultFormatPattern = "%[1]s - %-5[2]s - %[3]s"
+
+func typographyunexpectmsg(au aurora.Aurora, m *agent.Message) aurora.Value {
+	return typographymsg(au, m, agent.LogMessage(m, agent.Log_DEBUG, m.Type.String()))
+}
+
+func typographymsg(au aurora.Aurora, m *agent.Message, evt *agent.Message_Log) aurora.Value {
+	return typography(au, defaultFormatPattern, m, evt)
+}
+
+func typography(au aurora.Aurora, pattern string, m *agent.Message, evt *agent.Message_Log) aurora.Value {
 	printlevel := langx.FirstNonZero(evt.Log.Level, agent.Log_INFO)
 	msg := fmt.Sprintf(pattern, messagePrefix(m), printlevel, evt.Log.Log)
 	switch agent.Log_Level(evt.Log.Level) {

@@ -6,6 +6,7 @@ import (
 	"net"
 
 	. "github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
@@ -51,10 +52,13 @@ func testClient() harness {
 		grpcs.Serve(socket)
 	}()
 
-	conn, err := Dial(socket.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := dialers.NewDirect(
+		socket.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	).DialContext(context.Background())
 	Expect(err).ToNot(HaveOccurred())
 
-	return harness{client: conn, cluster: c, listener: socket}
+	return harness{client: NewConn(conn), cluster: c, listener: socket}
 }
 
 var _ = Describe("Server", func() {

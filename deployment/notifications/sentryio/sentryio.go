@@ -78,7 +78,7 @@ func (t Notifier) Notify(dc *agent.DeployCommand) {
 	}
 
 	n := notification{
-		Version:      stringsx.DefaultIfBlank(dc.Archive.Commit, bw.RandomID(dc.Archive.DeploymentID).String()),
+		Version:      stringsx.First(dc.Archive.Commit, bw.RandomID(dc.Archive.DeploymentID).String()),
 		Name:         t.Name,
 		URL:          t.URL,
 		Projects:     t.Projects,

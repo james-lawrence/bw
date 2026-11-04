@@ -13,6 +13,7 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/journal"
 	. "github.com/james-lawrence/bw/agent/quorum"
 	. "github.com/onsi/ginkgo/v2"
@@ -32,7 +33,7 @@ type mockdeploy struct {
 	lastPeers   []agent.Peer
 }
 
-func (t *mockdeploy) Deploy(_ agent.Dialer, opts *agent.DeployOptions, archive *agent.Archive, peers ...agent.Peer) error {
+func (t *mockdeploy) Deploy(_ dialers.T, opts *agent.DeployOptions, archive *agent.Archive, peers ...agent.Peer) error {
 	t.lastOptions = opts
 	t.lastArchive = archive
 	t.lastPeers = peers

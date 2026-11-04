@@ -79,7 +79,6 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	events <- agent.LogDebug(local, "cluster connection initiated")
 	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}

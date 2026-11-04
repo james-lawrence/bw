@@ -43,7 +43,6 @@ func Cancel(gctx *Context) (err error) {
 
 	local := commandutils.NewClientPeer()
 
-	events <- agent.LogDebug(local, "cluster connection initiated")
 	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
@@ -70,7 +69,6 @@ func Cancel(gctx *Context) (err error) {
 	dctx, failurefn := context.WithCancelCause(gctx.Context)
 	defer failurefn(nil)
 	termui.NewFromClientConfig(dctx, failurefn, config, qd, local, events)
-	events <- agent.LogDebug(local, "cluster connection completed")
 
 	cmd := agent.DeployCommandCancel(displayname)
 

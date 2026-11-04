@@ -78,7 +78,7 @@ func (t cmdMeInit) Run(ctx *cmdopts.Global) (err error) {
 
 	displayname := vcsinfo.CurrentUserDisplay(config.WorkDir())
 
-	if _, err = notary.NewDeterministicSigner(rsax.AutoDeterministic(seed), stringsx.DefaultIfBlank(t.Name, displayname)); err != nil {
+	if _, err = notary.NewDeterministicSigner(rsax.AutoDeterministic(seed), stringsx.First(t.Name, displayname)); err != nil {
 		return err
 	}
 

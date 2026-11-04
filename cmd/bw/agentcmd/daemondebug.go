@@ -115,7 +115,7 @@ func (t *CmdDaemonDebugQuorum) Run(ctx *cmdopts.Global, aconfig *agent.Config) (
 		ss        notary.Signer
 		tlsconfig *tls.Config
 		conn      *grpc.ClientConn
-		d         dialers.ContextDialer
+		d         dialers.T
 		creds     credentials.TransportCredentials
 		quorum    *agent.InfoResponse
 		config    = aconfig.Clone()

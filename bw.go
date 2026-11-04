@@ -125,5 +125,5 @@ func MustGenerateID() RandomID {
 // DisplayName for the user
 func DisplayName() string {
 	u := systemx.CurrentUserOrDefault(user.User{Username: "unknown"})
-	return stringsx.DefaultIfBlank(os.Getenv(EnvDisplayName), stringsx.DefaultIfBlank(u.Name, u.Username))
+	return stringsx.First(os.Getenv(EnvDisplayName), stringsx.First(u.Name, u.Username))
 }

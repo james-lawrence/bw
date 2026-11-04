@@ -98,7 +98,7 @@ func LoadConfiguration(ctx context.Context, environment string, options ...agent
 		return config, errors.Wrap(err, "failed to generate client TLS")
 	}
 
-	if d, err = dialers.DefaultDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
+	if d, err = dialers.EndpointDialer(config.Address, tlsx.NewDialer(tlsconfig)); err != nil {
 		return config, errors.Wrap(err, "failed to create network dialer")
 	}
 

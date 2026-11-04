@@ -6,10 +6,13 @@ import (
 	"log"
 	"net"
 	"net/netip"
+	"net/url"
+	"strconv"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/systemx"
@@ -42,12 +45,16 @@ func URIPeer(p *Peer, proto string) string {
 		return ""
 	}
 
-	return fmt.Sprintf("%s://%s", proto, net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return (&url.URL{
+		Scheme:   proto,
+		Host:     net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)),
+		Fragment: p.Name,
+	}).String()
 }
 
 // RPCAddress for a peer.
 func RPCAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return stringsx.First(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 func DecodePeerID(s string) string {
@@ -71,22 +78,22 @@ func DecodePeerID(s string) string {
 
 // DiscoveryAddress for a peer.
 func DiscoveryAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return stringsx.First(URIPeer(p, bw.ProtocolDiscovery), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // AutocertAddress for a peer.
 func AutocertAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return stringsx.First(URIPeer(p, bw.ProtocolAutocert), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // SWIMAddress for peer.
 func SWIMAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return stringsx.First(URIPeer(p, bw.ProtocolSWIM), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // RaftAddress for peer.
 func RaftAddress(p *Peer) string {
-	return stringsx.DefaultIfBlank(P2PRawAddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+	return stringsx.First(P2PRawAddress(p), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
 }
 
 // StaticPeeringStrategy ...
@@ -162,6 +169,20 @@ func NewPeerFromTemplate(p *Peer, opts ...PeerOption) *Peer {
 	}
 
 	return p
+}
+
+func NewPeerFromURI(address string) (*Peer, error) {
+	uri, err := url.Parse(address)
+	if err != nil {
+		return nil, errorsx.Wrapf(err, "unable to parse peer address: %s", address)
+	}
+
+	port, err := strconv.Atoi(uri.Port())
+	return NewPeerFromTemplate(&Peer{
+		Name:    uri.Fragment,
+		Ip:      uri.Hostname(),
+		P2PPort: uint32(port),
+	}), err
 }
 
 // NodesToPeers ...

@@ -132,7 +132,7 @@ func KeepNewestN(n int) Cleaner {
 
 // WatchEvents connects to the event stream of the cluster using the provided
 // peer as a proxy.
-func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer, events chan *agent.Message) {
+func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.T, events chan *agent.Message) {
 	rl := rate.NewLimiter(rate.Every(10*time.Second), 1)
 	var (
 		err     error
@@ -175,10 +175,6 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 			continue
 		}
 
-		if !deliver(agent.NewConnectionLog(local, agent.ConnectionEvent_Connected, fmt.Sprintf("connection established %s", conn.Target()))) {
-			errorsx.Log(conn.Close())
-			return
-		}
 		err = grpcx.Retry(ctx, func() error {
 			if history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{}); err == nil {
 				if !deliver(agent.NewLogHistoryFromMessages(local, history.Messages...)) {
@@ -196,13 +192,8 @@ func WatchEvents(ctx context.Context, local *agent.Peer, d dialers.ContextDialer
 
 		if err = agent.NewDeployConn(conn).WatchFrom(ctx, resumed.cursor, resumed.accept, events); err != nil {
 			msg := fmt.Sprintf("connection lost %s", conn.Target())
-			err = errors.Wrap(err, msg)
 			if envx.Boolean(false, bw.EnvLogsDeploy) {
-				log.Println(err)
-			}
-			if !deliver(agent.NewConnectionLog(local, agent.ConnectionEvent_Disconnected, msg)) {
-				errorsx.Log(conn.Close())
-				return
+				log.Println(errors.Wrap(err, msg))
 			}
 			continue
 		}

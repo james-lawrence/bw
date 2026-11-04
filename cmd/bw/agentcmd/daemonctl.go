@@ -175,7 +175,7 @@ func (t CmdControlQuorum) Run(gctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	if conn, err = dialers.NewQuorum(c).Dial(d.Defaults()...); err != nil {
+	if conn, err = dialers.NewQuorum(c, d.Defaults()...).DialContext(gctx.Context); err != nil {
 		return err
 	}
 

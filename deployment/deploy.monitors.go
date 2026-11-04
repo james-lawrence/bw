@@ -69,7 +69,7 @@ func MonitorTicklerHeartbeat(local *agent.Peer, d dispatcher, period time.Durati
 	}
 }
 
-func MonitorTicklerEvent(l *agent.Peer, d dialers.ContextDialer) MonitorTickler {
+func MonitorTicklerEvent(l *agent.Peer, d dialers.T) MonitorTickler {
 	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
 		events := make(chan *agent.Message, 100)
 		go agentutil.WatchEvents(ctx, l, d, events)

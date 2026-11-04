@@ -1,7 +1,10 @@
 // Package atomicx forwards compatibility with go1.19
 package atomicx
 
-import "sync/atomic"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 // noCopy may be added to structs which must not be copied
 // after the first use.
@@ -43,4 +46,55 @@ func b32(b bool) uint32 {
 		return 1
 	}
 	return 0
+}
+
+func NewValue[T comparable](v T) V[T] {
+	return V[T]{_v: &_v[T]{v: v}}
+}
+
+type _v[T comparable] struct {
+	sync.RWMutex
+	v T
+}
+
+type V[T comparable] struct {
+	*_v[T]
+}
+
+// Load atomically loads and returns the value stored in x.
+func (t *V[T]) Load() T {
+	t.RWMutex.RLock()
+	defer t.RWMutex.RUnlock()
+	return t.v
+}
+
+// Alias for Swap.
+func (t *V[T]) Store(v T) (old T) {
+	return t.Swap(v)
+}
+
+// Swap atomically stores new into x and returns the previous value.
+func (t *V[T]) Swap(v T) (old T) {
+	t.RWMutex.Lock()
+	defer t.RWMutex.Unlock()
+	old, t.v = t.v, v
+	return old
+}
+
+// Swap atomically stores new into x and returns the previous value.
+func (t *V[T]) unsafeSwap(v T) (old T) {
+	old, t.v = t.v, v
+	return old
+}
+
+// CompareAndSwap executes the compare-and-swap operation for the boolean value x.
+func (t *V[T]) CompareAndSwap(old, new T) (swapped bool) {
+	t.RWMutex.Lock()
+	defer t.RWMutex.Unlock()
+	if t.v != old {
+		return false
+	}
+
+	t.unsafeSwap(new)
+	return true
 }

@@ -53,7 +53,7 @@ func (t Vault) Refresh() (err error) {
 	if client, err = api.NewClient(config); err != nil {
 		return errors.WithStack(err)
 	}
-	client.SetToken(stringsx.DefaultIfBlank(client.Token(), t.readTokenFile()))
+	client.SetToken(stringsx.First(client.Token(), t.readTokenFile()))
 
 	payload := map[string]interface{}{
 		"common_name": t.CommonName,

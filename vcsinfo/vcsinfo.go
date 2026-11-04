@@ -51,8 +51,8 @@ func CurrentUserDisplay(dir string) string {
 
 	if stringsx.Empty(c.User.Email) {
 		log.Println("git user.email is missing - using system default", dir)
-		return stringsx.DefaultIfBlank(c.User.Name, bw.DisplayName())
+		return stringsx.First(c.User.Name, bw.DisplayName())
 	}
 
-	return fmt.Sprintf("%s <%s>", stringsx.DefaultIfBlank(c.User.Name, bw.DisplayName()), c.User.Email)
+	return fmt.Sprintf("%s <%s>", stringsx.First(c.User.Name, bw.DisplayName()), c.User.Email)
 }

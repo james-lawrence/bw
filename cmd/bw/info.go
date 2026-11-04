@@ -244,7 +244,7 @@ func (t cmdInfoCheck) Run(ctx *cmdopts.Global) (err error) {
 		),
 	}
 
-	if dd, err = dialers.DefaultDialer(
+	if dd, err = dialers.EndpointDialer(
 		t.Address,
 		di,
 	); err != nil {

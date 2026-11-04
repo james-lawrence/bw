@@ -270,7 +270,7 @@ func Redirect(streamID string, c clusterreroute, defaultPort string, req *http.R
 		return false
 	}
 
-	location := RedirectHTTPRequest(req, dst.Addr.String(), stringsx.DefaultIfBlank(req.Header.Get("X-Forwarded-Port"), defaultPort))
+	location := RedirectHTTPRequest(req, dst.Addr.String(), stringsx.First(req.Header.Get("X-Forwarded-Port"), defaultPort))
 	debugx.Println("redirecting to correct node", location.String())
 	resp.Header().Add("Location", location.String())
 	resp.WriteHeader(http.StatusMovedPermanently)
@@ -290,7 +290,7 @@ func PublicRedirect(streamID string, c clusterreroute, defaultPort string, req *
 		return false
 	}
 
-	location := RedirectHTTPRequest(req, dst.Name, stringsx.DefaultIfBlank(req.Header.Get("X-Forwarded-Port"), defaultPort))
+	location := RedirectHTTPRequest(req, dst.Name, stringsx.First(req.Header.Get("X-Forwarded-Port"), defaultPort))
 	debugx.Println("redirecting to correct node", location.String())
 	resp.Header().Add("Location", location.String())
 	resp.WriteHeader(http.StatusMovedPermanently)
@@ -338,7 +338,7 @@ func MimeType(h http.Header) string {
 		return fallback
 	}
 
-	return stringsx.DefaultIfBlank(t, fallback)
+	return stringsx.First(t, fallback)
 }
 
 // Notfound response handler
