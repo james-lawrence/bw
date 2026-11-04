@@ -20,6 +20,7 @@ import (
 	"github.com/james-lawrence/bw/internal/bytesx"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/langx"
+	"github.com/james-lawrence/bw/internal/slogx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/logrusorgru/aurora"
 	"github.com/mattn/go-runewidth"
@@ -84,10 +85,11 @@ func OptionDebug(b bool) Option {
 }
 
 // Deploy monitor a deploy.
-func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers.Cached, events chan *agent.Message, options ...Option) {
+func Deploy(ctx context.Context, failed context.CancelCauseFunc, cached *dialers.Cached, events chan *agent.Message, local *agent.Peer, options ...Option) {
 	var (
 		s = deploying{
 			cState: cState{
+				local:           local,
 				iconography:     envx.Rune('#', bw.EnvUploadSparkles),
 				cached:          cached,
 				heartbeat:       time.Minute,
@@ -137,9 +139,7 @@ func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer)
 	for {
 		select {
 		case <-time.After(t.heartbeat):
-			t.Logger.Println(
-				t.au.Yellow(fmt.Sprintf("no message has been received within the time limit %s", t.heartbeat)),
-			)
+			s = consume(s, agent.LogWarning(t.local, t.au.Yellow(fmt.Sprintf("no message has been received within the time limit %s", t.heartbeat)).String()))
 			t.cached.Close()
 		case m := <-events:
 			switch local := m.Event.(type) {
@@ -233,6 +233,7 @@ func consume(c consumer, messages ...*agent.Message) consumer {
 
 type cState struct {
 	iconography     rune
+	local           *agent.Peer
 	cached          *dialers.Cached
 	connection      *agent.ConnectionEvent
 	deploymentID    *atomic.Pointer[[]byte]
@@ -351,9 +352,7 @@ func (t cState) print(m *agent.Message) {
 
 		t.connection.State = evt.Connection.State
 	case *agent.Message_Heartbeat:
-		if t.debug {
-			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
-		}
+		slogx.With(t.Logger).If(t.debug).Printf("%s - %s\n", messagePrefix(m), m.Type)
 	default:
 		t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 	}

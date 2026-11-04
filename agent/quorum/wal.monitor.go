@@ -3,13 +3,14 @@ package quorum
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/asynccompute"
 	"github.com/james-lawrence/bw/internal/errorsx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/slogx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
@@ -59,7 +60,7 @@ func newApplyMonitor(d agent.Dispatcher, local func() *agent.Peer) *applyMonitor
 		),
 		local:     local,
 		threshold: applyWarnThreshold,
-		warnrate:  rate.NewLimiter(logx.DefaultWarnRate, 1),
+		warnrate:  rate.NewLimiter(slogx.DefaultWarnRate, 1),
 	}
 }
 
@@ -96,7 +97,7 @@ func (t *applyMonitor) observe(l *raft.Log, elapsed time.Duration) {
 		return
 	}
 
-	logx.Limit(t.warnrate).Printf("WARN - fsm apply took %s index=%d term=%d\n", elapsed, l.Index, l.Term)
+	slogx.With(log.Default()).Limit(t.warnrate).Printf("WARN - fsm apply took %s index=%d term=%d\n", elapsed, l.Index, l.Term)
 
 	if t.warned {
 		return

@@ -23,7 +23,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/langx"
-	"github.com/james-lawrence/bw/internal/logx"
+	"github.com/james-lawrence/bw/internal/slogx"
 	"github.com/james-lawrence/bw/storage"
 	"github.com/pkg/errors"
 )
@@ -169,7 +169,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					// background this task so dispatches work.
 					go func(ctx context.Context) {
 						errorsx.Log(sm.initialize())
-						_ = logx.Verbose(errors.Wrap(
+						_ = slogx.Verbose(errors.Wrap(
 							t.deployment.restartActiveDeploy(ctx, t.dialer, sm),
 							"failed to restart an active deploy",
 						))

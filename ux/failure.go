@@ -118,14 +118,14 @@ func (t FailureDisplayPrint) Display(s cState, m *agent.Message) {
 	defer conn.Close()
 
 	client = agent.NewDeployConn(conn)
-	s.Logger.Println(s.au.Yellow(fmt.Sprint("BEGIN LOGS:", messagePrefix(m))))
+	s.Logger.Println(s.au.Yellow(fmt.Sprint(messagePrefix(m))), "- BEGIN LOGS")
 	errorsx.Log(
 		errorsx.Compact(
 			agentutil.PrintLogs(b, client, m.Peer, m.GetDeploy().Archive.DeploymentID, os.Stderr),
 			client.Close(),
 		),
 	)
-	s.Logger.Println(s.au.Yellow(fmt.Sprint("CEASE LOGS:", messagePrefix(m))))
+	s.Logger.Println(s.au.Yellow(fmt.Sprint(messagePrefix(m), "- CEASE LOGS")))
 
 	atomic.AddInt64(t.n, 1)
 }

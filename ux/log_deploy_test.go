@@ -28,7 +28,7 @@ var _ = Describe("Log Deploy", func() {
 			}
 			ctx := contextx.NewWaitGroup(context.Background())
 			ctx, failed := context.WithCancelCause(ctx)
-			Deploy(ctx, failed, nil, buf)
+			Deploy(ctx, failed, nil, buf, agent.NewPeer("local"))
 			Expect(len(buf)).To(Equal(0))
 			if failure != nil {
 				Expect(context.Cause(ctx)).To(MatchError(failure))
@@ -90,7 +90,7 @@ var _ = Describe("Log Deploy", func() {
 			}
 			ctx := contextx.NewWaitGroup(context.Background())
 			ctx, failed := context.WithCancelCause(ctx)
-			Deploy(ctx, failed, nil, buf, OptionDeployment(monitored))
+			Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), OptionDeployment(monitored))
 			Expect(len(buf)).To(Equal(0))
 			if failure != nil {
 				Expect(context.Cause(ctx)).To(MatchError(failure))
@@ -157,7 +157,7 @@ var _ = Describe("Log Deploy", func() {
 			defer timeout()
 			ctx = contextx.NewWaitGroup(ctx)
 			ctx, failed := context.WithCancelCause(ctx)
-			Deploy(ctx, failed, nil, buf, options...)
+			Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), options...)
 			if finished {
 				Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 			} else {
@@ -227,7 +227,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf, OptionDeployment(deploymentID))
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), OptionDeployment(deploymentID))
 		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
 	})
 
@@ -249,7 +249,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf)
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 	})
 
@@ -268,7 +268,7 @@ var _ = Describe("Log Deploy", func() {
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
 		// the id is only stored once the archive has been uploaded.
-		Deploy(ctx, failed, nil, buf, OptionDeployment(new(atomic.Pointer[[]byte])))
+		Deploy(ctx, failed, nil, buf, node, OptionDeployment(new(atomic.Pointer[[]byte])))
 		Expect(context.Cause(ctx)).To(MatchError(context.DeadlineExceeded))
 	})
 
@@ -284,7 +284,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Deploy(ctx, failed, nil, buf, node, OptionLogger(log.New(output, "", 0)))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 
 		Expect(output.String()).To(ContainSubstring("archive upload [" + strings.Repeat("#", 15) + strings.Repeat("-", 15) + "]  50%"))
@@ -304,7 +304,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), OptionLogger(log.New(output, "", 0)))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 
 		// in progress updates are replaced by the next update, the completed one remains.
@@ -327,7 +327,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)), OptionIconography('✨'))
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), OptionLogger(log.New(output, "", 0)), OptionIconography('✨'))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 
 		// half way is 15 of the 30 cells filled, each empty cell is two dashes to match the width of the sparkle.
@@ -351,7 +351,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf, OptionLogger(log.New(output, "", 0)))
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"), OptionLogger(log.New(output, "", 0)))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 
 		Expect(strings.Count(output.String(), "] 100%")).To(Equal(1))
@@ -374,7 +374,7 @@ var _ = Describe("Log Deploy", func() {
 		defer timeout()
 		ctx = contextx.NewWaitGroup(ctx)
 		ctx, failed := context.WithCancelCause(ctx)
-		Deploy(ctx, failed, nil, buf)
+		Deploy(ctx, failed, nil, buf, agent.NewPeer("local"))
 		Expect(errorsx.Ignore(context.Cause(ctx), context.Canceled)).To(Succeed())
 	})
 })

@@ -174,6 +174,19 @@ func PeerEvent(p *Peer) *Message {
 	}, stamp))
 }
 
+func LogWarning(p *Peer, s string) *Message {
+	return new(langx.Clone(Message{
+		Type:      Message_LogEvent,
+		Ephemeral: true,
+		Peer:      p,
+		Event: &Message_Log{
+			Log: &Log{
+				Log: s,
+			},
+		},
+	}, stamp))
+}
+
 // NodeEvent ...
 func NodeEvent(p *Peer, event Message_NodeEvent) *Message {
 	return new(langx.Clone(Message{

@@ -27,7 +27,11 @@ func New(ctx context.Context, shutdown context.CancelCauseFunc, d dialers.Quorum
 		defer shutdown(nil)
 		defer contextx.WaitGroupDone(ctx)
 		ux.Deploy(
-			ctx, shutdown, cached, events,
+			ctx,
+			shutdown,
+			cached,
+			events,
+			local,
 			append(
 				options,
 				ux.OptionFailureDisplay(ux.NewFailureDisplayPrint(local, cached)),
