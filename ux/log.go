@@ -347,7 +347,7 @@ func (t cState) print(m *agent.Message) {
 			evt.Connection.State,
 			evt.Connection.Description,
 		)
-		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_INFO, msg)))
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_DEBUG, msg)))
 		t.connection.State = evt.Connection.State
 	case *agent.Message_Heartbeat:
 		slogx.With(t.Logger).If(t.debug).Printf("%s - %s\n", messagePrefix(m), m.Type)
