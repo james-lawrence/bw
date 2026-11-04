@@ -305,7 +305,7 @@ func (t cState) print(m *agent.Message) {
 			// Do nothing.
 		case agent.Message_PeersFoundEvent:
 			t.Logger.Printf(
-				"%s - INFO - located %d peers\n",
+				"%s - INFO  - located %d peers\n",
 				messagePrefix(m),
 				m.GetInt(),
 			)
@@ -313,20 +313,19 @@ func (t cState) print(m *agent.Message) {
 			t.Logger.Printf("%s - %s\n", messagePrefix(m), m.Type)
 		}
 	case *agent.Message_Log:
-		t.Logger.Printf(
-			"%s - INFO - %s\n",
-			messagePrefix(m),
-			evt.Log.Log,
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, evt))
 	case *agent.Message_DeployCommand:
 		t.printDeployCommand(m)
 	case *agent.Message_Deploy:
-		t.Logger.Printf(
-			"%s - %s %s\n",
-			messagePrefix(m),
-			evt.Deploy.Stage,
-			bw.RandomID(evt.Deploy.Archive.DeploymentID),
-		)
+		loglevel := func(s agent.Deploy_Stage) agent.Log_Level {
+			switch s {
+			case agent.Deploy_Failed:
+				return agent.Log_ERROR
+			default:
+				return agent.Log_INFO
+			}
+		}(evt.Deploy.Stage)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, loglevel, fmt.Sprintf("%s %s", evt.Deploy.Stage, bw.RandomID(evt.Deploy.Archive.DeploymentID)))))
 	case *agent.Message_Membership:
 		t.Logger.Println(
 			t.au.Yellow(
@@ -342,14 +341,13 @@ func (t cState) print(m *agent.Message) {
 			return
 		}
 
-		t.Logger.Printf(
-			"%s - INFO - %s -> %s %s\n",
-			messagePrefix(m),
+		msg := fmt.Sprintf(
+			"%s -> %s %s",
 			t.connection.State,
 			evt.Connection.State,
 			evt.Connection.Description,
 		)
-
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_INFO, msg)))
 		t.connection.State = evt.Connection.State
 	case *agent.Message_Heartbeat:
 		slogx.With(t.Logger).If(t.debug).Printf("%s - %s\n", messagePrefix(m), m.Type)
@@ -380,7 +378,7 @@ func (t cState) printUploadProgress(m *agent.Message, u *agent.UploadProgress) {
 	cell := max(1, runewidth.RuneWidth(t.iconography))
 	fmt.Fprintf(
 		t.Logger.Writer(),
-		"\x1b[2K%s%s - INFO - archive upload [%s%s] %3d%% (%s / %s) (%s)%s",
+		"\x1b[2K%s%s - INFO  - archive upload [%s%s] %3d%% (%s / %s) (%s)%s",
 		t.Logger.Prefix(),
 		messagePrefix(m),
 		strings.Repeat(string(t.iconography), filled),
@@ -397,29 +395,19 @@ func (t cState) printDeployCommand(m *agent.Message) {
 	d := m.GetDeployCommand()
 	switch d.Command {
 	case agent.DeployCommand_Begin:
-		t.Logger.Println(
-			t.au.Green(fmt.Sprintf("%s - INFO - deployment initiated", messagePrefix(m))),
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_USER, "deployment initiated")))
 	case agent.DeployCommand_Done:
-		t.Logger.Println(
-			t.au.Green(fmt.Sprintf("%s - INFO - deployment completed", messagePrefix(m))),
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_USER, "deployment completed")))
 	case agent.DeployCommand_Failed:
 		did := ""
 		if d.Archive != nil {
 			did = bw.RandomID(d.Archive.DeploymentID).String()
 		}
-		t.Logger.Println(
-			t.au.Red(fmt.Sprintf("%s - INFO - deployment failed - %s", messagePrefix(m), did)),
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_ERROR, fmt.Sprintf("deployment failed - %s", did))))
 	case agent.DeployCommand_Cancel:
-		t.Logger.Println(
-			t.au.Red(fmt.Sprintf("%s - INFO - deployment cancelled by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment cancelled by %s", stringsx.DefaultIfBlank(d.Initiator, "agent")))))
 	case agent.DeployCommand_Restart:
-		t.Logger.Println(
-			t.au.Yellow(fmt.Sprintf("%s - INFO - deployment restarted by %s", messagePrefix(m), stringsx.DefaultIfBlank(d.Initiator, "agent"))),
-		)
+		t.Logger.Println(formatlog(t.au, "%[1]s - %-5[2]s - %[3]s", m, agent.LogMessage(m, agent.Log_WARN, fmt.Sprintf("deployment restarted by %s", stringsx.DefaultIfBlank(d.Initiator, "agent")))))
 	default:
 		log.Println("unexpected command", messagePrefix(m), spew.Sdump(m))
 	}

@@ -55,6 +55,11 @@ func Zero[T any](v T, err error) T {
 	return v
 }
 
+// Zero logs that the error occurred but otherwise ignores it, returning the value.
+func ZeroSilent[T any](v T, err error) T {
+	return v
+}
+
 // From discards the value and returns the error, for consuming (value, error) results
 // when only the error matters, e.g.) w.CloseWithError(errorsx.From(io.Copy(w, r))).
 func From[T any](_ T, err error) error {

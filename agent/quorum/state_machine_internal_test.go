@@ -49,7 +49,7 @@ var _ = Describe("dispatchDeployResult", func() {
 var _ = Describe("Observer", func() {
 	It("should journal messages", func() {
 		d := &flakyDispatcher{}
-		m := agent.LogEvent(agent.NewPeer("local"), "message")
+		m := agent.LogInfo(agent.NewPeer("local"), "message")
 
 		Expect(NewObserver(d).Decode(TranscoderContext{State: StateHealthy}, m)).To(Succeed())
 		Expect(d.delivered).To(HaveLen(1))
@@ -57,7 +57,7 @@ var _ = Describe("Observer", func() {
 
 	It("should ignore messages replayed while recovering", func() {
 		d := &flakyDispatcher{}
-		m := agent.LogEvent(agent.NewPeer("local"), "message")
+		m := agent.LogInfo(agent.NewPeer("local"), "message")
 
 		Expect(NewObserver(d).Decode(TranscoderContext{State: StateRecovering}, m)).To(Succeed())
 		Expect(d.attempts).To(BeZero())

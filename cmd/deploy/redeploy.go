@@ -79,7 +79,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		debugopt2 = grpc.WithStreamInterceptor(grpcx.DebugClientStreamIntercepter)
 	}
 
-	events <- agent.LogEvent(local, "cluster connection initiated")
+	events <- agent.LogDebug(local, "cluster connection initiated")
 	if d, c, err = daemons.ConnectClientUntilSuccess(gctx.Context, config, ss, debugopt1, debugopt2, grpc.WithPerRPCCredentials(ss)); err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		ux.OptionDeployment(monitored),
 	)
 
-	events <- agent.LogEvent(local, "cluster connection completed")
+	events <- agent.LogDebug(local, "cluster connection completed")
 	go func() {
 		<-gctx.Context.Done()
 		if err = client.Close(); err != nil {
@@ -119,21 +119,21 @@ func Redeploy(gctx *Context, deploymentID string) error {
 	cx := cluster.New(local, c)
 	if located, err = agentutil.LocateDeployment(cx, qd, agentutil.FilterDeployID(deploymentID)); err != nil {
 		events <- agent.LogError(local, errors.Wrap(err, "archive retrieval failed"))
-		events <- agent.LogEvent(local, "deployment failed")
+		events <- agent.LogLevel(local, agent.Log_ERROR, "deployment failed")
 		return err
 	}
 
 	if located.Archive == nil {
 		err = errors.New("archive retrieval failed, deployment found but archive is nil")
 		events <- agent.LogError(local, err)
-		events <- agent.LogEvent(local, "deployment failed")
+		events <- agent.LogLevel(local, agent.Log_ERROR, "deployment failed")
 		return err
 	}
 
 	archive = located.Archive
 	monitored.Store(&archive.DeploymentID)
 
-	events <- agent.LogEvent(local, fmt.Sprintf("located: who(%s) location(%s)", displayname, archive.Location))
+	events <- agent.LogUser(local, fmt.Sprintf("located: who(%s) location(%s)", displayname, archive.Location))
 
 	max := int64(config.Partitioner().Partition(len(cx.Members())))
 
@@ -160,9 +160,9 @@ func Redeploy(gctx *Context, deploymentID string) error {
 		return cause
 	}
 
-	events <- agent.LogEvent(local, fmt.Sprintf("initiating deploy: concurrency(%d) attempts(%d), deployID(%s)", max, dopts.Attempts, bw.RandomID(archive.DeploymentID)))
+	events <- agent.LogUser(local, fmt.Sprintf("initiating deploy: concurrency(%d) attempts(%d), deployID(%s)", max, dopts.Attempts, bw.RandomID(archive.DeploymentID)))
 	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, archive, peers...); cause != nil {
-		events <- agent.LogEvent(local, fmt.Sprintln("deployment failed", cause))
+		events <- agent.LogLevel(local, agent.Log_ERROR, fmt.Sprintln("deployment failed", cause))
 	}
 
 	<-dctx.Done()

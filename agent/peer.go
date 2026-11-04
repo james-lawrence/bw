@@ -1,12 +1,16 @@
 package agent
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"net"
+	"net/netip"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/pkg/errors"
@@ -44,6 +48,25 @@ func URIPeer(p *Peer, proto string) string {
 // RPCAddress for a peer.
 func RPCAddress(p *Peer) string {
 	return stringsx.DefaultIfBlank(URIPeer(p, bw.ProtocolAgent), net.JoinHostPort(p.Ip, fmt.Sprint(p.P2PPort)))
+}
+
+func DecodePeerID(s string) string {
+	// original id format sha256 formatted hex. we're going
+	// to compress it to the prefix.
+	if id, err := hex.DecodeString(s); err == nil {
+		switch len(id) {
+		case 32:
+			return bw.RandomID(id[:16]).String()
+		default:
+			return s
+		}
+	}
+
+	if id := uuid.FromStringOrNil(s); !id.IsZero() {
+		return bw.RandomID(id.Bytes()).String()
+	}
+
+	return s
 }
 
 // DiscoveryAddress for a peer.
@@ -118,6 +141,18 @@ func NewPeer(id string, opts ...PeerOption) *Peer {
 	}
 
 	return NewPeerFromTemplate(&p, opts...)
+}
+
+func NewPeerZero(opts ...PeerOption) *Peer {
+	var zeroid [32]byte
+	return NewPeerFromTemplate(
+		&Peer{
+			Name:   hex.EncodeToString(zeroid[:]),
+			Ip:     netip.IPv4Unspecified().String(),
+			Status: Peer_Client,
+		},
+		langx.Compose(opts...), PeerOptionStatus(Peer_Client),
+	)
 }
 
 // NewPeerFromTemplate ...

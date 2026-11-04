@@ -281,7 +281,7 @@ func (t *Coordinator) Cancel() {
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
 		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
-		errorsx.Log(agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogEvent(t.local, "cancelled deploy")))
+		errorsx.Log(agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogInfo(t.local, "cancelled deploy")))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
 	}

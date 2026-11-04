@@ -36,11 +36,18 @@ func MessageTime(m *Message) time.Time {
 	}
 }
 
-// stamp identifies the message and records when it was created from a single reading of the clock,
+// Stamp identifies the message and records when it was created from a single reading of the clock,
 // so the timestamp embedded in the uuidv7 id matches Ts (to the millisecond).
-func stamp(m *Message) {
+func Stamp(m *Message) {
 	now := time.Now()
 	m.Id = uuid.Must(uuid.NewV7AtTime(now)).String()
+	m.Ts = now.UnixNano()
+}
+
+// test helper
+func StampZero(m *Message) {
+	now := time.Time{}
+	m.Id = uuid.Nil.String()
 	m.Ts = now.UnixNano()
 }
 
@@ -60,19 +67,6 @@ type MessageOption func(*Message)
 // MessageOptionEphemeral marks the message as ephemeral, it is not recorded in the write ahead log.
 func MessageOptionEphemeral(m *Message) {
 	m.Ephemeral = true
-}
-
-// LogEvent create a log event message.
-func LogEvent(p *Peer, s string, options ...MessageOption) *Message {
-	return new(langx.Clone(Message{
-		Type: Message_LogEvent,
-		Peer: p,
-		Event: &Message_Log{
-			Log: &Log{
-				Log: s,
-			},
-		},
-	}, stamp, langx.Compose(options...)))
 }
 
 // NewTLSCertificates ...
@@ -104,7 +98,7 @@ func LogError(p *Peer, s error) *Message {
 				Log: s.Error(),
 			},
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 func NewConnectionLog(p *Peer, s ConnectionEvent_Type, description string) *Message {
@@ -118,7 +112,7 @@ func NewConnectionLog(p *Peer, s ConnectionEvent_Type, description string) *Mess
 				Description: description,
 			},
 		},
-	}, stamp))
+	}, Stamp))
 }
 func NewLogHistoryEvent(m ...*Message) *LogHistoryEvent {
 	return &LogHistoryEvent{
@@ -134,7 +128,7 @@ func NewLogHistoryMessage(p *Peer, log *LogHistoryEvent) *Message {
 		Event: &Message_History{
 			History: log,
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 func NewLogHistoryFromMessages(p *Peer, m ...*Message) *Message {
@@ -149,7 +143,7 @@ func NewDeployHeartbeat(p *Peer) *Message {
 		Event: &Message_Heartbeat{
 			Heartbeat: &DeployHeartbeat{},
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 // NewUploadProgress reports how much of the archive the client has uploaded.
@@ -162,29 +156,56 @@ func NewUploadProgress(p *Peer, bytes, total uint64) *Message {
 		Event: &Message_Upload{
 			Upload: &UploadProgress{Bytes: bytes, Total: total},
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 // PeerEvent ...
-func PeerEvent(p *Peer) *Message {
+func PeerEvent(p *Peer, options ...MessageOption) *Message {
 	return new(langx.Clone(Message{
 		Type:  Message_PeerEvent,
 		Peer:  p,
 		Event: &Message_None{},
-	}, stamp))
+	}, Stamp, langx.Compose(options...)))
 }
 
-func LogWarning(p *Peer, s string) *Message {
+func LogLevel(p *Peer, level Log_Level, s string, options ...MessageOption) *Message {
 	return new(langx.Clone(Message{
 		Type:      Message_LogEvent,
 		Ephemeral: true,
 		Peer:      p,
 		Event: &Message_Log{
 			Log: &Log{
-				Log: s,
+				Level: level,
+				Log:   s,
 			},
 		},
-	}, stamp))
+	}, options...))
+}
+
+// LogInfo create a log event message.
+func LogInfo(p *Peer, s string, options ...MessageOption) *Message {
+	return LogLevel(p, Log_INFO, s, Stamp, langx.Compose(options...))
+}
+
+func LogUser(p *Peer, s string, options ...MessageOption) *Message {
+	return LogLevel(p, Log_USER, s, Stamp, langx.Compose(options...))
+}
+
+func LogWarning(p *Peer, s string) *Message {
+	return LogLevel(p, Log_WARN, s, Stamp)
+}
+
+func LogDebug(p *Peer, s string) *Message {
+	return LogLevel(p, Log_DEBUG, s, Stamp)
+}
+
+func LogMessage(m *Message, level Log_Level, s string) *Message_Log {
+	return &Message_Log{
+		Log: &Log{
+			Level: level,
+			Log:   s,
+		},
+	}
 }
 
 // NodeEvent ...
@@ -193,7 +214,7 @@ func NodeEvent(p *Peer, event Message_NodeEvent) *Message {
 		Type:  Message_PeerEvent,
 		Peer:  p,
 		Event: &Message_Membership{Membership: event},
-	}, stamp))
+	}, Stamp))
 }
 
 func deployToOptions(d *Deploy) (dopts *DeployOptions) {
@@ -286,7 +307,7 @@ func NewDeployCommand(p *Peer, dc *DeployCommand) *Message {
 		Event: &Message_DeployCommand{
 			DeployCommand: dc,
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 // DeployEvent represents a deploy being triggered.
@@ -303,7 +324,7 @@ func deployEvent(t Deploy_Stage, p *Peer, by string, di *DeployOptions, a *Archi
 		Type:  Message_DeployEvent,
 		Peer:  p,
 		Event: &Message_Deploy{Deploy: &Deploy{Stage: t, Initiator: by, Options: di, Archive: a, Error: err}},
-	}, stamp))
+	}, Stamp))
 }
 
 func integerEvent(p *Peer, t Message_Type, n int64) *Message {
@@ -313,7 +334,7 @@ func integerEvent(p *Peer, t Message_Type, n int64) *Message {
 		Event: &Message_Int{
 			Int: n,
 		},
-	}, stamp))
+	}, Stamp))
 }
 
 // ApplyToStateMachine utility function that applies an event to the provided

@@ -88,7 +88,7 @@ func TestTickleOnEvents(t *testing.T) {
 			message: agent.NodeEvent(peer, agent.Message_Joined),
 		},
 		"other messages are ignored": {
-			message: agent.LogEvent(peer, "ignored"),
+			message: agent.LogInfo(peer, "ignored"),
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -127,7 +127,7 @@ func TestTickleOnEvents(t *testing.T) {
 
 		tickleOnEvents(t.Context(), events(t, messages(
 			agent.NodeEvent(a, agent.Message_Departed),
-			agent.LogEvent(a, "ignored"),
+			agent.LogInfo(a, "ignored"),
 			agent.NodeEvent(b, agent.Message_Departed),
 		)), tickle, departed)
 

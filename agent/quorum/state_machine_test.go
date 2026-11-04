@@ -171,32 +171,32 @@ var _ = Describe("StateMachine", func() {
 		Entry(
 			"example 1",
 			4,
-			agent.LogEvent(local.Local(), "message 1"),
-			agent.LogEvent(local.Local(), "message 2"),
-			agent.LogEvent(local.Local(), "message 3"),
-			agent.LogEvent(local.Local(), "message 4"),
+			agent.LogInfo(local.Local(), "message 1"),
+			agent.LogInfo(local.Local(), "message 2"),
+			agent.LogInfo(local.Local(), "message 3"),
+			agent.LogInfo(local.Local(), "message 4"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogEvent(local.Local(), "message 5"),
-			agent.LogEvent(local.Local(), "message 6"),
+			agent.LogInfo(local.Local(), "message 5"),
+			agent.LogInfo(local.Local(), "message 6"),
 		),
 		Entry(
 			"example 2",
 			6,
-			agent.LogEvent(local.Local(), "message 1"),
-			agent.LogEvent(local.Local(), "message 2"),
+			agent.LogInfo(local.Local(), "message 1"),
+			agent.LogInfo(local.Local(), "message 2"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogEvent(local.Local(), "message 3"),
+			agent.LogInfo(local.Local(), "message 3"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
-			agent.LogEvent(local.Local(), "message 4"),
+			agent.LogInfo(local.Local(), "message 4"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogEvent(local.Local(), "message 5"),
-			agent.LogEvent(local.Local(), "message 6"),
+			agent.LogInfo(local.Local(), "message 5"),
+			agent.LogInfo(local.Local(), "message 6"),
 		),
 		Entry(
 			"example 3",
 			0,
-			agent.LogEvent(local.Local(), "message 1"),
-			agent.LogEvent(local.Local(), "message 2"),
+			agent.LogInfo(local.Local(), "message 1"),
+			agent.LogInfo(local.Local(), "message 2"),
 		),
 		Entry(
 			"example 4",
@@ -206,13 +206,13 @@ var _ = Describe("StateMachine", func() {
 		Entry(
 			"example 5",
 			7,
-			agent.LogEvent(local.Local(), "message 1"),
-			agent.LogEvent(local.Local(), "message 2"),
-			agent.LogEvent(local.Local(), "message 3"),
-			agent.LogEvent(local.Local(), "message 4"),
+			agent.LogInfo(local.Local(), "message 1"),
+			agent.LogInfo(local.Local(), "message 2"),
+			agent.LogInfo(local.Local(), "message 3"),
+			agent.LogInfo(local.Local(), "message 4"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogEvent(local.Local(), "message 5"),
-			agent.LogEvent(local.Local(), "message 6"),
+			agent.LogInfo(local.Local(), "message 5"),
+			agent.LogInfo(local.Local(), "message 6"),
 			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
 		),
 	)
@@ -233,10 +233,10 @@ var _ = Describe("StateMachine", func() {
 
 	It("should write message to the observer", func() {
 		messages := []*agent.Message{
-			agent.LogEvent(local.Local(), "message 1"),
-			agent.LogEvent(local.Local(), "message 2"),
-			agent.LogEvent(local.Local(), "message 3"),
-			agent.LogEvent(local.Local(), "message 4"),
+			agent.LogInfo(local.Local(), "message 1"),
+			agent.LogInfo(local.Local(), "message 2"),
+			agent.LogInfo(local.Local(), "message 3"),
+			agent.LogInfo(local.Local(), "message 4"),
 		}
 
 		obs := make(chan *agent.Message, len(messages))
@@ -295,7 +295,7 @@ var _ = Describe("StateMachine", func() {
 
 		start := time.Now()
 		for i := 0; i < 50; i++ {
-			Expect(sm.Dispatch(context.Background(), agent.LogEvent(local.Local(), "message"))).To(Succeed())
+			Expect(sm.Dispatch(context.Background(), agent.LogInfo(local.Local(), "message"))).To(Succeed())
 		}
 		Expect(time.Since(start)).To(BeNumerically("<", time.Second))
 	})

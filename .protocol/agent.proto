@@ -164,13 +164,14 @@ message DeployCommandResult {}
 
 message Log {
   enum Level {
-    INFO = 0;
-    WARN = 1;
-    ERROR = 2;
-    DEBUG = 3;
+    USER   = 0;
+    INFO   = 1;
+    WARN   = 2;
+    ERROR  = 3;
+    DEBUG  = 4;
   }
   string log = 1;
-  uint32 level = 2;
+  Level level = 2;
 }
 
 message UploadMetadata {

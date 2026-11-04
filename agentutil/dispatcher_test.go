@@ -104,14 +104,14 @@ var _ = Describe("Dispatcher", func() {
 
 		inflight := make(chan error, 1)
 		go func() {
-			inflight <- d.Dispatch(context.Background(), agent.LogEvent(local, "slow"))
+			inflight <- d.Dispatch(context.Background(), agent.LogInfo(local, "slow"))
 		}()
 		Eventually(srv.received).Should(Receive(Equal("slow")))
 
 		// e.g. a heartbeat whose context was cancelled when the deploy completed.
 		cancelled, cancel := context.WithCancel(context.Background())
 		cancel()
-		Expect(d.Dispatch(cancelled, agent.LogEvent(local, "heartbeat"))).To(HaveOccurred())
+		Expect(d.Dispatch(cancelled, agent.LogInfo(local, "heartbeat"))).To(HaveOccurred())
 
 		close(srv.release)
 		Eventually(inflight).Should(Receive(Succeed()))
@@ -121,19 +121,19 @@ var _ = Describe("Dispatcher", func() {
 	It("should not drop a newer connection when a stale rpc fails", func() {
 		d := NewDispatcher(dialer)
 
-		Expect(d.Dispatch(context.Background(), agent.LogEvent(local, "ok"))).To(Succeed())
+		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
 		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(1)))
 
 		// rpc on connection #1 that fails, but whose failure is observed late.
 		late := make(chan error, 1)
 		go func() {
-			late <- d.Dispatch(context.Background(), agent.LogEvent(local, "late"))
+			late <- d.Dispatch(context.Background(), agent.LogInfo(local, "late"))
 		}()
 		Eventually(lateheld).Should(BeClosed())
 
 		// connection #1 is dropped and connection #2 is established.
-		Expect(d.Dispatch(context.Background(), agent.LogEvent(local, "fail"))).To(HaveOccurred())
-		Expect(d.Dispatch(context.Background(), agent.LogEvent(local, "ok"))).To(Succeed())
+		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "fail"))).To(HaveOccurred())
+		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
 		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(2)))
 
 		// the stale failure from connection #1 arrives.
@@ -141,7 +141,7 @@ var _ = Describe("Dispatcher", func() {
 		Eventually(late).Should(Receive(HaveOccurred()))
 
 		// connection #2 should still be in use.
-		Expect(d.Dispatch(context.Background(), agent.LogEvent(local, "ok"))).To(Succeed())
+		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
 		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(2)))
 	})
 })

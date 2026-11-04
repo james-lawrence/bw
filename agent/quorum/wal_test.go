@@ -226,8 +226,8 @@ var _ = Describe("WAL", func() {
 			}
 
 			apply(agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
-			apply(agent.LogEvent(p, "a"))
-			apply(agent.LogEvent(p, "b"))
+			apply(agent.LogInfo(p, "a"))
+			apply(agent.LogInfo(p, "b"))
 			Eventually(d.all).Should(HaveLen(1))
 			Expect(d.all()[0].GetLog().GetLog()).To(ContainSubstring("WARN - fsm apply exceeded"))
 

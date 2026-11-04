@@ -311,13 +311,13 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 			agentutil.Dispatch(
 				context.WithoutCancel(ctx),
 				t.dispatcher,
-				agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"),
+				agent.LogWarning(t.worker.local, "timed out while waiting for nodes to complete, maybe try cancelling the current deploy"),
 			),
 		)
 		return 0, false
 	}
 
-	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogEvent(t.worker.local, "nodes are ready, deploying")))
+	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogUser(t.worker.local, "nodes are ready, deploying")))
 
 	concurrency := min(max(t.partitioner.Partition(len(nodes)), 1), math.MaxUint16)
 	pool := asynccompute.New(
@@ -338,7 +338,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 
 	if errorsx.Is(failure, context.DeadlineExceeded) {
 		errorsx.Log(
-			agentutil.Dispatch(context.WithoutCancel(ctx), t.dispatcher, agent.LogEvent(t.worker.local, "timed out while waiting for nodes to complete")),
+			agentutil.Dispatch(context.WithoutCancel(ctx), t.dispatcher, agent.LogWarning(t.worker.local, "timed out while waiting for nodes to complete")),
 		)
 	}
 
@@ -363,6 +363,7 @@ func ApplyFilter(s Filter, set ...*agent.Peer) []*agent.Peer {
 func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 	var (
 		deploy *agent.Deploy
+		did    bw.RandomID
 	)
 
 	if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
@@ -377,7 +378,6 @@ func healthcheck(ctx context.Context, task *pending, op operation) (err error) {
 		return err
 	}
 
-	did := bw.RandomID("unknown deployment")
 	if deploy.Archive != nil {
 		did = bw.RandomID(deploy.Archive.DeploymentID)
 	}

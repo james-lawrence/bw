@@ -47,7 +47,7 @@ func TestMessageTime(t *testing.T) {
 
 func TestNewMessagesCarryTheirOwnTime(t *testing.T) {
 	before := time.Now().Add(-time.Second)
-	m := agent.LogEvent(agent.NewPeer("node"), "message")
+	m := agent.LogInfo(agent.NewPeer("node"), "message")
 	if ts := agent.MessageTime(m); ts.Before(before) || ts.After(time.Now().Add(time.Second)) {
 		t.Fatalf("unexpected time %v", ts)
 	}
@@ -63,7 +63,7 @@ func TestMessageIdMatchesTimestamp(t *testing.T) {
 	p := agent.NewPeer("node")
 
 	for name, m := range map[string]*agent.Message{
-		"LogEvent":           agent.LogEvent(p, "message"),
+		"LogEvent":           agent.LogInfo(p, "message"),
 		"LogError":           agent.LogError(p, errors.New("failure")),
 		"NewConnectionLog":   agent.NewConnectionLog(p, agent.ConnectionEvent_Connected, "connected"),
 		"NewDeployHeartbeat": agent.NewDeployHeartbeat(p),

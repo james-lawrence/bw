@@ -105,7 +105,7 @@ func (t *applyMonitor) observe(l *raft.Log, elapsed time.Duration) {
 
 	t.warned = true
 	if p := t.local(); p != nil {
-		errorsx.Log(t.reports.Run(context.Background(), agent.LogEvent(p, fmt.Sprintf("WARN - fsm apply exceeded %s, took %s", t.threshold, elapsed))))
+		errorsx.Log(t.reports.Run(context.Background(), agent.LogInfo(p, fmt.Sprintf("WARN - fsm apply exceeded %s, took %s", t.threshold, elapsed))))
 	}
 }
 
@@ -133,7 +133,7 @@ func (t *applyMonitor) end(m *agent.Message) {
 	}
 
 	if p := t.local(); p != nil {
-		errorsx.Log(t.reports.Run(context.Background(), agent.LogEvent(p, fmt.Sprintf("fsm apply max duration %s", t.maxApply))))
+		errorsx.Log(t.reports.Run(context.Background(), agent.LogInfo(p, fmt.Sprintf("fsm apply max duration %s", t.maxApply))))
 	}
 	t.maxApply, t.warned = 0, false
 }

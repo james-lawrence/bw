@@ -48,7 +48,7 @@ var _ = Describe("Cursor", func() {
 
 var _ = Describe("Cursor from messages", func() {
 	It("should be the start of the window the message belongs to", func() {
-		m := agent.LogEvent(agent.NewPeer("node"), "message")
+		m := agent.LogInfo(agent.NewPeer("node"), "message")
 		c := agent.CursorOf(m)
 		Expect(c).To(Equal(agent.WindowCursor(agent.MessageTime(m))))
 		Expect(c.Offset()).To(BeZero())
@@ -56,7 +56,7 @@ var _ = Describe("Cursor from messages", func() {
 	})
 
 	It("should place v4 messages by their timestamp", func() {
-		m := agent.LogEvent(agent.NewPeer("node"), "message")
+		m := agent.LogInfo(agent.NewPeer("node"), "message")
 		m.Id = uuid.Must(uuid.NewV4()).String()
 		m.Ts = epoch.Add(7 * time.Second).Unix()
 		Expect(agent.CursorOf(m)).To(Equal(agent.WindowCursor(epoch)))

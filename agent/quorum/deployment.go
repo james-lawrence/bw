@@ -171,7 +171,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 
 	err = sm.Dispatch(
 		ctx,
-		agent.LogEvent(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
+		agent.LogInfo(t.c.Local(), "detected new leader during an active deployment, attempting to recover"),
 	)
 
 	if err != nil {
@@ -180,16 +180,16 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 
 	err = sm.Dispatch(
 		ctx,
-		agent.LogEvent(t.c.Local(), "restarting deploy"),
+		agent.LogInfo(t.c.Local(), "restarting deploy"),
 		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
-		agent.LogEvent(t.c.Local(), "attempting to cancel running deployments"),
+		agent.LogInfo(t.c.Local(), "attempting to cancel running deployments"),
 	)
 	if err != nil {
 		return errors.Wrap(err, "restart command failure")
 	}
 
 	if err = t.cancel(ctx, &agent.CancelRequest{}, d, sm); err != nil {
-		msg := agent.LogEvent(t.c.Local(), "failed to cancel running deployments")
+		msg := agent.LogInfo(t.c.Local(), "failed to cancel running deployments")
 		errorsx.Log(sm.Dispatch(ctx, msg))
 		return errors.Wrap(err, "cancellation failure")
 	}

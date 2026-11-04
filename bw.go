@@ -3,13 +3,13 @@ package bw
 import (
 	"crypto/md5"
 	"crypto/rand"
-	"encoding/base32"
 	"io"
 	"os"
 	"os/user"
 	"path/filepath"
 	"time"
 
+	"github.com/gofrs/uuid/v5"
 	"github.com/james-lawrence/bw/internal/stringsx"
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/pkg/errors"
@@ -79,7 +79,13 @@ func DeployDir(root string) string {
 type RandomID []byte
 
 func (t RandomID) String() string {
-	return base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(t)
+	if t == nil {
+		return uuid.Nil.String()
+	}
+
+	var b [16]byte
+	copy(b[:], t)
+	return uuid.UUID(b).String()
 }
 
 // SimpleGenerateID ...

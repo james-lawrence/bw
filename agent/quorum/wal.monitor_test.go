@@ -40,7 +40,7 @@ var _ = Describe("monitoredWAL", func() {
 
 	deploy := func(wal monitoredWAL) {
 		apply(wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
-		apply(wal, agent.LogEvent(p, "a"))
+		apply(wal, agent.LogInfo(p, "a"))
 		apply(wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Done}))
 	}
 

@@ -20,7 +20,7 @@ var epoch = time.Date(2026, 10, 30, 16, 0, 0, 0, time.UTC)
 
 // message with a v4 id, the window is determined by Ts.
 func v4(text string, ts time.Time) *agent.Message {
-	m := agent.LogEvent(agent.NewPeer("node"), text)
+	m := agent.LogInfo(agent.NewPeer("node"), text)
 	m.Id = uuid.Must(uuid.NewV4()).String()
 	m.Ts = ts.Unix()
 	return m
@@ -28,7 +28,7 @@ func v4(text string, ts time.Time) *agent.Message {
 
 // message with a v7 id, the window is determined by the id, Ts is ignored.
 func v7(text string, ts time.Time) *agent.Message {
-	m := agent.LogEvent(agent.NewPeer("node"), text)
+	m := agent.LogInfo(agent.NewPeer("node"), text)
 	m.Id = uuid.Must(uuid.NewV7AtTime(ts)).String()
 	m.Ts = ts.Add(24 * time.Hour).UnixNano()
 	return m

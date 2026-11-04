@@ -9,7 +9,7 @@ import (
 )
 
 func at(text string, ts time.Time) *agent.Message {
-	m := agent.LogEvent(agent.NewPeer("node"), text)
+	m := agent.LogInfo(agent.NewPeer("node"), text)
 	m.Id = uuid.Must(uuid.NewV7AtTime(ts)).String()
 	m.Ts = ts.UnixNano()
 	return m
@@ -54,7 +54,7 @@ func TestResumeDeduplicatesTheReplayedWindow(t *testing.T) {
 
 func TestResumeAcceptsMessagesWithoutATime(t *testing.T) {
 	var r resume
-	m := agent.LogEvent(agent.NewPeer("node"), "untimed")
+	m := agent.LogInfo(agent.NewPeer("node"), "untimed")
 	m.Id, m.Ts = "", 0
 	if !r.accept(m) || !r.accept(m) {
 		t.Fatal("messages without a time are never deduplicated")

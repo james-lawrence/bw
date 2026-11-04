@@ -4,10 +4,8 @@ package commandutils
 import (
 	"context"
 	"crypto/tls"
-	"encoding/hex"
 	"io"
 	"log"
-	"net/netip"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,18 +27,6 @@ import (
 	"github.com/james-lawrence/bw/internal/systemx"
 	"github.com/james-lawrence/bw/internal/tlsx"
 )
-
-func NewDeployPeer(options ...agent.PeerOption) (p *agent.Peer) {
-	var zeroid [32]byte
-	return agent.NewPeerFromTemplate(
-		&agent.Peer{
-			Name:   hex.EncodeToString(zeroid[:]),
-			Ip:     netip.IPv4Unspecified().String(),
-			Status: agent.Peer_Client,
-		},
-		append(options, agent.PeerOptionStatus(agent.Peer_Client))...,
-	)
-}
 
 // NewClientPeer create a client peer.
 func NewClientPeer(options ...agent.PeerOption) (p *agent.Peer) {
