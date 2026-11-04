@@ -170,7 +170,7 @@ message Log {
     DEBUG = 3;
   }
   string log = 1;
-  uint16 level = 2;
+  uint32 level = 2;
 }
 
 message UploadMetadata {

@@ -105,9 +105,7 @@ func Into(gctx *Context) error {
 
 	events := make(chan *agent.Message, 100)
 
-	local := commandutils.NewClientPeer(
-		agent.PeerOptionName("local"),
-	)
+	local := commandutils.NewDeployPeer()
 
 	events <- agent.LogEvent(local, "cluster connection initiated")
 	var (
