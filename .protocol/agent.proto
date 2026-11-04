@@ -162,7 +162,16 @@ message DeployCommandRequest {
 }
 message DeployCommandResult {}
 
-message Log { string log = 1; }
+message Log {
+  enum Level {
+    INFO = 0;
+    WARN = 1;
+    ERROR = 2;
+    DEBUG = 3;
+  }
+  string log = 1;
+  uint16 level = 2;
+}
 
 message UploadMetadata {
   uint64 bytes = 1;
