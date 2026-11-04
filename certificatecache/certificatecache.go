@@ -177,7 +177,7 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	// no reason to refresh more frequently than the minfrequency, even when we have an expired certificate.
 	due = timex.DurationMax(minFrequency, due)
 	refreshNeeded := t.Equal(expiration) || t.After(expiration)
-	log.Println("certificate refresh check", certpath, due, expiration, "<=", t, "->", refreshNeeded)
+	log.Println("certificate refresh check", certpath, due, expiration, "<=", t, "->", refreshNeeded, "in", due)
 
 	if refreshNeeded {
 		return due, r.Refresh()
