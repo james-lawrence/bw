@@ -13,6 +13,6 @@ func TestColorize(t *testing.T) {
 		au := aurora.NewAurora(true)
 		m := agent.PeerEvent(agent.NewPeerZero(), agent.StampZero)
 		evt := agent.LogMessage(m, agent.Log_INFO, "DERP DERP")
-		require.Equal(t, "Jan  1 00:00:00 00000000-0000-0000-0000-000000000000:0.0.0.0      - INFO - DERP DERP", typography(au, "%[1]s - %[2]s - %[3]s", m, evt).String())
+		require.Equal(t, "Jan  1 00:00:00 00000000:0.0.0.0      - INFO - DERP DERP", typography(au, "%[1]s - %[2]s - %[3]s", m, evt).String())
 	})
 }
