@@ -132,9 +132,10 @@ func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher, addit
 		due time.Duration
 	)
 
-	certnames := []string{DefaultTLSCertServer}
+	// the last name is used when none of the certificates exist, so the additional certificates
+	// go last to ensure refreshers that write them are read back from the correct location.
+	certnames := []string{DefaultTLSCertServer, DefaultTLSCertClient}
 	certnames = append(certnames, additionalcerts...)
-	certnames = append(certnames, DefaultTLSCertClient)
 	certpath := bw.LocateFirstInDir(dir, certnames...)
 
 	if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {

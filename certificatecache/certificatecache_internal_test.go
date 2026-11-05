@@ -157,3 +157,62 @@ func TestRefreshAutomatic(t *testing.T) {
 		require.EqualValues(t, 1, calls.Load())
 	})
 }
+
+func writecertat(t testing.TB, path string, valid time.Duration) {
+	t.Helper()
+
+	tmpl, err := tlsx.X509Template(valid)
+	require.NoError(t, err)
+
+	_, der, err := tlsx.SelfSignedRSAGen(2048, tmpl)
+	require.NoError(t, err)
+	require.NoError(t, tlsx.WriteCertificateFile(path, der))
+}
+
+func TestRefreshAutomaticSelfSigned(t *testing.T) {
+	t.Run("valid self signed certificate is found and not refreshed", func(t *testing.T) {
+		var calls atomic.Int32
+		dir := t.TempDir()
+		writecertat(t, filepath.Join(dir, DefaultTLSSelfSignedCertServer), 8*time.Hour)
+
+		require.NoError(t, RefreshAutomatic(dir, 0, refresherFunc(func() error {
+			calls.Add(1)
+			return nil
+		}), DefaultTLSSelfSignedCertServer))
+
+		time.Sleep(200 * time.Millisecond)
+		require.Zero(t, calls.Load())
+	})
+
+	t.Run("expired self signed certificate is refreshed immediately and not repeatedly", func(t *testing.T) {
+		var calls atomic.Int32
+		dir := t.TempDir()
+		path := filepath.Join(dir, DefaultTLSSelfSignedCertServer)
+		writecertat(t, path, time.Hour)
+
+		require.NoError(t, RefreshAutomatic(dir, 2*time.Hour, refresherFunc(func() error {
+			calls.Add(1)
+			writecertat(t, path, 8*time.Hour) // the refresher replaces the expiring certificate.
+			return nil
+		}), DefaultTLSSelfSignedCertServer))
+		require.EqualValues(t, 1, calls.Load())
+
+		time.Sleep(200 * time.Millisecond)
+		require.EqualValues(t, 1, calls.Load())
+	})
+
+	t.Run("self signed certificate is ignored unless requested", func(t *testing.T) {
+		var calls atomic.Int32
+		dir := t.TempDir()
+		writecertat(t, filepath.Join(dir, DefaultTLSSelfSignedCertServer), 8*time.Hour)
+
+		// signed certificates must take precedence, a self signed certificate must not satisfy
+		// the modes that obtain real certificates.
+		require.NoError(t, RefreshAutomatic(dir, 0, refresherFunc(func() error {
+			calls.Add(1)
+			writecertat(t, filepath.Join(dir, DefaultTLSCertClient), 8*time.Hour)
+			return nil
+		})))
+		require.EqualValues(t, 1, calls.Load())
+	})
+}
