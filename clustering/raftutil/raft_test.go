@@ -305,13 +305,26 @@ func TestRaftPeers(t *testing.T) {
 			return len(getServers(t, rafts...)) == 3
 		}, 10*time.Second, 10*time.Millisecond)
 
-		current := findPeer(firstRaft(findState(notLeader, rafts...)...), peers...)
-		require.NotNil(t, current)
-
 		for i := 0; i < 5; i++ {
+			var current *peer
+
+			// pick a follower each iteration, the rejoined node may have become the leader.
 			require.Eventually(t, func() bool {
 				rafts = gather(obsc, rafts...)
-				return len(voters(getServers(t, rafts...)...)) == 3
+				if len(voters(getServers(t, rafts...)...)) != 3 {
+					return false
+				}
+				follower := firstRaft(findState(func(s raft.RaftState) bool { return s == raft.Follower }, rafts...)...)
+				if follower == nil {
+					return false
+				}
+				for j := range peers {
+					if strings.Contains(follower.String(), SocketName(peers[j].c.LocalNode())) {
+						current = &peers[j]
+						return true
+					}
+				}
+				return false
 			}, 10*time.Second, 10*time.Millisecond)
 
 			require.NoError(t, current.c.Shutdown())
@@ -322,7 +335,9 @@ func TestRaftPeers(t *testing.T) {
 				return len(voters(getServers(t, rafts...)...)) == 2
 			}, 10*time.Second, 10*time.Millisecond)
 
-			current.c, err = clusteringtestutil.NewPeerFromConfig(current.c.Config(), clustering.OptionNodeID(current.c.Config().Name))
+			// copy the config, the old memberlist may still be reading the original.
+			cfg := *current.c.Config()
+			current.c, err = clusteringtestutil.NewPeerFromConfig(&cfg, clustering.OptionNodeID(current.c.Config().Name))
 			require.NoError(t, err)
 			_, err = clusteringtestutil.Connect(current.c, clusters(peers...)...)
 			require.NoError(t, err)
