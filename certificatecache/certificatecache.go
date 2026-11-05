@@ -10,10 +10,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/james-lawrence/bw"
+	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/timex"
@@ -48,8 +48,8 @@ const (
 const (
 	// ModeDisabled disable certificate refresh.
 	ModeDisabled = "disabled"
-	// ModeVault refresh certificates using vault's PKI
-	ModeVault = "vault"
+	// ModeSelfSigned only use (and refresh) the self signed certificate.
+	ModeSelfSigned = "selfsigned"
 )
 
 // NewRefreshClient default tls credentials refresh strategy for agents.
@@ -66,7 +66,7 @@ func NewRefreshAgent(dir string, a challenger) *ACME {
 // AutomaticTLSAgent generate a self signed certificate if necessary, this allows the agents
 // to communicate with temporary credentials while acme is bootstrapping.
 func AutomaticTLSAgent(seed []byte, domain, dir string) (err error) {
-	_, err = RefreshExpired(filepath.Join(dir, DefaultTLSCertServer), time.Now(), selfsigned{
+	_, err = RefreshExpired(filepath.Join(dir, DefaultTLSSelfSignedCertServer), time.Now(), selfsigned{
 		seed:           seed,
 		domain:         domain,
 		credentialsDir: dir,
@@ -81,26 +81,27 @@ func FromConfig(dir, mode, configfile string, futureoffset time.Duration, fallba
 	log.Printf("tls credentials mode '%s' - offset '%v'\n", mode, futureoffset)
 	switch mode {
 	case ModeDisabled:
-		return RefreshAutomatic(dir, futureoffset, Noop{})
-	case ModeVault:
-		v := Vault{
-			DefaultTokenFile: VaultDefaultTokenPath(),
-			CertificateDir:   dir,
-		}
+		return nil
+	case ModeSelfSigned:
+		var config agent.Config
 
-		if err = bw.ExpandAndDecodeFile(configfile, &v); err != nil {
+		// the seed and domain must match what AutomaticTLSAgent used, so they're derived from the agent configuration.
+		if err = bw.ExpandAndDecodeFile(configfile, &config); err != nil {
 			return err
 		}
 
-		if strings.TrimSpace(v.CommonName) == "" {
-			return errors.New("server name cannot be blank for vault, please set servername in the configuration")
+		ring, err := config.Keyring()
+		if err != nil {
+			return err
 		}
 
-		if strings.TrimSpace(v.Path) == "" {
-			return errors.New("vault PKI path cannot be blank, please set VaultPKIPath in the configuration")
-		}
-
-		return RefreshAutomatic(dir, futureoffset, v)
+		// self signed certificates are short lived, the future offset used for real certificates would
+		// cause them to be considered expired (and regenerated) constantly.
+		return RefreshAutomatic(dir, 0, selfsigned{
+			seed:           ring.GetPrimaryKey(),
+			domain:         config.ServerName,
+			credentialsDir: dir,
+		}, DefaultTLSSelfSignedCertServer)
 	default:
 		if err = bw.ExpandAndDecodeFile(configfile, fallback); err != nil {
 			return err
@@ -126,19 +127,22 @@ func (t Noop) Refresh() error {
 // RefreshAutomatic will automatically refresh credentials in the background.
 // error is returned if something goes wrong prior to starting the goroutine.
 // once the goroutine is started it will return nil.
-func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher) (err error) {
+func RefreshAutomatic(dir string, futureoffset time.Duration, r refresher, additionalcerts ...string) (err error) {
 	var (
 		due time.Duration
 	)
 
-	certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
+	certnames := []string{DefaultTLSCertServer}
+	certnames = append(certnames, additionalcerts...)
+	certnames = append(certnames, DefaultTLSCertClient)
+	certpath := bw.LocateFirstInDir(dir, certnames...)
 
 	if due, err = RefreshExpired(certpath, time.Now().UTC().Add(futureoffset), r); err != nil {
 		return err
 	}
 
 	go func() {
-		certpath := bw.LocateFirstInDir(dir, DefaultTLSCertServer, DefaultTLSCertClient)
+		certpath := bw.LocateFirstInDir(dir, certnames...)
 		certbackgroundrefresh(context.Background(), certpath, r, due, futureoffset)
 	}()
 

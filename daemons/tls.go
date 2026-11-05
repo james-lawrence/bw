@@ -14,6 +14,7 @@ func AgentCertificateCache(ctx Context) (err error) {
 	const futureoffset = 31 * 24 * time.Hour
 
 	config := ctx.Config
+
 	client := acme.NewChallenger(ctx.Cluster.Local(), ctx.Cluster, ctx.ACMECache, ctx.Dialer)
 	fallback := certificatecache.NewRefreshAgent(config.Credentials.Directory, client)
 
