@@ -63,7 +63,7 @@ func MonitorTicklerHeartbeat(local *agent.Peer, d dispatcher, period time.Durati
 			case <-ctx.Done():
 				return
 			case <-t.C:
-				errorsx.Log(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)))
+				errorsx.Log(errorsx.Wrap(agentutil.Dispatch(ctx, d, agent.NewDeployHeartbeat(local)), "heartbeat failure"))
 			}
 		}
 	}

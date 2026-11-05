@@ -197,7 +197,7 @@ func (t worker) work(ctx context.Context, peer *agent.Peer) error {
 	// Stop deployment when a single node fails.
 	if atomic.LoadInt64(t.failed) > 0 && !t.ignoreFailures {
 		t.report(ctx, nil)
-		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
+		errorsx.Log(agentutil.ReliableDispatch(ctx, t.dispatcher, agent.PeersCompletedEvent(t.local, atomic.AddInt64(t.completed, 1))))
 		return nil
 	}
 
