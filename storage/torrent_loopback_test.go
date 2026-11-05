@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
+	bwcluster "github.com/james-lawrence/bw/cluster"
 	"github.com/james-lawrence/bw/internal/torrentx"
 	"github.com/james-lawrence/torrent"
 	"github.com/stretchr/testify/require"
@@ -67,4 +68,53 @@ func TestTorrentLoopbackTransfer(t *testing.T) {
 	got, err := io.ReadAll(r)
 	require.NoError(t, err)
 	require.True(t, bytes.Equal(payload, got), "downloaded %d bytes, expected %d", len(got), len(payload))
+}
+
+// a downloader with no reachable peers must keep restarting rather than fail the download.
+func TestTorrentDownloadRestartsWhenMetadataStalls(t *testing.T) {
+	seeder, seederPeer := newLoopbackTorrent(t, func(uint32) staticCluster { return staticCluster{} })
+
+	payload := bytes.Repeat([]byte("restart payload "), 50000)
+	up, err := seeder.Uploader().NewUpload(uint64(len(payload)))
+	require.NoError(t, err)
+	_, err = up.Upload(bytes.NewReader(payload))
+	require.NoError(t, err)
+	_, magnet, err := up.Info()
+	require.NoError(t, err)
+
+	t.Run("no peers keeps retrying until the context ends", func(t *testing.T) {
+		downloader, _ := newLoopbackTorrent(t, func(uint32) staticCluster { return staticCluster{} })
+		d := downloader.Downloader().New().(torrentD)
+		d.stall = 50 * time.Millisecond
+
+		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		defer cancel()
+
+		r := d.Download(ctx, &agent.Archive{Location: magnet})
+		defer r.Close()
+
+		_, err := io.ReadAll(r)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.NotErrorIs(t, err, ErrDownloadStalled)
+	})
+
+	t.Run("a peer appearing after a stall completes the download", func(t *testing.T) {
+		cls := bwcluster.NewAtomic(nil)
+		downloader, _ := newLoopbackTorrent(t, func(uint32) staticCluster { return staticCluster{} })
+		d := downloader.Downloader().New().(torrentD)
+		d.c = cls
+		d.stall = 100 * time.Millisecond
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		time.AfterFunc(350*time.Millisecond, func() { cls.Update(seederPeer) })
+
+		r := d.Download(ctx, &agent.Archive{Location: magnet})
+		defer r.Close()
+
+		got, err := io.ReadAll(r)
+		require.NoError(t, err)
+		require.True(t, bytes.Equal(payload, got), "downloaded %d bytes, expected %d", len(got), len(payload))
+	})
 }

@@ -21,6 +21,7 @@ type torrentD struct {
 	c      cluster
 	client *torrent.Client
 	dir    string
+	stall  time.Duration // window without progress before restarting.
 }
 
 // the client has no dht server, so it considers the zero id to be itself and refuses to dial any
@@ -64,7 +65,10 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 	pr, pw := io.Pipe()
 
 	go func() {
-		var pos int64
+		var (
+			pos   int64
+			stall = t.stall
+		)
 
 		// restart stalled downloads until the context is cancelled.
 		for ctx.Err() == nil {
@@ -75,8 +79,10 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 			}
 
 			// no metadata within the window is a stall as well (e.g. no reachable peers).
-			mctx, cancel := context.WithTimeoutCause(ctx, 16*time.Second, ErrDownloadStalled)
+			mctx, cancel := context.WithTimeoutCause(ctx, stall, ErrDownloadStalled)
 			rc := torrent.Downloader(mctx, dl)
+			// the reader returned on timeout wraps the cause without Unwrap, so errors.Is can't see it.
+			metadataStalled := ctx.Err() == nil && errors.Is(context.Cause(mctx), ErrDownloadStalled)
 			cancel()
 
 			// a restarted torrent replays from the start, continue from what the consumer already has.
@@ -84,12 +90,14 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 				var n int64
 
 				// fail the attempt when no progress has been made, replaces a fixed timeout.
-				sr := iox.NewStalledReader(rc, 16*time.Second, ErrDownloadStalled, nil)
+				sr := iox.NewStalledReader(rc, stall, ErrDownloadStalled, nil)
 				stop := context.AfterFunc(ctx, func() { sr.Close() })
 				n, err = io.Copy(pw, sr)
 				stop()
 				sr.Close()
 				pos += n
+			} else if metadataStalled {
+				err = ErrDownloadStalled
 			}
 
 			if !errors.Is(err, ErrDownloadStalled) {

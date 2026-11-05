@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/envx"
@@ -125,6 +126,7 @@ func (t torrentP) New() Downloader {
 		c:      t.c,
 		dir:    t.dir,
 		client: t.client,
+		stall:  16 * time.Second,
 	}
 }
 
