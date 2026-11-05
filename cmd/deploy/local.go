@@ -90,14 +90,6 @@ func Locally(ctx *Context, debug bool) (err error) {
 		return errors.WithStack(err)
 	}
 
-	if err = os.MkdirAll(filepath.Join(root, bw.DirArchive), 0700); err != nil {
-		return errors.Wrap(err, "failed to create archive directory")
-	}
-
-	if err = archive.Unpack(filepath.Join(root, bw.DirArchive), dst); err != nil {
-		return errors.Wrap(err, "failed to unpack archive")
-	}
-
 	dctx, err = deployment.NewRemoteDeployContext(
 		ctx.Context,
 		root,
@@ -116,6 +108,10 @@ func Locally(ctx *Context, debug bool) (err error) {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to create deployment context")
+	}
+
+	if err = archive.Unpack(dctx.ArchiveRoot, dst); err != nil {
+		return errors.Wrap(err, "failed to unpack archive")
 	}
 
 	deploy := deployment.NewDirective(
