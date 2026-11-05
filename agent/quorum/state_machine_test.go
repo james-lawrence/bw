@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"runtime"
+	"slices"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -162,10 +163,13 @@ var _ = Describe("StateMachine", func() {
 			decoded, err = DecodeEvery(ior)
 			Expect(err).To(Succeed())
 
+			// ephemeral messages are never written to the WAL, so they are not part of snapshots.
+			expected := slices.DeleteFunc(slices.Clone(messages[n:]), func(m *agent.Message) bool { return m.Ephemeral })
+
 			Expect(
 				proto.Equal(
 					agent.NewLogHistoryEvent(decoded...),
-					agent.NewLogHistoryEvent(messages[n:]...),
+					agent.NewLogHistoryEvent(expected...),
 				),
 			).To(BeTrue())
 		},
