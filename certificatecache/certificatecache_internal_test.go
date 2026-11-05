@@ -96,9 +96,16 @@ func TestCertBackgroundRefresh(t *testing.T) {
 func TestRefreshAutomatic(t *testing.T) {
 	t.Run("missing certificate refreshes once then waits for the computed due", func(t *testing.T) {
 		var calls atomic.Int32
+		dir := t.TempDir()
 
-		require.NoError(t, RefreshAutomatic(t.TempDir(), 0, refresherFunc(func() error {
+		require.NoError(t, RefreshAutomatic(dir, 0, refresherFunc(func() error {
 			calls.Add(1)
+			// with nothing on disk the lookup falls back to the client certificate name.
+			tmpl, err := tlsx.X509Template(8 * time.Hour)
+			require.NoError(t, err)
+			_, der, err := tlsx.SelfSignedRSAGen(2048, tmpl)
+			require.NoError(t, err)
+			require.NoError(t, tlsx.WriteCertificateFile(filepath.Join(dir, DefaultTLSCertClient), der))
 			return nil
 		})))
 		require.EqualValues(t, 1, calls.Load())

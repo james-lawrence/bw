@@ -164,7 +164,9 @@ func RefreshExpired(certpath string, t time.Time, r refresher) (_ time.Duration,
 	// iteration where it'll use the certicates actual expiration to compute the next iteration.
 	if _, err = os.Stat(certpath); os.IsNotExist(err) {
 		log.Println("forcing refresh due to missing certificate", certpath)
-		r.Refresh()
+		if err = r.Refresh(); err != nil {
+			return due, err
+		}
 	}
 
 	if expiration, err = expiredCert(certpath); err != nil {

@@ -34,11 +34,12 @@ func TestRefreshExpired(t *testing.T) {
 
 		due, err := certificatecache.RefreshExpired(path, time.Now(), refresherFunc(func() error {
 			calls++
+			writecert(t, path, 8*time.Hour)
 			return nil
 		}))
 		require.NoError(t, err)
 		require.Equal(t, 1, calls)
-		require.Equal(t, time.Minute, due)
+		require.InDelta(t, float64(2*time.Hour), float64(due), float64(time.Minute)) // expiration / 4 of the generated certificate
 	})
 
 	t.Run("missing certificate propagates the refresh error", func(t *testing.T) {
