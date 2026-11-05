@@ -1,15 +1,21 @@
 package shell_test
 
 import (
+	"io"
+	"log"
 	"os"
 	"sort"
+	"testing"
 
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/joho/godotenv"
-	. "github.com/onsi/ginkgo/v2"
-
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
+
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	os.Exit(m.Run())
+}
 
 func mustReadString(path string) string {
 	raw, err := os.ReadFile(path)
@@ -29,24 +35,31 @@ func fromMap(m map[string]string) string {
 	return env
 }
 
-var _ = Describe("Environ", func() {
-	DescribeTable("Environment Parsing",
-		func(example string, expected ...string) {
-			result := shell.Environ(example)
-			sort.Strings(result)
-			sort.Strings(expected)
-			Expect(result).To(Equal(expected))
-		},
-		Entry("basic environment", "FOO=BAR", "FOO=BAR"),
-		Entry("quoted environment", "FOO=\"HELLO WORLD\"", "FOO=\"HELLO WORLD\""),
-		Entry("multiline environment 1", fromMap(map[string]string{"FOO": "HELLO\nWORLD"}), "FOO=\"HELLO\nWORLD\""),
-		Entry("multiline environment 2", "FOO=\"HELLO\\nWORLD\"", "FOO=\"HELLO\nWORLD\""),
-		Entry(
+func TestEnvironParsing(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		example  string
+		expected []string
+	}{
+		{"basic environment", "FOO=BAR", []string{"FOO=BAR"}},
+		{"quoted environment", "FOO=\"HELLO WORLD\"", []string{"FOO=\"HELLO WORLD\""}},
+		{"multiline environment 1", fromMap(map[string]string{"FOO": "HELLO\nWORLD"}), []string{"FOO=\"HELLO\nWORLD\""}},
+		{"multiline environment 2", "FOO=\"HELLO\\nWORLD\"", []string{"FOO=\"HELLO\nWORLD\""}},
+		{
 			"environmnet file example",
 			mustReadString(".fixtures/environ.env"),
-			"SIMPLE=VALUE",
-			"QUOTED=\"QUOTED VALUE\"",
-			"MULTILINE=\"Line1\nLine2\"",
-		),
-	)
-})
+			[]string{
+				"SIMPLE=VALUE",
+				"QUOTED=\"QUOTED VALUE\"",
+				"MULTILINE=\"Line1\nLine2\"",
+			},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			result := shell.Environ(c.example)
+			sort.Strings(result)
+			sort.Strings(c.expected)
+			require.Equal(t, c.expected, result)
+		})
+	}
+}

@@ -2,10 +2,10 @@ package shell
 
 import (
 	"os/user"
+	"testing"
 	"time"
 
-	g "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
 var example1 = Context{
@@ -26,26 +26,27 @@ var example1 = Context{
 	initiator:     "DEPLOYER",
 }
 
-var _ = g.Describe("Context", func() {
-	g.DescribeTable("variable substitution",
-		func(ctx Context, input, expected string) {
-			result := ctx.variableSubst(input)
-			Expect(result).To(Equal(expected))
-		},
-		g.Entry("basic environment deprecated", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ARCHIVEDIR WORKDIR 00000000-0000-0000-0000-000000000000 %"),
-		g.Entry("basic environment", example1, "%H %m %d %f %u %U %h %bw.work.directory% %bw.archive.directory% %bw.cache.directory% %bw.temp.directory% %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR WORKDIR ARCHIVEDIR CACHEDIR TEMPDIR 00000000-0000-0000-0000-000000000000 %"),
-		g.Entry("properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"),
-		g.Entry("deploy information", example1, "%bw.deploy.id% %bw.deploy.user.name% %bw.deploy.commit%", "00000000-0000-0000-0000-000000000000 DEPLOYER d9662c91bf8c4591ae311d853404ae8e"),
-	)
+func TestContextLinuxVariableSubstitution(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		ctx      Context
+		input    string
+		expected string
+	}{
+		{"basic environment deprecated", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ARCHIVEDIR WORKDIR 00000000-0000-0000-0000-000000000000 %"},
+		{"basic environment", example1, "%H %m %d %f %u %U %h %bw.work.directory% %bw.archive.directory% %bw.cache.directory% %bw.temp.directory% %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR WORKDIR ARCHIVEDIR CACHEDIR TEMPDIR 00000000-0000-0000-0000-000000000000 %"},
+		{"properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"},
+		{"deploy information", example1, "%bw.deploy.id% %bw.deploy.user.name% %bw.deploy.commit%", "00000000-0000-0000-0000-000000000000 DEPLOYER d9662c91bf8c4591ae311d853404ae8e"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			require.Equal(t, c.expected, c.ctx.variableSubst(c.input))
+		})
+	}
+}
 
-	g.DescribeTable("environment variables",
-		func(ctx Context, expected ...string) {
-			result := ctx.environmentSubst()
-			Expect(result).To(Equal(expected))
-		},
-		g.Entry(
-			"basic environment",
-			example1,
+func TestContextLinuxEnvironmentVariables(t *testing.T) {
+	t.Run("basic environment", func(t *testing.T) {
+		require.Equal(t, []string{
 			"FOO=BAR",
 			"BW_ENVIRONMENT_DEPLOY_ID=00000000-0000-0000-0000-000000000000",
 			"BW_ENVIRONMENT_DEPLOY_COMMIT=d9662c91bf8c4591ae311d853404ae8e",
@@ -62,6 +63,6 @@ var _ = g.Describe("Context", func() {
 			"BW_ENVIRONMENT_TEMP_DIRECTORY=TEMPDIR",
 			"BW_ENVIRONMENT_CACHE_DIRECTORY=CACHEDIR",
 			"BW_ENVIRONMENT_CONFIG_DIRECTORY=CONFIGDIR",
-		),
-	)
-})
+		}, example1.environmentSubst())
+	})
+}

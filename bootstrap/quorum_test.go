@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"net"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var _ = Describe("Quorum", func() {
+func TestQuorum(t *testing.T) {
 	var (
 		peer1    = agent.NewPeer("node1")
 		archive1 = agent.Archive{
@@ -35,13 +35,13 @@ var _ = Describe("Quorum", func() {
 		}
 	)
 
-	It("should succeed when no errors occur", func() {
+	t.Run("should succeed when no errors occur", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeQuorum{
 				InfoResponse: agent.InfoResponse{
 					Mode: agent.InfoResponse_None,
@@ -53,51 +53,51 @@ var _ = Describe("Quorum", func() {
 				},
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
 		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 	})
 
-	It("should return no deployments error when no deployments exist", func() {
+	t.Run("should return no deployments error when no deployments exist", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeQuorum{
 				InfoResponse: agent.InfoResponse{
 					Mode: agent.InfoResponse_None,
 				},
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
 		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(Equal(agentutil.ErrNoDeployments))
+		require.Equal(t, agentutil.ErrNoDeployments, err)
 	})
 
-	It("should error out when an error occurrs", func() {
+	t.Run("should error out when an error occurrs", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeQuorum{
 				ErrResult: errors.New("boom"),
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
 		mc := cluster.New(p, clustering.NewSingleNode("node1", net.ParseIP("127.0.0.1")))
-		Expect(Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewQuorum(mc, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(HaveOccurred())
+		require.Error(t, err)
 	})
-})
+}

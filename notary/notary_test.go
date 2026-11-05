@@ -1,8 +1,9 @@
 package notary_test
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/james-lawrence/bw/notary"
@@ -12,57 +13,57 @@ import (
 	"github.com/james-lawrence/bw/internal/testingx"
 )
 
-var _ = Describe("Notary", func() {
-	Describe("Grant", func() {
-		It("should fail without credentials", func() {
-			notary := New("", nil, NewDirectory(testingx.TempDir()))
-			conn, server := testingx.NewGRPCServer(func(s *grpc.Server) {
+func TestNotary(t *testing.T) {
+	t.Run("Grant", func(t *testing.T) {
+		t.Run("should fail without credentials", func(t *testing.T) {
+			notary := New("", nil, NewDirectory(testingx.TempDir(t)))
+			conn, server := testingx.NewGRPCServer(t, func(s *grpc.Server) {
 				notary.Bind(s)
 			})
-			defer testingx.GRPCCleanup(conn, server)
+			defer testingx.GRPCCleanup(t, conn, server)
 
 			c := NewClient(NewStaticDialer(conn))
 			_, err := c.Grant(&Grant{})
-			Expect(err).To(MatchError("rpc error: code = PermissionDenied desc = invalid credentials"))
+			require.EqualError(t, err, "rpc error: code = PermissionDenied desc = invalid credentials")
 		})
 
-		It("should succeed with credentials", func() {
-			c, cleanup := QuickService()
+		t.Run("should succeed with credentials", func(t *testing.T) {
+			c, cleanup := QuickService(t)
 			defer cleanup()
 
 			// generate a new key to add.
-			_, npubkey := QuickKey()
+			_, npubkey := QuickKey(t)
 			ngrant, err := c.Grant(&Grant{Authorization: npubkey, Permission: UserFull()})
-			Expect(err).To(Succeed())
-			Expect(ngrant.Authorization).To(Equal(npubkey))
+			require.NoError(t, err)
+			require.Equal(t, npubkey, ngrant.Authorization)
 		})
 	})
 
-	Describe("Revoke", func() {
-		It("should fail without credentials", func() {
-			notary := New("", nil, NewDirectory(testingx.TempDir()))
-			conn, server := testingx.NewGRPCServer(func(s *grpc.Server) {
+	t.Run("Revoke", func(t *testing.T) {
+		t.Run("should fail without credentials", func(t *testing.T) {
+			notary := New("", nil, NewDirectory(testingx.TempDir(t)))
+			conn, server := testingx.NewGRPCServer(t, func(s *grpc.Server) {
 				notary.Bind(s)
 			})
-			defer testingx.GRPCCleanup(conn, server)
+			defer testingx.GRPCCleanup(t, conn, server)
 
 			c := NewClient(NewStaticDialer(conn))
 			_, err := c.Revoke("")
-			Expect(err).To(MatchError("rpc error: code = PermissionDenied desc = invalid credentials"))
+			require.EqualError(t, err, "rpc error: code = PermissionDenied desc = invalid credentials")
 		})
 
-		It("should succeed with credentials", func() {
-			c, cleanup := QuickService()
+		t.Run("should succeed with credentials", func(t *testing.T) {
+			c, cleanup := QuickService(t)
 			defer cleanup()
 
 			// generate a new key to add.
-			_, npubkey := QuickKey()
+			_, npubkey := QuickKey(t)
 			ngrant, err := c.Grant(&Grant{Authorization: npubkey, Permission: UserFull()})
-			Expect(err).To(Succeed())
-			Expect(ngrant.Authorization).To(Equal(npubkey))
+			require.NoError(t, err)
+			require.Equal(t, npubkey, ngrant.Authorization)
 			nrevoked, err := c.Revoke(ngrant.Fingerprint)
-			Expect(err).To(Succeed())
-			Expect(proto.Equal(nrevoked, ngrant)).To(BeTrue())
+			require.NoError(t, err)
+			require.True(t, proto.Equal(nrevoked, ngrant))
 		})
 	})
-})
+}

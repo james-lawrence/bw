@@ -2,22 +2,21 @@ package interp_test
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"go/build"
 	"io"
 	"log"
 	"reflect"
 	"strings"
+	"testing"
 
 	yaegi "github.com/traefik/yaegi/interp"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/james-lawrence/bw/directives/interp"
 )
 
-var _ = Describe("osfix", func() {
-	It("Exit should not crash the program", func() {
+func TestOsfix(t *testing.T) {
+	t.Run("Exit should not crash the program", func(t *testing.T) {
 		c := Compiler{
 			Build:   build.Default,
 			Environ: []string{},
@@ -32,10 +31,10 @@ var _ = Describe("osfix", func() {
 			}
 		`)
 		err := c.Execute(context.Background(), "example.go", buf)
-		Expect(err).ToNot(Succeed())
+		require.Error(t, err)
 	})
 
-	It("should override os.Getwd() the working directory", func() {
+	t.Run("should override os.Getwd() the working directory", func(t *testing.T) {
 		s := ""
 		inc := func(in string) {
 			s = in
@@ -65,11 +64,11 @@ var _ = Describe("osfix", func() {
 				example.String(dir)
 			}
 		`)
-		Expect(c.Execute(context.Background(), "example.go", buf)).To(Succeed())
-		Expect(s).To(Equal("/tmp"))
+		require.NoError(t, c.Execute(context.Background(), "example.go", buf))
+		require.Equal(t, "/tmp", s)
 	})
 
-	It("should disallow os.Chdir()", func() {
+	t.Run("should disallow os.Chdir()", func(t *testing.T) {
 		c := Compiler{
 			Build:            build.Default,
 			WorkingDirectory: "/tmp",
@@ -88,6 +87,6 @@ var _ = Describe("osfix", func() {
 				}
 			}
 		`)
-		Expect(c.Execute(context.Background(), "example.go", buf)).ToNot(Succeed())
+		require.Error(t, c.Execute(context.Background(), "example.go", buf))
 	})
-})
+}

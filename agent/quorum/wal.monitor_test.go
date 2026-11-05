@@ -3,13 +3,12 @@ package quorum
 import (
 	"context"
 	"errors"
+	"github.com/stretchr/testify/require"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -19,7 +18,7 @@ func (t failingDispatcher) Dispatch(context.Context, ...*agent.Message) error {
 	return t.cause
 }
 
-var _ = Describe("monitoredWAL", func() {
+func TestMonitoredWAL(t *testing.T) {
 	var (
 		leader = func() *agent.Peer { return p }
 		follow = func() *agent.Peer { return nil }
@@ -32,88 +31,88 @@ var _ = Describe("monitoredWAL", func() {
 		return newMonitoredWAL(&w, monitor), monitor
 	}
 
-	apply := func(wal monitoredWAL, m *agent.Message) interface{} {
+	apply := func(t *testing.T, wal monitoredWAL, m *agent.Message) interface{} {
 		raw, err := proto.Marshal(m)
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 		return wal.Apply(&raft.Log{Type: raft.LogCommand, Data: raw})
 	}
 
-	deploy := func(wal monitoredWAL) {
-		apply(wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
-		apply(wal, agent.LogInfo(p, "a"))
-		apply(wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Done}))
+	deploy := func(t *testing.T, wal monitoredWAL) {
+		apply(t, wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
+		apply(t, wal, agent.LogInfo(p, "a"))
+		apply(t, wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Done}))
 	}
 
-	It("should report the first slow apply and the max duration of each deploy", func() {
+	t.Run("should report the first slow apply and the max duration of each deploy", func(t *testing.T) {
 		d := &recordingDispatcher{}
 		wal, monitor := newWAL(d, leader)
 
-		deploy(wal)
-		deploy(wal)
+		deploy(t, wal)
+		deploy(t, wal)
 
-		Expect(monitor.Close()).To(Succeed())
+		require.NoError(t, monitor.Close())
 		msgs := d.all()
-		Expect(msgs).To(HaveLen(4))
-		Expect(msgs[0].GetLog().GetLog()).To(ContainSubstring("WARN - fsm apply exceeded"))
-		Expect(msgs[1].GetLog().GetLog()).To(ContainSubstring("fsm apply max duration"))
-		Expect(msgs[2].GetLog().GetLog()).To(ContainSubstring("WARN - fsm apply exceeded"))
-		Expect(msgs[3].GetLog().GetLog()).To(ContainSubstring("fsm apply max duration"))
+		require.Len(t, msgs, 4)
+		require.Contains(t, msgs[0].GetLog().GetLog(), "WARN - fsm apply exceeded")
+		require.Contains(t, msgs[1].GetLog().GetLog(), "fsm apply max duration")
+		require.Contains(t, msgs[2].GetLog().GetLog(), "WARN - fsm apply exceeded")
+		require.Contains(t, msgs[3].GetLog().GetLog(), "fsm apply max duration")
 	})
 
-	It("should not report when no apply is slow", func() {
+	t.Run("should not report when no apply is slow", func(t *testing.T) {
 		d := &recordingDispatcher{}
 		wal, monitor := newWAL(d, leader)
 		monitor.threshold = time.Minute
 
-		apply(wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
-		Expect(monitor.Close()).To(Succeed())
-		Expect(d.all()).To(BeEmpty())
+		apply(t, wal, agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
+		require.NoError(t, monitor.Close())
+		require.Empty(t, d.all())
 	})
 
-	It("should not report when not the leader", func() {
+	t.Run("should not report when not the leader", func(t *testing.T) {
 		d := &recordingDispatcher{}
 		wal, monitor := newWAL(d, follow)
 
-		deploy(wal)
+		deploy(t, wal)
 
-		Expect(monitor.Close()).To(Succeed())
-		Expect(d.all()).To(BeEmpty())
+		require.NoError(t, monitor.Close())
+		require.Empty(t, d.all())
 	})
 
-	It("should send the queued reports before close returns", func() {
+	t.Run("should send the queued reports before close returns", func(t *testing.T) {
 		d := &recordingDispatcher{}
 		wal, monitor := newWAL(&delayedDispatcher{Dispatcher: d, delay: 50 * time.Millisecond}, leader)
 
-		deploy(wal)
+		deploy(t, wal)
 
-		Expect(monitor.Close()).To(Succeed())
-		Expect(d.all()).To(HaveLen(2))
+		require.NoError(t, monitor.Close())
+		require.Len(t, d.all(), 2)
 	})
 
-	It("should return the failure to report from close", func() {
+	t.Run("should return the failure to report from close", func(t *testing.T) {
 		cause := errors.New("boom")
 		wal, monitor := newWAL(failingDispatcher{cause: cause}, leader)
 
-		deploy(wal)
+		deploy(t, wal)
 
-		Expect(monitor.Close()).To(MatchError(cause))
+		require.ErrorIs(t, monitor.Close(), cause)
 	})
 
-	It("should return the error of the wrapped wal", func() {
+	t.Run("should return the error of the wrapped wal", func(t *testing.T) {
 		wal, monitor := newWAL(&recordingDispatcher{}, leader)
 		defer monitor.Close()
 
-		Expect(apply(wal, agent.NewUploadProgress(p, 1, 2))).To(HaveOccurred())
+		require.Error(t, apply(t, wal, agent.NewUploadProgress(p, 1, 2)).(error))
 	})
 
-	It("should pass the other log types through", func() {
+	t.Run("should pass the other log types through", func(t *testing.T) {
 		wal, monitor := newWAL(&recordingDispatcher{}, leader)
 		defer monitor.Close()
 
-		Expect(wal.Apply(&raft.Log{Type: raft.LogNoop})).To(BeNil())
-		Expect(wal.Apply(&raft.Log{Type: raft.LogBarrier})).To(BeNil())
+		require.Nil(t, wal.Apply(&raft.Log{Type: raft.LogNoop}))
+		require.Nil(t, wal.Apply(&raft.Log{Type: raft.LogBarrier}))
 	})
-})
+}
 
 // delayedDispatcher slows every dispatch, leaving reports queued.
 type delayedDispatcher struct {

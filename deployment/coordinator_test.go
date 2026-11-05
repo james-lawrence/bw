@@ -3,25 +3,25 @@ package deployment_test
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
+	"os"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/storage"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Coordinator", func() {
-	var workdir string
-	BeforeEach(func() {
-		workdir = testingx.TempDir()
-	})
+func TestCoordinator(t *testing.T) {
 
-	It("deployments should return the deploy options", func() {
+	t.Run("deployments should return the deploy options", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
 		p := agent.NewPeer("node1")
 		c := deployment.New(
 			p,
@@ -30,8 +30,8 @@ var _ = Describe("Coordinator", func() {
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
 		)
 		deploys, err := c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(0))
+		require.NoError(t, err)
+		require.Len(t, deploys, 0)
 		a := &agent.Archive{
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -44,18 +44,20 @@ var _ = Describe("Coordinator", func() {
 		}
 
 		_, err = c.Deploy(context.Background(), "test user", dopts, a)
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
 
 		deploys, err = c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(1))
-		Expect(deploys[0].Options).ToNot(BeNil())
+		require.NoError(t, err)
+		require.Len(t, deploys, 1)
+		require.NotNil(t, deploys[0].Options)
 		opts := deploys[0].Options
-		Expect(opts.Timeout).To(Equal(int64(time.Minute)))
-		Expect(opts.IgnoreFailures).To(Equal(true))
+		require.Equal(t, int64(time.Minute), opts.Timeout)
+		require.Equal(t, true, opts.IgnoreFailures)
 	})
 
-	PIt("should prevent deploys if one is already running", func() {
+	t.Run("should prevent deploys if one is already running", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		t.Skip("pending")
 		p := agent.NewPeer("node1")
 		c := deployment.New(
 			p,
@@ -64,8 +66,8 @@ var _ = Describe("Coordinator", func() {
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
 		)
 		deploys, err := c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(0))
+		require.NoError(t, err)
+		require.Len(t, deploys, 0)
 		a := &agent.Archive{
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -78,27 +80,28 @@ var _ = Describe("Coordinator", func() {
 		}
 
 		_, err = c.Deploy(context.Background(), "test user", dopts, a)
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
 
 		deploys, err = c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(1))
+		require.NoError(t, err)
+		require.Len(t, deploys, 1)
 
 		a2 := &agent.Archive{
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
 		}
 		_, err = c.Deploy(context.Background(), "test user 2", dopts, a2)
-		Expect(err).To(MatchError(fmt.Sprintf("test user is already deploying: %s - Deploying", bw.RandomID(a.DeploymentID).String())))
+		require.EqualError(t, err, fmt.Sprintf("test user is already deploying: %s - Deploying", bw.RandomID(a.DeploymentID).String()))
 
-		Eventually(func() []*agent.Deploy {
+		require.Eventually(t, func() bool {
 			deploys, err := c.Deployments()
-			Expect(err).ToNot(HaveOccurred())
-			return deploys
-		}).Should(HaveLen(2))
+			require.NoError(t, err)
+			return len(deploys) == 2
+		}, time.Second, 10*time.Millisecond)
 	})
 
-	It("should be able to cancel a running deploy", func() {
+	t.Run("should be able to cancel a running deploy", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
 		p := agent.NewPeer("node1")
 		c := deployment.New(
 			p,
@@ -107,8 +110,8 @@ var _ = Describe("Coordinator", func() {
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
 		)
 		deploys, err := c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(0))
+		require.NoError(t, err)
+		require.Len(t, deploys, 0)
 		a := &agent.Archive{
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -121,7 +124,7 @@ var _ = Describe("Coordinator", func() {
 		}
 
 		_, err = c.Deploy(context.Background(), "test user", dopts, a)
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
 
 		c.Cancel()
 
@@ -130,14 +133,15 @@ var _ = Describe("Coordinator", func() {
 			Peer:         p,
 		}
 		_, err = c.Deploy(context.Background(), "test user 2", dopts, a2)
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
 
 		deploys, err = c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(2))
+		require.NoError(t, err)
+		require.Len(t, deploys, 2)
 	})
 
-	It("should be safe to cancel a deploy multiple times", func() {
+	t.Run("should be safe to cancel a deploy multiple times", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
 		p := agent.NewPeer("node1")
 		c := deployment.New(
 			p,
@@ -146,8 +150,8 @@ var _ = Describe("Coordinator", func() {
 			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
 		)
 		deploys, err := c.Deployments()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(deploys).To(HaveLen(0))
+		require.NoError(t, err)
+		require.Len(t, deploys, 0)
 		a := &agent.Archive{
 			DeploymentID: bw.MustGenerateID(),
 			Peer:         p,
@@ -160,9 +164,17 @@ var _ = Describe("Coordinator", func() {
 		}
 
 		_, err = c.Deploy(context.Background(), "test user", dopts, a)
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
 
 		c.Cancel()
 		c.Cancel()
 	})
-})
+}
+
+func TestMain(m *testing.M) {
+	log.SetFlags(log.Flags() | log.Lshortfile)
+	log.SetOutput(io.Discard)
+	code := m.Run()
+	testingx.Cleanup()
+	os.Exit(code)
+}

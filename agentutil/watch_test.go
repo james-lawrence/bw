@@ -3,14 +3,13 @@ package agentutil_test
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/james-lawrence/bw/agentutil"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 type failingDialer struct{}
@@ -19,22 +18,24 @@ func (failingDialer) DialContext(ctx context.Context, options ...grpc.DialOption
 	return nil, errors.New("unable to dial")
 }
 
-var _ = Describe("WatchEvents", func() {
-	It("should return once the context is cancelled even if events are no longer consumed", func() {
-		ctx, cancel := context.WithCancel(context.Background())
-		// nothing reads from events, e.g. the ux has already exited.
-		events := make(chan *agent.Message)
-		returned := make(chan struct{})
+func TestWatchEventsShouldReturnOnceTheContextIsCancelledEvenIfEventsAreNoLongerConsumed(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	// nothing reads from events, e.g. the ux has already exited.
+	events := make(chan *agent.Message)
+	returned := make(chan struct{})
 
-		go func() {
-			defer close(returned)
-			WatchEvents(ctx, agent.NewPeer("local"), failingDialer{}, events)
-		}()
+	go func() {
+		defer close(returned)
+		WatchEvents(ctx, agent.NewPeer("local"), failingDialer{}, events)
+	}()
 
-		// give the watcher time to block delivering the dial failure.
-		time.Sleep(50 * time.Millisecond)
-		cancel()
+	// give the watcher time to block delivering the dial failure.
+	time.Sleep(50 * time.Millisecond)
+	cancel()
 
-		Eventually(returned, time.Second).Should(BeClosed())
-	})
-})
+	select {
+	case <-returned:
+	case <-time.After(time.Second):
+		require.FailNow(t, "WatchEvents did not return after the context was cancelled")
+	}
+}

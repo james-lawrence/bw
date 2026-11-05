@@ -2,75 +2,74 @@ package agent_test
 
 import (
 	"bytes"
+	"github.com/stretchr/testify/require"
+	"testing"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/journal"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var epoch = time.Date(2026, 10, 30, 16, 0, 0, 0, time.UTC)
 
-var _ = Describe("Cursor", func() {
+func TestCursor(t *testing.T) {
 	segment := uuid.Must(uuid.FromString(journal.Segment(epoch)[:36]))
 
-	It("should round trip the segment and offset", func() {
+	t.Run("should round trip the segment and offset", func(t *testing.T) {
 		c := agent.NewCursor(segment, 123456789)
-		Expect(c.Segment()).To(Equal(segment))
-		Expect(c.Offset()).To(Equal(int64(123456789)))
+		require.Equal(t, segment, c.Segment())
+		require.Equal(t, int64(123456789), c.Offset())
 	})
 
-	It("should be the segment id at offset zero and remain a valid v7", func() {
+	t.Run("should be the segment id at offset zero and remain a valid v7", func(t *testing.T) {
 		c := agent.NewCursor(segment, 0)
-		Expect(uuid.UUID(c)).To(Equal(segment))
-		Expect(uuid.UUID(c).Version()).To(Equal(uuid.V7))
-		Expect(uuid.UUID(c).Variant()).To(Equal(uuid.VariantRFC9562))
+		require.Equal(t, segment, uuid.UUID(c))
+		require.Equal(t, uuid.V7, uuid.UUID(c).Version())
+		require.Equal(t, uuid.VariantRFC9562, uuid.UUID(c).Variant())
 	})
 
-	It("should keep the version and variant when holding a maximum offset", func() {
+	t.Run("should keep the version and variant when holding a maximum offset", func(t *testing.T) {
 		c := agent.NewCursor(segment, 1<<62-1)
-		Expect(c.Offset()).To(Equal(int64(1<<62 - 1)))
-		Expect(uuid.UUID(c).Version()).To(Equal(uuid.V7))
-		Expect(uuid.UUID(c).Variant()).To(Equal(uuid.VariantRFC9562))
-		Expect(c.Segment()).To(Equal(segment))
+		require.Equal(t, int64(1<<62-1), c.Offset())
+		require.Equal(t, uuid.V7, uuid.UUID(c).Version())
+		require.Equal(t, uuid.VariantRFC9562, uuid.UUID(c).Variant())
+		require.Equal(t, segment, c.Segment())
 	})
 
-	It("should order by segment then offset", func() {
+	t.Run("should order by segment then offset", func(t *testing.T) {
 		next := uuid.Must(uuid.FromString(journal.Segment(epoch.Add(15 * time.Second))[:36]))
 		a, b, c := agent.NewCursor(segment, 5), agent.NewCursor(segment, 900), agent.NewCursor(next, 1)
-		Expect(bytes.Compare(a[:], b[:])).To(Equal(-1))
-		Expect(bytes.Compare(b[:], c[:])).To(Equal(-1))
+		require.Equal(t, -1, bytes.Compare(a[:], b[:]))
+		require.Equal(t, -1, bytes.Compare(b[:], c[:]))
 	})
-})
+}
 
-var _ = Describe("Cursor from messages", func() {
-	It("should be the start of the window the message belongs to", func() {
+func TestCursorFromMessages(t *testing.T) {
+	t.Run("should be the start of the window the message belongs to", func(t *testing.T) {
 		m := agent.LogInfo(agent.NewPeer("node"), "message")
 		c := agent.CursorOf(m)
-		Expect(c).To(Equal(agent.WindowCursor(agent.MessageTime(m))))
-		Expect(c.Offset()).To(BeZero())
-		Expect(agent.MessageTime(m).Sub(time.UnixMilli(agent.MessageTime(m).UnixMilli()))).To(BeZero())
+		require.Equal(t, agent.WindowCursor(agent.MessageTime(m)), c)
+		require.Zero(t, c.Offset())
+		require.Zero(t, agent.MessageTime(m).Sub(time.UnixMilli(agent.MessageTime(m).UnixMilli())))
 	})
 
-	It("should place v4 messages by their timestamp", func() {
+	t.Run("should place v4 messages by their timestamp", func(t *testing.T) {
 		m := agent.LogInfo(agent.NewPeer("node"), "message")
 		m.Id = uuid.Must(uuid.NewV4()).String()
 		m.Ts = epoch.Add(7 * time.Second).Unix()
-		Expect(agent.CursorOf(m)).To(Equal(agent.WindowCursor(epoch)))
+		require.Equal(t, agent.WindowCursor(epoch), agent.CursorOf(m))
 	})
 
-	It("should be zero for messages without a time", func() {
-		Expect(agent.CursorOf(&agent.Message{})).To(Equal(agent.Cursor{}))
+	t.Run("should be zero for messages without a time", func(t *testing.T) {
+		require.Equal(t, agent.Cursor{}, agent.CursorOf(&agent.Message{}))
 	})
 
-	It("should round trip through bytes and treat anything else as zero", func() {
+	t.Run("should round trip through bytes and treat anything else as zero", func(t *testing.T) {
 		c := agent.NewCursor(agent.WindowCursor(epoch).Segment(), 42)
-		Expect(agent.CursorFromBytes(c.Bytes())).To(Equal(c))
-		Expect(agent.Cursor{}.Bytes()).To(BeNil())
-		Expect(agent.CursorFromBytes(nil)).To(Equal(agent.Cursor{}))
-		Expect(agent.CursorFromBytes([]byte{1, 2, 3})).To(Equal(agent.Cursor{}))
+		require.Equal(t, c, agent.CursorFromBytes(c.Bytes()))
+		require.Nil(t, agent.Cursor{}.Bytes())
+		require.Equal(t, agent.Cursor{}, agent.CursorFromBytes(nil))
+		require.Equal(t, agent.Cursor{}, agent.CursorFromBytes([]byte{1, 2, 3}))
 	})
-})
+}

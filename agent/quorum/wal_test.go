@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"sync"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -12,9 +13,7 @@ import (
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/journal"
 
-	. "github.com/onsi/ginkgo/v2"
-
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -96,123 +95,159 @@ var (
 	p       = agent.NewPeer("abc123")
 	archive = &agent.Archive{}
 )
-var _ = DescribeTable(
-	"WAL Snapshot/Restore", func(commands ...*agent.Message) {
-		deployment := newDeployment(nil)
-		mobs, err := journal.New(GinkgoT().TempDir())
-		Expect(err).To(Succeed())
-		obs := NewObserver(mobs)
-		wal := NewWAL(
-			NewTranscoder(
-				deployment,
-				obs,
-			),
-		)
 
-		Expect(snapshotRestore(wal, bytes.NewBuffer(nil), commands...)).To(Succeed())
-	},
-	Entry(
-		"successful deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-	Entry(
-		"failed deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
-	),
-	Entry(
-		"cancelled deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-	),
-	Entry(
-		"sequential successful deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-	Entry(
-		"sequential cancelled deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-	),
-	Entry(
-		"sequential failed, cancelled deployment",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-	Entry(
-		"sequential deployment begin",
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandRestart()),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-)
+func TestWALSnapshotRestore(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		commands []*agent.Message
+	}{
+		{
+			"successful deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+		{
+			"failed deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
+			},
+		},
+		{
+			"cancelled deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+			},
+		},
+		{
+			"sequential successful deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+		{
+			"sequential cancelled deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+			},
+		},
+		{
+			"sequential failed, cancelled deployment",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandFailedQuick()),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+		{
+			"sequential deployment begin",
+			[]*agent.Message{
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			deployment := newDeployment(nil)
+			mobs, err := journal.New(t.TempDir())
+			require.NoError(t, err)
+			t.Cleanup(func() { mobs.Close() })
+			obs := NewObserver(mobs)
+			wal := NewWAL(
+				NewTranscoder(
+					deployment,
+					obs,
+				),
+			)
 
-var _ = DescribeTable(
-	"WAL Restore", func(commands ...proto.Message) {
-		deployment := newDeployment(nil)
-		mobs, err := journal.New(GinkgoT().TempDir())
-		Expect(err).To(Succeed())
-		obs := NewObserver(mobs)
-		wal := NewWAL(
-			NewTranscoder(
-				deployment,
-				obs,
-			),
-		)
-		buf := bytes.NewBuffer(nil)
-		Expect(EncodeEvery(buf, commands...)).To(Succeed())
-		Expect(wal.Restore(io.NopCloser(buf))).To(Succeed())
-	},
-	Entry(
-		"successful deployment",
-		agent.NewWALPreamble(),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-	Entry(
-		"sequential deployment begin",
-		agent.NewWALPreamble(),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-	Entry(
-		"sequential deployment begin",
-		agent.NewWALPreamble(),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-		agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
-		agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-		agent.NewDeployCommand(p, agent.DeployCommandRestart()),
-		agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
-	),
-)
+			require.NoError(t, snapshotRestore(wal, bytes.NewBuffer(nil), c.commands...))
+		})
+	}
+}
 
-var _ = Describe("WAL", func() {
-	It("should reject upload progress messages", func() {
-		mobs, err := journal.New(GinkgoT().TempDir())
-		Expect(err).To(Succeed())
+func TestWALRestore(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		commands []proto.Message
+	}{
+		{
+			"successful deployment",
+			[]proto.Message{
+				agent.NewWALPreamble(),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+		{
+			"sequential deployment begin",
+			[]proto.Message{
+				agent.NewWALPreamble(),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+		{
+			"sequential deployment begin",
+			[]proto.Message{
+				agent.NewWALPreamble(),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
+				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
+				agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
+			},
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			deployment := newDeployment(nil)
+			mobs, err := journal.New(t.TempDir())
+			require.NoError(t, err)
+			t.Cleanup(func() { mobs.Close() })
+			obs := NewObserver(mobs)
+			wal := NewWAL(
+				NewTranscoder(
+					deployment,
+					obs,
+				),
+			)
+
+			buf := bytes.NewBuffer(nil)
+			require.NoError(t, EncodeEvery(buf, c.commands...))
+			require.NoError(t, wal.Restore(io.NopCloser(buf)))
+		})
+	}
+}
+
+func TestWAL(t *testing.T) {
+	t.Run("should reject upload progress messages", func(t *testing.T) {
+		mobs, err := journal.New(t.TempDir())
+		require.NoError(t, err)
+		t.Cleanup(func() { mobs.Close() })
 		wal := NewWAL(NewTranscoder(newDeployment(nil), NewObserver(mobs)))
-
 		raw, err := proto.Marshal(agent.NewUploadProgress(p, 1, 2))
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 		_, derr := wal.decode(wal.ctx, raw)
-		Expect(derr).To(HaveOccurred())
+		require.Error(t, derr)
 	})
 
-	Describe("slow apply", func() {
-		It("should report the first slow apply and the max duration of a deploy", func() {
+	t.Run("slow apply", func(t *testing.T) {
+		t.Run("should report the first slow apply and the max duration of a deploy", func(t *testing.T) {
 			d := &recordingDispatcher{}
 			monitor := newApplyMonitor(d, func() *agent.Peer { return p })
 			monitor.threshold = 10 * time.Millisecond
@@ -221,22 +256,22 @@ var _ = Describe("WAL", func() {
 
 			apply := func(m *agent.Message) {
 				raw, err := proto.Marshal(m)
-				Expect(err).To(Succeed())
-				Expect(wal.Apply(&raft.Log{Type: raft.LogCommand, Data: raw})).To(BeNil())
+				require.NoError(t, err)
+				require.Nil(t, wal.Apply(&raft.Log{Type: raft.LogCommand, Data: raw}))
 			}
 
 			apply(agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Begin}))
 			apply(agent.LogInfo(p, "a"))
 			apply(agent.LogInfo(p, "b"))
-			Eventually(d.all).Should(HaveLen(1))
-			Expect(d.all()[0].GetLog().GetLog()).To(ContainSubstring("WARN - fsm apply exceeded"))
+			require.Eventually(t, func() bool { return len(d.all()) == 1 }, time.Second, 10*time.Millisecond)
+			require.Contains(t, d.all()[0].GetLog().GetLog(), "WARN - fsm apply exceeded")
 
 			apply(agent.NewDeployCommand(p, &agent.DeployCommand{Command: agent.DeployCommand_Done}))
-			Eventually(d.all).Should(HaveLen(2))
-			Expect(d.all()[1].GetLog().GetLog()).To(ContainSubstring("fsm apply max duration"))
+			require.Eventually(t, func() bool { return len(d.all()) == 2 }, time.Second, 10*time.Millisecond)
+			require.Contains(t, d.all()[1].GetLog().GetLog(), "fsm apply max duration")
 		})
 	})
-})
+}
 
 type slowTranscoder struct{ delay time.Duration }
 

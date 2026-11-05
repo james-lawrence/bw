@@ -3,31 +3,31 @@ package notary_test
 import (
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/sshx"
 	. "github.com/james-lawrence/bw/notary"
 )
 
-var _ = Describe("file storage reload", func() {
-	It("should reload authorizations after repeated atomic replacement", func() {
-		root := GinkgoT().TempDir()
-		src := GinkgoT().TempDir()
+func TestFileStorageReload(t *testing.T) {
+	t.Run("should reload authorizations after repeated atomic replacement", func(t *testing.T) {
+		root := t.TempDir()
+		src := t.TempDir()
 		cfg := filepath.Join(src, "notary.yml")
-		Expect(os.WriteFile(cfg, []byte("notary: {}\n"), 0600)).To(Succeed())
+		require.NoError(t, os.WriteFile(cfg, []byte("notary: {}\n"), 0600))
 
 		c, err := NewFromFile(root, cfg)
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 
 		newkey := func(comment string) (string, []byte) {
-			s, err := QuickSigner()
-			Expect(err).To(Succeed())
+			s, err := QuickSigner(t)
+			require.NoError(t, err)
 			fp, pub, err := s.AutoSignerInfo()
-			Expect(err).To(Succeed())
+			require.NoError(t, err)
 			return fp, sshx.Comment(pub, comment)
 		}
 
@@ -36,15 +36,15 @@ var _ = Describe("file storage reload", func() {
 
 		swap := func(content []byte) {
 			tmp := filepath.Join(src, "authorized_keys")
-			Expect(os.WriteFile(tmp, content, 0600)).To(Succeed())
-			Expect(CloneAuthorizationFile(tmp, filepath.Join(root, bw.AuthKeysFile))).To(Succeed())
+			require.NoError(t, os.WriteFile(tmp, content, 0600))
+			require.NoError(t, CloneAuthorizationFile(tmp, filepath.Join(root, bw.AuthKeysFile)))
 		}
 
 		swap(pub1)
-		Eventually(func() error { _, err := c.Lookup(fp1); return err }, 2*time.Second, 50*time.Millisecond).Should(Succeed())
+		require.Eventually(t, func() bool { _, err := c.Lookup(fp1); return err == nil }, 2*time.Second, 50*time.Millisecond)
 
 		swap(pub2)
-		Eventually(func() error { _, err := c.Lookup(fp2); return err }, 2*time.Second, 50*time.Millisecond).Should(Succeed())
-		Eventually(func() error { _, err := c.Lookup(fp1); return err }, 2*time.Second, 50*time.Millisecond).ShouldNot(Succeed())
+		require.Eventually(t, func() bool { _, err := c.Lookup(fp2); return err == nil }, 2*time.Second, 50*time.Millisecond)
+		require.Eventually(t, func() bool { _, err := c.Lookup(fp1); return err != nil }, 2*time.Second, 50*time.Millisecond)
 	})
-})
+}

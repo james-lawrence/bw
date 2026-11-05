@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/james-lawrence/bw/cluster"
@@ -20,8 +21,7 @@ import (
 
 	"github.com/hashicorp/memberlist"
 	"github.com/hashicorp/raft"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
 func testRaftConfig() *raft.Config {
@@ -97,10 +97,10 @@ func findState(s raftStateFilter, peers ...*raft.Raft) []*raft.Raft {
 	return r
 }
 
-func getServers(rafts ...*raft.Raft) (ss []raft.Server) {
+func getServers(t *testing.T, rafts ...*raft.Raft) (ss []raft.Server) {
 	for _, node := range findState(leaderFilter, rafts...) {
 		config := node.GetConfiguration()
-		Expect(config.Error()).ToNot(HaveOccurred())
+		require.NoError(t, config.Error())
 		return config.Configuration().Servers
 	}
 	return []raft.Server{}
@@ -141,7 +141,7 @@ func random(peers ...clustering.Memberlist) clustering.Memberlist {
 	panic("tried to get a random member of an empty set")
 }
 
-func overlayRaft(ctx context.Context, q *grpc.ClientConn, tmpdir string, p clustering.Memberlist) (r Protocol) {
+func overlayRaft(t *testing.T, ctx context.Context, q *grpc.ClientConn, tmpdir string, p clustering.Memberlist) (r Protocol) {
 	var (
 		err error
 	)
@@ -174,7 +174,7 @@ func overlayRaft(ctx context.Context, q *grpc.ClientConn, tmpdir string, p clust
 		ProtocolOptionPassiveCheckin(200*time.Millisecond),
 		ProtocolOptionLeadershipGrace(200*time.Millisecond),
 	)
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
 	return r
 }
 
@@ -192,146 +192,144 @@ func clusters(peers ...peer) (o []clustering.Memberlist) {
 	return o
 }
 
-func newPeer(ctx context.Context, tmpdir string, obs *raft.Observer, network *memberlist.MockNetwork, peers ...peer) peer {
+func newPeer(t *testing.T, ctx context.Context, tmpdir string, obs *raft.Observer, network *memberlist.MockNetwork, peers ...peer) peer {
 	events := cluster.NewEventsQueue(nil)
-	conn, _ := testingx.NewGRPCServer(func(srv *grpc.Server) {
+	conn, _ := testingx.NewGRPCServer(t, func(srv *grpc.Server) {
 		events.Bind(srv)
 	})
 
 	c, err := clusteringtestutil.NewPeer(network, clustering.OptionEventDelegate(events), clustering.OptionLogOutput(io.Discard))
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
 	_, err = clusteringtestutil.Connect(c, clusters(peers...)...)
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
 	rctx, rcancel := context.WithCancel(ctx)
-	r := overlayRaft(rctx, conn, tmpdir, c)
+	r := overlayRaft(t, rctx, conn, tmpdir, c)
 	go r.Overlay(c, ProtocolOptionObservers(obs))
 	return peer{c: c, r: &r, rc: rcancel}
 }
 
-var _ = Describe("Raft", func() {
-	Context("peers", func() {
-		It("gracefully joins", func() {
-			var (
-				network memberlist.MockNetwork
-				rafts   []*raft.Raft
-				peers   []peer
-			)
+func TestRaftPeers(t *testing.T) {
+	t.Run("gracefully joins", func(t *testing.T) {
+		var (
+			network memberlist.MockNetwork
+			rafts   []*raft.Raft
+			peers   []peer
+		)
 
-			tmpdir := testingx.TempDir()
-			obsc := make(chan raft.Observation, 100)
-			obs := raft.NewObserver(obsc, true, nil)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+		tmpdir := testingx.TempDir(t)
+		obsc := make(chan raft.Observation, 100)
+		obs := raft.NewObserver(obsc, true, nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-			for i := 0; i < 3; i++ {
-				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-			}
+		for i := 0; i < 3; i++ {
+			peers = append(peers, newPeer(t, ctx, tmpdir, obs, &network, peers...))
+		}
 
-			Eventually(func() []raft.Server {
+		require.Eventually(t, func() bool {
+			rafts = gather(obsc, rafts...)
+			return len(getServers(t, rafts...)) == 3
+		}, 30*time.Second, 10*time.Millisecond)
+
+		for i := 0; i < 5; i++ {
+			peers = append(peers, newPeer(t, ctx, tmpdir, obs, &network, peers...))
+			require.Eventually(t, func() bool {
 				rafts = gather(obsc, rafts...)
-				return getServers(rafts...)
-			}, 30*time.Second).Should(HaveLen(3))
-
-			for i := 0; i < 5; i++ {
-				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-				Eventually(func() int {
-					rafts = gather(obsc, rafts...)
-					return len(getServers(rafts...))
-				}, 30*time.Second).Should(BeNumerically(">=", 3))
-			}
-		})
-
-		It("should gracefully handle departures", func() {
-			var (
-				network memberlist.MockNetwork
-				rafts   []*raft.Raft
-				peers   []peer
-			)
-
-			tmpdir := testingx.TempDir()
-			obsc := make(chan raft.Observation, 100)
-			obs := raft.NewObserver(obsc, true, nil)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for i := 0; i < 5; i++ {
-				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-			}
-
-			Eventually(func() *raft.Raft {
-				rafts = gather(obsc, rafts...)
-				return firstRaft(findState(leaderFilter, rafts...)...)
-			}, 10*time.Second).ShouldNot(BeNil())
-
-			leader := firstRaft(findState(leaderFilter, rafts...)...)
-			Expect(leader.Barrier(time.Second).Error()).To(Succeed())
-
-			for killed, i := 0, 0; i < len(peers) && killed < 2; i++ {
-				p := peers[i]
-				if strings.HasSuffix(string(leader.Leader()), p.c.LocalNode().Name) {
-					continue
-				}
-
-				Expect(p.c.Shutdown()).ToNot(HaveOccurred())
-				p.rc()
-				killed++
-			}
-
-			Eventually(func() []raft.Server {
-				rafts = gather(obsc, rafts...)
-				return getServers(rafts...)
-			}, 10*time.Second).Should(HaveLen(3))
-		})
-
-		It("should allow for a single node to join and depart repeatedly", func() {
-			var (
-				err     error
-				network memberlist.MockNetwork
-				rafts   []*raft.Raft
-				peers   []peer
-			)
-
-			tmpdir := testingx.TempDir()
-			obsc := make(chan raft.Observation, 100)
-			obs := raft.NewObserver(obsc, true, nil)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			for i := 0; i < 3; i++ {
-				peers = append(peers, newPeer(ctx, tmpdir, obs, &network, peers...))
-			}
-
-			Eventually(func() []raft.Server {
-				rafts = gather(obsc, rafts...)
-				return getServers(rafts...)
-			}, 10*time.Second).Should(HaveLen(3))
-
-			current := findPeer(firstRaft(findState(notLeader, rafts...)...), peers...)
-			Expect(current).ToNot(BeNil())
-
-			for i := 0; i < 5; i++ {
-				Eventually(func() []raft.Server {
-					rafts = gather(obsc, rafts...)
-					return voters(getServers(rafts...)...)
-				}, 10*time.Second).Should(HaveLen(3))
-
-				Expect(current.c.Shutdown()).ToNot(HaveOccurred())
-				current.rc()
-
-				Eventually(func() []raft.Server {
-					rafts = gather(obsc, rafts...)
-					return voters(getServers(rafts...)...)
-				}, 10*time.Second).Should(HaveLen(2))
-
-				current.c, err = clusteringtestutil.NewPeerFromConfig(current.c.Config(), clustering.OptionNodeID(current.c.Config().Name))
-				Expect(err).ToNot(HaveOccurred())
-				_, err = clusteringtestutil.Connect(current.c, clusters(peers...)...)
-				Expect(err).ToNot(HaveOccurred())
-				rctx, rcancel := context.WithCancel(ctx)
-				r := overlayRaft(rctx, current.r.StabilityQueue, tmpdir, current.c)
-				go r.Overlay(current.c, ProtocolOptionObservers(obs))
-				current.r, current.rc = &r, rcancel
-			}
-		})
+				return len(getServers(t, rafts...)) >= 3
+			}, 30*time.Second, 10*time.Millisecond)
+		}
 	})
-})
+
+	t.Run("should gracefully handle departures", func(t *testing.T) {
+		var (
+			network memberlist.MockNetwork
+			rafts   []*raft.Raft
+			peers   []peer
+		)
+
+		tmpdir := testingx.TempDir(t)
+		obsc := make(chan raft.Observation, 100)
+		obs := raft.NewObserver(obsc, true, nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		for i := 0; i < 5; i++ {
+			peers = append(peers, newPeer(t, ctx, tmpdir, obs, &network, peers...))
+		}
+
+		require.Eventually(t, func() bool {
+			rafts = gather(obsc, rafts...)
+			return firstRaft(findState(leaderFilter, rafts...)...) != nil
+		}, 10*time.Second, 10*time.Millisecond)
+
+		leader := firstRaft(findState(leaderFilter, rafts...)...)
+		require.NoError(t, leader.Barrier(time.Second).Error())
+
+		for killed, i := 0, 0; i < len(peers) && killed < 2; i++ {
+			p := peers[i]
+			if strings.HasSuffix(string(leader.Leader()), p.c.LocalNode().Name) {
+				continue
+			}
+
+			require.NoError(t, p.c.Shutdown())
+			p.rc()
+			killed++
+		}
+
+		require.Eventually(t, func() bool {
+			rafts = gather(obsc, rafts...)
+			return len(getServers(t, rafts...)) == 3
+		}, 10*time.Second, 10*time.Millisecond)
+	})
+
+	t.Run("should allow for a single node to join and depart repeatedly", func(t *testing.T) {
+		var (
+			err     error
+			network memberlist.MockNetwork
+			rafts   []*raft.Raft
+			peers   []peer
+		)
+
+		tmpdir := testingx.TempDir(t)
+		obsc := make(chan raft.Observation, 100)
+		obs := raft.NewObserver(obsc, true, nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		for i := 0; i < 3; i++ {
+			peers = append(peers, newPeer(t, ctx, tmpdir, obs, &network, peers...))
+		}
+
+		require.Eventually(t, func() bool {
+			rafts = gather(obsc, rafts...)
+			return len(getServers(t, rafts...)) == 3
+		}, 10*time.Second, 10*time.Millisecond)
+
+		current := findPeer(firstRaft(findState(notLeader, rafts...)...), peers...)
+		require.NotNil(t, current)
+
+		for i := 0; i < 5; i++ {
+			require.Eventually(t, func() bool {
+				rafts = gather(obsc, rafts...)
+				return len(voters(getServers(t, rafts...)...)) == 3
+			}, 10*time.Second, 10*time.Millisecond)
+
+			require.NoError(t, current.c.Shutdown())
+			current.rc()
+
+			require.Eventually(t, func() bool {
+				rafts = gather(obsc, rafts...)
+				return len(voters(getServers(t, rafts...)...)) == 2
+			}, 10*time.Second, 10*time.Millisecond)
+
+			current.c, err = clusteringtestutil.NewPeerFromConfig(current.c.Config(), clustering.OptionNodeID(current.c.Config().Name))
+			require.NoError(t, err)
+			_, err = clusteringtestutil.Connect(current.c, clusters(peers...)...)
+			require.NoError(t, err)
+			rctx, rcancel := context.WithCancel(ctx)
+			r := overlayRaft(t, rctx, current.r.StabilityQueue, tmpdir, current.c)
+			go r.Overlay(current.c, ProtocolOptionObservers(obs))
+			current.r, current.rc = &r, rcancel
+		}
+	})
+}

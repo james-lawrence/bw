@@ -3,29 +3,25 @@ package deployment
 import (
 	"os"
 	"path/filepath"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/storage"
-
-	. "github.com/onsi/ginkgo/v2"
-
-	g "github.com/onsi/gomega"
 )
 
-var _ = Describe("Coordinator", func() {
-	var workdir string
-	BeforeEach(func() {
-		workdir = testingx.TempDir()
-	})
+func TestCoordinator(t *testing.T) {
 
-	It("should autocorrect dead deploys", func() {
+	t.Run("should autocorrect dead deploys", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
 		id := bw.MustGenerateID()
 		deploydir := filepath.Join(workdir, "deploys", id.String())
 
-		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())
+		require.NoError(t, os.MkdirAll(deploydir, 0755))
 
 		p := agent.NewPeer("node1")
 		c := New(
@@ -36,8 +32,8 @@ var _ = Describe("Coordinator", func() {
 		)
 
 		deploys, err := c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(0))
+		require.NoError(t, err)
+		require.Len(t, deploys, 0)
 		a := agent.Archive{
 			DeploymentID: id,
 			Peer:         p,
@@ -48,62 +44,64 @@ var _ = Describe("Coordinator", func() {
 			Timeout:        int64(time.Minute),
 		}
 
-		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{
+		require.NoError(t, writeDeployMetadata(deploydir, &agent.Deploy{
 			Initiator: "test user",
 			Archive:   &a,
 			Options:   &dopts,
 			Stage:     agent.Deploy_Deploying,
-		})).To(g.Succeed())
+		}))
 
 		deploys, err = c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(1))
-		g.Expect(deploys[0].Stage).To(g.Equal(agent.Deploy_Failed))
+		require.NoError(t, err)
+		require.Len(t, deploys, 1)
+		require.Equal(t, agent.Deploy_Failed, deploys[0].Stage)
 	})
 
-	DescribeTable("Reset should properly reset deploys directory", func(s agent.Deploy_Stage, result int) {
-		p := agent.NewPeer("node1")
-		c := New(
-			p,
-			NewDirective(),
-			CoordinatorOptionRoot(workdir),
-			CoordinatorOptionStorage(storage.NoopRegistry{}),
-		)
+	t.Run("Reset should properly reset deploys directory", func(t *testing.T) {
+		check := func(t *testing.T, s agent.Deploy_Stage, result int) {
+			workdir := testingx.TempDir(t)
+			p := agent.NewPeer("node1")
+			c := New(
+				p,
+				NewDirective(),
+				CoordinatorOptionRoot(workdir),
+				CoordinatorOptionStorage(storage.NoopRegistry{}),
+			)
 
-		deploys, err := c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(0))
+			deploys, err := c.Deployments()
+			require.NoError(t, err)
+			require.Len(t, deploys, 0)
 
-		dopts := agent.DeployOptions{
-			Concurrency:       1,
-			IgnoreFailures:    false,
-			SilenceDeployLogs: true,
-			Timeout:           int64(time.Minute),
+			dopts := agent.DeployOptions{
+				Concurrency:       1,
+				IgnoreFailures:    false,
+				SilenceDeployLogs: true,
+				Timeout:           int64(time.Minute),
+			}
+			a := agent.Archive{
+				DeploymentID: bw.MustGenerateID(),
+				Peer:         p,
+			}
+			deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
+			require.NoError(t, os.MkdirAll(deploydir, 0755))
+			require.NoError(t, writeDeployMetadata(deploydir, &agent.Deploy{
+				Initiator: "test user",
+				Archive:   &a,
+				Options:   &dopts,
+				Stage:     s,
+			}))
+			deploys, err = c.Deployments()
+			require.NoError(t, err)
+			require.Len(t, deploys, 1)
+
+			require.NoError(t, c.Reset())
+
+			deploys, err = c.Deployments()
+			require.NoError(t, err)
+			require.Len(t, deploys, result)
 		}
-		a := agent.Archive{
-			DeploymentID: bw.MustGenerateID(),
-			Peer:         p,
-		}
-		deploydir := filepath.Join(workdir, "deploys", bw.RandomID(a.DeploymentID).String())
-		g.Expect(os.MkdirAll(deploydir, 0755)).To(g.Succeed())
-		g.Expect(writeDeployMetadata(deploydir, &agent.Deploy{
-			Initiator: "test user",
-			Archive:   &a,
-			Options:   &dopts,
-			Stage:     s,
-		})).To(g.Succeed())
-		deploys, err = c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(1))
-
-		g.Expect(c.Reset()).To(g.Succeed())
-
-		deploys, err = c.Deployments()
-		g.Expect(err).To(g.Succeed())
-		g.Expect(deploys).To(g.HaveLen(result))
-	},
-		Entry("failed deploy should be removed", agent.Deploy_Failed, 0),
-		Entry("currently deploying should be removed", agent.Deploy_Deploying, 0),
-		Entry("completed deploy should remain", agent.Deploy_Completed, 1),
-	)
-})
+		t.Run("failed deploy should be removed", func(t *testing.T) { check(t, agent.Deploy_Failed, 0) })
+		t.Run("currently deploying should be removed", func(t *testing.T) { check(t, agent.Deploy_Deploying, 0) })
+		t.Run("completed deploy should remain", func(t *testing.T) { check(t, agent.Deploy_Completed, 1) })
+	})
+}

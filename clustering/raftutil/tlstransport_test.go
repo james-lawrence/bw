@@ -4,31 +4,31 @@ import (
 	"crypto/tls"
 	"net"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("TLSTransport", func() {
-	It("should gracefully close and reopen a net listenr", func() {
+func TestTLSTransport(t *testing.T) {
+	t.Run("should gracefully close and reopen a net listenr", func(t *testing.T) {
 		c := &tls.Config{
 			InsecureSkipVerify: true,
 		}
 
 		l, err := net.Listen("tcp", "127.1.1.2:9999")
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 		sl := NewStreamTransport(l, NewTLSStreamDialer(c))
 
 		nt := raft.NewNetworkTransport(sl, 5, 10*time.Second, os.Stderr)
-		Expect(autocloseTransport(nt)).To(Succeed())
+		require.NoError(t, autocloseTransport(nt))
 
 		l, err = net.Listen("tcp", "127.1.1.2:9999")
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 
 		sl = NewStreamTransport(l, NewTLSStreamDialer(c))
 		nt = raft.NewNetworkTransport(sl, 5, 10*time.Second, os.Stderr)
-		Expect(autocloseTransport(nt)).To(Succeed())
+		require.NoError(t, autocloseTransport(nt))
 	})
-})
+}

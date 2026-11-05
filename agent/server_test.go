@@ -3,7 +3,10 @@ package agent_test
 import (
 	"context"
 	"io"
+	"log"
 	"net"
+	"os"
+	"testing"
 
 	. "github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
@@ -15,8 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/icrowley/fake"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
 type testauth struct{}
@@ -25,19 +27,22 @@ func (t testauth) Deploy(ctx context.Context) error {
 	return nil
 }
 
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	os.Exit(m.Run())
+}
+
 type harness struct {
 	client   Client
 	cluster  cluster.Cluster
 	listener net.Listener
 }
 
-func (t harness) Cleanup() {
-	Expect(t.listener.Close()).ToNot(HaveOccurred())
-}
+func testClient(t *testing.T) harness {
+	t.Helper()
 
-func testClient() harness {
 	socket, err := net.Listen("tcp", ":0")
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
 	peers := clusteringtestutil.NewNodes(5)
 
 	c := cluster.New(
@@ -56,57 +61,55 @@ func testClient() harness {
 		socket.Addr().String(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	).DialContext(context.Background())
-	Expect(err).ToNot(HaveOccurred())
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		require.NoError(t, socket.Close())
+	})
 
 	return harness{client: NewConn(conn), cluster: c, listener: socket}
 }
 
-var _ = Describe("Server", func() {
-	Context("Connect", func() {
-		It("should return cluster details", func() {
-			h := testClient()
-			defer h.Cleanup()
+func TestServerConnect(t *testing.T) {
+	t.Run("should return cluster details", func(t *testing.T) {
+		h := testClient(t)
 
-			q := h.cluster.Quorum()
-			info, err := h.client.Connect(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(info.Quorum).To(ConsistOf(q[0], q[1], q[2]))
-		})
+		q := h.cluster.Quorum()
+		info, err := h.client.Connect(context.Background())
+		require.NoError(t, err)
+		require.ElementsMatch(t, []*Peer{q[0], q[1], q[2]}, info.Quorum)
 	})
+}
 
-	Context("Info", func() {
-		It("should return information about the agent", func() {
-			h := testClient()
-			defer h.Cleanup()
+func TestServerInfo(t *testing.T) {
+	t.Run("should return information about the agent", func(t *testing.T) {
+		h := testClient(t)
 
-			info, err := h.client.Info(context.Background())
-			Expect(err).ToNot(HaveOccurred())
-			Expect(info.Deployments).To(BeEmpty())
-			tmp := h.cluster.Local()
-			tmp.Status = Peer_Node
-			Expect(proto.Equal(info.Peer, tmp)).To(BeTrue())
-		})
+		info, err := h.client.Info(context.Background())
+		require.NoError(t, err)
+		require.Empty(t, info.Deployments)
+		tmp := h.cluster.Local()
+		tmp.Status = Peer_Node
+		require.True(t, proto.Equal(info.Peer, tmp))
 	})
+}
 
-	Context("Deploy", func() {
-		It("should trigger a deploy on the server", func() {
-			h := testClient()
-			defer h.Cleanup()
+func TestServerDeploy(t *testing.T) {
+	t.Run("should trigger a deploy on the server", func(t *testing.T) {
+		h := testClient(t)
 
-			_, err := h.client.Deploy(context.Background(), &DeployOptions{}, &Archive{})
-			Expect(err).ToNot(HaveOccurred())
-		})
+		_, err := h.client.Deploy(context.Background(), &DeployOptions{}, &Archive{})
+		require.NoError(t, err)
 	})
+}
 
-	Context("Logs", func() {
-		It("should return logs from the given deployer", func() {
-			h := testClient()
-			defer h.Cleanup()
-			p := h.cluster.Local()
-			pipe := h.client.Logs(context.Background(), p, []byte("fake"))
-			raw, err := io.ReadAll(pipe)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(raw)).To(Equal("INFO: fake"))
-		})
+func TestServerLogs(t *testing.T) {
+	t.Run("should return logs from the given deployer", func(t *testing.T) {
+		h := testClient(t)
+		p := h.cluster.Local()
+		pipe := h.client.Logs(context.Background(), p, []byte("fake"))
+		raw, err := io.ReadAll(pipe)
+		require.NoError(t, err)
+		require.Equal(t, "INFO: fake", string(raw))
 	})
-})
+}

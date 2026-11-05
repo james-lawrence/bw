@@ -1,124 +1,117 @@
 package agentutil_test
 
 import (
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"testing"
 	"time"
 
 	. "github.com/james-lawrence/bw/agentutil"
-
-	. "github.com/onsi/ginkgo/v2"
-
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
-var _ = Describe("Agentutil", func() {
-	Context("directory cleanup", func() {
-		var (
-			root string
-		)
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	os.Exit(m.Run())
+}
 
-		makedir := func(root string) string {
-			d, err := os.MkdirTemp(root, "")
-			Expect(err).ToNot(HaveOccurred())
-			return d
-		}
+// dircleanupRoot creates the root directory for the directory cleanup tests, removed when the test completes.
+func dircleanupRoot(t *testing.T) string {
+	t.Helper()
+	root, err := os.MkdirTemp(".", "dircleanup-test")
+	require.NoError(t, err)
+	t.Cleanup(func() { os.RemoveAll(root) })
+	return root
+}
 
-		BeforeEach(func() {
-			var (
-				err error
-			)
-			root, err = os.MkdirTemp(".", "dircleanup-test")
-			Expect(err).ToNot(HaveOccurred())
-		})
+func makedir(t *testing.T, root string) string {
+	t.Helper()
+	d, err := os.MkdirTemp(root, "")
+	require.NoError(t, err)
+	return d
+}
 
-		AfterEach(func() {
-			defer os.RemoveAll(root)
-		})
-
-		Describe("KeepNewestN", func() {
-			DescribeTable("should keep the n newest directories",
-				func(m, n int) {
-					if n > m {
-						n = m
-					}
-					dirs := make([]string, 0, n)
-					for i := 0; i < m; i++ {
-						dirs = append(dirs, makedir(root))
-						time.Sleep(30 * time.Millisecond)
-					}
-
-					MaybeClean(KeepNewestN(n))(Dirs(root))
-
-					for _, d := range dirs[:len(dirs)-n] {
-						Expect(d).ToNot(BeAnExistingFile())
-					}
-					for _, d := range dirs[len(dirs)-n:] {
-						Expect(d).To(BeAnExistingFile())
-					}
-				},
-				Entry("example 1", 5, 1),
-				Entry("example 2", 5, 2),
-				Entry("example 3", 5, 3),
-				Entry("example 4", 5, 4),
-				Entry("example 5", 5, 5),
-				Entry("example 6", 5, 6),
-			)
-			It("should keep the n newest directories", func() {
-				d1 := makedir(root)
+func TestKeepNewestN(t *testing.T) {
+	// should keep the n newest directories
+	for i, c := range [][2]int{{5, 1}, {5, 2}, {5, 3}, {5, 4}, {5, 5}, {5, 6}} {
+		m, n := c[0], c[1]
+		t.Run(fmt.Sprintf("example %d", i+1), func(t *testing.T) {
+			root := dircleanupRoot(t)
+			if n > m {
+				n = m
+			}
+			dirs := make([]string, 0, n)
+			for i := 0; i < m; i++ {
+				dirs = append(dirs, makedir(t, root))
 				time.Sleep(30 * time.Millisecond)
-				d2 := makedir(root)
-				time.Sleep(30 * time.Millisecond)
-				d3 := makedir(root)
-				log.Println(d1, d2, d3)
-				Expect(MaybeClean(KeepNewestN(1))(Dirs(root))).To(Succeed())
-				Expect(d1).ToNot(BeAnExistingFile())
-				Expect(d2).ToNot(BeAnExistingFile())
-				Expect(d3).To(BeAnExistingFile())
-			})
+			}
+
+			MaybeClean(KeepNewestN(n))(Dirs(root))
+
+			for _, d := range dirs[:len(dirs)-n] {
+				require.NoDirExists(t, d)
+			}
+			for _, d := range dirs[len(dirs)-n:] {
+				require.DirExists(t, d)
+			}
 		})
+	}
 
-		Describe("KeepOldestN", func() {
-			DescribeTable("should keep the n oldest directories",
-				func(m, n int) {
-					if n > m {
-						n = m
-					}
-					dirs := make([]string, 0, n)
-					for i := 0; i < m; i++ {
-						dirs = append(dirs, makedir(root))
-						// necessary to ensure order of dirs by creation date.
-						time.Sleep(30 * time.Millisecond)
-					}
-
-					Expect(MaybeClean(KeepOldestN(n))(Dirs(root))).To(Succeed())
-
-					for _, d := range dirs[:n] {
-						Expect(d).To(BeAnExistingFile())
-					}
-					for _, d := range dirs[n:] {
-						Expect(d).ToNot(BeAnExistingFile())
-					}
-				},
-				Entry("example 1", 5, 1),
-				Entry("example 2", 5, 2),
-				Entry("example 3", 5, 3),
-				Entry("example 4", 5, 4),
-				Entry("example 5", 5, 5),
-				Entry("example 6", 5, 6),
-			)
-			It("should keep the n oldest directories", func() {
-				d1 := makedir(root)
-				time.Sleep(30 * time.Millisecond)
-				d2 := makedir(root)
-				time.Sleep(30 * time.Millisecond)
-				d3 := makedir(root)
-
-				Expect(MaybeClean(KeepOldestN(1))(Dirs(root))).To(Succeed())
-				Expect(d1).To(BeAnExistingFile())
-				Expect(d2).ToNot(BeAnExistingFile())
-				Expect(d3).ToNot(BeAnExistingFile())
-			})
-		})
+	t.Run("should keep the n newest directories", func(t *testing.T) {
+		root := dircleanupRoot(t)
+		d1 := makedir(t, root)
+		time.Sleep(30 * time.Millisecond)
+		d2 := makedir(t, root)
+		time.Sleep(30 * time.Millisecond)
+		d3 := makedir(t, root)
+		log.Println(d1, d2, d3)
+		require.NoError(t, MaybeClean(KeepNewestN(1))(Dirs(root)))
+		require.NoDirExists(t, d1)
+		require.NoDirExists(t, d2)
+		require.DirExists(t, d3)
 	})
-})
+}
+
+func TestKeepOldestN(t *testing.T) {
+	// should keep the n oldest directories
+	for i, c := range [][2]int{{5, 1}, {5, 2}, {5, 3}, {5, 4}, {5, 5}, {5, 6}} {
+		m, n := c[0], c[1]
+		t.Run(fmt.Sprintf("example %d", i+1), func(t *testing.T) {
+			root := dircleanupRoot(t)
+			if n > m {
+				n = m
+			}
+			dirs := make([]string, 0, n)
+			for i := 0; i < m; i++ {
+				dirs = append(dirs, makedir(t, root))
+				// necessary to ensure order of dirs by creation date.
+				time.Sleep(30 * time.Millisecond)
+			}
+
+			require.NoError(t, MaybeClean(KeepOldestN(n))(Dirs(root)))
+
+			for _, d := range dirs[:n] {
+				require.DirExists(t, d)
+			}
+			for _, d := range dirs[n:] {
+				require.NoDirExists(t, d)
+			}
+		})
+	}
+
+	t.Run("should keep the n oldest directories", func(t *testing.T) {
+		root := dircleanupRoot(t)
+		d1 := makedir(t, root)
+		time.Sleep(30 * time.Millisecond)
+		d2 := makedir(t, root)
+		time.Sleep(30 * time.Millisecond)
+		d3 := makedir(t, root)
+
+		require.NoError(t, MaybeClean(KeepOldestN(1))(Dirs(root)))
+		require.DirExists(t, d1)
+		require.NoDirExists(t, d2)
+		require.NoDirExists(t, d3)
+	})
+}

@@ -3,22 +3,21 @@ package interp_test
 import (
 	"bytes"
 	"context"
+	"github.com/stretchr/testify/require"
 	"go/build"
 	"io"
 	"log"
 	"strings"
+	"testing"
 
 	yaegi "github.com/traefik/yaegi/interp"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/james-lawrence/bw/directives/interp"
 )
 
-var _ = Describe("log", func() {
-	Describe("SetFlags", func() {
-		It("should error out", func() {
+func TestLog(t *testing.T) {
+	t.Run("SetFlags", func(t *testing.T) {
+		t.Run("should error out", func(t *testing.T) {
 			c := Compiler{
 				Build:   build.Default,
 				Environ: []string{},
@@ -33,12 +32,12 @@ var _ = Describe("log", func() {
 				}
 			`)
 			err := c.Execute(context.Background(), "example.go", buf)
-			Expect(err).ToNot(Succeed())
+			require.Error(t, err)
 		})
 	})
 
-	Describe("Println", func() {
-		It("should log the message", func() {
+	t.Run("Println", func(t *testing.T) {
+		t.Run("should log the message", func(t *testing.T) {
 			logs := bytes.NewBufferString("")
 			c := Compiler{
 				Build:   build.Default,
@@ -55,13 +54,13 @@ var _ = Describe("log", func() {
 			`)
 
 			err := c.Execute(context.Background(), "example.go", buf)
-			Expect(err).To(Succeed())
-			Expect(logs.String()).To(Equal("Hello World\n"))
+			require.NoError(t, err)
+			require.Equal(t, "Hello World\n", logs.String())
 		})
 	})
 
-	Describe("Fatalln", func() {
-		It("should log the message", func() {
+	t.Run("Fatalln", func(t *testing.T) {
+		t.Run("should log the message", func(t *testing.T) {
 			logs := bytes.NewBufferString("")
 			c := Compiler{
 				Build:   build.Default,
@@ -78,8 +77,8 @@ var _ = Describe("log", func() {
 			`)
 
 			err := c.Execute(context.Background(), "example.go", buf)
-			Expect(err).ToNot(Succeed())
-			Expect(logs.String()).To(Equal("Hello World\n"))
+			require.Error(t, err)
+			require.Equal(t, "Hello World\n", logs.String())
 		})
 	})
-})
+}

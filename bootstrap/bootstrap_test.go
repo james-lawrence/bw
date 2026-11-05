@@ -2,11 +2,14 @@ package bootstrap_test
 
 import (
 	"context"
+	"io"
+	"log"
+	"os"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -19,7 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var _ = Describe("Bootstrap", func() {
+func TestBootstrap(t *testing.T) {
 	var (
 		peer1    = agent.NewPeer("node1")
 		archive1 = agent.Archive{
@@ -34,9 +37,9 @@ var _ = Describe("Bootstrap", func() {
 		missing = status.Error(codes.NotFound, "missing deployment")
 	)
 
-	It("should succeed when no errors occur", func() {
+	t.Run("should succeed when no errors occur", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
@@ -50,19 +53,19 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current}))
+		require.NoError(t, Bootstrap(context.Background(), c, dc, nil))
 	})
 
-	It("should fail when it fails to download the archive", func() {
+	t.Run("should fail when it fails to download the archive", func(t *testing.T) {
 		reg := storage.NoopRegistry{Err: errors.New("download failed")}
 		p := agent.NewPeer("local")
 
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
@@ -74,16 +77,16 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
-		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("download failed"))
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current}))
+		require.EqualError(t, errors.Cause(Bootstrap(context.Background(), c, dc, nil)), "download failed")
 	})
 
-	It("should fail when the deployment fails", func() {
+	t.Run("should fail when the deployment fails", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
@@ -97,16 +100,16 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: errors.New("deployment failed")},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
-		Expect(errors.Cause(Bootstrap(context.Background(), c, dc, nil))).To(MatchError("deployment failed"))
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current}))
+		require.EqualError(t, errors.Cause(Bootstrap(context.Background(), c, dc, nil)), "deployment failed")
 	})
 
-	It("should succeed when it finishes bootstrapping from quorum", func() {
+	t.Run("should succeed when it finishes bootstrapping from quorum", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
@@ -120,16 +123,16 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc, nil)).ToNot(HaveOccurred())
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current}))
+		require.NoError(t, Bootstrap(context.Background(), c, dc, nil))
 	})
 
-	It("should bootstrap from fallback bootstrap services when quorum has no deployments", func() {
+	t.Run("should bootstrap from fallback bootstrap services when quorum has no deployments", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		current := &agent.Deploy{
 			Stage:   agent.Deploy_Completed,
@@ -143,20 +146,20 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Current: current})).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Current: current}))
 		results := make(chan *deployment.DeployResult, 1)
-		Expect(Bootstrap(context.Background(), c, dc, results)).To(MatchError("failed to determine latest deployment from quorum, retrying: no deployments found"))
+		require.EqualError(t, Bootstrap(context.Background(), c, dc, results), "failed to determine latest deployment from quorum, retrying: no deployments found")
 		result := <-results
-		Expect([]byte(result.ID)).To(Equal(current.Archive.DeploymentID))
+		require.Equal(t, current.Archive.DeploymentID, []byte(result.ID))
 	})
 
-	It("should stop attempting to bootstrap if all services return no deployments found", func() {
+	t.Run("should stop attempting to bootstrap if all services return no deployments found", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 
 		reg := storage.NoopRegistry{}
@@ -166,18 +169,18 @@ var _ = Describe("Bootstrap", func() {
 			p,
 			noopDeployer{err: nil},
 			deployment.CoordinatorOptionStorage(reg),
-			deployment.CoordinatorOptionRoot(testingx.TempDir()),
+			deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 		)
-		Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Fail: missing})).To(Succeed())
-		Expect(Bootstrap(context.Background(), c, dc, nil)).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Run(context.Background(), SocketAuto(c), &agenttestutil.Mock{Fail: missing}))
+		require.NoError(t, Bootstrap(context.Background(), c, dc, nil))
 	})
 
-	Context("active deploy", func() {
-		It("should deploy an active deploy from quorum", func() {
+	t.Run("active deploy", func(t *testing.T) {
+		t.Run("should deploy an active deploy from quorum", func(t *testing.T) {
 			c := agent.Config{
-				Root: testingx.TempDir(),
+				Root: testingx.TempDir(t),
 			}
 			current := &agent.Deploy{
 				Stage:   agent.Deploy_Completed,
@@ -191,11 +194,18 @@ var _ = Describe("Bootstrap", func() {
 				p,
 				noopDeployer{err: nil},
 				deployment.CoordinatorOptionStorage(reg),
-				deployment.CoordinatorOptionRoot(testingx.TempDir()),
+				deployment.CoordinatorOptionRoot(testingx.TempDir(t)),
 			)
-			Expect(Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Current: current})).To(Succeed())
-			Expect(Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current, Info: agent.ArchiveResponse_ActiveDeploy})).To(Succeed())
-			Expect(Bootstrap(context.Background(), c, dc, nil).Error()).To(Equal("active deploy matches the local deployment, waiting for deployment to complete: deployment in progress"))
+			require.NoError(t, Run(context.Background(), SocketLocal(c), &agenttestutil.Mock{Current: current}))
+			require.NoError(t, Run(context.Background(), SocketQuorum(c), &agenttestutil.Mock{Current: current, Info: agent.ArchiveResponse_ActiveDeploy}))
+			require.Equal(t, "active deploy matches the local deployment, waiting for deployment to complete: deployment in progress", Bootstrap(context.Background(), c, dc, nil).Error())
 		})
 	})
-})
+}
+
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	code := m.Run()
+	testingx.Cleanup()
+	os.Exit(code)
+}

@@ -3,10 +3,10 @@ package bootstrap_test
 import (
 	"context"
 	"errors"
+	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
@@ -18,7 +18,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var _ = Describe("Local", func() {
+func TestLocal(t *testing.T) {
 	var (
 		peer1    = agent.NewPeer("node1")
 		archive1 = agent.Archive{
@@ -32,13 +32,13 @@ var _ = Describe("Local", func() {
 		}
 	)
 
-	It("should succeed when no errors occur", func() {
+	t.Run("should succeed when no errors occur", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeAgent{
 				StatusResponse: agent.StatusResponse{
 					Deployments: []*agent.Deploy{
@@ -51,48 +51,48 @@ var _ = Describe("Local", func() {
 				},
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewLocal(p, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 	})
 
-	It("should return no deployments error when no deployments exist", func() {
+	t.Run("should return no deployments error when no deployments exist", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeAgent{
 				StatusResponse: agent.StatusResponse{
 					Deployments: []*agent.Deploy{},
 				},
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewLocal(p, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(Equal(agentutil.ErrNoDeployments))
+		require.Equal(t, agentutil.ErrNoDeployments, err)
 	})
 
-	It("should error out when an error occurrs", func() {
+	t.Run("should error out when an error occurrs", func(t *testing.T) {
 		c := agent.Config{
-			Root: testingx.TempDir(),
+			Root: testingx.TempDir(t),
 		}
 		p := agent.NewPeer("local")
 
-		d, srv := testingx.NewGRPCServer2(func(srv *grpc.Server) {
+		d, srv := testingx.NewGRPCServer2(t, func(srv *grpc.Server) {
 			(&agenttestutil.FakeAgent{
 				ErrResult: errors.New("boom"),
 			}).Bind(srv)
 		})
-		defer testingx.GRPCCleanup(nil, srv)
+		defer testingx.GRPCCleanup(t, nil, srv)
 
-		Expect(Run(context.Background(), SocketQuorum(c), NewLocal(p, d))).To(Succeed())
+		require.NoError(t, Run(context.Background(), SocketQuorum(c), NewLocal(p, d)))
 		_, err := Latest(context.Background(), SocketQuorum(c), grpc.WithTransportCredentials(insecure.NewCredentials()))
-		Expect(err).To(HaveOccurred())
+		require.Error(t, err)
 	})
-})
+}

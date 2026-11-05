@@ -4,13 +4,14 @@ import (
 	"context"
 	"sync"
 	"sync/atomic"
+	"testing"
 
 	. "github.com/james-lawrence/bw/agent/dialers"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type countingDialer struct {
@@ -26,29 +27,26 @@ func (t countingDialer) Defaults(combined ...grpc.DialOption) Defaulted {
 	return combined
 }
 
-var _ = Describe("Cached", func() {
-	It("should only dial once when called concurrently", func() {
-		for round := 0; round < 100; round++ {
-			d := countingDialer{dials: new(int64)}
-			cached := NewCached(d)
+func TestCachedShouldOnlyDialOnceWhenCalledConcurrently(t *testing.T) {
+	for round := 0; round < 100; round++ {
+		d := countingDialer{dials: new(int64)}
+		cached := NewCached(d)
 
-			var wg sync.WaitGroup
-			start := make(chan struct{})
-			for i := 0; i < 16; i++ {
-				wg.Add(1)
-				go func() {
-					defer GinkgoRecover()
-					defer wg.Done()
-					<-start
-					_, err := cached.DialContext(context.Background())
-					Expect(err).To(Succeed())
-				}()
-			}
-			close(start)
-			wg.Wait()
-
-			Expect(cached.Close()).To(Succeed())
-			Expect(atomic.LoadInt64(d.dials)).To(Equal(int64(1)), "round %d", round)
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		for i := 0; i < 16; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				_, err := cached.DialContext(context.Background())
+				assert.NoError(t, err)
+			}()
 		}
-	})
-})
+		close(start)
+		wg.Wait()
+
+		require.NoError(t, cached.Close())
+		require.Equal(t, int64(1), atomic.LoadInt64(d.dials), "round %d", round)
+	}
+}

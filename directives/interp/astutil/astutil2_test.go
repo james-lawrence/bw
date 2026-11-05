@@ -3,57 +3,56 @@ package astutil_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"go/ast"
 	"go/build"
 	"go/parser"
 	"go/token"
+	"testing"
 
 	. "github.com/james-lawrence/bw/directives/interp/astutil"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Astutil", func() {
-	Describe("LocatePackage", func() {
-		It("find a the specified package", func() {
+func TestAstutil(t *testing.T) {
+	t.Run("LocatePackage", func(t *testing.T) {
+		t.Run("find a the specified package", func(t *testing.T) {
 			var err error
 			var p *build.Package
 
 			p, err = LocatePackage("go/build", build.Default, StrictPackageName("build"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(p.Name).To(Equal("build"))
+			require.NoError(t, err)
+			require.Equal(t, "build", p.Name)
 
 			p, err = LocatePackage("does/not/exist", build.Default, StrictPackageName("exist"))
-			Expect(err).To(HaveOccurred())
-			Expect(p).To(BeNil())
+			require.Error(t, err)
+			require.Nil(t, p)
 		})
 	})
 
-	Describe("ExtractFields", func() {
-		It("should extract the fields from the provided ast.Spec", func() {
+	t.Run("ExtractFields", func(t *testing.T) {
+		t.Run("should extract the fields from the provided ast.Spec", func(t *testing.T) {
 			var err error
 			var expr ast.Expr
 
 			expr, err = parser.ParseExpr(emptyStructExpression)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			fields := ExtractFields(typeSpec("empty", expr))
-			Expect(fields.List).To(BeEmpty())
+			require.Empty(t, fields.List)
 
 			expr, err = parser.ParseExpr(structExpression)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			fields = ExtractFields(typeSpec("fields", expr))
-			Expect(fields.List).To(HaveLen(2))
+			require.Len(t, fields.List, 2)
 		})
 	})
 
-	Describe("FilterDeclarations", func() {
-		It("should only locate declarations that match the filter", func() {
+	t.Run("FilterDeclarations", func(t *testing.T) {
+		t.Run("should only locate declarations that match the filter", func(t *testing.T) {
 			fset := token.NewFileSet()
 			examples, err := parser.ParseFile(fset, "examples.go", examples, 0)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			p := ast.Package{
 				Files: map[string]*ast.File{
@@ -62,14 +61,14 @@ var _ = Describe("Astutil", func() {
 			}
 
 			types := FilterType(FilterName("aStruct"), &p)
-			Expect(types).To(HaveLen(1))
-			Expect(types[0].Name.Name).To(Equal("aStruct"))
+			require.Len(t, types, 1)
+			require.Equal(t, "aStruct", types[0].Name.Name)
 		})
 
-		It("should be able to handle self referential types", func() {
+		t.Run("should be able to handle self referential types", func(t *testing.T) {
 			fset := token.NewFileSet()
 			examples, err := parser.ParseFile(fset, "examples.go", examples, 0)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			p := ast.Package{
 				Files: map[string]*ast.File{
@@ -78,55 +77,55 @@ var _ = Describe("Astutil", func() {
 			}
 
 			types := FilterType(FilterName("selfReferential"), &p)
-			Expect(types).To(HaveLen(1))
-			Expect(types[0].Name.Name).To(Equal("selfReferential"))
+			require.Len(t, types, 1)
+			require.Equal(t, "selfReferential", types[0].Name.Name)
 		})
 	})
 
-	Describe("FindUniqueDeclaration", func() {
-		It("should return the declaration if it is unique", func() {
+	t.Run("FindUniqueDeclaration", func(t *testing.T) {
+		t.Run("should return the declaration if it is unique", func(t *testing.T) {
 			fset := token.NewFileSet()
 			p, err := LocatePackage("go/ast", build.Default, StrictPackageName("ast"))
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			typ, err := NewUtils(fset).FindUniqueType(FilterName("Package"), p)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(typ.Name.Name).To(Equal("Package"))
+			require.NoError(t, err)
+			require.Equal(t, "Package", typ.Name.Name)
 		})
 
-		It("should return an error if the declaration is ambiguous", func() {
+		t.Run("should return an error if the declaration is ambiguous", func(t *testing.T) {
 			fset := token.NewFileSet()
 
 			p, err := LocatePackage("go/ast", build.Default, StrictPackageName("ast"))
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			typ, err := NewUtils(fset).FindUniqueType(FilterName("Package"), p, p)
-			Expect(err).To(Equal(ErrAmbiguousDeclaration))
-			Expect(typ).To(Equal(&ast.TypeSpec{}))
+			require.Equal(t, ErrAmbiguousDeclaration, err)
+			require.Equal(t, &ast.TypeSpec{}, typ)
 		})
 
-		It("should return an error if the declaration is not found", func() {
+		t.Run("should return an error if the declaration is not found", func(t *testing.T) {
 			fset := token.NewFileSet()
 			p, err := LocatePackage("go/ast", build.Default, StrictPackageName("ast"))
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 
 			typ, err := NewUtils(fset).FindUniqueType(FilterName("DoesNotExist"), p)
-			Expect(err).To(Equal(ErrDeclarationNotFound))
-			Expect(typ).To(Equal(&ast.TypeSpec{}))
+			require.Equal(t, ErrDeclarationNotFound, err)
+			require.Equal(t, &ast.TypeSpec{}, typ)
 		})
 	})
 
-	Describe("FilterName", func() {
-		It("should return true iff name matches exactly", func() {
+	t.Run("FilterName", func(t *testing.T) {
+		t.Run("should return true iff name matches exactly", func(t *testing.T) {
 			filter := FilterName("aName")
-			Expect(filter("OtherName")).To(BeFalse())
-			Expect(filter("aName")).To(BeTrue())
+			require.False(t, filter("OtherName"))
+			require.True(t, filter("aName"))
 		})
 	})
 
-	Describe("ASTPrinter", func() {
-		Describe("FprintAST", func() {
-			It("should print the ast node into the buffer", func() {
+	t.Run("ASTPrinter", func(t *testing.T) {
+		t.Run("FprintAST", func(t *testing.T) {
+			t.Run("should print the ast node into the buffer", func(t *testing.T) {
 				pkg := &ast.File{
 					Name: &ast.Ident{
 						Name: "example",
@@ -136,48 +135,48 @@ var _ = Describe("Astutil", func() {
 				fset := token.NewFileSet()
 				dst := bytes.NewBuffer([]byte{})
 				p.FprintAST(dst, fset, pkg)
-				Expect(p.Err()).ToNot(HaveOccurred())
-				Expect(dst.String()).To(Equal("package example\n"))
+				require.NoError(t, p.Err())
+				require.Equal(t, "package example\n", dst.String())
 			})
 		})
 
-		Describe("Fprintln", func() {
-			It("should print the provided elements into the buffer", func() {
+		t.Run("Fprintln", func(t *testing.T) {
+			t.Run("should print the provided elements into the buffer", func(t *testing.T) {
 				p := ASTPrinter{}
 				dst := bytes.NewBuffer([]byte{})
 				p.Fprintln(dst, "Hello", "World")
-				Expect(p.Err()).ToNot(HaveOccurred())
-				Expect(dst.String()).To(Equal("Hello World\n"))
+				require.NoError(t, p.Err())
+				require.Equal(t, "Hello World\n", dst.String())
 			})
 		})
 
-		Describe("Fprintf", func() {
-			It("should print the formatted string into the buffer", func() {
+		t.Run("Fprintf", func(t *testing.T) {
+			t.Run("should print the formatted string into the buffer", func(t *testing.T) {
 				p := ASTPrinter{}
 				dst := bytes.NewBuffer([]byte{})
 				p.Fprintf(dst, "Hello %s\n", "World")
-				Expect(p.Err()).ToNot(HaveOccurred())
-				Expect(dst.String()).To(Equal("Hello World\n"))
+				require.NoError(t, p.Err())
+				require.Equal(t, "Hello World\n", dst.String())
 			})
 		})
 
-		Describe("Err", func() {
-			It("should return the first error that occurred", func() {
+		t.Run("Err", func(t *testing.T) {
+			t.Run("should return the first error that occurred", func(t *testing.T) {
 				p := ASTPrinter{}
 				w1 := errWriter{err: fmt.Errorf("boom1")}
 				w2 := errWriter{err: fmt.Errorf("boom2")}
 				p.Fprintln(w1, "Hello World 1")
 				p.Fprintln(w2, "Hello World 2")
-				Expect(p.Err()).To(MatchError("boom1"))
+				require.EqualError(t, p.Err(), "boom1")
 			})
 		})
 	})
 
-	Describe("RetrieveBasicLiteralString", func() {
-		It("should locate the value of the basic literal", func() {
+	t.Run("RetrieveBasicLiteralString", func(t *testing.T) {
+		t.Run("should locate the value of the basic literal", func(t *testing.T) {
 			fset := token.NewFileSet()
 			examples, err := parser.ParseFile(fset, "examples.go", examples, 0)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 			p := ast.Package{
 				Files: map[string]*ast.File{
 					"examples1.go": examples,
@@ -185,14 +184,14 @@ var _ = Describe("Astutil", func() {
 			}
 
 			value, err := RetrieveBasicLiteralString(FilterName("aConstant"), &p)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(value).To(Equal("constant string"))
+			require.NoError(t, err)
+			require.Equal(t, "constant string", value)
 		})
 
-		It("should return an error when the literal cannot be found", func() {
+		t.Run("should return an error when the literal cannot be found", func(t *testing.T) {
 			fset := token.NewFileSet()
 			examples, err := parser.ParseFile(fset, "examples.go", examples, 0)
-			Expect(err).ToNot(HaveOccurred())
+			require.NoError(t, err)
 			p := ast.Package{
 				Files: map[string]*ast.File{
 					"examples1.go": examples,
@@ -200,11 +199,11 @@ var _ = Describe("Astutil", func() {
 			}
 
 			value, err := RetrieveBasicLiteralString(FilterName("aStruct"), &p)
-			Expect(err).To(Equal(ErrBasicLiteralNotFound))
-			Expect(value).To(Equal(""))
+			require.Equal(t, ErrBasicLiteralNotFound, err)
+			require.Equal(t, "", value)
 		})
 	})
-})
+}
 
 type errWriter struct {
 	err error

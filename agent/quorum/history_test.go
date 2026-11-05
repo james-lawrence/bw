@@ -3,24 +3,23 @@ package quorum_test
 import (
 	"github.com/james-lawrence/bw/agent"
 	. "github.com/james-lawrence/bw/agent/quorum"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
-var _ = Describe("History", func() {
-	It("should not record heartbeats", func() {
+func TestHistory(t *testing.T) {
+	t.Run("should not record heartbeats", func(t *testing.T) {
 		local := agent.NewPeer("local")
 		h := NewHistory()
 		begin := agent.NewDeployCommand(local, &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: &agent.Archive{}, Options: &agent.DeployOptions{}})
 
-		Expect(h.Decode(TranscoderContext{}, begin)).To(Succeed())
+		require.NoError(t, h.Decode(TranscoderContext{}, begin))
 		for i := 0; i < 200; i++ {
-			Expect(h.Decode(TranscoderContext{}, agent.NewDeployHeartbeat(local))).To(Succeed())
+			require.NoError(t, h.Decode(TranscoderContext{}, agent.NewDeployHeartbeat(local)))
 		}
 
 		snapshot := h.Snapshot()
-		Expect(snapshot).To(HaveLen(1))
-		Expect(snapshot[0].Id).To(Equal(begin.Id))
+		require.Len(t, snapshot, 1)
+		require.Equal(t, begin.Id, snapshot[0].Id)
 	})
-})
+}

@@ -2,40 +2,32 @@ package peering_test
 
 import (
 	"context"
+	"io"
+	"log"
 	"os"
 	"path/filepath"
+	"testing"
 
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
+	"github.com/stretchr/testify/require"
 
 	. "github.com/james-lawrence/bw/clustering/peering"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("File", func() {
-	var (
-		err    error
-		tmpdir string
-	)
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	os.Exit(m.Run())
+}
 
-	BeforeEach(func() {
-		tmpdir, err = os.MkdirTemp(".", "fs-peering")
-		Expect(err).ToNot(HaveOccurred())
-	})
+func TestFileShouldPersistThePeersToAFile(t *testing.T) {
+	tmpdir := t.TempDir()
 
-	AfterEach(func() {
-		os.RemoveAll(tmpdir)
-	})
+	c := clusteringtestutil.NewMock(3)
+	fs := File{Path: filepath.Join(tmpdir, "peers.yml")}
+	require.NoError(t, fs.Snapshot(clustering.Peers(c)))
 
-	It("should persist the peers to a file", func() {
-		c := clusteringtestutil.NewMock(3)
-		fs := File{Path: filepath.Join(tmpdir, "peers.yml")}
-		Expect(fs.Snapshot(clustering.Peers(c))).ToNot(HaveOccurred())
-
-		peers, err := fs.Peers(context.Background())
-		Expect(err).ToNot(HaveOccurred())
-		Expect(peers).To(ConsistOf(clustering.Peers(c)))
-	})
-})
+	peers, err := fs.Peers(context.Background())
+	require.NoError(t, err)
+	require.ElementsMatch(t, clustering.Peers(c), peers)
+}

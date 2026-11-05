@@ -2,9 +2,8 @@ package bw_test
 
 import (
 	. "github.com/james-lawrence/bw"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
+	"testing"
 )
 
 func environmentSet1(k string) string {
@@ -26,28 +25,27 @@ type xType struct {
 	Field3 string
 }
 
-var _ = Describe("Config", func() {
-	DescribeTable("ExpandEnvironAndDecode", func(content string, result xType) {
-		out := xType{}
-		Expect(ExpandEnvironAndDecode([]byte(content), &out, environmentSet1)).ToNot(HaveOccurred())
-		Expect(out).To(Equal(result))
-	},
-		Entry("example 1",
-			`field1: "${FOO}"
+func TestConfig(t *testing.T) {
+	t.Run("ExpandEnvironAndDecode", func(t *testing.T) {
+		check := func(t *testing.T, content string, result xType) {
+			out := xType{}
+			require.NoError(t, ExpandEnvironAndDecode([]byte(content), &out, environmentSet1))
+			require.Equal(t, result, out)
+		}
+		t.Run("example 1", func(t *testing.T) {
+			check(t, `field1: "${FOO}"
 field2: "${BIZZ}"
 field3: "YOINK"
-`,
-			xType{
+`, xType{
 				Field1: "BAR",
 				Field2: "BAZZ",
 				Field3: "YOINK",
-			},
-		),
-		Entry("example 2",
-			`field1: '${MULTILINE}'`,
-			xType{
+			})
+		})
+		t.Run("example 2", func(t *testing.T) {
+			check(t, `field1: '${MULTILINE}'`, xType{
 				Field1: "line1\nline2\nline3",
-			},
-		),
-	)
-})
+			})
+		})
+	})
+}

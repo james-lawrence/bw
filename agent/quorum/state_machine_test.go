@@ -7,6 +7,7 @@ import (
 	"log"
 	"runtime"
 	"slices"
+	"testing"
 	"time"
 
 	"github.com/hashicorp/raft"
@@ -17,9 +18,8 @@ import (
 	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agent/journal"
 	. "github.com/james-lawrence/bw/agent/quorum"
-	. "github.com/onsi/ginkgo/v2"
 
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
 type mockLocal struct{}
@@ -116,127 +116,148 @@ func qCommand(d agent.DeployCommand_Command) *agent.DeployCommand {
 	}
 }
 
-var _ = Describe("StateMachine", func() {
+func TestStateMachine(t *testing.T) {
 	local := mockLocal{}
 
-	It("should write to WAL on dispatch", func() {
+	t.Run("should write to WAL on dispatch", func(t *testing.T) {
 		protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
+
 		log.Println("awaiting leader")
 		leader := findFirstState(raft.Leader, protocols...)
 		log.Println("leader elected")
+
 		lp := agent.NewPeer("node")
 		sm := NewMachine(
 			lp,
 			leader,
 		)
-		cmd := qCommand(agent.DeployCommand_Begin)
 
-		Expect(sm.Dispatch(context.Background(), agent.NewDeployCommand(lp, cmd))).ToNot(HaveOccurred())
+		cmd := qCommand(agent.DeployCommand_Begin)
+		require.NoError(t, sm.Dispatch(context.Background(), agent.NewDeployCommand(lp, cmd)))
 	})
 
-	DescribeTable("persisting state",
-		func(n int, messages ...*agent.Message) {
-			var (
-				decoded []*agent.Message
-			)
+	t.Run("persisting state", func(t *testing.T) {
+		for _, c := range []struct {
+			name     string
+			n        int
+			messages []*agent.Message
+		}{
+			{
+				"example 1",
+				4,
+				[]*agent.Message{
+					agent.LogInfo(local.Local(), "message 1"),
+					agent.LogInfo(local.Local(), "message 2"),
+					agent.LogInfo(local.Local(), "message 3"),
+					agent.LogInfo(local.Local(), "message 4"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+					agent.LogInfo(local.Local(), "message 5"),
+					agent.LogInfo(local.Local(), "message 6"),
+				},
+			},
+			{
+				"example 2",
+				6,
+				[]*agent.Message{
+					agent.LogInfo(local.Local(), "message 1"),
+					agent.LogInfo(local.Local(), "message 2"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+					agent.LogInfo(local.Local(), "message 3"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
+					agent.LogInfo(local.Local(), "message 4"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+					agent.LogInfo(local.Local(), "message 5"),
+					agent.LogInfo(local.Local(), "message 6"),
+				},
+			},
+			{
+				"example 3",
+				0,
+				[]*agent.Message{
+					agent.LogInfo(local.Local(), "message 1"),
+					agent.LogInfo(local.Local(), "message 2"),
+				},
+			},
+			{
+				"example 4",
+				0,
+				[]*agent.Message{
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+				},
+			},
+			{
+				"example 5",
+				7,
+				[]*agent.Message{
+					agent.LogInfo(local.Local(), "message 1"),
+					agent.LogInfo(local.Local(), "message 2"),
+					agent.LogInfo(local.Local(), "message 3"),
+					agent.LogInfo(local.Local(), "message 4"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
+					agent.LogInfo(local.Local(), "message 5"),
+					agent.LogInfo(local.Local(), "message 6"),
+					agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
+				},
+			},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				var (
+					decoded []*agent.Message
+				)
 
-			protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
-			Expect(err).To(Succeed())
+				protocols, _, err := newCluster(NewTranscoder(), "server1", "server2", "server3")
+				require.NoError(t, err)
 
-			leader := findFirstState(raft.Leader, protocols...)
-			sm := NewMachine(
-				agent.NewPeer("node"),
-				leader,
-			)
+				leader := findFirstState(raft.Leader, protocols...)
+				sm := NewMachine(
+					agent.NewPeer("node"),
+					leader,
+				)
 
-			Expect(sm.Dispatch(context.Background(), messages...)).To(Succeed())
-			snapshotfuture := leader.Snapshot()
-			Expect(snapshotfuture.Error()).To(Succeed())
-			_, ior, err := snapshotfuture.Open()
-			Expect(err).To(Succeed())
-			preamble := &agent.WALPreamble{}
-			Expect(Decode(ior, preamble)).To(Succeed())
-			Expect(preamble.Major).To(Equal(int32(1)))
-			Expect(preamble.Minor).To(Equal(int32(0)))
-			Expect(preamble.Patch).To(Equal(int32(0)))
-			decoded, err = DecodeEvery(ior)
-			Expect(err).To(Succeed())
+				require.NoError(t, sm.Dispatch(context.Background(), c.messages...))
 
-			// ephemeral messages are never written to the WAL, so they are not part of snapshots.
-			expected := slices.DeleteFunc(slices.Clone(messages[n:]), func(m *agent.Message) bool { return m.Ephemeral })
+				snapshotfuture := leader.Snapshot()
+				require.NoError(t, snapshotfuture.Error())
+				_, ior, err := snapshotfuture.Open()
+				require.NoError(t, err)
 
-			Expect(
-				proto.Equal(
-					agent.NewLogHistoryEvent(decoded...),
-					agent.NewLogHistoryEvent(expected...),
-				),
-			).To(BeTrue())
-		},
-		Entry(
-			"example 1",
-			4,
-			agent.LogInfo(local.Local(), "message 1"),
-			agent.LogInfo(local.Local(), "message 2"),
-			agent.LogInfo(local.Local(), "message 3"),
-			agent.LogInfo(local.Local(), "message 4"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogInfo(local.Local(), "message 5"),
-			agent.LogInfo(local.Local(), "message 6"),
-		),
-		Entry(
-			"example 2",
-			6,
-			agent.LogInfo(local.Local(), "message 1"),
-			agent.LogInfo(local.Local(), "message 2"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogInfo(local.Local(), "message 3"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
-			agent.LogInfo(local.Local(), "message 4"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogInfo(local.Local(), "message 5"),
-			agent.LogInfo(local.Local(), "message 6"),
-		),
-		Entry(
-			"example 3",
-			0,
-			agent.LogInfo(local.Local(), "message 1"),
-			agent.LogInfo(local.Local(), "message 2"),
-		),
-		Entry(
-			"example 4",
-			0,
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-		),
-		Entry(
-			"example 5",
-			7,
-			agent.LogInfo(local.Local(), "message 1"),
-			agent.LogInfo(local.Local(), "message 2"),
-			agent.LogInfo(local.Local(), "message 3"),
-			agent.LogInfo(local.Local(), "message 4"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Begin)),
-			agent.LogInfo(local.Local(), "message 5"),
-			agent.LogInfo(local.Local(), "message 6"),
-			agent.NewDeployCommand(local.Local(), qCommand(agent.DeployCommand_Done)),
-		),
-	)
+				preamble := &agent.WALPreamble{}
+				require.NoError(t, Decode(ior, preamble))
+				require.Equal(t, int32(1), preamble.Major)
+				require.Equal(t, int32(0), preamble.Minor)
+				require.Equal(t, int32(0), preamble.Patch)
 
-	It("should return an error when dispatch fails", func() {
+				decoded, err = DecodeEvery(ior)
+				require.NoError(t, err)
+
+				// ephemeral messages are never written to the WAL, so they are not part of snapshots.
+				expected := slices.DeleteFunc(slices.Clone(c.messages[c.n:]), func(m *agent.Message) bool { return m.Ephemeral })
+				require.True(t,
+					proto.Equal(
+						agent.NewLogHistoryEvent(decoded...),
+						agent.NewLogHistoryEvent(expected...),
+					),
+				)
+			})
+		}
+	})
+
+	t.Run("should return an error when dispatch fails", func(t *testing.T) {
 		cmd := qCommand(agent.DeployCommand_Begin)
-
 		protocols, _, err := newCluster(NewTranscoder(Discard{Cause: errors.New("boom")}), "server1", "server2", "server3")
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
+
 		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(
 			agent.NewPeer("node"),
 			leader,
 		)
 
-		Expect(sm.Dispatch(context.Background(), agent.NewDeployCommand(local.Local(), cmd))).To(HaveOccurred())
+		require.Error(t, sm.Dispatch(context.Background(), agent.NewDeployCommand(local.Local(), cmd)))
 	})
 
-	It("should write message to the observer", func() {
+	t.Run("should write message to the observer", func(t *testing.T) {
 		messages := []*agent.Message{
 			agent.LogInfo(local.Local(), "message 1"),
 			agent.LogInfo(local.Local(), "message 2"),
@@ -245,9 +266,10 @@ var _ = Describe("StateMachine", func() {
 		}
 
 		obs := make(chan *agent.Message, len(messages))
-		jrnl, err := journal.New(GinkgoT().TempDir())
-		Expect(err).To(Succeed())
-		DeferCleanup(jrnl.Close)
+		jrnl, err := journal.New(t.TempDir())
+		require.NoError(t, err)
+		t.Cleanup(func() { jrnl.Close() })
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		go func() {
@@ -258,28 +280,29 @@ var _ = Describe("StateMachine", func() {
 
 		ob := NewObserver(jrnl)
 		protocols, _, err := newCluster(NewTranscoder(ob), "server1")
-		Expect(err).ToNot(HaveOccurred())
-		leader := findFirstState(raft.Leader, protocols...)
+		require.NoError(t, err)
 
+		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(
 			agent.NewPeer("node"),
 			leader,
 		)
 
-		Expect(sm.Dispatch(context.Background(), messages...)).ToNot(HaveOccurred())
+		require.NoError(t, sm.Dispatch(context.Background(), messages...))
 
 		for _, m := range messages {
 			expected := <-obs
-			Expect(proto.Equal(expected, m)).To(BeTrue())
+			require.True(t, proto.Equal(expected, m))
 		}
 	})
 
 	// regression: observers are invoked from the raft FSM, a stalled observer must not throttle the WAL
 	// otherwise the apply queue fills and writes fail with "timed out enqueuing operation".
-	It("should not be throttled by stalled observers", func() {
-		jrnl, err := journal.New(GinkgoT().TempDir())
-		Expect(err).To(Succeed())
-		DeferCleanup(jrnl.Close)
+	t.Run("should not be throttled by stalled observers", func(t *testing.T) {
+		jrnl, err := journal.New(t.TempDir())
+		require.NoError(t, err)
+		t.Cleanup(func() { jrnl.Close() })
+
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		stalled := make(chan *agent.Message) // never read.
@@ -294,14 +317,15 @@ var _ = Describe("StateMachine", func() {
 		}()
 
 		protocols, _, err := newCluster(NewTranscoder(NewObserver(jrnl)), "server1")
-		Expect(err).ToNot(HaveOccurred())
+		require.NoError(t, err)
+
 		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(agent.NewPeer("node"), leader)
 
 		start := time.Now()
 		for i := 0; i < 50; i++ {
-			Expect(sm.Dispatch(context.Background(), agent.LogInfo(local.Local(), "message"))).To(Succeed())
+			require.NoError(t, sm.Dispatch(context.Background(), agent.LogInfo(local.Local(), "message")))
 		}
-		Expect(time.Since(start)).To(BeNumerically("<", time.Second))
+		require.Less(t, time.Since(start), time.Second)
 	})
-})
+}

@@ -3,9 +3,14 @@ package deployment_test
 import (
 	"context"
 	"errors"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agentutil"
@@ -13,9 +18,6 @@ import (
 	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/clustering/clusteringtestutil"
 	"github.com/james-lawrence/bw/deployment"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var (
@@ -66,8 +68,8 @@ func testCluster(p *agent.Peer) cluster.Cluster {
 	)
 }
 
-var _ = Describe("Deploy", func() {
-	It("should run the deploys", func() {
+func TestDeploy(t *testing.T) {
+	t.Run("should run the deploys", func(t *testing.T) {
 		var (
 			deployCount int64
 		)
@@ -94,12 +96,12 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(0)))
-		Expect(success).To(BeTrue())
-		Expect(deployCount).To(Equal(int64(len(c.Peers()))))
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
+		require.Equal(t, int64(len(c.Peers())), deployCount)
 	})
 
-	It("should be durable against healthcheck failures", func() {
+	t.Run("should be durable against healthcheck failures", func(t *testing.T) {
 		var (
 			deploycount      int64
 			healthcheckcount int64
@@ -135,12 +137,12 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(0)))
-		Expect(success).To(BeTrue())
-		Expect(deploycount).To(Equal(int64(4)))
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
+		require.Equal(t, int64(4), deploycount)
 	})
 
-	It("should stop when a deploy fails", func() {
+	t.Run("should stop when a deploy fails", func(t *testing.T) {
 		var (
 			deployCount    int64
 			failedDeployID int64 = 2
@@ -176,11 +178,11 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(1)))
-		Expect(success).To(BeFalse())
-		Expect(deployCount).To(Equal(int64(2)))
+		require.Equal(t, int64(1), failures)
+		require.False(t, success)
+		require.Equal(t, int64(2), deployCount)
 	})
-	It("should report progress events while deploying", func() {
+	t.Run("should report progress events while deploying", func(t *testing.T) {
 		p := agent.NewPeer("node4")
 		c := testCluster(p)
 		events := &recorder{}
@@ -195,20 +197,20 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(0)))
-		Expect(success).To(BeTrue())
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
 
 		found := events.ofType(agent.Message_PeersFoundEvent)
-		Expect(found).To(HaveLen(1))
-		Expect(found[0].GetInt()).To(Equal(int64(len(c.Peers()))))
-		Expect(events.logs()).To(ContainElement("nodes are ready, deploying"))
+		require.Len(t, found, 1)
+		require.Equal(t, int64(len(c.Peers())), found[0].GetInt())
+		require.Contains(t, events.logs(), "nodes are ready, deploying")
 
 		completed := events.ofType(agent.Message_PeersCompletedEvent)
-		Expect(completed).To(HaveLen(len(c.Peers())))
-		Expect(completed[len(completed)-1].GetInt()).To(Equal(int64(len(c.Peers()))))
+		require.Len(t, completed, len(c.Peers()))
+		require.Equal(t, int64(len(c.Peers())), completed[len(completed)-1].GetInt())
 	})
 
-	It("should only deploy to peers matching the filter", func() {
+	t.Run("should only deploy to peers matching the filter", func(t *testing.T) {
 		var (
 			mu       sync.Mutex
 			deployed []string
@@ -232,12 +234,12 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(0)))
-		Expect(success).To(BeTrue())
-		Expect(deployed).To(Equal([]string{target.Name}))
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
+		require.Equal(t, []string{target.Name}, deployed)
 	})
 
-	It("should fail when the deployer returns an error", func() {
+	t.Run("should fail when the deployer returns an error", func(t *testing.T) {
 		p := agent.NewPeer("node4")
 		events := &recorder{}
 
@@ -251,12 +253,12 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(testCluster(p))
-		Expect(failures).To(BeNumerically(">=", 1))
-		Expect(success).To(BeFalse())
-		Expect(events.ofType(agent.Message_LogEvent)).ToNot(BeEmpty())
+		require.GreaterOrEqual(t, failures, int64(1))
+		require.False(t, success)
+		require.NotEmpty(t, events.ofType(agent.Message_LogEvent))
 	})
 
-	It("should continue past failures when failures are ignored", func() {
+	t.Run("should continue past failures when failures are ignored", func(t *testing.T) {
 		var (
 			deployCount int64
 		)
@@ -278,12 +280,12 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(c)
-		Expect(failures).To(Equal(int64(1)))
-		Expect(success).To(BeTrue())
-		Expect(deployCount).To(Equal(int64(len(c.Peers()))))
+		require.Equal(t, int64(1), failures)
+		require.True(t, success)
+		require.Equal(t, int64(len(c.Peers())), deployCount)
 	})
 
-	It("should emit heartbeats until the deploy completes", func() {
+	t.Run("should emit heartbeats until the deploy completes", func(t *testing.T) {
 		p := agent.NewPeer("node4")
 		events := &recorder{}
 
@@ -299,17 +301,17 @@ var _ = Describe("Deploy", func() {
 		)
 
 		failures, success := deploy.Deploy(testCluster(p))
-		Expect(failures).To(Equal(int64(0)))
-		Expect(success).To(BeTrue())
-		Expect(len(events.ofType(agent.Message_DeployHeartbeat))).To(BeNumerically(">=", 3))
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
+		require.GreaterOrEqual(t, len(events.ofType(agent.Message_DeployHeartbeat)), 3)
 
 		// the heartbeat stops once the deploy is complete.
 		settled := len(events.ofType(agent.Message_DeployHeartbeat))
 		time.Sleep(50 * time.Millisecond)
-		Expect(events.ofType(agent.Message_DeployHeartbeat)).To(HaveLen(settled))
+		require.Len(t, events.ofType(agent.Message_DeployHeartbeat), settled)
 	})
 
-	It("should give up once the timeout and grace period elapse", func() {
+	t.Run("should give up once the timeout and grace period elapse", func(t *testing.T) {
 		p := agent.NewPeer("node4")
 		events := &recorder{}
 
@@ -325,12 +327,18 @@ var _ = Describe("Deploy", func() {
 
 		result := make(chan bool, 1)
 		go func() {
-			defer GinkgoRecover()
 			_, success := deploy.Deploy(testCluster(p))
 			result <- success
 		}()
 
-		Eventually(result, 5*time.Second).Should(Receive(BeFalse()))
-		Expect(events.logs()).To(ContainElement(ContainSubstring("timed out while waiting for nodes to complete")))
+		select {
+		case success := <-result:
+			require.False(t, success)
+		case <-time.After(5 * time.Second):
+			require.FailNow(t, "timed out waiting for the deploy to give up")
+		}
+		require.True(t, slices.ContainsFunc(events.logs(), func(l string) bool {
+			return strings.Contains(l, "timed out while waiting for nodes to complete")
+		}))
 	})
-})
+}

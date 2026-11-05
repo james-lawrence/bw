@@ -3,6 +3,8 @@ package agentutil_test
 import (
 	"context"
 	"sync/atomic"
+	"testing"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
@@ -12,8 +14,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 )
 
 func dispatchLog(req *agent.DispatchRequest) string {
@@ -59,89 +60,111 @@ func (t countingDialer) DialContext(ctx context.Context, options ...grpc.DialOpt
 	return t.Direct.DialContext(ctx, options...)
 }
 
-var _ = Describe("Dispatcher", func() {
-	var (
-		local  = agent.NewPeer("local")
-		srv    blockingQuorum
-		server *grpc.Server
-		dialer countingDialer
-		// client side hold on the "late" message's response, simulating an rpc whose failure
-		// is observed after the dispatcher has already moved on to a new connection.
-		lateheld    chan struct{}
-		laterelease chan struct{}
-	)
+type dispatcherFixture struct {
+	local  *agent.Peer
+	srv    blockingQuorum
+	server *grpc.Server
+	dialer countingDialer
+	// client side hold on the "late" message's response, simulating an rpc whose failure
+	// is observed after the dispatcher has already moved on to a new connection.
+	lateheld    chan struct{}
+	laterelease chan struct{}
+}
 
-	BeforeEach(func() {
-		srv = blockingQuorum{
+func newDispatcherFixture(t *testing.T) *dispatcherFixture {
+	t.Helper()
+	f := &dispatcherFixture{
+		local: agent.NewPeer("local"),
+		srv: blockingQuorum{
 			received: make(chan string, 10),
 			release:  make(chan struct{}),
+		},
+		lateheld:    make(chan struct{}),
+		laterelease: make(chan struct{}),
+	}
+
+	holdlate := grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		if dr, ok := req.(*agent.DispatchRequest); ok && dispatchLog(dr) == "late" {
+			close(f.lateheld)
+			<-f.laterelease
 		}
-		lateheld = make(chan struct{})
-		laterelease = make(chan struct{})
-
-		holdlate := grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			err := invoker(ctx, method, req, reply, cc, opts...)
-			if dr, ok := req.(*agent.DispatchRequest); ok && dispatchLog(dr) == "late" {
-				close(lateheld)
-				<-laterelease
-			}
-			return err
-		})
-
-		var d dialers.Direct
-		d, server = testingx.NewGRPCServer2(func(s *grpc.Server) {
-			agent.RegisterQuorumServer(s, srv)
-		}, holdlate)
-		dialer = countingDialer{Direct: d, dials: new(int64)}
+		return err
 	})
 
-	AfterEach(func() {
-		server.Stop()
-	})
+	var d dialers.Direct
+	d, f.server = testingx.NewGRPCServer2(t, func(s *grpc.Server) {
+		agent.RegisterQuorumServer(s, f.srv)
+	}, holdlate)
+	f.dialer = countingDialer{Direct: d, dials: new(int64)}
+	t.Cleanup(f.server.Stop)
 
-	It("should not close the shared connection when a caller's context is cancelled", func() {
-		d := NewDispatcher(dialer)
+	return f
+}
 
-		inflight := make(chan error, 1)
-		go func() {
-			inflight <- d.Dispatch(context.Background(), agent.LogInfo(local, "slow"))
-		}()
-		Eventually(srv.received).Should(Receive(Equal("slow")))
+func TestDispatcherShouldNotCloseTheSharedConnectionWhenACallersContextIsCancelled(t *testing.T) {
+	f := newDispatcherFixture(t)
+	d := NewDispatcher(f.dialer)
 
-		// e.g. a heartbeat whose context was cancelled when the deploy completed.
-		cancelled, cancel := context.WithCancel(context.Background())
-		cancel()
-		Expect(d.Dispatch(cancelled, agent.LogInfo(local, "heartbeat"))).To(HaveOccurred())
+	inflight := make(chan error, 1)
+	go func() {
+		inflight <- d.Dispatch(context.Background(), agent.LogInfo(f.local, "slow"))
+	}()
+	select {
+	case msg := <-f.srv.received:
+		require.Equal(t, "slow", msg)
+	case <-time.After(time.Second):
+		require.FailNow(t, "timed out waiting for the slow message")
+	}
 
-		close(srv.release)
-		Eventually(inflight).Should(Receive(Succeed()))
-		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(1)))
-	})
+	// e.g. a heartbeat whose context was cancelled when the deploy completed.
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	require.Error(t, d.Dispatch(cancelled, agent.LogInfo(f.local, "heartbeat")))
 
-	It("should not drop a newer connection when a stale rpc fails", func() {
-		d := NewDispatcher(dialer)
+	close(f.srv.release)
+	select {
+	case err := <-inflight:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "timed out waiting for the in flight dispatch")
+	}
+	require.Equal(t, int64(1), atomic.LoadInt64(f.dialer.dials))
+}
 
-		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
-		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(1)))
+func TestDispatcherShouldNotDropANewerConnectionWhenAStaleRPCFails(t *testing.T) {
+	f := newDispatcherFixture(t)
+	d := NewDispatcher(f.dialer)
 
-		// rpc on connection #1 that fails, but whose failure is observed late.
-		late := make(chan error, 1)
-		go func() {
-			late <- d.Dispatch(context.Background(), agent.LogInfo(local, "late"))
-		}()
-		Eventually(lateheld).Should(BeClosed())
+	require.NoError(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "ok")))
+	require.Equal(t, int64(1), atomic.LoadInt64(f.dialer.dials))
 
-		// connection #1 is dropped and connection #2 is established.
-		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "fail"))).To(HaveOccurred())
-		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
-		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(2)))
+	// rpc on connection #1 that fails, but whose failure is observed late.
+	late := make(chan error, 1)
+	go func() {
+		late <- d.Dispatch(context.Background(), agent.LogInfo(f.local, "late"))
+	}()
+	select {
+	case <-f.lateheld:
+	case <-time.After(time.Second):
+		require.FailNow(t, "timed out waiting for the late rpc to be held")
+	}
 
-		// the stale failure from connection #1 arrives.
-		close(laterelease)
-		Eventually(late).Should(Receive(HaveOccurred()))
+	// connection #1 is dropped and connection #2 is established.
+	require.Error(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "fail")))
+	require.NoError(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "ok")))
+	require.Equal(t, int64(2), atomic.LoadInt64(f.dialer.dials))
 
-		// connection #2 should still be in use.
-		Expect(d.Dispatch(context.Background(), agent.LogInfo(local, "ok"))).To(Succeed())
-		Expect(atomic.LoadInt64(dialer.dials)).To(Equal(int64(2)))
-	})
-})
+	// the stale failure from connection #1 arrives.
+	close(f.laterelease)
+	select {
+	case err := <-late:
+		require.Error(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "timed out waiting for the stale failure")
+	}
+
+	// connection #2 should still be in use.
+	require.NoError(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "ok")))
+	require.Equal(t, int64(2), atomic.LoadInt64(f.dialer.dials))
+}

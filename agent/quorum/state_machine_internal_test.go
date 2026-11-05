@@ -2,14 +2,13 @@ package quorum
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"sync"
+	"testing"
 
 	"github.com/james-lawrence/bw/agent"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 // dispatcher that fails the first n dispatches.
@@ -33,33 +32,33 @@ func (t *flakyDispatcher) Dispatch(_ context.Context, ms ...*agent.Message) erro
 	return nil
 }
 
-var _ = Describe("dispatchDeployResult", func() {
-	It("should retry until the deploy result is delivered", func() {
+func TestDispatchDeployResult(t *testing.T) {
+	t.Run("should retry until the deploy result is delivered", func(t *testing.T) {
 		local := agent.NewPeer("local")
 		d := &flakyDispatcher{failures: 1}
 		dcmd := agent.DeployCommandDone("tester")
 
-		Expect(dispatchDeployResult(context.Background(), d, local, dcmd)).To(Succeed())
-		Expect(d.attempts).To(Equal(2))
-		Expect(d.delivered).To(HaveLen(1))
-		Expect(d.delivered[0].GetDeployCommand().Command).To(Equal(agent.DeployCommand_Done))
+		require.NoError(t, dispatchDeployResult(context.Background(), d, local, dcmd))
+		require.Equal(t, 2, d.attempts)
+		require.Len(t, d.delivered, 1)
+		require.Equal(t, agent.DeployCommand_Done, d.delivered[0].GetDeployCommand().Command)
 	})
-})
+}
 
-var _ = Describe("Observer", func() {
-	It("should journal messages", func() {
+func TestObserver(t *testing.T) {
+	t.Run("should journal messages", func(t *testing.T) {
 		d := &flakyDispatcher{}
 		m := agent.LogInfo(agent.NewPeer("local"), "message")
 
-		Expect(NewObserver(d).Decode(TranscoderContext{State: StateHealthy}, m)).To(Succeed())
-		Expect(d.delivered).To(HaveLen(1))
+		require.NoError(t, NewObserver(d).Decode(TranscoderContext{State: StateHealthy}, m))
+		require.Len(t, d.delivered, 1)
 	})
 
-	It("should ignore messages replayed while recovering", func() {
+	t.Run("should ignore messages replayed while recovering", func(t *testing.T) {
 		d := &flakyDispatcher{}
 		m := agent.LogInfo(agent.NewPeer("local"), "message")
 
-		Expect(NewObserver(d).Decode(TranscoderContext{State: StateRecovering}, m)).To(Succeed())
-		Expect(d.attempts).To(BeZero())
+		require.NoError(t, NewObserver(d).Decode(TranscoderContext{State: StateRecovering}, m))
+		require.Zero(t, d.attempts)
 	})
-})
+}

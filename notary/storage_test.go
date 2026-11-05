@@ -3,42 +3,40 @@ package notary_test
 import (
 	"bytes"
 	"os"
+	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw/internal/sshx"
 	. "github.com/james-lawrence/bw/notary"
 )
 
-var _ = Describe("ReplaceAuthorizedKey", func() {
-	It("should allow repeated replace calls without change", func() {
-		auths, err := os.CreateTemp(GinkgoT().TempDir(), "auths.tmp")
-		Expect(err).To(Succeed())
+func TestReplaceAuthorizedKey(t *testing.T) {
+	t.Run("should allow repeated replace calls without change", func(t *testing.T) {
+		auths, err := os.CreateTemp(t.TempDir(), "auths.tmp")
+		require.NoError(t, err)
 
-		s1, err := QuickSigner()
-		Expect(err).To(Succeed())
+		s1, err := QuickSigner(t)
+		require.NoError(t, err)
 		fp1, pubk1, err := s1.AutoSignerInfo()
-		Expect(err).To(Succeed())
-		Expect(ReplaceAuthorizedKey(auths.Name(), fp1, sshx.Comment(pubk1, "test1"))).To(Succeed())
+		require.NoError(t, err)
+		require.NoError(t, ReplaceAuthorizedKey(auths.Name(), fp1, sshx.Comment(pubk1, "test1")))
 
-		s2, err := QuickSigner()
-		Expect(err).To(Succeed())
+		s2, err := QuickSigner(t)
+		require.NoError(t, err)
 		fp2, pubk2, err := s2.AutoSignerInfo()
-		Expect(err).To(Succeed())
-		Expect(ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2"))).To(Succeed())
-		Expect(ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2"))).To(Succeed())
+		require.NoError(t, err)
+		require.NoError(t, ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2")))
+		require.NoError(t, ReplaceAuthorizedKey(auths.Name(), fp2, sshx.Comment(pubk2, "test2")))
 
 		content, err := os.ReadFile(auths.Name())
-		Expect(err).To(Succeed())
-		Expect(string(content)).To(Equal(
-			string(bytes.Join(
-				[][]byte{
-					sshx.Comment(pubk1, "test1"),
-					sshx.Comment(pubk2, "test2"),
-				},
-				[]byte{},
-			)),
-		))
+		require.NoError(t, err)
+		require.Equal(t, string(bytes.Join(
+			[][]byte{
+				sshx.Comment(pubk1, "test1"),
+				sshx.Comment(pubk2, "test2"),
+			},
+			[]byte{},
+		)), string(content))
 	})
-})
+}

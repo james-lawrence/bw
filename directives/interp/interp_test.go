@@ -2,20 +2,22 @@ package interp_test
 
 import (
 	"context"
+	"github.com/stretchr/testify/require"
 	"go/build"
+	"io"
+	"log"
+	"os"
 	"reflect"
 	"strings"
+	"testing"
 
 	yaegi "github.com/traefik/yaegi/interp"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 
 	. "github.com/james-lawrence/bw/directives/interp"
 )
 
-var _ = Describe("Interp", func() {
-	It("should execute a function", func() {
+func TestInterp(t *testing.T) {
+	t.Run("should execute a function", func(t *testing.T) {
 		i := 0
 		inc := func() {
 			i++
@@ -42,11 +44,11 @@ var _ = Describe("Interp", func() {
 				example.Increment()
 			}
 		`)
-		Expect(c.Execute(context.Background(), "example.go", buf)).To(Succeed())
-		Expect(i).To(Equal(1))
+		require.NoError(t, c.Execute(context.Background(), "example.go", buf))
+		require.Equal(t, 1, i)
 	})
 
-	It("should be able to read the environment", func() {
+	t.Run("should be able to read the environment", func(t *testing.T) {
 		s := ""
 		inc := func(in string) {
 			s = in
@@ -75,11 +77,11 @@ var _ = Describe("Interp", func() {
 				example.String(env.BEARDED_WOOKIE)
 			}
 		`)
-		Expect(c.Execute(context.Background(), "example.go", buf)).To(Succeed())
-		Expect(s).To(Equal("foo"))
+		require.NoError(t, c.Execute(context.Background(), "example.go", buf))
+		require.Equal(t, "foo", s)
 	})
 
-	It("should handle os.Exit gracefully", func() {
+	t.Run("should handle os.Exit gracefully", func(t *testing.T) {
 		c := Compiler{
 			Build:   build.Default,
 			Environ: []string{},
@@ -96,10 +98,10 @@ var _ = Describe("Interp", func() {
 			}
 		`)
 		err := c.Execute(context.Background(), "example.go", buf)
-		Expect(err).NotTo(Succeed())
+		require.Error(t, err)
 	})
 
-	It("should gracefully handle panics", func() {
+	t.Run("should gracefully handle panics", func(t *testing.T) {
 		c := Compiler{
 			Build:   build.Default,
 			Environ: []string{},
@@ -112,6 +114,11 @@ var _ = Describe("Interp", func() {
 			}
 		`)
 		err := c.Execute(context.Background(), "example.go", buf)
-		Expect(err).ToNot(Succeed())
+		require.Error(t, err)
 	})
-})
+}
+
+func TestMain(m *testing.M) {
+	log.SetOutput(io.Discard)
+	os.Exit(m.Run())
+}

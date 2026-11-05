@@ -1,20 +1,20 @@
 package bw_test
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
+	"testing"
 
 	. "github.com/james-lawrence/bw"
 )
 
-var _ = Describe("bw", func() {
-	Describe("SimpleGenerateID", func() {
-		It("16 bytes", func() {
+func TestBw(t *testing.T) {
+	t.Run("SimpleGenerateID", func(t *testing.T) {
+		t.Run("16 bytes", func(t *testing.T) {
 			id := MustGenerateID()
-			Expect(id[:]).To(HaveLen(16))
+			require.Len(t, id[:], 16)
 		})
 
-		It("should generate different ids", func() {
+		t.Run("should generate different ids", func(t *testing.T) {
 			var (
 				cache = make(map[string]struct{})
 			)
@@ -22,9 +22,9 @@ var _ = Describe("bw", func() {
 			for range 100 {
 				id := MustGenerateID()
 				_, found := cache[id.String()]
-				Expect(found).To(BeFalse())
+				require.False(t, found)
 				cache[id.String()] = struct{}{}
 			}
 		})
 	})
-})
+}

@@ -3,33 +3,33 @@ package notary
 import (
 	"os"
 	"path/filepath"
+	"testing"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/testingx"
 )
 
-var _ = Describe("newAutoSignerPath", func() {
-	It("should succeed when no key exists", func() {
+func TestNewAutoSignerPath(t *testing.T) {
+	t.Run("should succeed when no key exists", func(t *testing.T) {
 		_, err := newAutoSignerPath(
-			filepath.Join(testingx.TempDir(), bw.DefaultNotaryKey),
+			filepath.Join(testingx.TempDir(t), bw.DefaultNotaryKey),
 			"",
 			rsax.UnsafeAuto,
 		)
-		Expect(err).To(Succeed())
+		require.NoError(t, err)
 	})
 
-	It("should fail when unable to write to disk", func() {
-		tmp := testingx.TempDir()
-		Expect(os.Chmod(tmp, 0400)).To(Succeed())
+	t.Run("should fail when unable to write to disk", func(t *testing.T) {
+		tmp := testingx.TempDir(t)
+		require.NoError(t, os.Chmod(tmp, 0400))
 		_, err := newAutoSignerPath(
 			filepath.Join(tmp, bw.DefaultNotaryKey),
 			"",
 			rsax.UnsafeAuto,
 		)
-		Expect(err).ToNot(Succeed())
+		require.Error(t, err)
 	})
-})
+}
