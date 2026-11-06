@@ -45,6 +45,8 @@ func (t blockingQuorum) Dispatch(ctx context.Context, req *agent.DispatchRequest
 		}
 	case "fail", "late":
 		return nil, status.Error(codes.Unavailable, "server unavailable")
+	case "busy":
+		return nil, status.Error(codes.ResourceExhausted, "back off")
 	}
 
 	return &agent.DispatchResponse{}, nil
@@ -167,4 +169,14 @@ func TestDispatcherShouldNotDropANewerConnectionWhenAStaleRPCFails(t *testing.T)
 	// connection #2 should still be in use.
 	require.NoError(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "ok")))
 	require.Equal(t, int64(2), atomic.LoadInt64(f.dialer.dials))
+}
+
+func TestDispatcherShouldKeepTheConnectionWhenTheServerAsksToBackOff(t *testing.T) {
+	f := newDispatcherFixture(t)
+	d := NewDispatcher(f.dialer)
+
+	err := d.Dispatch(context.Background(), agent.LogInfo(f.local, "busy"))
+	require.Equal(t, codes.ResourceExhausted, status.Code(err))
+	require.NoError(t, d.Dispatch(context.Background(), agent.LogInfo(f.local, "ok")))
+	require.EqualValues(t, 1, atomic.LoadInt64(f.dialer.dials), "backing off isn't a connection failure, the connection is reused")
 }

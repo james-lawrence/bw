@@ -359,7 +359,15 @@ func (t *Quorum) Watch(cursor agent.Cursor, out agent.Quorum_WatchServer) (err e
 func (t *Quorum) Dispatch(ctx context.Context, m ...*agent.Message) (err error) {
 	if err = t.proxy().Dispatch(ctx, m...); err != nil {
 		log.Println(errors.Wrap(err, "unable to dispatch message"))
-		t.rp.ClusterChange.Broadcast()
+
+		// only a change in the cluster warrants re-evaluating it. a leader that is overloaded or a caller that
+		// gave up would just trigger more work on a node that is already behind.
+		switch status.Code(err) {
+		case codes.ResourceExhausted, codes.Canceled, codes.DeadlineExceeded:
+		default:
+			t.rp.ClusterChange.Broadcast()
+		}
+
 		return err
 	}
 

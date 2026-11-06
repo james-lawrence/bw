@@ -74,6 +74,10 @@ func (t passive) Update(c rendezvous) state {
 		lastContact: time.Now(),
 		ctx:         ctx,
 		done:        done,
+
+		barrierTimeout:     defaultBarrierTimeout,
+		maxBarrierFailures: defaultMaxBarrierFailures,
+		stepdownTimeout:    defaultStepdownTimeout,
 	}
 
 	if r.LastIndex() == 0 {

@@ -16,7 +16,18 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
+)
+
+const (
+	// maxInflightWrites bounds the writes waiting on raft at once. beyond that callers are told to back off
+	// rather than piling up behind a leader that can't keep up.
+	maxInflightWrites = 64
+	// writeAdmitTimeout how long a write waits for a slot, and for raft to accept it, before the caller is
+	// told to back off. kept well below the callers' own deadlines so they hear about it.
+	writeAdmitTimeout = 2 * time.Second
 )
 
 // Initializer for the state machine.
@@ -31,6 +42,8 @@ func NewMachine(ctx context.Context, l *agent.Peer, rp *raft.Raft, inits ...Init
 		l:     l,
 		state: rp,
 		inits: inits,
+
+		inflight: make(chan struct{}, maxInflightWrites),
 	}
 }
 
@@ -40,6 +53,8 @@ type StateMachine struct {
 	l     *agent.Peer
 	state *raft.Raft
 	inits []Initializer
+
+	inflight chan struct{} // admission for writes to the WAL.
 }
 
 func (t *StateMachine) initialize() (err error) {
@@ -181,7 +196,7 @@ func deploy(by string, dopts *agent.DeployOptions, archive *agent.Archive, d dia
 // Dispatch a message to the WAL.
 func (t *StateMachine) Dispatch(ctx context.Context, messages ...*agent.Message) (err error) {
 	for _, m := range messages {
-		if err = t.writeWAL(m, 10*time.Second); err != nil {
+		if err = t.writeWAL(ctx, m, writeAdmitTimeout); err != nil {
 			return err
 		}
 	}
@@ -189,7 +204,9 @@ func (t *StateMachine) Dispatch(ctx context.Context, messages ...*agent.Message)
 	return nil
 }
 
-func (t *StateMachine) writeWAL(m *agent.Message, d time.Duration) (err error) {
+// writeWAL writes the message to the WAL. when raft can't take the write promptly the caller is told to
+// back off (codes.ResourceExhausted) instead of being held until its own deadline.
+func (t *StateMachine) writeWAL(ctx context.Context, m *agent.Message, d time.Duration) (err error) {
 	var (
 		encoded []byte
 		future  raft.ApplyFuture
@@ -200,11 +217,24 @@ func (t *StateMachine) writeWAL(m *agent.Message, d time.Duration) (err error) {
 		return errors.WithStack(err)
 	}
 
+	// bound the writes in flight.
+	admit := time.NewTimer(d)
+	defer admit.Stop()
+
+	select {
+	case t.inflight <- struct{}{}:
+		defer func() { <-t.inflight }()
+	case <-admit.C:
+		return status.Error(codes.ResourceExhausted, "too many writes in flight, back off")
+	case <-ctx.Done():
+		return errors.WithStack(ctx.Err())
+	}
+
 	// write the event to the WAL.
-	future = t.state.Apply(encoded, 10*time.Second)
+	future = t.state.Apply(encoded, d)
 
 	if err = future.Error(); err != nil {
-		return errors.WithStack(err)
+		return backpressure(err)
 	}
 
 	if err, ok = future.Response().(error); ok {
@@ -212,4 +242,16 @@ func (t *StateMachine) writeWAL(m *agent.Message, d time.Duration) (err error) {
 	}
 
 	return err
+}
+
+// backpressure translates raft errors into statuses that tell the caller what to do.
+func backpressure(err error) error {
+	switch {
+	case errors.Is(err, raft.ErrEnqueueTimeout):
+		return status.Error(codes.ResourceExhausted, err.Error())
+	case errors.Is(err, raft.ErrNotLeader), errors.Is(err, raft.ErrLeadershipLost), errors.Is(err, raft.ErrRaftShutdown):
+		return status.Error(codes.Unavailable, err.Error())
+	default:
+		return errors.WithStack(err)
+	}
 }

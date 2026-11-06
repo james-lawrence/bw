@@ -49,7 +49,7 @@ func (t peer) updateLastContact(p *raft.Raft, n time.Time) peer {
 func (t peer) Update(c rendezvous) state {
 	switch s := t.r.State(); s {
 	case raft.Leader:
-		return leader(t).Update(c)
+		return leader{stateMeta: t.stateMeta}.Update(c)
 	default:
 		log.Println("peer current state", s)
 		if t.protocol.MaybeLeave(c) || t.deadleadership(t.r) {

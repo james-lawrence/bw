@@ -12,18 +12,38 @@ import (
 	"github.com/james-lawrence/bw/internal/debugx"
 )
 
+// defaults for the stateMeta leadership settings.
+const (
+	defaultBarrierTimeout     = 10 * time.Second
+	defaultMaxBarrierFailures = 3
+	defaultStepdownTimeout    = 5 * time.Second
+)
+
 type leader struct {
 	stateMeta
+	barrierFailures int // consecutive barrier failures.
 }
 
 func (t leader) Update(c rendezvous) state {
-	var (
-		maintainState state = delayed(t, t.protocol.ClusterChange, t.protocol.PassiveCheckin)
-	)
-
 	log.Printf("leader update invoked: %p - %s\n", t.r, t.protocol.PassiveCheckin)
 	switch t.r.State() {
 	case raft.Leader:
+		if err := t.r.Barrier(t.barrierTimeout).Error(); err != nil {
+			log.Println("barrier write failed", err)
+
+			t.barrierFailures++
+			if t.barrierFailures >= t.maxBarrierFailures {
+				return t.stepdown(c, err)
+			}
+
+			refresh := time.Second
+			log.Println("peers unstable, will refresh in", refresh)
+			return delayed(t, t.protocol.ClusterChange, refresh)
+		}
+
+		t.barrierFailures = 0
+		maintainState := delayed(t, t.protocol.ClusterChange, t.protocol.PassiveCheckin)
+
 		if t.cleanupPeers(t.protocol.LocalNode, agent.QuorumNodes(c)...) {
 			refresh := time.Second
 			log.Println("peers unstable, will refresh in", refresh)
@@ -33,8 +53,33 @@ func (t leader) Update(c rendezvous) state {
 		return maintainState
 	default:
 		log.Println("lost leadership: demote to peer")
-		return peer(t).Update(c)
+		return peer{stateMeta: t.stateMeta}.Update(c)
 	}
+}
+
+// stepdown gives up leadership because this node cannot commit. the followers can't replace a leader
+// that still heartbeats. a leadership transfer is tried first, if it can't complete (the leader loop
+// is likely the thing that is stuck) the node leaves the protocol, which shuts raft down.
+func (t leader) stepdown(c rendezvous, cause error) state {
+	log.Println("unable to commit", t.barrierFailures, "consecutive barriers, stepping down:", cause)
+
+	transferred := make(chan error, 1)
+	go func() {
+		transferred <- t.r.LeadershipTransfer().Error()
+	}()
+
+	select {
+	case err := <-transferred:
+		if err == nil {
+			log.Println("leadership transferred")
+			return peer{stateMeta: t.stateMeta}.Update(c)
+		}
+		log.Println("leadership transfer failed, leaving the protocol", err)
+	case <-time.After(t.stepdownTimeout):
+		log.Println("leadership transfer timed out, leaving the protocol")
+	}
+
+	return leave(t.stateMeta)
 }
 
 // cleanupPeers returns true if the peer set was unstable.
@@ -47,11 +92,6 @@ func (t leader) cleanupPeers(local *memberlist.Node, candidates ...*memberlist.N
 		err error
 		rs  raft.Server
 	)
-
-	if err = t.r.Barrier(commitTimeout).Error(); err != nil {
-		log.Println("barrier write failed", err)
-		return true
-	}
 
 	config := t.r.GetConfiguration()
 	if err = config.Error(); err != nil {

@@ -205,6 +205,14 @@ type stateMeta struct {
 	transport   raft.Transport
 	ctx         context.Context
 	done        context.CancelFunc
+
+	// barrierTimeout how long the leader waits to commit a barrier.
+	barrierTimeout time.Duration
+	// maxBarrierFailures consecutive barrier failures before the leader gives up leadership. a leader
+	// that cannot commit is useless, but its heartbeats keep the followers from replacing it.
+	maxBarrierFailures int
+	// stepdownTimeout how long to wait for a leadership transfer before leaving the protocol.
+	stepdownTimeout time.Duration
 }
 
 func (t *stateMeta) waitShutdown(c rendezvous) {

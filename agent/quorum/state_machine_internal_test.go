@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/james-lawrence/bw/agent"
 	"google.golang.org/grpc/codes"
@@ -62,4 +63,20 @@ func TestObserver(t *testing.T) {
 		require.NoError(t, NewObserver(d).Decode(TranscoderContext{State: StateRecovering}, m))
 		require.Len(t, d.delivered, 1)
 	})
+}
+
+// writes beyond what raft can take are told to back off promptly rather than held for their deadline.
+func TestStateMachineShouldTellCallersToBackOffWhenTooManyWritesAreInFlight(t *testing.T) {
+	// admission happens before raft is touched, so no cluster is required.
+	sm := NewMachine(t.Context(), agent.NewPeer("node"), nil)
+
+	// occupy every slot.
+	for i := 0; i < cap(sm.inflight); i++ {
+		sm.inflight <- struct{}{}
+	}
+
+	start := time.Now()
+	err := sm.writeWAL(t.Context(), agent.LogInfo(agent.NewPeer("node"), "message"), 100*time.Millisecond)
+	require.Equal(t, codes.ResourceExhausted, status.Code(err))
+	require.Less(t, time.Since(start), time.Second)
 }

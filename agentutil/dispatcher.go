@@ -48,6 +48,8 @@ func reliable(ctx context.Context, d dispatcher, m *agent.Message) (err error) {
 	bs := backoff.New(
 		backoff.Exponential(200*time.Millisecond),
 		backoff.Maximum(10*time.Second),
+		// callers fail together when the leader stalls, jitter keeps them from retrying in lockstep.
+		backoff.Jitter(0.5),
 	)
 
 	for i := 0; ; i++ {
@@ -158,6 +160,11 @@ func (t *Dispatcher) dropClient(ctx context.Context, bad *grpc.ClientConn, err e
 	}
 
 	if errors.Is(ctx.Err(), context.Canceled) || status.Code(err) == codes.Canceled {
+		return err
+	}
+
+	// the connection is fine, the server is asking the caller to back off.
+	if status.Code(err) == codes.ResourceExhausted {
 		return err
 	}
 
