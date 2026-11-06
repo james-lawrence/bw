@@ -59,10 +59,13 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		debug = log.New(os.Stderr, "TORRENT DEBUG ", 0)
 	}
 
-	// the metadata cache lives in a sub directory, which is ignored when loading the data directory.
+	// the metadata and piece completion caches live in sub directories, which are ignored when loading the data
+	// directory. the library defaults the piece cache to the user cache directory, so pin it here to keep
+	// everything the torrent subsystem reads and writes within the data directory.
 	c.ClientConfig = torrent.NewDefaultClientConfig(
 		torrent.NewMetadataCache(filepath.Join(c.dir, ".metadata")),
 		tstorage.NewFile(c.dir, tstorage.FileOptionPathMaker(dataPathMaker)),
+		torrent.ClientConfigCacheDirectory(filepath.Join(c.dir, ".bitmaps")),
 		torrent.ClientConfigInfoLogger(logger),
 		torrent.ClientConfigDebugLogger(debug),
 		torrent.ClientConfigSeed(true),
