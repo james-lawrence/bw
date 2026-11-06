@@ -186,13 +186,14 @@ func (t *EventsQueue) NodeMeta(limit int) []byte {
 		return []byte(nil)
 	}
 
-	log.Println("NodeMeta invoked limit:", limit, len(t.local.metadata))
-	if limit < len(t.local.metadata) {
+	metadata := t.local.Metadata()
+	log.Println("NodeMeta invoked limit:", limit, len(metadata))
+	if limit < len(metadata) {
 		log.Println("insufficient room to send metadata")
 		return []byte(nil)
 	}
 
-	return t.local.metadata
+	return metadata
 }
 
 // LocalState local state of the node.

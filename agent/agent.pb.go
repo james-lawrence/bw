@@ -21,6 +21,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// PeerMode informational role of a node within the cluster, eventually consistent.
+type PeerMode int32
+
+const (
+	PeerMode_PeerModePeer     PeerMode = 0
+	PeerMode_PeerModeFollower PeerMode = 1
+	PeerMode_PeerModeLeader   PeerMode = 2
+)
+
+// Enum value maps for PeerMode.
+var (
+	PeerMode_name = map[int32]string{
+		0: "PeerModePeer",
+		1: "PeerModeFollower",
+		2: "PeerModeLeader",
+	}
+	PeerMode_value = map[string]int32{
+		"PeerModePeer":     0,
+		"PeerModeFollower": 1,
+		"PeerModeLeader":   2,
+	}
+)
+
+func (x PeerMode) Enum() *PeerMode {
+	p := new(PeerMode)
+	*p = x
+	return p
+}
+
+func (x PeerMode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PeerMode) Descriptor() protoreflect.EnumDescriptor {
+	return file_agent_proto_enumTypes[0].Descriptor()
+}
+
+func (PeerMode) Type() protoreflect.EnumType {
+	return &file_agent_proto_enumTypes[0]
+}
+
+func (x PeerMode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PeerMode.Descriptor instead.
+func (PeerMode) EnumDescriptor() ([]byte, []int) {
+	return file_agent_proto_rawDescGZIP(), []int{0}
+}
+
 type Peer_State int32
 
 const (
@@ -54,11 +104,11 @@ func (x Peer_State) String() string {
 }
 
 func (Peer_State) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[0].Descriptor()
+	return file_agent_proto_enumTypes[1].Descriptor()
 }
 
 func (Peer_State) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[0]
+	return &file_agent_proto_enumTypes[1]
 }
 
 func (x Peer_State) Number() protoreflect.EnumNumber {
@@ -100,11 +150,11 @@ func (x ConnectionEvent_Type) String() string {
 }
 
 func (ConnectionEvent_Type) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[1].Descriptor()
+	return file_agent_proto_enumTypes[2].Descriptor()
 }
 
 func (ConnectionEvent_Type) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[1]
+	return &file_agent_proto_enumTypes[2]
 }
 
 func (x ConnectionEvent_Type) Number() protoreflect.EnumNumber {
@@ -146,11 +196,11 @@ func (x Message_NodeEvent) String() string {
 }
 
 func (Message_NodeEvent) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[2].Descriptor()
+	return file_agent_proto_enumTypes[3].Descriptor()
 }
 
 func (Message_NodeEvent) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[2]
+	return &file_agent_proto_enumTypes[3]
 }
 
 func (x Message_NodeEvent) Number() protoreflect.EnumNumber {
@@ -213,11 +263,11 @@ func (x Message_Type) String() string {
 }
 
 func (Message_Type) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[3].Descriptor()
+	return file_agent_proto_enumTypes[4].Descriptor()
 }
 
 func (Message_Type) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[3]
+	return &file_agent_proto_enumTypes[4]
 }
 
 func (x Message_Type) Number() protoreflect.EnumNumber {
@@ -268,11 +318,11 @@ func (x DeployCommand_Command) String() string {
 }
 
 func (DeployCommand_Command) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[4].Descriptor()
+	return file_agent_proto_enumTypes[5].Descriptor()
 }
 
 func (DeployCommand_Command) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[4]
+	return &file_agent_proto_enumTypes[5]
 }
 
 func (x DeployCommand_Command) Number() protoreflect.EnumNumber {
@@ -317,11 +367,11 @@ func (x Deploy_Stage) String() string {
 }
 
 func (Deploy_Stage) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[5].Descriptor()
+	return file_agent_proto_enumTypes[6].Descriptor()
 }
 
 func (Deploy_Stage) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[5]
+	return &file_agent_proto_enumTypes[6]
 }
 
 func (x Deploy_Stage) Number() protoreflect.EnumNumber {
@@ -372,11 +422,11 @@ func (x Log_Level) String() string {
 }
 
 func (Log_Level) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[6].Descriptor()
+	return file_agent_proto_enumTypes[7].Descriptor()
 }
 
 func (Log_Level) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[6]
+	return &file_agent_proto_enumTypes[7]
 }
 
 func (x Log_Level) Number() protoreflect.EnumNumber {
@@ -418,11 +468,11 @@ func (x InfoResponse_Mode) String() string {
 }
 
 func (InfoResponse_Mode) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[7].Descriptor()
+	return file_agent_proto_enumTypes[8].Descriptor()
 }
 
 func (InfoResponse_Mode) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[7]
+	return &file_agent_proto_enumTypes[8]
 }
 
 func (x InfoResponse_Mode) Number() protoreflect.EnumNumber {
@@ -464,11 +514,11 @@ func (x ArchiveResponse_Info) String() string {
 }
 
 func (ArchiveResponse_Info) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[8].Descriptor()
+	return file_agent_proto_enumTypes[9].Descriptor()
 }
 
 func (ArchiveResponse_Info) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[8]
+	return &file_agent_proto_enumTypes[9]
 }
 
 func (x ArchiveResponse_Info) Number() protoreflect.EnumNumber {
@@ -513,11 +563,11 @@ func (x ClusterWatchEvents_Event) String() string {
 }
 
 func (ClusterWatchEvents_Event) Descriptor() protoreflect.EnumDescriptor {
-	return file_agent_proto_enumTypes[9].Descriptor()
+	return file_agent_proto_enumTypes[10].Descriptor()
 }
 
 func (ClusterWatchEvents_Event) Type() protoreflect.EnumType {
-	return &file_agent_proto_enumTypes[9]
+	return &file_agent_proto_enumTypes[10]
 }
 
 func (x ClusterWatchEvents_Event) Number() protoreflect.EnumNumber {
@@ -627,7 +677,8 @@ type PeerMetadata struct {
 	Status     int32                  `protobuf:"varint,6,opt,name=Status,proto3" json:"Status,omitempty"`
 	P2PPort    uint32                 `protobuf:"varint,9,opt,name=P2PPort,proto3" json:"P2PPort,omitempty"`
 	// archive true when the node archives successful deployments for use as a bootstrap archive.
-	Archive       bool `protobuf:"varint,10,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Archive       bool  `protobuf:"varint,10,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Mode          int32 `protobuf:"varint,11,opt,name=Mode,proto3" json:"Mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -690,6 +741,13 @@ func (x *PeerMetadata) GetArchive() bool {
 	return false
 }
 
+func (x *PeerMetadata) GetMode() int32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
+}
+
 type Peer struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	Status    Peer_State             `protobuf:"varint,1,opt,name=Status,proto3,enum=agent.Peer_State" json:"Status,omitempty"`
@@ -698,7 +756,8 @@ type Peer struct {
 	P2PPort   uint32                 `protobuf:"varint,10,opt,name=P2PPort,proto3" json:"P2PPort,omitempty"`
 	PublicKey []byte                 `protobuf:"bytes,11,opt,name=PublicKey,proto3" json:"PublicKey,omitempty"`
 	// archive true when the node archives successful deployments for use as a bootstrap archive.
-	Archive       bool `protobuf:"varint,12,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Archive       bool     `protobuf:"varint,12,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Mode          PeerMode `protobuf:"varint,13,opt,name=Mode,proto3,enum=agent.PeerMode" json:"Mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -773,6 +832,13 @@ func (x *Peer) GetArchive() bool {
 		return x.Archive
 	}
 	return false
+}
+
+func (x *Peer) GetMode() PeerMode {
+	if x != nil {
+		return x.Mode
+	}
+	return PeerMode_PeerModePeer
 }
 
 // Represents the certificates in use by the system
@@ -2957,7 +3023,7 @@ const file_agent_proto_rawDesc = "" +
 	"\bchecksum\x18\x04 \x01(\fR\bchecksum\x12\x0e\n" +
 	"\x02ts\x18\x05 \x01(\x03R\x02ts\x12\x10\n" +
 	"\x03dts\x18\a \x01(\x03R\x03dts\x12\x16\n" +
-	"\x06commit\x18\b \x01(\tR\x06commit\"z\n" +
+	"\x06commit\x18\b \x01(\tR\x06commit\"\x8e\x01\n" +
 	"\fPeerMetadata\x12\x1e\n" +
 	"\n" +
 	"capability\x18\x01 \x01(\fR\n" +
@@ -2965,7 +3031,8 @@ const file_agent_proto_rawDesc = "" +
 	"\x06Status\x18\x06 \x01(\x05R\x06Status\x12\x18\n" +
 	"\aP2PPort\x18\t \x01(\rR\aP2PPort\x12\x18\n" +
 	"\aArchive\x18\n" +
-	" \x01(\bR\aArchive\"\xd0\x01\n" +
+	" \x01(\bR\aArchive\x12\x12\n" +
+	"\x04Mode\x18\v \x01(\x05R\x04Mode\"\xf5\x01\n" +
 	"\x04Peer\x12)\n" +
 	"\x06Status\x18\x01 \x01(\x0e2\x11.agent.Peer.StateR\x06Status\x12\x0e\n" +
 	"\x02ip\x18\x02 \x01(\tR\x02ip\x12\x12\n" +
@@ -2973,7 +3040,8 @@ const file_agent_proto_rawDesc = "" +
 	"\aP2PPort\x18\n" +
 	" \x01(\rR\aP2PPort\x12\x1c\n" +
 	"\tPublicKey\x18\v \x01(\fR\tPublicKey\x12\x18\n" +
-	"\aArchive\x18\f \x01(\bR\aArchive\"'\n" +
+	"\aArchive\x18\f \x01(\bR\aArchive\x12#\n" +
+	"\x04Mode\x18\r \x01(\x0e2\x0f.agent.PeerModeR\x04Mode\"'\n" +
 	"\x05State\x12\b\n" +
 	"\x04Node\x10\x00\x12\n" +
 	"\n" +
@@ -3153,7 +3221,11 @@ const file_agent_proto_rawDesc = "" +
 	"\n" +
 	"\x06Depart\x10\x01\x12\n" +
 	"\n" +
-	"\x06Update\x10\x022\xa9\x02\n" +
+	"\x06Update\x10\x02*F\n" +
+	"\bPeerMode\x12\x10\n" +
+	"\fPeerModePeer\x10\x00\x12\x14\n" +
+	"\x10PeerModeFollower\x10\x01\x12\x12\n" +
+	"\x0ePeerModeLeader\x10\x022\xa9\x02\n" +
 	"\vDeployments\x127\n" +
 	"\x06Upload\x12\x12.agent.UploadChunk\x1a\x15.agent.UploadResponse\"\x00(\x01\x12C\n" +
 	"\x06Deploy\x12\x1b.agent.DeployCommandRequest\x1a\x1a.agent.DeployCommandResult\"\x00\x127\n" +
@@ -3192,152 +3264,154 @@ func file_agent_proto_rawDescGZIP() []byte {
 	return file_agent_proto_rawDescData
 }
 
-var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
+var file_agent_proto_enumTypes = make([]protoimpl.EnumInfo, 11)
 var file_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_agent_proto_goTypes = []any{
-	(Peer_State)(0),               // 0: agent.Peer.State
-	(ConnectionEvent_Type)(0),     // 1: agent.ConnectionEvent.Type
-	(Message_NodeEvent)(0),        // 2: agent.Message.NodeEvent
-	(Message_Type)(0),             // 3: agent.Message.Type
-	(DeployCommand_Command)(0),    // 4: agent.DeployCommand.Command
-	(Deploy_Stage)(0),             // 5: agent.Deploy.Stage
-	(Log_Level)(0),                // 6: agent.Log.Level
-	(InfoResponse_Mode)(0),        // 7: agent.InfoResponse.Mode
-	(ArchiveResponse_Info)(0),     // 8: agent.ArchiveResponse.Info
-	(ClusterWatchEvents_Event)(0), // 9: agent.ClusterWatchEvents.Event
-	(*Archive)(nil),               // 10: agent.Archive
-	(*PeerMetadata)(nil),          // 11: agent.PeerMetadata
-	(*Peer)(nil),                  // 12: agent.Peer
-	(*TLSCertificates)(nil),       // 13: agent.TLSCertificates
-	(*WALPreamble)(nil),           // 14: agent.WALPreamble
-	(*LogHistoryEvent)(nil),       // 15: agent.LogHistoryEvent
-	(*ConnectionEvent)(nil),       // 16: agent.ConnectionEvent
-	(*DeployHeartbeat)(nil),       // 17: agent.DeployHeartbeat
-	(*UploadProgress)(nil),        // 18: agent.UploadProgress
-	(*Message)(nil),               // 19: agent.Message
-	(*DeployOptions)(nil),         // 20: agent.DeployOptions
-	(*DeployCommand)(nil),         // 21: agent.DeployCommand
-	(*Deploy)(nil),                // 22: agent.Deploy
-	(*DeployCommandRequest)(nil),  // 23: agent.DeployCommandRequest
-	(*DeployCommandResult)(nil),   // 24: agent.DeployCommandResult
-	(*Log)(nil),                   // 25: agent.Log
-	(*UploadMetadata)(nil),        // 26: agent.UploadMetadata
-	(*UploadChunk)(nil),           // 27: agent.UploadChunk
-	(*UploadResponse)(nil),        // 28: agent.UploadResponse
-	(*WatchRequest)(nil),          // 29: agent.WatchRequest
-	(*DispatchResponse)(nil),      // 30: agent.DispatchResponse
-	(*InfoRequest)(nil),           // 31: agent.InfoRequest
-	(*InfoResponse)(nil),          // 32: agent.InfoResponse
-	(*HistoryRequest)(nil),        // 33: agent.HistoryRequest
-	(*HistoryResponse)(nil),       // 34: agent.HistoryResponse
-	(*ConnectRequest)(nil),        // 35: agent.ConnectRequest
-	(*ConnectResponse)(nil),       // 36: agent.ConnectResponse
-	(*StatusRequest)(nil),         // 37: agent.StatusRequest
-	(*StatusResponse)(nil),        // 38: agent.StatusResponse
-	(*DeployRequest)(nil),         // 39: agent.DeployRequest
-	(*DeployResponse)(nil),        // 40: agent.DeployResponse
-	(*ShutdownRequest)(nil),       // 41: agent.ShutdownRequest
-	(*ShutdownResponse)(nil),      // 42: agent.ShutdownResponse
-	(*CancelRequest)(nil),         // 43: agent.CancelRequest
-	(*CancelResponse)(nil),        // 44: agent.CancelResponse
-	(*LogRequest)(nil),            // 45: agent.LogRequest
-	(*LogResponse)(nil),           // 46: agent.LogResponse
-	(*DispatchRequest)(nil),       // 47: agent.DispatchRequest
-	(*ArchiveRequest)(nil),        // 48: agent.ArchiveRequest
-	(*ArchiveResponse)(nil),       // 49: agent.ArchiveResponse
-	(*ClusterWatchRequest)(nil),   // 50: agent.ClusterWatchRequest
-	(*ClusterWatchEvents)(nil),    // 51: agent.ClusterWatchEvents
+	(PeerMode)(0),                 // 0: agent.PeerMode
+	(Peer_State)(0),               // 1: agent.Peer.State
+	(ConnectionEvent_Type)(0),     // 2: agent.ConnectionEvent.Type
+	(Message_NodeEvent)(0),        // 3: agent.Message.NodeEvent
+	(Message_Type)(0),             // 4: agent.Message.Type
+	(DeployCommand_Command)(0),    // 5: agent.DeployCommand.Command
+	(Deploy_Stage)(0),             // 6: agent.Deploy.Stage
+	(Log_Level)(0),                // 7: agent.Log.Level
+	(InfoResponse_Mode)(0),        // 8: agent.InfoResponse.Mode
+	(ArchiveResponse_Info)(0),     // 9: agent.ArchiveResponse.Info
+	(ClusterWatchEvents_Event)(0), // 10: agent.ClusterWatchEvents.Event
+	(*Archive)(nil),               // 11: agent.Archive
+	(*PeerMetadata)(nil),          // 12: agent.PeerMetadata
+	(*Peer)(nil),                  // 13: agent.Peer
+	(*TLSCertificates)(nil),       // 14: agent.TLSCertificates
+	(*WALPreamble)(nil),           // 15: agent.WALPreamble
+	(*LogHistoryEvent)(nil),       // 16: agent.LogHistoryEvent
+	(*ConnectionEvent)(nil),       // 17: agent.ConnectionEvent
+	(*DeployHeartbeat)(nil),       // 18: agent.DeployHeartbeat
+	(*UploadProgress)(nil),        // 19: agent.UploadProgress
+	(*Message)(nil),               // 20: agent.Message
+	(*DeployOptions)(nil),         // 21: agent.DeployOptions
+	(*DeployCommand)(nil),         // 22: agent.DeployCommand
+	(*Deploy)(nil),                // 23: agent.Deploy
+	(*DeployCommandRequest)(nil),  // 24: agent.DeployCommandRequest
+	(*DeployCommandResult)(nil),   // 25: agent.DeployCommandResult
+	(*Log)(nil),                   // 26: agent.Log
+	(*UploadMetadata)(nil),        // 27: agent.UploadMetadata
+	(*UploadChunk)(nil),           // 28: agent.UploadChunk
+	(*UploadResponse)(nil),        // 29: agent.UploadResponse
+	(*WatchRequest)(nil),          // 30: agent.WatchRequest
+	(*DispatchResponse)(nil),      // 31: agent.DispatchResponse
+	(*InfoRequest)(nil),           // 32: agent.InfoRequest
+	(*InfoResponse)(nil),          // 33: agent.InfoResponse
+	(*HistoryRequest)(nil),        // 34: agent.HistoryRequest
+	(*HistoryResponse)(nil),       // 35: agent.HistoryResponse
+	(*ConnectRequest)(nil),        // 36: agent.ConnectRequest
+	(*ConnectResponse)(nil),       // 37: agent.ConnectResponse
+	(*StatusRequest)(nil),         // 38: agent.StatusRequest
+	(*StatusResponse)(nil),        // 39: agent.StatusResponse
+	(*DeployRequest)(nil),         // 40: agent.DeployRequest
+	(*DeployResponse)(nil),        // 41: agent.DeployResponse
+	(*ShutdownRequest)(nil),       // 42: agent.ShutdownRequest
+	(*ShutdownResponse)(nil),      // 43: agent.ShutdownResponse
+	(*CancelRequest)(nil),         // 44: agent.CancelRequest
+	(*CancelResponse)(nil),        // 45: agent.CancelResponse
+	(*LogRequest)(nil),            // 46: agent.LogRequest
+	(*LogResponse)(nil),           // 47: agent.LogResponse
+	(*DispatchRequest)(nil),       // 48: agent.DispatchRequest
+	(*ArchiveRequest)(nil),        // 49: agent.ArchiveRequest
+	(*ArchiveResponse)(nil),       // 50: agent.ArchiveResponse
+	(*ClusterWatchRequest)(nil),   // 51: agent.ClusterWatchRequest
+	(*ClusterWatchEvents)(nil),    // 52: agent.ClusterWatchEvents
 }
 var file_agent_proto_depIdxs = []int32{
-	12, // 0: agent.Archive.peer:type_name -> agent.Peer
-	0,  // 1: agent.Peer.Status:type_name -> agent.Peer.State
-	19, // 2: agent.LogHistoryEvent.messages:type_name -> agent.Message
-	1,  // 3: agent.ConnectionEvent.state:type_name -> agent.ConnectionEvent.Type
-	3,  // 4: agent.Message.type:type_name -> agent.Message.Type
-	12, // 5: agent.Message.peer:type_name -> agent.Peer
-	25, // 6: agent.Message.log:type_name -> agent.Log
-	21, // 7: agent.Message.deployCommand:type_name -> agent.DeployCommand
-	22, // 8: agent.Message.deploy:type_name -> agent.Deploy
-	2,  // 9: agent.Message.membership:type_name -> agent.Message.NodeEvent
-	15, // 10: agent.Message.history:type_name -> agent.LogHistoryEvent
-	16, // 11: agent.Message.connection:type_name -> agent.ConnectionEvent
-	17, // 12: agent.Message.heartbeat:type_name -> agent.DeployHeartbeat
-	18, // 13: agent.Message.upload:type_name -> agent.UploadProgress
-	4,  // 14: agent.DeployCommand.command:type_name -> agent.DeployCommand.Command
-	10, // 15: agent.DeployCommand.archive:type_name -> agent.Archive
-	20, // 16: agent.DeployCommand.options:type_name -> agent.DeployOptions
-	5,  // 17: agent.Deploy.stage:type_name -> agent.Deploy.Stage
-	10, // 18: agent.Deploy.archive:type_name -> agent.Archive
-	20, // 19: agent.Deploy.options:type_name -> agent.DeployOptions
-	10, // 20: agent.DeployCommandRequest.archive:type_name -> agent.Archive
-	20, // 21: agent.DeployCommandRequest.options:type_name -> agent.DeployOptions
-	12, // 22: agent.DeployCommandRequest.peers:type_name -> agent.Peer
-	6,  // 23: agent.Log.level:type_name -> agent.Log.Level
-	26, // 24: agent.UploadChunk.metadata:type_name -> agent.UploadMetadata
-	10, // 25: agent.UploadResponse.archive:type_name -> agent.Archive
-	7,  // 26: agent.InfoResponse.mode:type_name -> agent.InfoResponse.Mode
-	21, // 27: agent.InfoResponse.deploying:type_name -> agent.DeployCommand
-	21, // 28: agent.InfoResponse.deployed:type_name -> agent.DeployCommand
-	12, // 29: agent.InfoResponse.leader:type_name -> agent.Peer
-	12, // 30: agent.InfoResponse.quorum:type_name -> agent.Peer
-	19, // 31: agent.HistoryResponse.messages:type_name -> agent.Message
-	12, // 32: agent.ConnectResponse.quorum:type_name -> agent.Peer
-	12, // 33: agent.StatusResponse.peer:type_name -> agent.Peer
-	22, // 34: agent.StatusResponse.deployments:type_name -> agent.Deploy
-	10, // 35: agent.DeployRequest.archive:type_name -> agent.Archive
-	20, // 36: agent.DeployRequest.options:type_name -> agent.DeployOptions
-	22, // 37: agent.DeployResponse.deploy:type_name -> agent.Deploy
-	12, // 38: agent.LogRequest.peer:type_name -> agent.Peer
-	19, // 39: agent.DispatchRequest.messages:type_name -> agent.Message
-	8,  // 40: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
-	22, // 41: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
-	9,  // 42: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
-	12, // 43: agent.ClusterWatchEvents.node:type_name -> agent.Peer
-	27, // 44: agent.Deployments.Upload:input_type -> agent.UploadChunk
-	23, // 45: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
-	43, // 46: agent.Deployments.Cancel:input_type -> agent.CancelRequest
-	45, // 47: agent.Deployments.Logs:input_type -> agent.LogRequest
-	29, // 48: agent.Deployments.Watch:input_type -> agent.WatchRequest
-	27, // 49: agent.Quorum.Upload:input_type -> agent.UploadChunk
-	29, // 50: agent.Quorum.Watch:input_type -> agent.WatchRequest
-	47, // 51: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
-	23, // 52: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
-	31, // 53: agent.Quorum.Info:input_type -> agent.InfoRequest
-	43, // 54: agent.Quorum.Cancel:input_type -> agent.CancelRequest
-	33, // 55: agent.Quorum.History:input_type -> agent.HistoryRequest
-	35, // 56: agent.Agent.Connect:input_type -> agent.ConnectRequest
-	37, // 57: agent.Agent.Info:input_type -> agent.StatusRequest
-	39, // 58: agent.Agent.Deploy:input_type -> agent.DeployRequest
-	43, // 59: agent.Agent.Cancel:input_type -> agent.CancelRequest
-	41, // 60: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
-	45, // 61: agent.Agent.Logs:input_type -> agent.LogRequest
-	48, // 62: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
-	50, // 63: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
-	28, // 64: agent.Deployments.Upload:output_type -> agent.UploadResponse
-	24, // 65: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
-	44, // 66: agent.Deployments.Cancel:output_type -> agent.CancelResponse
-	46, // 67: agent.Deployments.Logs:output_type -> agent.LogResponse
-	19, // 68: agent.Deployments.Watch:output_type -> agent.Message
-	28, // 69: agent.Quorum.Upload:output_type -> agent.UploadResponse
-	19, // 70: agent.Quorum.Watch:output_type -> agent.Message
-	30, // 71: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
-	24, // 72: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
-	32, // 73: agent.Quorum.Info:output_type -> agent.InfoResponse
-	44, // 74: agent.Quorum.Cancel:output_type -> agent.CancelResponse
-	34, // 75: agent.Quorum.History:output_type -> agent.HistoryResponse
-	36, // 76: agent.Agent.Connect:output_type -> agent.ConnectResponse
-	38, // 77: agent.Agent.Info:output_type -> agent.StatusResponse
-	40, // 78: agent.Agent.Deploy:output_type -> agent.DeployResponse
-	44, // 79: agent.Agent.Cancel:output_type -> agent.CancelResponse
-	42, // 80: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
-	46, // 81: agent.Agent.Logs:output_type -> agent.LogResponse
-	49, // 82: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
-	51, // 83: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
-	64, // [64:84] is the sub-list for method output_type
-	44, // [44:64] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	13, // 0: agent.Archive.peer:type_name -> agent.Peer
+	1,  // 1: agent.Peer.Status:type_name -> agent.Peer.State
+	0,  // 2: agent.Peer.Mode:type_name -> agent.PeerMode
+	20, // 3: agent.LogHistoryEvent.messages:type_name -> agent.Message
+	2,  // 4: agent.ConnectionEvent.state:type_name -> agent.ConnectionEvent.Type
+	4,  // 5: agent.Message.type:type_name -> agent.Message.Type
+	13, // 6: agent.Message.peer:type_name -> agent.Peer
+	26, // 7: agent.Message.log:type_name -> agent.Log
+	22, // 8: agent.Message.deployCommand:type_name -> agent.DeployCommand
+	23, // 9: agent.Message.deploy:type_name -> agent.Deploy
+	3,  // 10: agent.Message.membership:type_name -> agent.Message.NodeEvent
+	16, // 11: agent.Message.history:type_name -> agent.LogHistoryEvent
+	17, // 12: agent.Message.connection:type_name -> agent.ConnectionEvent
+	18, // 13: agent.Message.heartbeat:type_name -> agent.DeployHeartbeat
+	19, // 14: agent.Message.upload:type_name -> agent.UploadProgress
+	5,  // 15: agent.DeployCommand.command:type_name -> agent.DeployCommand.Command
+	11, // 16: agent.DeployCommand.archive:type_name -> agent.Archive
+	21, // 17: agent.DeployCommand.options:type_name -> agent.DeployOptions
+	6,  // 18: agent.Deploy.stage:type_name -> agent.Deploy.Stage
+	11, // 19: agent.Deploy.archive:type_name -> agent.Archive
+	21, // 20: agent.Deploy.options:type_name -> agent.DeployOptions
+	11, // 21: agent.DeployCommandRequest.archive:type_name -> agent.Archive
+	21, // 22: agent.DeployCommandRequest.options:type_name -> agent.DeployOptions
+	13, // 23: agent.DeployCommandRequest.peers:type_name -> agent.Peer
+	7,  // 24: agent.Log.level:type_name -> agent.Log.Level
+	27, // 25: agent.UploadChunk.metadata:type_name -> agent.UploadMetadata
+	11, // 26: agent.UploadResponse.archive:type_name -> agent.Archive
+	8,  // 27: agent.InfoResponse.mode:type_name -> agent.InfoResponse.Mode
+	22, // 28: agent.InfoResponse.deploying:type_name -> agent.DeployCommand
+	22, // 29: agent.InfoResponse.deployed:type_name -> agent.DeployCommand
+	13, // 30: agent.InfoResponse.leader:type_name -> agent.Peer
+	13, // 31: agent.InfoResponse.quorum:type_name -> agent.Peer
+	20, // 32: agent.HistoryResponse.messages:type_name -> agent.Message
+	13, // 33: agent.ConnectResponse.quorum:type_name -> agent.Peer
+	13, // 34: agent.StatusResponse.peer:type_name -> agent.Peer
+	23, // 35: agent.StatusResponse.deployments:type_name -> agent.Deploy
+	11, // 36: agent.DeployRequest.archive:type_name -> agent.Archive
+	21, // 37: agent.DeployRequest.options:type_name -> agent.DeployOptions
+	23, // 38: agent.DeployResponse.deploy:type_name -> agent.Deploy
+	13, // 39: agent.LogRequest.peer:type_name -> agent.Peer
+	20, // 40: agent.DispatchRequest.messages:type_name -> agent.Message
+	9,  // 41: agent.ArchiveResponse.info:type_name -> agent.ArchiveResponse.Info
+	23, // 42: agent.ArchiveResponse.deploy:type_name -> agent.Deploy
+	10, // 43: agent.ClusterWatchEvents.event:type_name -> agent.ClusterWatchEvents.Event
+	13, // 44: agent.ClusterWatchEvents.node:type_name -> agent.Peer
+	28, // 45: agent.Deployments.Upload:input_type -> agent.UploadChunk
+	24, // 46: agent.Deployments.Deploy:input_type -> agent.DeployCommandRequest
+	44, // 47: agent.Deployments.Cancel:input_type -> agent.CancelRequest
+	46, // 48: agent.Deployments.Logs:input_type -> agent.LogRequest
+	30, // 49: agent.Deployments.Watch:input_type -> agent.WatchRequest
+	28, // 50: agent.Quorum.Upload:input_type -> agent.UploadChunk
+	30, // 51: agent.Quorum.Watch:input_type -> agent.WatchRequest
+	48, // 52: agent.Quorum.Dispatch:input_type -> agent.DispatchRequest
+	24, // 53: agent.Quorum.Deploy:input_type -> agent.DeployCommandRequest
+	32, // 54: agent.Quorum.Info:input_type -> agent.InfoRequest
+	44, // 55: agent.Quorum.Cancel:input_type -> agent.CancelRequest
+	34, // 56: agent.Quorum.History:input_type -> agent.HistoryRequest
+	36, // 57: agent.Agent.Connect:input_type -> agent.ConnectRequest
+	38, // 58: agent.Agent.Info:input_type -> agent.StatusRequest
+	40, // 59: agent.Agent.Deploy:input_type -> agent.DeployRequest
+	44, // 60: agent.Agent.Cancel:input_type -> agent.CancelRequest
+	42, // 61: agent.Agent.Shutdown:input_type -> agent.ShutdownRequest
+	46, // 62: agent.Agent.Logs:input_type -> agent.LogRequest
+	49, // 63: agent.Bootstrap.Archive:input_type -> agent.ArchiveRequest
+	51, // 64: agent.Cluster.Watch:input_type -> agent.ClusterWatchRequest
+	29, // 65: agent.Deployments.Upload:output_type -> agent.UploadResponse
+	25, // 66: agent.Deployments.Deploy:output_type -> agent.DeployCommandResult
+	45, // 67: agent.Deployments.Cancel:output_type -> agent.CancelResponse
+	47, // 68: agent.Deployments.Logs:output_type -> agent.LogResponse
+	20, // 69: agent.Deployments.Watch:output_type -> agent.Message
+	29, // 70: agent.Quorum.Upload:output_type -> agent.UploadResponse
+	20, // 71: agent.Quorum.Watch:output_type -> agent.Message
+	31, // 72: agent.Quorum.Dispatch:output_type -> agent.DispatchResponse
+	25, // 73: agent.Quorum.Deploy:output_type -> agent.DeployCommandResult
+	33, // 74: agent.Quorum.Info:output_type -> agent.InfoResponse
+	45, // 75: agent.Quorum.Cancel:output_type -> agent.CancelResponse
+	35, // 76: agent.Quorum.History:output_type -> agent.HistoryResponse
+	37, // 77: agent.Agent.Connect:output_type -> agent.ConnectResponse
+	39, // 78: agent.Agent.Info:output_type -> agent.StatusResponse
+	41, // 79: agent.Agent.Deploy:output_type -> agent.DeployResponse
+	45, // 80: agent.Agent.Cancel:output_type -> agent.CancelResponse
+	43, // 81: agent.Agent.Shutdown:output_type -> agent.ShutdownResponse
+	47, // 82: agent.Agent.Logs:output_type -> agent.LogResponse
+	50, // 83: agent.Bootstrap.Archive:output_type -> agent.ArchiveResponse
+	52, // 84: agent.Cluster.Watch:output_type -> agent.ClusterWatchEvents
+	65, // [65:85] is the sub-list for method output_type
+	45, // [45:65] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_agent_proto_init() }
@@ -3366,7 +3440,7 @@ func file_agent_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agent_proto_rawDesc), len(file_agent_proto_rawDesc)),
-			NumEnums:      10,
+			NumEnums:      11,
 			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   5,

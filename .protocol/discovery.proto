@@ -14,6 +14,7 @@ message Node {
   uint32 DiscoveryPort = 7;
   // archive true when the node archives successful deployments for use as a bootstrap archive.
   bool Archive = 9;
+  int32 Mode = 10;
 }
 
 message QuorumRequest {}

@@ -59,24 +59,16 @@ func NodeName(name string) string {
 	return name
 }
 
-// NodeMode describes the role of the peer within the cluster: leader, quorum, follower or peer.
-// follower is a quorum member that isn't the leader, quorum is a quorum member while there is no leader.
-func NodeMode(info *agent.InfoResponse, p *agent.Peer) string {
-	if info.GetLeader().GetName() == p.Name {
+// ModeString describes the role of the node within the cluster.
+func ModeString(m agent.PeerMode) string {
+	switch m {
+	case agent.PeerMode_PeerModeLeader:
 		return "leader"
+	case agent.PeerMode_PeerModeFollower:
+		return "follower"
+	default:
+		return "peer"
 	}
-
-	for _, q := range info.GetQuorum() {
-		if q.Name == p.Name {
-			if info.GetLeader() == nil {
-				return "quorum"
-			}
-
-			return "follower"
-		}
-	}
-
-	return "peer"
 }
 
 // PrintNodes prints the nodes of the cluster along with the deployment state of the quorum.
@@ -87,7 +79,7 @@ func PrintNodes(info *agent.InfoResponse, peers []*agent.Peer) error {
 
 	for _, p := range peers {
 		nodes = append(nodes, []string{
-			strconv.FormatBool(p.Archive), NodeMode(info, p), NodeName(p.Name), p.Ip, strconv.Itoa(int(p.P2PPort)),
+			strconv.FormatBool(p.Archive), ModeString(p.Mode), NodeName(p.Name), p.Ip, strconv.Itoa(int(p.P2PPort)),
 		})
 	}
 

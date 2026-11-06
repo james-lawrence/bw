@@ -54,6 +54,13 @@ func OptionDialer(d dialers.Defaults) Option {
 	}
 }
 
+// OptionModeChange set the callback invoked when the role of the node within the quorum changes.
+func OptionModeChange(fn func(agent.PeerMode)) Option {
+	return func(q *Quorum) {
+		q.modechange = fn
+	}
+}
+
 // OptionStateMachineDispatch ...
 func OptionStateMachineDispatch(d stateMachine) Option {
 	return func(q *Quorum) {
@@ -112,6 +119,13 @@ type Quorum struct {
 	rp                 raftutil.Protocol
 	history            History
 	leadershipTransfer *LeadershipTransfer
+	modechange         func(agent.PeerMode)
+}
+
+func (t *Quorum) mode(m agent.PeerMode) {
+	if t.modechange != nil {
+		t.modechange(m)
+	}
 }
 
 // Observe observes a raft cluster and updates the quorum state.
@@ -160,6 +174,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			log.Println("leadership observation", o.Raft.State())
 			switch o.Raft.State() {
 			case raft.Leader:
+				t.mode(agent.PeerMode_PeerModeLeader)
 				t.sm = func() stateMachine {
 					sm := NewMachine(
 						t.c.Local(),
@@ -179,9 +194,11 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 					return sm
 				}()
 			case raft.Follower, raft.Candidate:
+				t.mode(agent.PeerMode_PeerModeFollower)
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
 			case raft.Shutdown:
 				log.Println("shutdown disabling quorum locally")
+				t.mode(agent.PeerMode_PeerModePeer)
 				t.sm = DisabledMachine{}
 			}
 		}

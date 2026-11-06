@@ -2,8 +2,10 @@ package daemons
 
 import (
 	"context"
+	"log"
 	"net"
 	"path/filepath"
+	"time"
 
 	"github.com/hashicorp/raft"
 	"github.com/pkg/errors"
@@ -19,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/agent/quorum"
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/certificatecache"
+	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/notary"
@@ -84,6 +87,21 @@ func Agent(dctx Context, upload storage.UploadProtocol, download storage.Downloa
 		upload,
 		dctx.Raft,
 		quorum.OptionDialer(qdialer),
+		quorum.OptionModeChange(func(m agent.PeerMode) {
+			if err := dctx.Local.SetMode(m); err != nil {
+				log.Println("unable to update node mode", err)
+				return
+			}
+
+			// informational, so advertising is best effort and happens in the background.
+			if r, ok := dctx.Bootstrapper.(clustering.Replication); ok {
+				go func() {
+					if err := r.UpdateNode(5 * time.Second); err != nil {
+						log.Println("unable to advertise node mode", err)
+					}
+				}()
+			}
+		}),
 	)
 	go (&q).Observe(make(chan raft.Observation, 200))
 

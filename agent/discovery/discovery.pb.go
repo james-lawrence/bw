@@ -84,7 +84,8 @@ type Node struct {
 	TorrentPort   uint32                 `protobuf:"varint,6,opt,name=TorrentPort,proto3" json:"TorrentPort,omitempty"`
 	DiscoveryPort uint32                 `protobuf:"varint,7,opt,name=DiscoveryPort,proto3" json:"DiscoveryPort,omitempty"`
 	// archive true when the node archives successful deployments for use as a bootstrap archive.
-	Archive       bool `protobuf:"varint,9,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Archive       bool  `protobuf:"varint,9,opt,name=Archive,proto3" json:"Archive,omitempty"`
+	Mode          int32 `protobuf:"varint,10,opt,name=Mode,proto3" json:"Mode,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -180,6 +181,13 @@ func (x *Node) GetArchive() bool {
 		return x.Archive
 	}
 	return false
+}
+
+func (x *Node) GetMode() int32 {
+	if x != nil {
+		return x.Mode
+	}
+	return 0
 }
 
 type QuorumRequest struct {
@@ -550,7 +558,7 @@ var File_discovery_proto protoreflect.FileDescriptor
 
 const file_discovery_proto_rawDesc = "" +
 	"\n" +
-	"\x0fdiscovery.proto\x12\tdiscovery\"\xf8\x01\n" +
+	"\x0fdiscovery.proto\x12\tdiscovery\"\x8c\x02\n" +
 	"\x04Node\x12\x0e\n" +
 	"\x02ip\x18\x01 \x01(\tR\x02ip\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -560,7 +568,9 @@ const file_discovery_proto_rawDesc = "" +
 	"\bSWIMPort\x18\x05 \x01(\rR\bSWIMPort\x12 \n" +
 	"\vTorrentPort\x18\x06 \x01(\rR\vTorrentPort\x12$\n" +
 	"\rDiscoveryPort\x18\a \x01(\rR\rDiscoveryPort\x12\x18\n" +
-	"\aArchive\x18\t \x01(\bR\aArchive\"\x0f\n" +
+	"\aArchive\x18\t \x01(\bR\aArchive\x12\x12\n" +
+	"\x04Mode\x18\n" +
+	" \x01(\x05R\x04Mode\"\x0f\n" +
 	"\rQuorumRequest\"7\n" +
 	"\x0eQuorumResponse\x12%\n" +
 	"\x05nodes\x18\x01 \x03(\v2\x0f.discovery.NodeR\x05nodes\"?\n" +

@@ -211,6 +211,7 @@ func PeerToMetadata(p *Peer) *PeerMetadata {
 		Status:  int32(p.Status),
 		P2PPort: p.P2PPort,
 		Archive: p.Archive,
+		Mode:    int32(p.Mode),
 	}
 }
 
@@ -260,6 +261,7 @@ func NodeToPeer(n *memberlist.Node) (_zerop *Peer, err error) {
 		Ip:      n.Addr.String(),
 		P2PPort: m.P2PPort,
 		Archive: m.Archive,
+		Mode:    PeerMode(m.Mode),
 	}, nil
 }
 

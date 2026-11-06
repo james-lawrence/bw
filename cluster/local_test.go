@@ -2,6 +2,8 @@ package cluster_test
 
 import (
 	"net"
+
+	"github.com/hashicorp/memberlist"
 	"testing"
 
 	"github.com/james-lawrence/bw/agent"
@@ -37,4 +39,19 @@ func TestLocalAdvertisesArchive(t *testing.T) {
 			require.Equal(t, tc.expected, peer.Archive)
 		})
 	}
+}
+
+// the mode is gossiped through the metadata and can change after the local node is created.
+func TestLocalSetMode(t *testing.T) {
+	p := agent.NewPeer("node1")
+	l := cluster.NewLocal(p)
+
+	peer, err := agent.NodeToPeer(&memberlist.Node{Name: p.Name, Addr: net.IPv4(127, 0, 0, 1), Meta: l.Metadata()})
+	require.NoError(t, err)
+	require.Equal(t, agent.PeerMode_PeerModePeer, peer.Mode)
+
+	require.NoError(t, l.SetMode(agent.PeerMode_PeerModeLeader))
+	peer, err = agent.NodeToPeer(&memberlist.Node{Name: p.Name, Addr: net.IPv4(127, 0, 0, 1), Meta: cluster.NewEventsQueue(l).NodeMeta(512)})
+	require.NoError(t, err)
+	require.Equal(t, agent.PeerMode_PeerModeLeader, peer.Mode)
 }

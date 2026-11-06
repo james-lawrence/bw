@@ -14,12 +14,20 @@ message Archive {
   string commit = 8;
 }
 
+// PeerMode informational role of a node within the cluster, eventually consistent.
+enum PeerMode {
+  PeerModePeer = 0;
+  PeerModeFollower = 1;
+  PeerModeLeader = 2;
+}
+
 message PeerMetadata {
   bytes capability = 1;
   int32 Status = 6;
   uint32 P2PPort = 9;
   // archive true when the node archives successful deployments for use as a bootstrap archive.
   bool Archive = 10;
+  int32 Mode = 11;
 }
 
 message Peer {
@@ -35,6 +43,7 @@ message Peer {
   bytes PublicKey = 11;
   // archive true when the node archives successful deployments for use as a bootstrap archive.
   bool Archive = 12;
+  PeerMode Mode = 13;
 }
 
 // Represents the certificates in use by the system

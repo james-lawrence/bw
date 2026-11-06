@@ -17,12 +17,8 @@ func TestNodeName(t *testing.T) {
 	require.Equal(t, "node1", uxterm.NodeName("node1"))
 }
 
-func TestNodeMode(t *testing.T) {
-	leader, follower, other := agent.NewPeer("leader"), agent.NewPeer("follower"), agent.NewPeer("other")
-	info := &agent.InfoResponse{Leader: leader, Quorum: []*agent.Peer{leader, follower}}
-
-	require.Equal(t, "leader", uxterm.NodeMode(info, leader))
-	require.Equal(t, "follower", uxterm.NodeMode(info, follower))
-	require.Equal(t, "peer", uxterm.NodeMode(info, other))
-	require.Equal(t, "quorum", uxterm.NodeMode(&agent.InfoResponse{Quorum: []*agent.Peer{follower}}, follower))
+func TestModeString(t *testing.T) {
+	require.Equal(t, "leader", uxterm.ModeString(agent.PeerMode_PeerModeLeader))
+	require.Equal(t, "follower", uxterm.ModeString(agent.PeerMode_PeerModeFollower))
+	require.Equal(t, "peer", uxterm.ModeString(agent.PeerMode_PeerModePeer))
 }
