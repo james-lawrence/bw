@@ -9,6 +9,9 @@ Conflicts=bearded-wookie-coordinator.service bearded-wookie.service
 Type=simple
 Restart=always
 Slice=bearded-wookie.slice
+# account the io and network of the agent itself, the slice only accounts for the slice.
+IOAccounting=true
+IPAccounting=true
 ConfigurationDirectory=%N
 CacheDirectory=%N
 RuntimeDirectory=%N

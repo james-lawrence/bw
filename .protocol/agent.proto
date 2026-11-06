@@ -98,6 +98,10 @@ message Message {
     LogHistoryEvent = 6;
     DeployHeartbeat = 7;
     UploadEvent = 8;
+    // a snapshot restore of the write ahead log replaces the state of the node. the markers are local to the
+    // node, never replicated. everything between initiated and completed is replayed state, not new events.
+    RestoreEventInitiated = 9;
+    RestoreEventCompleted = 10;
   }
 
   string id = 9;

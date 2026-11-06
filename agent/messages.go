@@ -173,6 +173,26 @@ func NewUploadProgress(p *Peer, bytes, total uint64) *Message {
 	}, Stamp))
 }
 
+// NewRestoreInitiated marks the start of a snapshot restore of the write ahead log. it is local to the
+// node, restores are never replicated, so it is ephemeral.
+func NewRestoreInitiated(p *Peer) *Message {
+	return newRestore(p, Message_RestoreEventInitiated)
+}
+
+// NewRestoreCompleted marks the end of a snapshot restore, see NewRestoreInitiated.
+func NewRestoreCompleted(p *Peer) *Message {
+	return newRestore(p, Message_RestoreEventCompleted)
+}
+
+func newRestore(p *Peer, t Message_Type) *Message {
+	return new(langx.Clone(Message{
+		Type:      t,
+		Ephemeral: true,
+		Peer:      p,
+		Event:     &Message_None{},
+	}, Stamp))
+}
+
 // PeerEvent ...
 func PeerEvent(p *Peer, options ...MessageOption) *Message {
 	return new(langx.Clone(Message{

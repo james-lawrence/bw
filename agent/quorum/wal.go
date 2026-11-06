@@ -140,6 +140,18 @@ func (t *WAL) Restore(o io.ReadCloser) (err error) {
 	atomic.SwapInt64(&t.innerstate.ctx.State, StateRecovering)
 	defer atomic.SwapInt64(&t.innerstate.ctx.State, StateHealthy)
 
+	// tell the transcoders the state they hold is being replaced by the snapshot. the markers are local
+	// to this node, they bypass the log and the duplicate filter.
+	local := agent.NewPeerZero()
+	if err = t.c.Decode(t.ctx, agent.NewRestoreInitiated(local)); err != nil {
+		return errors.WithStack(err)
+	}
+	defer func() {
+		if err == nil {
+			err = t.c.Decode(t.ctx, agent.NewRestoreCompleted(local))
+		}
+	}()
+
 	// reset the internal state of the write ahead log.
 	t.innerstate = innerstate{
 		ctx:     t.ctx,

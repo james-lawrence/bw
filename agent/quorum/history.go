@@ -28,6 +28,11 @@ func (t History) Decode(ctx TranscoderContext, m *agent.Message) error {
 	}
 
 	switch m.Type {
+	case agent.Message_RestoreEventInitiated:
+		// the snapshot replaces the history, the messages that follow rebuild it.
+		t.lbuffer.Reset()
+	case agent.Message_RestoreEventCompleted:
+		// nothing to do, the history is rebuilt. not recorded.
 	case agent.Message_DeployHeartbeat:
 		// heartbeats only signal liveness, recording them evicts the actual history.
 	case agent.Message_DeployCommandEvent:

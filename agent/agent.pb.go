@@ -224,31 +224,39 @@ const (
 	Message_LogHistoryEvent     Message_Type = 6
 	Message_DeployHeartbeat     Message_Type = 7
 	Message_UploadEvent         Message_Type = 8
+	// a snapshot restore of the write ahead log replaces the state of the node. the markers are local to the
+	// node, never replicated. everything between initiated and completed is replayed state, not new events.
+	Message_RestoreEventInitiated Message_Type = 9
+	Message_RestoreEventCompleted Message_Type = 10
 )
 
 // Enum value maps for Message_Type.
 var (
 	Message_Type_name = map[int32]string{
-		0: "PeerEvent",
-		1: "LogEvent",
-		2: "DeployCommandEvent",
-		3: "DeployEvent",
-		4: "PeersFoundEvent",
-		5: "PeersCompletedEvent",
-		6: "LogHistoryEvent",
-		7: "DeployHeartbeat",
-		8: "UploadEvent",
+		0:  "PeerEvent",
+		1:  "LogEvent",
+		2:  "DeployCommandEvent",
+		3:  "DeployEvent",
+		4:  "PeersFoundEvent",
+		5:  "PeersCompletedEvent",
+		6:  "LogHistoryEvent",
+		7:  "DeployHeartbeat",
+		8:  "UploadEvent",
+		9:  "RestoreEventInitiated",
+		10: "RestoreEventCompleted",
 	}
 	Message_Type_value = map[string]int32{
-		"PeerEvent":           0,
-		"LogEvent":            1,
-		"DeployCommandEvent":  2,
-		"DeployEvent":         3,
-		"PeersFoundEvent":     4,
-		"PeersCompletedEvent": 5,
-		"LogHistoryEvent":     6,
-		"DeployHeartbeat":     7,
-		"UploadEvent":         8,
+		"PeerEvent":             0,
+		"LogEvent":              1,
+		"DeployCommandEvent":    2,
+		"DeployEvent":           3,
+		"PeersFoundEvent":       4,
+		"PeersCompletedEvent":   5,
+		"LogHistoryEvent":       6,
+		"DeployHeartbeat":       7,
+		"UploadEvent":           8,
+		"RestoreEventInitiated": 9,
+		"RestoreEventCompleted": 10,
 	}
 )
 
@@ -3075,7 +3083,7 @@ const file_agent_proto_rawDesc = "" +
 	"\x0fDeployHeartbeat\"<\n" +
 	"\x0eUploadProgress\x12\x14\n" +
 	"\x05bytes\x18\x01 \x01(\x04R\x05bytes\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x04R\x05total\"\xd7\x06\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total\"\x8d\a\n" +
 	"\aMessage\x12\x0e\n" +
 	"\x02id\x18\t \x01(\tR\x02id\x12\x1d\n" +
 	"\tephemeral\x18\xe6\a \x01(\bR\tephemeral\x12\x17\n" +
@@ -3102,7 +3110,7 @@ const file_agent_proto_rawDesc = "" +
 	"\tNodeEvent\x12\n" +
 	"\n" +
 	"\x06Joined\x10\x00\x12\f\n" +
-	"\bDeparted\x10\x01\"\xb5\x01\n" +
+	"\bDeparted\x10\x01\"\xeb\x01\n" +
 	"\x04Type\x12\r\n" +
 	"\tPeerEvent\x10\x00\x12\f\n" +
 	"\bLogEvent\x10\x01\x12\x16\n" +
@@ -3112,7 +3120,10 @@ const file_agent_proto_rawDesc = "" +
 	"\x13PeersCompletedEvent\x10\x05\x12\x13\n" +
 	"\x0fLogHistoryEvent\x10\x06\x12\x13\n" +
 	"\x0fDeployHeartbeat\x10\a\x12\x0f\n" +
-	"\vUploadEvent\x10\bB\a\n" +
+	"\vUploadEvent\x10\b\x12\x19\n" +
+	"\x15RestoreEventInitiated\x10\t\x12\x19\n" +
+	"\x15RestoreEventCompleted\x10\n" +
+	"B\a\n" +
 	"\x05Event\"\xdb\x01\n" +
 	"\rDeployOptions\x12 \n" +
 	"\vconcurrency\x18\x02 \x01(\x03R\vconcurrency\x12\x18\n" +
