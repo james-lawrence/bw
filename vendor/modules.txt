@@ -1,3 +1,4 @@
+## workspace
 # atomicgo.dev/cursor v0.2.0
 ## explicit; go 1.15
 atomicgo.dev/cursor
@@ -56,6 +57,9 @@ dario.cat/mergo
 # github.com/0xAX/notificator v0.0.0-20220220101646-ee9b8921e557
 ## explicit; go 1.16
 github.com/0xAX/notificator
+# github.com/Masterminds/squirrel v1.5.4
+## explicit; go 1.14
+github.com/Masterminds/squirrel
 # github.com/Microsoft/go-winio v0.6.3
 ## explicit; go 1.26.0
 github.com/Microsoft/go-winio
@@ -378,6 +382,54 @@ github.com/dustin/go-humanize
 # github.com/edsrzf/mmap-go v1.2.0
 ## explicit; go 1.17
 github.com/edsrzf/mmap-go
+# github.com/egdaemon/eg v0.0.0-20261030201623-bd74787ece93
+## explicit; go 1.27.2
+github.com/egdaemon/eg
+github.com/egdaemon/eg/astcodec
+github.com/egdaemon/eg/backoff
+github.com/egdaemon/eg/internal/contextx
+github.com/egdaemon/eg/internal/coverage
+github.com/egdaemon/eg/internal/coverage/golangcov
+github.com/egdaemon/eg/internal/debugx
+github.com/egdaemon/eg/internal/envx
+github.com/egdaemon/eg/internal/errorsx
+github.com/egdaemon/eg/internal/execx
+github.com/egdaemon/eg/internal/fsx
+github.com/egdaemon/eg/internal/goosex
+github.com/egdaemon/eg/internal/iox
+github.com/egdaemon/eg/internal/iterx
+github.com/egdaemon/eg/internal/langx
+github.com/egdaemon/eg/internal/md5x
+github.com/egdaemon/eg/internal/modfilex
+github.com/egdaemon/eg/internal/numericx
+github.com/egdaemon/eg/internal/protobuflog
+github.com/egdaemon/eg/internal/slicesx
+github.com/egdaemon/eg/internal/sqlx
+github.com/egdaemon/eg/internal/squirrelx
+github.com/egdaemon/eg/internal/stringsx
+github.com/egdaemon/eg/internal/systemx
+github.com/egdaemon/eg/internal/timex
+github.com/egdaemon/eg/internal/tracex
+github.com/egdaemon/eg/internal/userx
+github.com/egdaemon/eg/interp/c8s
+github.com/egdaemon/eg/interp/events
+github.com/egdaemon/eg/interp/execproxy
+github.com/egdaemon/eg/interp/runtime/wasi/ffierrors
+github.com/egdaemon/eg/interp/runtime/wasi/ffiguest
+github.com/egdaemon/eg/runtime/wasi/eg
+github.com/egdaemon/eg/runtime/wasi/egenv
+github.com/egdaemon/eg/runtime/wasi/eggit
+github.com/egdaemon/eg/runtime/wasi/egunsafe
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiegcontainer
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffiexec
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigit
+github.com/egdaemon/eg/runtime/wasi/egunsafe/ffigraph
+github.com/egdaemon/eg/runtime/wasi/env
+github.com/egdaemon/eg/runtime/wasi/shell
+github.com/egdaemon/eg/runtime/x/wasi/egdebuild
+github.com/egdaemon/eg/runtime/x/wasi/egfs
+github.com/egdaemon/eg/runtime/x/wasi/eggolang
+github.com/egdaemon/eg/runtime/x/wasi/execx
 # github.com/egdaemon/gdx v0.0.0-20260824162813-84291833ef44
 ## explicit; go 1.25.8
 github.com/egdaemon/gdx
@@ -390,6 +442,16 @@ github.com/egdaemon/gdx/internal/langx
 github.com/egdaemon/gdx/konggdx
 github.com/egdaemon/gdx/konggdx/cmdopts
 github.com/egdaemon/gdx/konggdx/userx
+# github.com/egdaemon/wasinet/wasinet v0.0.0-20261027202319-9cfc20f44598
+## explicit; go 1.26.0
+github.com/egdaemon/wasinet/wasinet
+github.com/egdaemon/wasinet/wasinet/ffi
+github.com/egdaemon/wasinet/wasinet/ffierrors
+github.com/egdaemon/wasinet/wasinet/internal/envx
+github.com/egdaemon/wasinet/wasinet/internal/errorsx
+github.com/egdaemon/wasinet/wasinet/internal/langx
+github.com/egdaemon/wasinet/wasinet/stdlib/wasip1net
+github.com/egdaemon/wasinet/wasinet/stdlib/wasip1syscall
 # github.com/emirpasic/gods v1.18.1
 ## explicit; go 1.2
 github.com/emirpasic/gods/containers
@@ -619,6 +681,69 @@ github.com/hashicorp/raft-boltdb
 # github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0
 ## explicit; go 1.17
 github.com/icrowley/fake
+# github.com/jackc/pgio v1.0.0
+## explicit; go 1.12
+github.com/jackc/pgio
+# github.com/jackc/pgpassfile v1.0.0
+## explicit; go 1.12
+github.com/jackc/pgpassfile
+# github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
+## explicit; go 1.14
+github.com/jackc/pgservicefile
+# github.com/jackc/pgtype v1.14.4
+## explicit; go 1.13
+github.com/jackc/pgtype
+# github.com/jackc/pgx/v5 v5.11.0
+## explicit; go 1.25.0
+github.com/jackc/pgx/v5
+github.com/jackc/pgx/v5/internal/iobufpool
+github.com/jackc/pgx/v5/internal/pgdatetime
+github.com/jackc/pgx/v5/internal/pgio
+github.com/jackc/pgx/v5/internal/sanitize
+github.com/jackc/pgx/v5/internal/stmtcache
+github.com/jackc/pgx/v5/pgconn
+github.com/jackc/pgx/v5/pgconn/ctxwatch
+github.com/jackc/pgx/v5/pgconn/internal/bgreader
+github.com/jackc/pgx/v5/pgproto3
+github.com/jackc/pgx/v5/pgtype
+github.com/jackc/pgx/v5/pgxpool
+github.com/jackc/pgx/v5/stdlib
+# github.com/jackc/puddle/v2 v2.2.3
+## explicit; go 1.19
+github.com/jackc/puddle/v2
+github.com/jackc/puddle/v2/internal/genstack
+# github.com/james-lawrence/genieql v0.0.0-20260917171911-8038e3e1d315
+## explicit; go 1.25.0
+github.com/james-lawrence/genieql
+github.com/james-lawrence/genieql/astbuild
+github.com/james-lawrence/genieql/astcodec
+github.com/james-lawrence/genieql/astutil
+github.com/james-lawrence/genieql/buildx
+github.com/james-lawrence/genieql/columninfo
+github.com/james-lawrence/genieql/dialects
+github.com/james-lawrence/genieql/fsx
+github.com/james-lawrence/genieql/generators
+github.com/james-lawrence/genieql/generators/functions
+github.com/james-lawrence/genieql/generators/typespec
+github.com/james-lawrence/genieql/ginterp
+github.com/james-lawrence/genieql/internal/bytesx
+github.com/james-lawrence/genieql/internal/contextx
+github.com/james-lawrence/genieql/internal/debugx
+github.com/james-lawrence/genieql/internal/drivers
+github.com/james-lawrence/genieql/internal/envx
+github.com/james-lawrence/genieql/internal/errorsx
+github.com/james-lawrence/genieql/internal/iox
+github.com/james-lawrence/genieql/internal/langx
+github.com/james-lawrence/genieql/internal/md5x
+github.com/james-lawrence/genieql/internal/postgresql
+github.com/james-lawrence/genieql/internal/postgresql/internal
+github.com/james-lawrence/genieql/internal/slicesx
+github.com/james-lawrence/genieql/internal/stringsx
+github.com/james-lawrence/genieql/internal/transformx
+github.com/james-lawrence/genieql/internal/userx
+github.com/james-lawrence/genieql/internal/wasidialect
+github.com/james-lawrence/genieql/internal/wasix/ffierrors
+github.com/james-lawrence/genieql/internal/wasix/ffiguest
 # github.com/james-lawrence/torrent v0.0.0-20261103050457-294b8a5cff75
 ## explicit; go 1.27.0
 github.com/james-lawrence/torrent
@@ -684,6 +809,14 @@ github.com/joho/godotenv
 github.com/kevinburke/ssh_config
 # github.com/klauspost/cpuid/v2 v2.4.0
 ## explicit; go 1.24.0
+# github.com/kr/pretty v0.3.1
+## explicit; go 1.12
+# github.com/lann/builder v0.0.0-20180802200727-47ae307949d0
+## explicit
+github.com/lann/builder
+# github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0
+## explicit
+github.com/lann/ps
 # github.com/lithammer/fuzzysearch v1.1.8
 ## explicit; go 1.15
 github.com/lithammer/fuzzysearch/fuzzy
@@ -704,6 +837,9 @@ github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.23
 ## explicit; go 1.20
 github.com/mattn/go-runewidth
+# github.com/mfridman/interpolate v0.0.2
+## explicit; go 1.19
+github.com/mfridman/interpolate
 # github.com/miekg/dns v1.1.73
 ## explicit; go 1.25.0
 github.com/miekg/dns
@@ -731,11 +867,27 @@ github.com/pkg/errors
 # github.com/pkg/profile v1.7.0
 ## explicit; go 1.13
 github.com/pkg/profile
+# github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
+## explicit
+github.com/pmezard/go-difflib/difflib
 # github.com/posener/complete v1.2.3
 ## explicit; go 1.13
 github.com/posener/complete
 github.com/posener/complete/cmd
 github.com/posener/complete/cmd/install
+# github.com/pressly/goose/v3 v3.29.0
+## explicit; go 1.26.0
+github.com/pressly/goose/v3
+github.com/pressly/goose/v3/database
+github.com/pressly/goose/v3/database/dialect
+github.com/pressly/goose/v3/internal/controller
+github.com/pressly/goose/v3/internal/dialects
+github.com/pressly/goose/v3/internal/gooseutil
+github.com/pressly/goose/v3/internal/legacystore
+github.com/pressly/goose/v3/internal/sqlparser
+github.com/pressly/goose/v3/lock
+github.com/pressly/goose/v3/lock/internal/store
+github.com/pressly/goose/v3/lock/internal/table
 # github.com/pterm/pterm v0.12.80
 ## explicit; go 1.21
 github.com/pterm/pterm
@@ -746,9 +898,15 @@ github.com/riywo/loginshell
 # github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529
 ## explicit
 github.com/sean-/seed
+# github.com/serenize/snaker v0.0.0-20201027110005-a7ad2135616e
+## explicit
+github.com/serenize/snaker
 # github.com/sergi/go-diff v1.4.0
 ## explicit; go 1.13
 github.com/sergi/go-diff/diffmatchpatch
+# github.com/sethvargo/go-retry v0.5.0
+## explicit; go 1.25
+github.com/sethvargo/go-retry
 # github.com/skeema/knownhosts v1.3.2
 ## explicit; go 1.24.0
 github.com/skeema/knownhosts
@@ -776,6 +934,9 @@ github.com/xanzy/ssh-agent
 # github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e
 ## explicit; go 1.19
 github.com/xo/terminfo
+# github.com/zieckey/goini v0.0.0-20240615065340-08ee21c836fb
+## explicit; go 1.22.4
+github.com/zieckey/goini
 # go.opencensus.io v0.24.0
 ## explicit; go 1.13
 go.opencensus.io
@@ -820,6 +981,9 @@ go.opentelemetry.io/otel/trace
 go.opentelemetry.io/otel/trace/embedded
 go.opentelemetry.io/otel/trace/internal/telemetry
 go.opentelemetry.io/otel/trace/noop
+# go.uber.org/multierr v1.11.0
+## explicit; go 1.19
+go.uber.org/multierr
 # go.yaml.in/yaml/v3 v3.0.6
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
@@ -850,6 +1014,7 @@ golang.org/x/exp/constraints
 # golang.org/x/mod v0.42.0
 ## explicit; go 1.26.0
 golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.62.0
@@ -912,25 +1077,39 @@ golang.org/x/text/internal/utf8internal
 golang.org/x/text/language
 golang.org/x/text/runes
 golang.org/x/text/secure/bidirule
+golang.org/x/text/secure/precis
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
+golang.org/x/text/width
 # golang.org/x/time v0.16.0
 ## explicit; go 1.26.0
 golang.org/x/time/rate
 # golang.org/x/tools v0.52.0
 ## explicit; go 1.26.0
+golang.org/x/tools/cover
 golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/go/ast/edge
+golang.org/x/tools/go/ast/inspector
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/packages
+golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/imports
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
 golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/gcimporter
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
 golang.org/x/tools/internal/modindex
+golang.org/x/tools/internal/moremaps
+golang.org/x/tools/internal/packagesinternal
+golang.org/x/tools/internal/pkgbits
 golang.org/x/tools/internal/stdlib
+golang.org/x/tools/internal/typesinternal
+golang.org/x/tools/internal/versions
 # google.golang.org/api v0.307.0
 ## explicit; go 1.26.0
 google.golang.org/api/compute/v1
@@ -1075,3 +1254,6 @@ gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit; go 1.15
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3

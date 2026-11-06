@@ -1,0 +1,5 @@
+cmd/spike
+.eg.workload
+.eg.cache
+notes-*.md
+.genieql

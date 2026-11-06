@@ -1,0 +1,424 @@
+package astcodec
+
+import (
+	"errors"
+	"go/ast"
+	"go/token"
+	"go/types"
+	"log"
+	"os"
+	"slices"
+
+	"golang.org/x/tools/go/ast/astutil"
+	"golang.org/x/tools/go/packages"
+)
+
+type LoadOpt func(*packages.Config)
+
+func LoadDir(path string) LoadOpt {
+	return func(c *packages.Config) {
+		c.Dir = path
+	}
+}
+
+func AutoFileSet(c *packages.Config) {
+	c.Fset = token.NewFileSet()
+}
+
+func DisableGowork(c *packages.Config) {
+	c.Env = append(c.Env, "GOWORK=off")
+}
+
+func DefaultPkgLoad(options ...LoadOpt) *packages.Config {
+	cfg := &packages.Config{
+		Env:  os.Environ(),
+		Mode: packages.NeedName | packages.NeedImports | packages.NeedTypes | packages.NeedSyntax | packages.NeedFiles | packages.NeedDeps | packages.NeedModule,
+	}
+
+	for _, opt := range options {
+		opt(cfg)
+	}
+
+	return cfg
+}
+
+func Load(cfg *packages.Config) (pkg *packages.Package, err error) {
+	var set []*packages.Package
+
+	if set, err = packages.Load(cfg); err != nil {
+		return nil, err
+	}
+
+	for _, pkg = range set {
+		return pkg, nil
+	}
+
+	return nil, errors.New("no package found")
+}
+
+func FindFunctions(d ast.Decl) bool {
+	_, ok := d.(*ast.FuncDecl)
+	return ok
+}
+
+func FindFunctionsByName(n string) func(d ast.Decl) bool {
+	return func(d ast.Decl) bool {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok {
+			return ok
+		}
+
+		return fn.Name.Name == n
+	}
+}
+
+func TypePattern(pattern ...ast.Expr) func(...ast.Expr) bool {
+	return func(testcase ...ast.Expr) bool {
+		if len(pattern) != len(testcase) {
+			return false
+		}
+
+		for idx := range pattern {
+			if types.ExprString(pattern[idx]) != types.ExprString(testcase[idx]) {
+				return false
+			}
+		}
+
+		return true
+	}
+}
+
+// MapFieldsToTypeExpr - extracts the type for each name for each of the provided fields.
+// i.e.) a,b int, c string, d float is transformed into: int, int, string, float
+// anonymous fields count as a single name. the provided fields are not modified.
+func MapFieldsToTypeExpr(args ...*ast.Field) []ast.Expr {
+	r := []ast.Expr{}
+	for _, f := range args {
+		for range max(len(f.Names), 1) {
+			r = append(r, f.Type)
+		}
+	}
+	return r
+}
+
+// FieldListPattern extracts the types of the field list, a nil list (i.e. a function
+// without results) has no types.
+func FieldListPattern(l *ast.FieldList) []ast.Expr {
+	if l == nil {
+		return nil
+	}
+
+	return MapFieldsToTypeExpr(l.List...)
+}
+
+func FunctionPattern(example *ast.FuncType) (params []ast.Expr, results []ast.Expr) {
+	return FieldListPattern(example.Params), FieldListPattern(example.Results)
+}
+
+func FindFunctionsByPattern(example *ast.FuncType) func(d ast.Decl) bool {
+	paramspattern, resultpattern := FunctionPattern(example)
+	return func(d ast.Decl) bool {
+		fn, ok := d.(*ast.FuncDecl)
+		if !ok {
+			return ok
+		}
+
+		aparamspattern, aresultpattern := FunctionPattern(fn.Type)
+
+		return TypePattern(paramspattern...)(aparamspattern...) && TypePattern(resultpattern...)(aresultpattern...)
+	}
+}
+
+func FindImportsByPath(path string) func(*ast.ImportSpec) bool {
+	path = "\"" + path + "\""
+	return func(n *ast.ImportSpec) bool {
+		return path == n.Path.Value
+	}
+}
+
+// SearchDecls returns the declarations that match all of the filters.
+func SearchDecls(pkg *packages.Package, filters ...func(ast.Decl) bool) (fn []ast.Decl) {
+	for _, gf := range pkg.Syntax {
+		for _, d := range gf.Decls {
+			if !slices.ContainsFunc(filters, func(f func(ast.Decl) bool) bool { return !f(d) }) {
+				fn = append(fn, d)
+			}
+		}
+	}
+
+	return fn
+}
+
+func SearchPackageImports(pkg *packages.Package, filters ...func(*ast.ImportSpec) bool) (fn []*ast.ImportSpec) {
+	for _, gf := range pkg.Syntax {
+		fn = append(fn, SearchImports(gf, filters...)...)
+	}
+
+	return fn
+}
+
+// SearchImports returns the imports that match all of the filters.
+func SearchImports(root ast.Node, filters ...func(*ast.ImportSpec) bool) (fn []*ast.ImportSpec) {
+	x := &findimports{}
+
+	ast.Walk(x, root)
+
+	for _, s := range x.found {
+		if !slices.ContainsFunc(filters, func(f func(*ast.ImportSpec) bool) bool { return !f(s) }) {
+			fn = append(fn, s)
+		}
+	}
+
+	return fn
+}
+
+func FindImport(root ast.Node, filters ...func(*ast.ImportSpec) bool) *ast.ImportSpec {
+	found := SearchImports(root, filters...)
+	for _, i := range found {
+		for _, f := range filters {
+			if f(i) {
+				return i
+			}
+		}
+	}
+
+	return nil
+}
+
+func FindFunctionDecl(pkg *packages.Package, filters ...func(ast.Decl) bool) *ast.FuncDecl {
+	found := SearchDecls(pkg, filters...)
+	for _, i := range found {
+		for _, f := range filters {
+			if x, ok := i.(*ast.FuncDecl); ok && f(i) {
+				return x
+			}
+		}
+	}
+
+	return nil
+}
+
+type multivisit []ast.Visitor
+
+func (t multivisit) Visit(node ast.Node) (w ast.Visitor) {
+	updates := make([]ast.Visitor, 0, len(t))
+	for _, v := range t {
+		// visitors that return nil are done with this subtree.
+		if u := v.Visit(node); u != nil {
+			updates = append(updates, u)
+		}
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return multivisit(updates)
+}
+
+func Multivisit(set ...ast.Visitor) ast.Visitor {
+	return multivisit(set)
+}
+
+type findimports struct {
+	found []*ast.ImportSpec
+}
+
+func (t *findimports) Visit(node ast.Node) (w ast.Visitor) {
+	if node == nil {
+		return t
+	}
+
+	switch x := node.(type) {
+	case *ast.File:
+		return t
+	case *ast.GenDecl:
+		return t
+	case *ast.ImportSpec:
+		t.found = append(t.found, x)
+		return nil
+	default:
+		return nil
+	}
+}
+
+func Printer() ast.Visitor {
+	return nodePrinter{}
+}
+
+type nodePrinter struct{}
+
+func (t nodePrinter) Visit(node ast.Node) (w ast.Visitor) {
+	if node == nil {
+		return t
+	}
+
+	switch x := node.(type) {
+	case *ast.CallExpr:
+		log.Println("invocation of", types.ExprString(x.Fun))
+	case *ast.ImportSpec:
+		log.Println("import", x.Name.String(), x.Path.Value)
+	default:
+		log.Printf("%T\n", x)
+	}
+	return t
+}
+
+func Noop() ast.Visitor {
+	return noop{}
+}
+
+type noop struct{}
+
+func (t noop) Visit(node ast.Node) (w ast.Visitor) {
+	return t
+}
+
+type filter struct {
+	delegate ast.Visitor
+	pattern  func(ast.Node) bool
+}
+
+func (t filter) Visit(node ast.Node) (w ast.Visitor) {
+	if node == nil {
+		return t
+	}
+
+	if !t.pattern(node) {
+		return t
+	}
+
+	delegate := t.delegate.Visit(node)
+	if delegate == nil {
+		// the delegate is done with this subtree.
+		return nil
+	}
+
+	return filter{
+		delegate: delegate,
+		pattern:  t.pattern,
+	}
+}
+
+func Filter[T ast.Node](v ast.Visitor, m func(T) bool) ast.Visitor {
+	return filter{
+		delegate: v,
+		pattern: func(n ast.Node) bool {
+			switch x := n.(type) {
+			case T:
+				return m(x)
+			default:
+				return false
+			}
+		},
+	}
+}
+
+type replacecallexpr struct {
+	pattern func(*ast.CallExpr) bool
+	mut     func(*ast.CallExpr) *ast.CallExpr
+}
+
+func (t replacecallexpr) Visit(node ast.Node) (w ast.Visitor) {
+	if node == nil {
+		return t
+	}
+
+	switch x := node.(type) {
+	case *ast.CallExpr:
+		if t.pattern(x) {
+			replacement := t.mut(x)
+			x.Args = replacement.Args
+			x.Fun = replacement.Fun
+		}
+	default:
+		// log.Printf("%T\n", x)
+	}
+
+	return t
+}
+
+func NewCallExprReplacement(mut func(*ast.CallExpr) *ast.CallExpr, pattern func(*ast.CallExpr) bool) ast.Visitor {
+	return replacecallexpr{
+		mut:     mut,
+		pattern: pattern,
+	}
+}
+
+func ReplaceFunction(root ast.Node, with *ast.FuncDecl, pattern func(ast.Decl) bool) ast.Node {
+	return astutil.Apply(root, func(c *astutil.Cursor) bool {
+		switch n := c.Node().(type) {
+		case *ast.File:
+			return true
+		case *ast.FuncDecl:
+			return pattern(n)
+		case ast.Decl:
+			return false
+		default:
+			return false
+		}
+	}, func(c *astutil.Cursor) bool {
+		if _, ok := c.Node().(*ast.FuncDecl); !ok {
+			return true
+		}
+		c.InsertAfter(with)
+		c.Delete()
+		return true
+	})
+}
+
+func RemoveFunction(root ast.Node, pattern func(ast.Decl) bool) ast.Node {
+	return astutil.Apply(root, func(c *astutil.Cursor) bool {
+		switch n := c.Node().(type) {
+		case *ast.File:
+			return true
+		case *ast.FuncDecl:
+			return pattern(n)
+		case ast.Decl:
+			return false
+		default:
+			return false
+		}
+	}, func(c *astutil.Cursor) bool {
+		if _, ok := c.Node().(*ast.FuncDecl); !ok {
+			return true
+		}
+		c.Delete()
+		return true
+	})
+}
+
+func Ident(expr ast.Expr) string {
+	return types.ExprString(expr)
+}
+
+// FuncName returns the name coverage records for the function; methods are
+// qualified by their receiver's type name, e.g. Type.Method.
+func FuncName(fd *ast.FuncDecl) string {
+	if fd.Recv == nil || len(fd.Recv.List) == 0 {
+		return fd.Name.Name
+	}
+
+	return ReceiverName(fd.Recv.List[0].Type) + "." + fd.Name.Name
+}
+
+// ReceiverName returns the base type name of a receiver expression, stripping
+// pointers and type parameters.
+func ReceiverName(expr ast.Expr) string {
+	for {
+		switch t := expr.(type) {
+		case *ast.StarExpr:
+			expr = t.X
+		case *ast.IndexExpr:
+			expr = t.X
+		case *ast.IndexListExpr:
+			expr = t.X
+		case *ast.ParenExpr:
+			expr = t.X
+		case *ast.Ident:
+			return t.Name
+		default:
+			return ""
+		}
+	}
+}
