@@ -271,11 +271,17 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 
 	errorsx.Log(dctx.Dispatch(agent.DeployEvent(dctx.Local, d)))
 
-	if err = downloadArchive(t.dlreg, dctx); err != nil {
-		return d, dctx.Done(err)
-	}
+	// the deploy is claimed and recorded, acknowledge it. the download can take a long time and holding the
+	// rpc open for it makes callers retry, delivering the same deployment again. failures are reported
+	// through the deploy context, the same way every later failure is.
+	go func() {
+		if err := downloadArchive(t.dlreg, dctx); err != nil {
+			errorsx.Log(dctx.Done(err))
+			return
+		}
 
-	t.deployer.Deploy(dctx)
+		t.deployer.Deploy(dctx)
+	}()
 
 	return d, nil
 }

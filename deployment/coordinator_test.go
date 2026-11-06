@@ -418,10 +418,11 @@ func TestCoordinator(t *testing.T) {
 		)
 		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
 
-		// mirrors bootstrap, which abandons the deploy context when Deploy returns an error.
+		// mirrors the rpc, which abandons the deploy context once Deploy returns. the download failure is
+		// reported asynchronously, the deploy is acknowledged first.
 		ctx, cancel := context.WithCancel(context.Background())
 		_, err := c.Deploy(ctx, "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
-		require.Error(t, err)
+		require.NoError(t, err)
 		cancel()
 
 		require.Eventually(t, func() bool {
