@@ -3,6 +3,7 @@ package cmdopts
 import (
 	"net"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/alecthomas/kong"
@@ -13,6 +14,21 @@ import (
 // ParseIP addresses
 func ParseIP(ctx *kong.DecodeContext, target reflect.Value) (err error) {
 	target.Set(reflect.ValueOf(net.ParseIP(ctx.Scan.Pop().String())))
+	return nil
+}
+
+// ParseRegexp compiles a regular expression, kong decodes *regexp.Regexp through a nil pointer otherwise.
+func ParseRegexp(ctx *kong.DecodeContext, target reflect.Value) (err error) {
+	var (
+		pattern = ctx.Scan.Pop().String()
+		re      *regexp.Regexp
+	)
+
+	if re, err = regexp.Compile(pattern); err != nil {
+		return errors.Wrapf(err, "invalid regular expression %q", pattern)
+	}
+
+	target.Set(reflect.ValueOf(re))
 	return nil
 }
 

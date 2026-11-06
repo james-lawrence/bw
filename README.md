@@ -68,7 +68,7 @@ example commands:
 - `bw deploy --ip='127.0.0.1' {environment}` deploy to the servers that match the given filters.
 - `bw deploy archive {environment} {deploymentID}` redeploy a previously uploaded archive.
 - `bw deploy archive --ip='127.0.0.1' {environment} {deploymentID}` filter a redeploy to specific servers.
-- `bw info check {address}:{port}` checks if the cluster is reachable.
+- `bw actl check {address}:{port}` checks if the cluster is reachable.
 
 ### architecture overview
 
@@ -210,7 +210,7 @@ minimumNodes: 1 # Override default minimum
 
 ```bash
 # Check cluster status
-bw info nodes environment-name --insecure -v
+bw actl nodes environment-name --insecure -v
 
 # Verify agent configuration
 grep -i minimum /etc/bearded-wookie/default/agent.config
@@ -248,7 +248,7 @@ openssl s_client -connect your-node:2000 -verify_return_error
 openssl x509 -in cert.pem -text -noout
 
 # Verify BW can connect
-bw info check your-node:2000 --insecure -v
+bw actl check your-node:2000 --insecure -v
 ```
 
 #### Error 3: Network binding and discovery issues
@@ -401,11 +401,11 @@ Key metrics to monitor for single-node deployments:
 # Agent health
 curl -s http://localhost:2000/healthz
 
-# Deployment history
-bw info deployments environment-name --insecure
+# Latest deployment logs
+bw actl logs environment-name --insecure
 
 # Cluster status
-bw info nodes environment-name --insecure
+bw actl nodes environment-name --insecure
 
 # Service status
 systemctl status bearded-wookie-agent

@@ -18,6 +18,8 @@ message PeerMetadata {
   bytes capability = 1;
   int32 Status = 6;
   uint32 P2PPort = 9;
+  // archive true when the node archives successful deployments for use as a bootstrap archive.
+  bool Archive = 10;
 }
 
 message Peer {
@@ -31,6 +33,8 @@ message Peer {
   string name = 3;
   uint32 P2PPort = 10;
   bytes PublicKey = 11;
+  // archive true when the node archives successful deployments for use as a bootstrap archive.
+  bool Archive = 12;
 }
 
 // Represents the certificates in use by the system

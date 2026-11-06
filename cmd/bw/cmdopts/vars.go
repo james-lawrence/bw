@@ -4,6 +4,7 @@ import (
 	"net"
 	"path/filepath"
 	"reflect"
+	"regexp"
 
 	"github.com/alecthomas/kong"
 	"github.com/james-lawrence/bw"
@@ -34,6 +35,7 @@ func Vars(defaults agent.Config) kong.Vars {
 func Mappers() kong.Option {
 	mappers := []kong.Option{
 		kong.TypeMapper(reflect.TypeFor[*net.IP](), kong.MapperFunc(ParseIP)),
+		kong.TypeMapper(reflect.TypeFor[*regexp.Regexp](), kong.MapperFunc(ParseRegexp)),
 		kong.TypeMapper(reflect.TypeFor[*net.TCPAddr](), kong.MapperFunc(ParseTCPAddr)),
 		kong.TypeMapper(reflect.TypeFor[[]*net.TCPAddr](), kong.MapperFunc(ParseTCPAddrArray)),
 	}

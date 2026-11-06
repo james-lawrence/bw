@@ -218,3 +218,16 @@ func TestGDX(t *testing.T) {
 		require.Equal(t, "/tmp/other.socket", c.GDX.Goroutines.Socket)
 	})
 }
+
+func TestInfoCommandMovedToActl(t *testing.T) {
+	_, _, err := parse(t, "info", "nodes")
+	require.Error(t, err)
+
+	for _, name := range []string{"watch", "nodes", "logs"} {
+		_, _, err = parse(t, "actl", name, "production")
+		require.NoError(t, err, name)
+	}
+
+	_, _, err = parse(t, "actl", "check", "node:2000")
+	require.NoError(t, err)
+}
