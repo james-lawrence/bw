@@ -91,7 +91,7 @@ func CoordinatorOptionDispatcher(di dispatcher) CoordinatorOption {
 // CoordinatorOptionDeployResults set the channel to send deploy results to.
 func CoordinatorOptionDeployResults(dst chan *DeployResult) CoordinatorOption {
 	return func(d *Coordinator) {
-		d.completedObserver = dst
+		d.completed = dst
 	}
 }
 
@@ -104,17 +104,17 @@ func CoordinatorOptionStorage(reg storage.DownloadFactory) CoordinatorOption {
 
 // Coordinator for a deploy
 type Coordinator struct {
-	keepN             int // never set manually. always set by CoordinatorOptionKeepN
-	root              string
-	deploysRoot       string // never set manually. always set by CoordinatorOptionRoot
-	local             *agent.Peer
-	deployer          deployer
-	dispatcher        dispatcher
-	dlreg             storage.DownloadFactory
-	cleanup           agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
-	completedObserver chan *DeployResult
-	ds                *DeployState
-	m                 *sync.Mutex
+	keepN       int // never set manually. always set by CoordinatorOptionKeepN
+	root        string
+	deploysRoot string // never set manually. always set by CoordinatorOptionRoot
+	local       *agent.Peer
+	deployer    deployer
+	dispatcher  dispatcher
+	dlreg       storage.DownloadFactory
+	cleanup     agentutil.Cleaner // never set manually. always set by CoordinatorOptionKeepN
+	completed   chan *DeployResult
+	ds          *DeployState
+	m           *sync.Mutex
 }
 
 func (t *Coordinator) background(dctx *DeployContext) {
@@ -138,11 +138,17 @@ func (t *Coordinator) background(dctx *DeployContext) {
 		t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 	}
 
-	if t.completedObserver != nil {
+	if t.completed != nil {
+		// always deliver when the observer can take it, even if the deploy context has ended (timeout, cancel).
+		// go picks randomly between ready cases, so a single select could drop a deliverable result.
 		select {
-		case t.completedObserver <- done:
-		case <-dctx.deadline.Done():
-			// the deploy's context ended (caller gave up, or timeout) so nobody is observing, don't hold the coordinator hostage.
+		case t.completed <- done:
+		default:
+			select {
+			case t.completed <- done:
+			case <-dctx.deadline.Done():
+				// the deploy's context ended (caller gave up, or timeout) and nobody is observing, don't hold the coordinator hostage.
+			}
 		}
 	}
 
@@ -222,7 +228,7 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 	// downloads from becoming permanently blocked waiting for the archive to be downloaded.
 	// without this behaviour the torrent can be removed while nodes are still trying to deploy.
 	// preventing further deploys.
-	if soft := agentutil.MaybeClean(t.cleanup)(agentutil.Dirs(t.deploysRoot)); soft != nil {
+	if soft := agentutil.MaybeClean(t.cleaner())(agentutil.Dirs(t.deploysRoot)); soft != nil {
 		soft = errors.Wrap(soft, "failed to clear deploy directory")
 		log.Println(soft)
 		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, soft)))
@@ -303,13 +309,26 @@ func (t *Coordinator) Cancel() {
 	}
 }
 
+// cleaner returns the cleaner chosen by the most recent deploy, falling back to the configured default.
+// the most recent choice lives in the shared deploy state so every clone of the coordinator sees it.
+func (t *Coordinator) cleaner() agentutil.Cleaner {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.ds.cleanup != nil {
+		return t.ds.cleanup
+	}
+
+	return t.cleanup
+}
+
 func (t *Coordinator) update(dctx *DeployContext, d *agent.Deploy, c agentutil.Cleaner) *agent.Deploy {
 	t.m.Lock()
 	defer t.m.Unlock()
 
 	t.ds.current = d
 	t.ds.currentContext = dctx
-	t.cleanup = c
+	t.ds.cleanup = c
 
 	return d
 }

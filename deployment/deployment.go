@@ -250,6 +250,7 @@ func newCancelDeployContext() *DeployContext {
 type DeployState struct {
 	current        *agent.Deploy
 	currentContext *DeployContext
+	cleanup        agentutil.Cleaner // cleaner selected by the latest deploy, shared by all clones. guarded by the coordinator mutex.
 	state          *uint32
 }
 
