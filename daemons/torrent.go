@@ -26,9 +26,10 @@ func Torrent(ctx Context) (tc storage.TorrentConfig, err error) {
 	b := torrent.NewSocketsBind(
 		torrentx.Socket{
 			Listener: bind,
+			// prefer quic, peers without it (disabled, older versions, udp blocked) are reached over tcp.
 			Dialer: muxer.NewDialer(
 				bw.ProtocolTorrent,
-				tlsx.NewDialer(tlsx.MustClone(ctx.RPCCredentials, tlsx.OptionInsecureSkipVerify, tlsx.OptionNoClientCert)),
+				ctx.QUICDialer(tlsx.NewDialer(tlsx.MustClone(ctx.RPCCredentials, tlsx.OptionInsecureSkipVerify, tlsx.OptionNoClientCert))),
 			),
 		},
 	)

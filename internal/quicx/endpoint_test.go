@@ -243,3 +243,83 @@ func TestFallback(t *testing.T) {
 	require.Less(t, time.Since(start), time.Second)
 	require.Equal(t, 2, f.called)
 }
+
+// bulk data, as the torrent protocol moves, flows both ways over quic and over the tcp fallback.
+func TestBulkTransferQuicAndTCPFallback(t *testing.T) {
+	const size = 16 << 20
+
+	payload := make([]byte, size)
+	_, err := rand.Read(payload)
+	require.NoError(t, err)
+
+	// echo everything received, the dialer checks what comes back.
+	serve := func(t *testing.T, ctx context.Context, m *muxer.M, addr net.Addr) {
+		l, err := m.Bind("bw.torrent", addr)
+		require.NoError(t, err)
+		go func() {
+			for {
+				c, err := l.Accept()
+				if err != nil {
+					return
+				}
+				go func() {
+					defer c.Close()
+					io.Copy(c, c)
+				}()
+			}
+		}()
+	}
+
+	roundtrip := func(t *testing.T, ctx context.Context, d muxer.Dialer, network, address string) {
+		c, err := d.DialContext(ctx, network, address)
+		require.NoError(t, err)
+		defer c.Close()
+
+		go func() { c.Write(payload) }()
+
+		got := make([]byte, size)
+		require.NoError(t, c.SetReadDeadline(time.Now().Add(20*time.Second)))
+		_, err = io.ReadFull(c, got)
+		require.NoError(t, err)
+		require.Equal(t, payload, got)
+	}
+
+	t.Run("quic", func(t *testing.T) {
+		ctx, done := context.WithTimeout(context.Background(), 30*time.Second)
+		defer done()
+		a, b := endpoint(t), endpoint(t)
+
+		m := muxer.New()
+		serve(t, ctx, m, b.Addr())
+		go muxer.Listen(ctx, m, b)
+
+		roundtrip(t, ctx, muxer.NewDialer("bw.torrent", a.Fallback(failing2{})), "tcp", b.Addr().String())
+	})
+
+	t.Run("tcp fallback", func(t *testing.T) {
+		ctx, done := context.WithTimeout(context.Background(), 30*time.Second)
+		defer done()
+		a := endpoint(t) // dialer with quic, the peer only speaks tcp.
+
+		tcp, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		defer tcp.Close()
+		// nothing answers quic on the same port.
+		pc, err := net.ListenPacket("udp", tcp.Addr().String())
+		require.NoError(t, err)
+		defer pc.Close()
+
+		m := muxer.New()
+		serve(t, ctx, m, tcp.Addr())
+		go muxer.Listen(ctx, m, tcp)
+
+		roundtrip(t, ctx, muxer.NewDialer("bw.torrent", a.Fallback(&net.Dialer{})), "tcp", tcp.Addr().String())
+	})
+}
+
+// failing2 is a fallback dialer which must not be used.
+type failing2 struct{}
+
+func (failing2) DialContext(context.Context, string, string) (net.Conn, error) {
+	return nil, io.ErrUnexpectedEOF
+}
