@@ -85,6 +85,28 @@ func (t CmdControlWatch) refresh(ctx context.Context, d dialers.Defaults, c clus
 			last = rendered
 			pterm.Println()
 			pterm.Println(rendered)
+
+			// the nodes are printed below the logs that scrolled by, print the logs again after them.
+			if err = t.logs(ctx, d, c); err != nil {
+				errorsx.Log(errors.Wrap(err, "unable to reprint the logs"))
+			}
 		}
 	}
+}
+
+// logs prints the history of the quorum.
+func (t CmdControlWatch) logs(ctx context.Context, d dialers.Defaults, c clustering.Rendezvous) error {
+	conn, err := dialers.NewQuorum(c, d.Defaults()...).DialContext(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	history, err := agent.NewQuorumClient(conn).History(ctx, &agent.HistoryRequest{})
+	if err != nil {
+		return err
+	}
+
+	ux.Replay(commandutils.NewClientPeer(), history.Messages)
+	return nil
 }
