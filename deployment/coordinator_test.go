@@ -36,6 +36,120 @@ func blocking(t *testing.T) blockingDeployer {
 	return d
 }
 
+// gatedRegistry holds every download until the gate is closed, a slow archive download.
+type gatedRegistry struct {
+	storage.NoopRegistry
+	gate chan struct{}
+}
+
+func (t gatedRegistry) New(location string) storage.Downloader {
+	return gatedDownloader{Downloader: t.NoopRegistry.New(location), gate: t.gate}
+}
+
+type gatedDownloader struct {
+	storage.Downloader
+	gate chan struct{}
+}
+
+func (t gatedDownloader) Download(ctx context.Context, a *agent.Archive) io.ReadCloser {
+	<-t.gate
+	return t.Downloader.Download(ctx, a)
+}
+
+// dispatchRecorder captures what the coordinator dispatches.
+type dispatchRecorder struct {
+	m        sync.Mutex
+	messages []*agent.Message
+}
+
+func (t *dispatchRecorder) Dispatch(_ context.Context, m ...*agent.Message) error {
+	t.m.Lock()
+	defer t.m.Unlock()
+	t.messages = append(t.messages, m...)
+	return nil
+}
+
+func (t *dispatchRecorder) snapshot() []*agent.Message {
+	t.m.Lock()
+	defer t.m.Unlock()
+	return append([]*agent.Message(nil), t.messages...)
+}
+
+func TestCoordinatorSlowDeliveryRetried(t *testing.T) {
+	// a slow archive download keeps the deploy rpc open, the caller retries the same deployment while it is
+	// in flight (grpc unavailable retries). none of the retries may disturb the deploy or report a failure.
+	workdir := testingx.TempDir(t)
+	p := agent.NewPeer("node1")
+	rec := &dispatchRecorder{}
+	gate := make(chan struct{})
+	release := blockingDeployer{release: make(chan struct{})}
+	results := make(chan *deployment.DeployResult, 1)
+	c := deployment.New(
+		p,
+		release,
+		deployment.CoordinatorOptionRoot(workdir),
+		deployment.CoordinatorOptionStorage(gatedRegistry{gate: gate}),
+		deployment.CoordinatorOptionDispatcher(rec),
+		deployment.CoordinatorOptionDeployResults(results),
+	)
+	dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+	a := &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}
+
+	first := make(chan error, 1)
+	go func() {
+		_, err := c.Deploy(context.Background(), "test user", dopts, a)
+		first <- err
+	}()
+
+	// the first delivery has claimed the coordinator and is downloading.
+	require.Eventually(t, func() bool {
+		deploys, err := c.Deployments()
+		return err == nil && len(deploys) == 1 && deploys[0].Stage == agent.Deploy_Deploying
+	}, time.Second, 5*time.Millisecond)
+
+	var wg sync.WaitGroup
+	errs := make([]error, 8)
+	for i := range errs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, errs[i] = c.Deploy(context.Background(), "test user", dopts, a)
+		}()
+	}
+	wg.Wait()
+
+	for _, err := range errs {
+		require.NoError(t, err)
+	}
+
+	close(gate)
+	require.NoError(t, <-first)
+
+	close(release.release)
+	select {
+	case r := <-results:
+		require.NoError(t, r.Error)
+	case <-time.After(5 * time.Second):
+		t.Fatal("deploy did not complete")
+	}
+
+	require.Eventually(t, func() bool {
+		deploys, err := c.Deployments()
+		return err == nil && len(deploys) == 1 && deploys[0].Stage == agent.Deploy_Completed
+	}, 5*time.Second, 10*time.Millisecond)
+
+	// nothing failed, and no error was reported while the retries were in flight.
+	for _, m := range rec.snapshot() {
+		if d := m.GetDeploy(); d != nil {
+			require.NotEqual(t, agent.Deploy_Failed, d.Stage, "unexpected failed deploy event: %v", m)
+		}
+
+		if l := m.GetLog(); l != nil {
+			require.NotEqual(t, agent.Log_ERROR, l.Level, "unexpected error log: %v", m)
+		}
+	}
+}
+
 func TestCoordinator(t *testing.T) {
 
 	t.Run("deployments should return the deploy options", func(t *testing.T) {

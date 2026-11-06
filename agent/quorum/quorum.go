@@ -360,11 +360,10 @@ func (t *Quorum) Dispatch(ctx context.Context, m ...*agent.Message) (err error) 
 	if err = t.proxy().Dispatch(ctx, m...); err != nil {
 		log.Println(errors.Wrap(err, "unable to dispatch message"))
 
-		// only a change in the cluster warrants re-evaluating it. a leader that is overloaded or a caller that
-		// gave up would just trigger more work on a node that is already behind.
-		switch status.Code(err) {
-		case codes.ResourceExhausted, codes.Canceled, codes.DeadlineExceeded:
-		default:
+		// only a change in the cluster warrants re-evaluating it. a leader that is overloaded, a caller that
+		// gave up, or a state machine rejecting the message (the cluster is fine, it said no) would just
+		// trigger more work on a node that is already behind.
+		if reevaluates(err) {
 			t.rp.ClusterChange.Broadcast()
 		}
 
@@ -372,6 +371,16 @@ func (t *Quorum) Dispatch(ctx context.Context, m ...*agent.Message) (err error) 
 	}
 
 	return nil
+}
+
+// reevaluates reports whether the dispatch failure indicates the cluster may have changed.
+func reevaluates(err error) bool {
+	switch status.Code(err) {
+	case codes.ResourceExhausted, codes.Canceled, codes.DeadlineExceeded, codes.FailedPrecondition, codes.AlreadyExists:
+		return false
+	default:
+		return true
+	}
 }
 
 func (t *Quorum) proxy() stateMachine {

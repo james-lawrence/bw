@@ -5,6 +5,8 @@ import (
 
 	"github.com/james-lawrence/bw/agent"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestDeploymentReleasesOnlyNamedDeployment(t *testing.T) {
@@ -44,7 +46,8 @@ func TestDeploymentReleasesOnlyNamedDeployment(t *testing.T) {
 			if tc.released {
 				require.NoError(t, err)
 			} else {
-				require.EqualError(t, err, "deploy already in progress")
+				require.Equal(t, codes.FailedPrecondition, status.Code(err))
+				require.ErrorContains(t, err, "deploy already in progress")
 			}
 		})
 	}

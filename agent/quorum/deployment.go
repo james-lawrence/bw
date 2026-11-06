@@ -16,6 +16,7 @@ import (
 	"github.com/james-lawrence/bw/internal/grpcx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/pkg/errors"
 )
@@ -63,7 +64,7 @@ func (t *deployment) Decode(ctx TranscoderContext, m *agent.Message) error {
 	switch dc.Command {
 	case agent.DeployCommand_Begin:
 		if ctx.State != StateRecovering && !atomic.CompareAndSwapInt32(&t.deploying, none, deploying) {
-			return errors.New("deploy already in progress")
+			return status.Error(codes.FailedPrecondition, "deploy already in progress")
 		}
 
 		t.m.Lock()
