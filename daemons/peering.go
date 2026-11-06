@@ -52,16 +52,25 @@ func Peering(dctx Context) (_ Context, err error) {
 		return dctx, errors.Wrap(err, "failed to establish reliable transport")
 	}
 
-	if bindpacket, err = net.ListenUDP("udp", &net.UDPAddr{IP: dctx.Config.P2PBind.IP, Port: dctx.Config.P2PBind.Port}); err != nil {
-		return dctx, errors.Wrap(err, "failed to establish udp transport")
+	if bindpacket = dctx.Packets; bindpacket == nil {
+		if bindpacket, err = net.ListenUDP("udp", &net.UDPAddr{IP: dctx.Config.P2PBind.IP, Port: dctx.Config.P2PBind.Port}); err != nil {
+			return dctx, errors.Wrap(err, "failed to establish udp transport")
+		}
+	}
+
+	options := []memberlistx.SWIMTransportOption{
+		memberlistx.SWIMStreams(bindreliable),
+		memberlistx.SWIMPackets(bindpacket),
+	}
+	if dctx.QUIC != nil {
+		options = append(options, memberlistx.SWIMExchange(dctx.QUIC))
 	}
 
 	// TLS verification doesn't matter for swim, since we use a secret key but we need to still
 	// pass through the TLS handshake.
 	transport, err := memberlistx.NewSWIMTransport(
 		muxer.NewDialer(bw.ProtocolSWIM, tlsx.NewDialer(tlsx.MustClone(dctx.RPCCredentials, tlsx.OptionInsecureSkipVerify, tlsx.OptionNoClientCert))),
-		memberlistx.SWIMStreams(bindreliable),
-		memberlistx.SWIMPackets(bindpacket),
+		options...,
 	)
 
 	if err != nil {

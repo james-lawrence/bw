@@ -3,7 +3,6 @@ package muxer
 import (
 	"context"
 	"crypto/md5"
-	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -163,7 +162,7 @@ func accept(ctx context.Context, m *M, conn net.Conn) (err error) {
 	// log.Println("accept initiated")
 	// defer log.Println("accept completed")
 
-	if tlsconn, ok := conn.(*tls.Conn); ok {
+	if tlsconn, ok := conn.(tlsConn); ok {
 		if err = tlsconn.Handshake(); err != nil {
 			conn.Close()
 			return errors.Wrap(err, "tls handshake failed")

@@ -15,7 +15,7 @@ type rafter interface {
 
 // Quorum initialize the quorum daemon service.
 func Quorum(dctx Context, cc rafter) (_ Context, err error) {
-	transport := raftutil.ProtocolOptionMuxerTransport(dctx.Config.P2PBind, dctx.Config.P2PAdvertised, dctx.Muxer, raftutil.NewTLSStreamDialer(dctx.RPCCredentials))
+	transport := raftutil.ProtocolOptionMuxerTransport(dctx.Config.P2PBind, dctx.Config.P2PAdvertised, dctx.Muxer, dctx.QUICDialer(raftutil.NewTLSStreamDialer(dctx.RPCCredentials)))
 
 	if dctx.Raft, err = cc.Raft(dctx.Context, dctx.Config, agent.PeerToNode(dctx.Local.Peer), dctx.Inmem, transport); err != nil {
 		return dctx, err

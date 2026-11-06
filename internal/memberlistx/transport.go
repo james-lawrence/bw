@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/memberlist"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/quicx"
 	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
@@ -50,6 +51,22 @@ func SWIMPackets(packets ...net.PacketConn) SWIMTransportOption {
 	}
 }
 
+// PacketExchange sends and receives packets over a secured transport (quic) in addition to the
+// packet connections. a peer without a live connection is reached over the packet connection.
+type PacketExchange interface {
+	Established(address string) bool
+	Warm(address string)
+	SendPacket(ctx context.Context, address string, b []byte) error
+	ReceivePacket(ctx context.Context) (quicx.Packet, error)
+}
+
+// SWIMExchange adds a secured packet transport.
+func SWIMExchange(x PacketExchange) SWIMTransportOption {
+	return func(t *SWIMTransport) {
+		t.exchange = x
+	}
+}
+
 type dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
@@ -64,6 +81,9 @@ type SWIMTransport struct {
 	wg       sync.WaitGroup
 	streams  []net.Listener
 	packets  []net.PacketConn
+	exchange PacketExchange
+	cancel   context.CancelFunc
+	ctx      context.Context
 	shutdown int32
 }
 
@@ -85,6 +105,8 @@ func NewSWIMTransport(d dialer, options ...SWIMTransportOption) (*SWIMTransport,
 	for _, opt := range options {
 		opt(&t)
 	}
+
+	t.ctx, t.cancel = context.WithCancel(context.Background())
 
 	if t.dialer == nil {
 		return nil, fmt.Errorf("missing dialer")
@@ -111,9 +133,14 @@ func NewSWIMTransport(d dialer, options ...SWIMTransportOption) (*SWIMTransport,
 		go t.tcpListen(t.streams[idx])
 	}
 
-	for idx := range t.streams {
+	for idx := range t.packets {
 		t.wg.Add(1)
 		go t.udpListen(t.packets[idx])
+	}
+
+	if t.exchange != nil {
+		t.wg.Add(1)
+		go t.exchangeListen()
 	}
 
 	ok = true
@@ -185,6 +212,20 @@ func (t *SWIMTransport) WriteTo(b []byte, addr string) (time.Time, error) {
 		return time.Time{}, err
 	}
 
+	// prefer the secured transport when a connection is already established, otherwise
+	// start establishing one for next time and use udp now. peers without quic never connect.
+	if t.exchange != nil {
+		if t.exchange.Established(addr) {
+			ctx, done := context.WithTimeout(t.ctx, time.Second)
+			defer done()
+			if err = t.exchange.SendPacket(ctx, addr, b); err == nil {
+				return time.Now(), nil
+			}
+		} else {
+			t.exchange.Warm(addr)
+		}
+	}
+
 	// We made sure there's at least one UDP listener, so just use the
 	// packet sending interface on the first one. Take the time after the
 	// write call comes back, which will underestimate the time a little,
@@ -215,6 +256,7 @@ func (t *SWIMTransport) StreamCh() <-chan net.Conn {
 func (t *SWIMTransport) Shutdown() error {
 	// This will avoid log spam about errors when we shut down.
 	atomic.StoreInt32(&t.shutdown, 1)
+	t.cancel()
 
 	// Rip through all the connections and shut them down.
 	for _, conn := range t.streams {
@@ -308,3 +350,25 @@ func (t *SWIMTransport) udpListen(udpLn net.PacketConn) {
 // 	}
 // 	return err
 // }
+
+// exchangeListen hands packets received over the secured transport to the packet channel.
+func (t *SWIMTransport) exchangeListen() {
+	defer t.wg.Done()
+	for {
+		p, err := t.exchange.ReceivePacket(t.ctx)
+		if err != nil {
+			if atomic.LoadInt32(&t.shutdown) == 1 || t.ctx.Err() != nil {
+				return
+			}
+
+			t.logger.Printf("[ERR] memberlist: Error reading secured packet: %v", err)
+			return
+		}
+
+		select {
+		case t.packetCh <- &memberlist.Packet{Buf: p.Data, From: p.Addr, Timestamp: time.Now()}:
+		case <-t.ctx.Done():
+			return
+		}
+	}
+}

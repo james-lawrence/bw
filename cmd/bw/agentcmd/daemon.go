@@ -1,6 +1,7 @@
 package agentcmd
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net"
@@ -20,6 +21,7 @@ import (
 	"github.com/james-lawrence/bw/directives/shell"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/quicx"
 	"github.com/james-lawrence/bw/internal/rsax"
 	"github.com/james-lawrence/bw/internal/sshx"
 	"github.com/james-lawrence/bw/internal/systemx"
@@ -163,9 +165,30 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		bound = append(bound, l2)
 	}
 
+	// quic shares the udp port with swim packets. when disabled swim binds the port itself.
+	var (
+		qe      *quicx.Endpoint
+		packets net.PacketConn
+	)
+
+	if !envx.Boolean(false, bw.EnvAgentQUICDisable) {
+		if qe, packets, err = listenQUIC(config, tlscreds); err != nil {
+			return errors.Wrap(err, "failed to listen for quic")
+		}
+
+		bound = append(bound, qe)
+	}
+
+	var tcpdialer interface {
+		DialContext(ctx context.Context, network string, address string) (net.Conn, error)
+	} = tlsx.NewDialer(tlscreds)
+	if qe != nil {
+		tcpdialer = qe.Fallback(tcpdialer)
+	}
+
 	// grpc can be insecure because the socket itself has tls.
 	dialer := dialers.NewDefaults(
-		dialers.WithMuxer(tlsx.NewDialer(tlscreds), l.Addr()),
+		dialers.WithMuxer(tcpdialer, l.Addr()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithPerRPCCredentials(ss),
 	)
@@ -179,6 +202,8 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		Deploys:           deployer,
 		Local:             local,
 		Listener:          l,
+		QUIC:              qe,
+		Packets:           packets,
 		Dialer:            dialer,
 		Muxer:             muxer.New(),
 		ConfigurationFile: t.Location,
@@ -203,7 +228,7 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 		ACMECache:     acmesvc,
 	}
 
-	if dctx, err = daemons.Proxy(dctx, tlsx.NewDialer(tlscreds)); err != nil {
+	if dctx, err = daemons.Proxy(dctx, dctx.QUICDialer(tlsx.NewDialer(tlscreds))); err != nil {
 		return errors.Wrap(err, "failed to initialize proxy connection service")
 	}
 
@@ -221,6 +246,11 @@ func (t *Daemon) bind(ctx *cmdopts.Global, config agent.Config, deployer daemons
 	)
 
 	for idx, b := range bound {
+		// quic is already secured by its own handshake.
+		if _, ok := b.(*quicx.Endpoint); ok {
+			continue
+		}
+
 		bound[idx] = tls.NewListener(
 			b,
 			alpn,
@@ -303,4 +333,21 @@ func syncAuthorizationsPostDeploy(dctx daemons.Context) chan *deployment.DeployR
 	}()
 
 	return ndr
+}
+
+// listenQUIC binds the p2p udp port and shares it between quic and swim packets.
+func listenQUIC(config agent.Config, creds *tls.Config) (*quicx.Endpoint, net.PacketConn, error) {
+	pc, err := net.ListenUDP("udp", &net.UDPAddr{IP: config.P2PBind.IP, Port: config.P2PBind.Port})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to establish udp transport")
+	}
+
+	qpc, legacy := quicx.Demux(pc)
+	qe, err := quicx.New(qpc, creds, creds)
+	if err != nil {
+		pc.Close()
+		return nil, nil, err
+	}
+
+	return qe, legacy, nil
 }

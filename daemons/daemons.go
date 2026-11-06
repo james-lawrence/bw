@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/clustering/raftutil"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/quicx"
 	"github.com/james-lawrence/bw/muxer"
 	"github.com/james-lawrence/bw/notary"
 	"github.com/pkg/errors"
@@ -41,6 +42,15 @@ type cluster interface {
 	GetN(n int, key []byte) []*memberlist.Node
 }
 
+// QUICDialer prefers quic and falls back to d when quic is disabled or unavailable for the address.
+func (t Context) QUICDialer(d dialer) dialer {
+	if t.QUIC == nil {
+		return d
+	}
+
+	return t.QUIC.Fallback(d)
+}
+
 type dialer interface {
 	DialContext(ctx context.Context, network string, address string) (net.Conn, error)
 }
@@ -51,6 +61,8 @@ type Context struct {
 	Deploys            Deployer
 	Local              *_cluster.Local
 	Listener           net.Listener
+	QUIC               *quicx.Endpoint // nil when quic is disabled.
+	Packets            net.PacketConn  // udp socket for swim packets, nil to bind one.
 	Dialer             dialers.Defaults
 	Muxer              *muxer.M
 	ConfigurationFile  string

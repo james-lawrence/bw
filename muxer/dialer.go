@@ -2,7 +2,6 @@ package muxer
 
 import (
 	"context"
-	"crypto/tls"
 	"log"
 	"net"
 	"net/url"
@@ -70,7 +69,7 @@ func (t Dialer) DialContext(ctx context.Context, network string, address string)
 		}
 	}
 
-	if tlsconn, ok := conn.(*tls.Conn); ok {
+	if tlsconn, ok := conn.(tlsState); ok {
 		s := tlsconn.ConnectionState()
 		if s.NegotiatedProtocol == "" {
 			log.Println("WARN: muxer.DialContext tls connection detected but no protocol was negotiated, expected to negotiate bw.mux")
