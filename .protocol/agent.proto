@@ -207,7 +207,10 @@ message WatchRequest {
   // position to resume from, see agent.Cursor. empty watches the messages sent after the request.
   bytes cursor = 1;
 }
-message DispatchResponse {}
+message DispatchResponse {
+  // messages rejected because they were already applied, see agent.ErrDuplicate.
+  repeated Message duplicates = 1;
+}
 
 message InfoRequest {}
 message InfoResponse {

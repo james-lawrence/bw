@@ -174,25 +174,7 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			log.Println("leadership observation", o.Raft.State())
 			switch o.Raft.State() {
 			case raft.Leader:
-				t.mode(agent.PeerMode_PeerModeLeader)
-				t.sm = func() stateMachine {
-					sm := NewMachine(
-						t.c.Local(),
-						o.Raft,
-					)
-
-					// background this task so dispatches work.
-					go func(ctx context.Context) {
-						errorsx.Log(sm.initialize())
-						_ = slogx.Verbose(errors.Wrap(
-							t.deployment.restartActiveDeploy(ctx, t.dialer, sm),
-							"failed to restart an active deploy",
-						))
-						errorsx.Log(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
-					}(context.Background())
-
-					return sm
-				}()
+				t.leading(o.Raft)
 			case raft.Follower, raft.Candidate:
 				t.mode(agent.PeerMode_PeerModeFollower)
 				t.sm = func() stateMachine { sm := NewProxyMachine(t.c, o.Raft, t.dialer); return &sm }()
@@ -203,6 +185,36 @@ func (t *Quorum) Observe(events chan raft.Observation) {
 			}
 		}
 	}
+}
+
+// leading switches the node to the leader state machine and recovers any active deploy.
+// leader observations are not transitions: observations are processed after the fact, so a node that is
+// already the leader can see several. recovering again would repeat the recovery events (and restart the
+// deploy) every time, so it only happens when the node was not already leading.
+func (t *Quorum) leading(r *raft.Raft) {
+	if sm, ok := t.proxy().(*StateMachine); ok && sm.state == r {
+		return
+	}
+
+	t.mode(agent.PeerMode_PeerModeLeader)
+	t.sm = func() stateMachine {
+		sm := NewMachine(
+			t.c.Local(),
+			r,
+		)
+
+		// background this task so dispatches work.
+		go func(ctx context.Context) {
+			errorsx.Log(sm.initialize())
+			_ = slogx.Verbose(errors.Wrap(
+				t.deployment.restartActiveDeploy(ctx, t.dialer, sm),
+				"failed to restart an active deploy",
+			))
+			errorsx.Log(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
+		}(context.Background())
+
+		return sm
+	}()
 }
 
 // Info return current info from the leader.

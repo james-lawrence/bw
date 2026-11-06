@@ -32,16 +32,41 @@ func Dispatch(ctx context.Context, d dispatcher, m ...*agent.Message) error {
 }
 
 // ReliableDispatch repeatedly attempts to deliver messages using the provided
-// context and dispatcher until the context is cancelled.
+// context and dispatcher until the context is cancelled. the messages are delivered one at a time,
+// a rejection as a duplicate (see agent.IsDuplicate) is then about exactly one message.
 func ReliableDispatch(ctx context.Context, d dispatcher, m ...*agent.Message) (err error) {
+	for _, msg := range m {
+		if err = reliable(ctx, d, msg); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func reliable(ctx context.Context, d dispatcher, m *agent.Message) (err error) {
 	bs := backoff.New(
 		backoff.Exponential(200*time.Millisecond),
 		backoff.Maximum(10*time.Second),
 	)
 
 	for i := 0; ; i++ {
-		if err = _dispatch(ctx, d, dispatchTimeout, m...); err == nil {
+		if err = _dispatch(ctx, d, dispatchTimeout, m); err == nil {
 			return nil
+		}
+
+		if agent.IsDuplicate(err) {
+			// a retry answered with a rejection means an earlier attempt, whose acknowledgement was lost,
+			// was delivered.
+			if i > 0 {
+				return nil
+			}
+
+			// nothing was sent before the first attempt, so the id collided with another (a false positive
+			// of the duplicate filter). the message was not delivered, give it a new identity and retry.
+			log.Printf("message %s was rejected as a duplicate on its first attempt, assigning a new id\n", m.GetId())
+			agent.Stamp(m)
+			continue
 		}
 
 		select {

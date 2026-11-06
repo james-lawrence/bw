@@ -8,9 +8,12 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/langx"
 	"github.com/james-lawrence/bw/internal/timex"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -59,6 +62,17 @@ func PeersFoundEvent(p *Peer, n int64) *Message {
 // PeersCompletedEvent ...
 func PeersCompletedEvent(p *Peer, n int64) *Message {
 	return integerEvent(p, Message_PeersCompletedEvent, n)
+}
+
+// ErrDuplicate is returned when a message with the same id was already applied. senders retry until they
+// see success, when a retry is answered with this the earlier attempt was delivered.
+func ErrDuplicate(m *Message) error {
+	return status.Errorf(codes.AlreadyExists, "duplicate message: %s", m.GetId())
+}
+
+// IsDuplicate reports whether the error is a rejection for an already applied message.
+func IsDuplicate(err error) bool {
+	return grpcx.IsCode(err, codes.AlreadyExists)
 }
 
 // MessageOption modifies a message as it is created.
