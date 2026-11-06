@@ -8,9 +8,11 @@ import (
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/james-lawrence/bw/internal/grpcx"
 	"github.com/james-lawrence/bw/internal/jsonl"
 	"github.com/james-lawrence/bw/ux"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
 )
 
 // CmdControlHistory replays the messages recorded by the quorum.
@@ -31,7 +33,12 @@ func (t CmdControlHistory) Run(gctx *cmdopts.Global) (err error) {
 	}
 	defer func() { errorsx.Log(errors.Wrap(conn.Close(), "failed to close connection")) }()
 
-	history, err := agent.NewQuorumClient(conn).History(gctx.Context, &agent.HistoryRequest{})
+	// the quorum may be restarting, wait for it rather than failing.
+	var history *agent.HistoryResponse
+	err = grpcx.Retry(gctx.Context, func() (cause error) {
+		history, cause = agent.NewQuorumClient(conn).History(gctx.Context, &agent.HistoryRequest{})
+		return cause
+	}, codes.Unavailable)
 	if err != nil {
 		return err
 	}
