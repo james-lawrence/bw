@@ -130,7 +130,6 @@ func Redeploy(gctx *Context, deploymentID string) error {
 	}
 
 	archive = located.Archive
-	monitored.Store(&archive.DeploymentID)
 
 	events <- agent.LogUser(local, fmt.Sprintf("located: who(%s) location(%s)", displayname, archive.Location))
 
@@ -160,7 +159,13 @@ func Redeploy(gctx *Context, deploymentID string) error {
 	}
 
 	events <- agent.LogUser(local, fmt.Sprintf("initiating deploy: concurrency(%d) attempts(%d), deployID(%s)", max, dopts.Attempts, bw.RandomID(archive.DeploymentID)))
-	if cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, archive, peers...); cause != nil {
+	cause := client.RemoteDeploy(gctx.Context, displayname, &dopts, archive, peers...)
+
+	// the deployment id is the same as the previous run, so only start monitoring once the new run has
+	// begun. otherwise the history replay matches the previous run's begin/done and finishes immediately.
+	monitored.Store(&archive.DeploymentID)
+
+	if cause != nil {
 		events <- agent.LogLevel(local, agent.Log_ERROR, fmt.Sprintln("deployment failed", cause))
 	}
 
