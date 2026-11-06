@@ -1,8 +1,10 @@
 package quorum
 
 import (
+	"bytes"
 	"context"
 	"log"
+	"slices"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
@@ -101,7 +103,7 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 	}
 
 	options := []deployments.Option{
-		deployments.DeployOptionChecker(deployments.OperationFunc(check(dialer))),
+		deployments.DeployOptionChecker(deployments.OperationFunc(check(dialer, archive))),
 		deployments.DeployOptionDeployer(deployments.OperationFunc(deploy(by, dopts, archive, dialer))),
 		deployments.DeployOptionFilter(filter),
 		deployments.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
@@ -151,7 +153,7 @@ func dispatchDeployResult(ctx context.Context, d agent.Dispatcher, local *agent.
 	return agentutil.ReliableDispatch(ctx, d, agent.NewDeployCommand(local, dcmd))
 }
 
-func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
+func check(d dialers.Defaults, archive *agent.Archive) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
 	return func(ctx context.Context, n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
 			c    *grpc.ClientConn
@@ -168,14 +170,22 @@ func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.
 			return _d, err
 		}
 
-		if len(info.Deployments) > 0 {
-			return info.Deployments[0], nil
-		}
-
-		return &agent.Deploy{
-			Stage: agent.Deploy_Completed,
-		}, nil
+		return findDeployment(info.Deployments, archive, n)
 	}
+}
+
+// findDeployment the node's record of the given deployment. records of other deployments (e.g. an earlier failed
+// deploy) say nothing about this one, until the node has recorded it the deployment hasn't started.
+func findDeployment(deployments []*agent.Deploy, archive *agent.Archive, n *agent.Peer) (*agent.Deploy, error) {
+	i := slices.IndexFunc(deployments, func(d *agent.Deploy) bool {
+		return d.GetArchive() != nil && bytes.Equal(d.Archive.DeploymentID, archive.DeploymentID)
+	})
+
+	if i < 0 {
+		return nil, errors.Errorf("deployment %s not found on %s", bw.RandomID(archive.DeploymentID), n.Ip)
+	}
+
+	return deployments[i], nil
 }
 
 func deploy(by string, dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {

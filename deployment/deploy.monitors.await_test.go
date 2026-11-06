@@ -113,6 +113,29 @@ func TestMonitorAwait(t *testing.T) {
 		require.GreaterOrEqual(t, checks.Load(), int64(3))
 	})
 
+	t.Run("a stale failure from another deployment is not reported until the node records this one", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+		defer cancel()
+
+		var checks atomic.Int64
+		// mirrors the quorum check, records of other deployments are errors until the node has this one.
+		check := OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
+			if checks.Add(1) < 3 {
+				return nil, errors.New("deployment not found")
+			}
+
+			return &agent.Deploy{Stage: agent.Deploy_Completed}, nil
+		})
+
+		task := newPending(agent.NewPeer("node1"), time.Second)
+		q := make(chan *pending, 1)
+		q <- task
+
+		require.NoError(t, await(ctx, q, 1, check))
+		require.NoError(t, <-task.done)
+		require.GreaterOrEqual(t, checks.Load(), int64(3))
+	})
+
 	t.Run("reports a failed deployment to the node", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 		defer cancel()
