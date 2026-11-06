@@ -74,12 +74,20 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 		for ctx.Err() == nil {
 			var dl torrent.Torrent
 
-			if dl, _, err = t.client.Start(metadata, torrent.TunePeers(peersToNode(t.c.Quorum()...)...)); err != nil {
+			// no metadata within the window is a stall as well (e.g. no reachable peers).
+			mctx, cancel := context.WithTimeoutCause(ctx, stall, ErrDownloadStalled)
+
+			// the quorum changes while we wait for the metadata, ask for it again several times within the window
+			// rather than using the peers from when the attempt started. the loop ends with the window.
+			peers := torrent.TunePeersPeriodic(mctx, stall/4, func() []torrent.Peer {
+				return peersToNode(t.c.Quorum()...)
+			})
+
+			if dl, _, err = t.client.Start(metadata, peers); err != nil {
+				cancel()
 				break
 			}
 
-			// no metadata within the window is a stall as well (e.g. no reachable peers).
-			mctx, cancel := context.WithTimeoutCause(ctx, stall, ErrDownloadStalled)
 			rc := torrent.Downloader(mctx, dl)
 			// the reader returned on timeout wraps the cause without Unwrap, so errors.Is can't see it.
 			metadataStalled := ctx.Err() == nil && errors.Is(context.Cause(mctx), ErrDownloadStalled)
