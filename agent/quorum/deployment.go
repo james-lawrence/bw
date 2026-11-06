@@ -1,6 +1,7 @@
 package quorum
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log"
@@ -70,17 +71,36 @@ func (t *deployment) Decode(ctx TranscoderContext, m *agent.Message) error {
 		t.coordinator = m.GetPeer()
 		t.m.Unlock()
 	case agent.DeployCommand_Done:
-		atomic.SwapInt32(&t.deploying, none)
 		t.m.Lock()
 		t.lastSuccessfulDeploy = dc
-		t.runningDeploy = nil
-		t.coordinator = nil
+		if t.releases(dc) {
+			atomic.SwapInt32(&t.deploying, none)
+			t.runningDeploy = nil
+			t.coordinator = nil
+		}
 		t.m.Unlock()
 	default:
-		atomic.SwapInt32(&t.deploying, none)
+		t.m.RLock()
+		release := t.releases(dc)
+		t.m.RUnlock()
+		if release {
+			atomic.SwapInt32(&t.deploying, none)
+		}
 	}
 
 	return nil
+}
+
+// releases reports whether the command ends the running deploy. commands naming a deployment (non-empty id)
+// only release the deploy they name, a stale command for another deployment must not reopen the gate.
+// commands without an id, such as cancel, apply to whatever is running. caller must hold the lock.
+func (t *deployment) releases(dc *agent.DeployCommand) bool {
+	id := dc.GetArchive().GetDeploymentID()
+	if len(id) == 0 || t.runningDeploy == nil {
+		return true
+	}
+
+	return bytes.Equal(id, t.runningDeploy.GetArchive().GetDeploymentID())
 }
 
 // getInfo the state of the deployments, completed are the deploy events the nodes completed.
