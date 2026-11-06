@@ -130,6 +130,25 @@ func Logging(ctx context.Context, failed context.CancelCauseFunc, cached *dialer
 	s.run(ctx, events, s)
 }
 
+// Replay prints the messages in order using the logging styling. there is no state
+// tracking, every message is printed.
+func Replay(local *agent.Peer, messages []*agent.Message, options ...Option) {
+	s := tail{
+		cState: cState{
+			local:          local,
+			iconography:    envx.Rune('#', bw.EnvUploadSparkles),
+			connection:     &agent.ConnectionEvent{},
+			FailureDisplay: FailureDisplayNoop{},
+			au:             aurora.NewAurora(true),
+			Logger:         log.New(os.Stderr, "[CLIENT] ", 0),
+		}.merge(options...),
+	}
+
+	for _, m := range messages {
+		s.Consume(m)
+	}
+}
+
 func (t cState) run(ctx context.Context, events chan *agent.Message, s consumer) {
 	var (
 		last *agent.Message

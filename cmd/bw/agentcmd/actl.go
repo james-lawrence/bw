@@ -27,6 +27,7 @@ type CmdControl struct {
 	Watch   CmdControlWatch   `cmd:"" help:"watch cluster activity"`
 	Nodes   CmdControlNodes   `cmd:"" help:"retrieve nodes within the cluster"`
 	Logs    CmdControlLogs    `cmd:"" help:"log retrieval for the latest deployment"`
+	History CmdControlHistory `cmd:"" help:"replay the messages recorded by the quorum"`
 	Check   CmdControlCheck   `cmd:"" help:"check connectivity with the discovery service"`
 }
 
