@@ -326,10 +326,15 @@ func DeployCommandFailed(by string, options ...doption) *DeployCommand {
 	return deployCommand(DeployCommand_Failed, by, append(options, updateDTS)...)
 }
 
-// DeployCommandRestart delivered when a deploy is automatically restarting.
-func DeployCommandRestart() *DeployCommand {
+// DeployCommandRestart delivered when a deploy is automatically restarting. running is the deploy being
+// restarted, previous the node that was coordinating it. both are optional.
+func DeployCommandRestart(previous *Peer, running *DeployCommand) *DeployCommand {
 	return &DeployCommand{
-		Command: DeployCommand_Restart,
+		Command:   DeployCommand_Restart,
+		Archive:   running.GetArchive(),
+		Options:   running.GetOptions(),
+		Initiator: running.GetInitiator(),
+		Previous:  previous,
 	}
 }
 

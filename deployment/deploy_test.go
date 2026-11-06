@@ -95,7 +95,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(0), failures)
 		require.True(t, success)
 		require.Equal(t, int64(len(c.Peers())), deployCount)
@@ -136,7 +136,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(0), failures)
 		require.True(t, success)
 		require.Equal(t, int64(4), deploycount)
@@ -177,7 +177,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(1), failures)
 		require.False(t, success)
 		require.Equal(t, int64(2), deployCount)
@@ -196,7 +196,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(0), failures)
 		require.True(t, success)
 
@@ -233,7 +233,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(0), failures)
 		require.True(t, success)
 		require.Equal(t, []string{target.Name}, deployed)
@@ -252,7 +252,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(testCluster(p))
+		failures, success := deploy.Deploy(t.Context(), testCluster(p))
 		require.GreaterOrEqual(t, failures, int64(1))
 		require.False(t, success)
 		require.NotEmpty(t, events.ofType(agent.Message_LogEvent))
@@ -279,7 +279,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(c)
+		failures, success := deploy.Deploy(t.Context(), c)
 		require.Equal(t, int64(1), failures)
 		require.True(t, success)
 		require.Equal(t, int64(len(c.Peers())), deployCount)
@@ -300,7 +300,7 @@ func TestDeploy(t *testing.T) {
 			})),
 		)
 
-		failures, success := deploy.Deploy(testCluster(p))
+		failures, success := deploy.Deploy(t.Context(), testCluster(p))
 		require.Equal(t, int64(0), failures)
 		require.True(t, success)
 		require.GreaterOrEqual(t, len(events.ofType(agent.Message_DeployHeartbeat)), 3)
@@ -327,7 +327,7 @@ func TestDeploy(t *testing.T) {
 
 		result := make(chan bool, 1)
 		go func() {
-			_, success := deploy.Deploy(testCluster(p))
+			_, success := deploy.Deploy(t.Context(), testCluster(p))
 			result <- success
 		}()
 
@@ -340,5 +340,75 @@ func TestDeploy(t *testing.T) {
 		require.True(t, slices.ContainsFunc(events.logs(), func(l string) bool {
 			return strings.Contains(l, "timed out while waiting for nodes to complete")
 		}))
+	})
+}
+
+func TestDeployContext(t *testing.T) {
+	p := agent.NewPeer("node4")
+	c := cluster.New(
+		p,
+		clustering.NewMock(
+			agent.PeerToNode(p),
+			clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
+		),
+	)
+
+	// nodes that never finish, only the context can end the deploy before the timeout.
+	stuck := deployment.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
+		return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
+	})
+
+	t.Run("cancelling the context stops the deploy and is not a success", func(t *testing.T) {
+		ctx, cancel := context.WithCancelCause(t.Context())
+		rec := &recorder{}
+
+		deploy := deployment.NewDeploy(
+			p,
+			rec,
+			deployment.DeployOptionTimeout(time.Minute),
+			deployment.DeployOptionChecker(stuck),
+			deployment.DeployOptionMonitor(deployment.NewMonitor(deployment.MonitorTicklerPeriodic(10*time.Millisecond))),
+		)
+
+		time.AfterFunc(100*time.Millisecond, func() { cancel(errors.New("superseded")) })
+
+		done := make(chan bool, 1)
+		go func() {
+			_, success := deploy.Deploy(ctx, c)
+			done <- success
+		}()
+
+		select {
+		case success := <-done:
+			require.False(t, success)
+		case <-time.After(5 * time.Second):
+			t.Fatal("the deploy kept running after its context was cancelled")
+		}
+
+		var reason bool
+		for _, l := range rec.logs() {
+			reason = reason || strings.Contains(l, "superseded")
+		}
+		require.True(t, reason, "the cause of the stop should be recorded")
+	})
+
+	t.Run("a context cancelled before the deploy starts runs nothing", func(t *testing.T) {
+		ctx, cancel := context.WithCancelCause(t.Context())
+		cancel(errors.New("leadership lost"))
+
+		var visits int64
+		deploy := deployment.NewDeploy(
+			p,
+			agentutil.DiscardDispatcher{},
+			deployment.DeployOptionTimeout(time.Minute),
+			deployment.DeployOptionDeployer(deployment.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
+				atomic.AddInt64(&visits, 1)
+				return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
+			})),
+		)
+
+		_, success := deploy.Deploy(ctx, c)
+		require.False(t, success)
+		require.Zero(t, atomic.LoadInt64(&visits))
 	})
 }

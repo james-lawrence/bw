@@ -71,7 +71,7 @@ func TestMessageIdMatchesTimestamp(t *testing.T) {
 		"PeerEvent":          agent.PeerEvent(p),
 		"NodeEvent":          agent.NodeEvent(p, agent.Message_NodeEvent(0)),
 		"PeersFoundEvent":    agent.PeersFoundEvent(p, 1),
-		"NewDeployCommand":   agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+		"NewDeployCommand":   agent.NewDeployCommand(p, agent.DeployCommandRestart(nil, nil)),
 	} {
 		t.Run(name, func(t *testing.T) {
 			expected := time.Unix(0, m.Ts).Truncate(time.Millisecond)

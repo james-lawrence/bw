@@ -2,6 +2,7 @@ package quorum
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -206,7 +207,7 @@ func (t simpeers) Peers() []*agent.Peer                { return t.peers }
 // simdeploy runs the leader side coordination, the same call StateMachine.Deploy backgrounds.
 // visits counts the deploys dispatched to each node.
 func simdeploy(ctx context.Context, sm *StateMachine, c simpeers, visits *sync.Map) (int64, bool) {
-	return deployments.RunDeploy(c.Local(), c, sm,
+	return deployments.RunDeploy(ctx, c.Local(), c, sm,
 		deployments.DeployOptionChecker(deployments.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
 			return &agent.Deploy{Stage: agent.Deploy_Completed}, nil
 		})),
@@ -223,18 +224,18 @@ func simdeploy(ctx context.Context, sm *StateMachine, c simpeers, visits *sync.M
 func begin(t *testing.T, sm *StateMachine, c simpeers) {
 	t.Helper()
 	cmd := agent.DeployCommandBegin("tester", &agent.Archive{DeploymentID: []byte("d1")}, &agent.DeployOptions{})
-	require.NoError(t, sm.Dispatch(context.Background(), agent.NewDeployCommand(c.Local(), cmd)))
+	require.NoError(t, sm.Dispatch(t.Context(), agent.NewDeployCommand(c.Local(), cmd)))
 }
 
 func TestSimulation(t *testing.T) {
 	t.Run("a single deploy records each event exactly once", func(t *testing.T) {
 		cl := newSimCluster(t, "a", "b", "c")
 		l := cl.leader(t)
-		sm := NewMachine(agent.NewPeer("leader"), l.raft)
+		sm := NewMachine(t.Context(), agent.NewPeer("leader"), l.raft)
 		c := newSimPeers(3)
 
 		begin(t, sm, c)
-		_, ok := simdeploy(context.Background(), sm, c, &sync.Map{})
+		_, ok := simdeploy(t.Context(), sm, c, &sync.Map{})
 		require.True(t, ok)
 		cl.settle(t)
 
@@ -243,37 +244,54 @@ func TestSimulation(t *testing.T) {
 		}
 	})
 
-	// two coordinators for the same deploy, which is what an orphaned RunDeploy (old leader, nothing
-	// cancels it when leadership moves) plus the new leader's restartActiveDeploy produce.
-	// the fsm cannot tell them apart: every event is created twice with its own Id, so clients
-	// can't drop either. this proves the FSM does not protect against the second coordinator,
-	// the guard has to be in the producer.
-	t.Run("two coordinators for one deploy repeat every event", func(t *testing.T) {
-		t.Skip("pending: StateMachine.Deploy has no leadership bound on its RunDeploy goroutine, nothing proves a second one is started yet")
-
+	// the old leader's coordinator used to run until it finished on its own: nothing could stop it, so after a
+	// leadership change it kept emitting events alongside the replacement's, each with its own Id. clients can't
+	// tell them apart. a coordinator is now bound to a context, cancelled when the node stops leading or another
+	// coordinator takes over (see supersedes).
+	t.Run("a coordinator stopped by its context stops emitting events", func(t *testing.T) {
 		cl := newSimCluster(t, "a", "b", "c")
 		l := cl.leader(t)
-		sm := NewMachine(agent.NewPeer("leader"), l.raft)
+		sm := NewMachine(t.Context(), agent.NewPeer("leader"), l.raft)
 		c := newSimPeers(3)
 
 		begin(t, sm, c)
 
-		visits := &sync.Map{}
-		var wg sync.WaitGroup
-		for i := 0; i < 2; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				simdeploy(context.Background(), sm, c, visits)
-			}()
-		}
-		wg.Wait()
-		cl.settle(t)
+		ctx, cancel := context.WithCancelCause(t.Context())
+		done := make(chan bool, 1)
+		go func() {
+			// nodes never finish, only the context can end the deploy.
+			_, ok := deployments.RunDeploy(ctx, c.Local(), c, sm,
+				deployments.DeployOptionChecker(deployments.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
+					return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
+				})),
+				deployments.DeployOptionHeartbeatFrequency(time.Hour),
+				deployments.DeployOptionMonitor(deployments.NewMonitor(deployments.MonitorTicklerPeriodic(20*time.Millisecond))),
+			)
+			done <- ok
+		}()
 
-		visits.Range(func(k, v any) bool {
-			require.EqualValues(t, 1, atomic.LoadInt64(v.(*int64)), "node %s was deployed to more than once", k)
-			return true
-		})
+		require.Eventually(t, func() bool {
+			for _, m := range l.rec.snapshot() {
+				if m.GetType() == agent.Message_PeersFoundEvent {
+					return true
+				}
+			}
+			return false
+		}, 10*time.Second, 10*time.Millisecond)
+
+		cancel(errors.New("leadership lost"))
+
+		select {
+		case ok := <-done:
+			require.False(t, ok)
+		case <-time.After(10 * time.Second):
+			t.Fatal("the coordinator kept running after its context was cancelled")
+		}
+
+		cl.settle(t)
+		before := len(l.rec.snapshot())
+		time.Sleep(500 * time.Millisecond)
+		require.Len(t, l.rec.snapshot(), before, "a stopped coordinator emitted more events")
 		require.Empty(t, duplicates(l.rec.snapshot(), repeatable))
 	})
 
@@ -302,7 +320,7 @@ func TestSimulation(t *testing.T) {
 		}
 
 		// an active deploy, as recorded by the fsm.
-		sm := NewMachine(c.Local(), r)
+		sm := NewMachine(t.Context(), c.Local(), r)
 		begin(t, sm, c)
 		require.NotNil(t, q.deployment.getRunningDeploy())
 
@@ -330,14 +348,14 @@ func TestSimulation(t *testing.T) {
 	t.Run("a dispatch retried after it committed is recorded once", func(t *testing.T) {
 		cl := newSimCluster(t, "a", "b", "c")
 		l := cl.leader(t)
-		sm := NewMachine(agent.NewPeer("leader"), l.raft)
+		sm := NewMachine(t.Context(), agent.NewPeer("leader"), l.raft)
 		peer := agent.NewPeer("leader")
 
 		lossy := &ackLoss{inner: sm, losses: 1}
 		batch := []*agent.Message{agent.LogInfo(peer, "first"), agent.LogInfo(peer, "second")}
 
-		require.NoError(t, agentutil.ReliableDispatch(context.Background(), lossy, batch...))
-		require.NoError(t, sm.Dispatch(context.Background(), agent.LogInfo(peer, "other")))
+		require.NoError(t, agentutil.ReliableDispatch(t.Context(), lossy, batch...))
+		require.NoError(t, sm.Dispatch(t.Context(), agent.LogInfo(peer, "other")))
 		cl.settle(t)
 
 		for _, n := range cl.nodes {
@@ -450,7 +468,7 @@ func TestReliableDispatchDuplicate(t *testing.T) {
 		ids := []string{batch[0].Id, batch[1].Id, batch[2].Id}
 		d := &filterDispatcher{falsepositive: map[string]bool{batch[1].Id: true}, seen: map[string]bool{}}
 
-		require.NoError(t, agentutil.ReliableDispatch(context.Background(), d, batch...))
+		require.NoError(t, agentutil.ReliableDispatch(t.Context(), d, batch...))
 
 		require.Equal(t, []string{"a", "b", "c"}, d.delivered)
 		require.Equal(t, ids[0], batch[0].Id)

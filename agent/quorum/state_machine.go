@@ -24,9 +24,10 @@ type Initializer interface {
 	Initialize(agent.Dispatcher) error
 }
 
-// NewMachine ...
-func NewMachine(l *agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine {
+// NewMachine the work started by the machine, such as deploys, is bound to the context.
+func NewMachine(ctx context.Context, l *agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachine {
 	return &StateMachine{
+		ctx:   ctx,
 		l:     l,
 		state: rp,
 		inits: inits,
@@ -35,6 +36,7 @@ func NewMachine(l *agent.Peer, rp *raft.Raft, inits ...Initializer) *StateMachin
 
 // StateMachine wraps the raft protocol giving more convient access to the protocol.
 type StateMachine struct {
+	ctx   context.Context // bounds the work started by the machine, such as deploys. cancelled when leadership ends.
 	l     *agent.Peer
 	state *raft.Raft
 	inits []Initializer
@@ -68,9 +70,13 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 	qd := dialers.NewQuorum(c, dialer.Defaults()...)
 	d := agentutil.NewDispatcher(qd)
 
+	// the coordinator stops when leadership ends, or an event shows another coordinator has taken over.
+	coordinator, cancel := context.WithCancelCause(t.ctx)
+
 	cmd := agent.DeployCommandBegin(by, archive, dopts)
 
 	if err = d.Dispatch(ctx, agent.NewDeployCommand(c.Local(), cmd)); err != nil {
+		cancel(err)
 		return err
 	}
 
@@ -89,15 +95,26 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 		deployments.DeployOptionTimeout(time.Duration(dopts.Timeout)),
 		deployments.DeployOptionHeartbeatFrequency(time.Duration(dopts.Heartbeat)),
 		deployments.DeployOptionMonitor(deployments.NewMonitor(
-			deployments.MonitorTicklerEvent(c.Local(), qd),
+			deployments.MonitorTicklerEvent(c.Local(), qd, archive.GetDeploymentID(), cancel),
 			deployments.MonitorTicklerPeriodicAuto(time.Minute),
 		)),
 	}
 
 	// At this point the deploy could take awhile, so we shunt it into the background.
 	go func() {
+		defer cancel(nil)
+
 		dcmd := agent.DeployCommandFailed(by, archive.DeployOption, dopts.DeployOption)
-		if _, success := deployments.RunDeploy(c.Local(), c, d, options...); success {
+		_, success := deployments.RunDeploy(coordinator, c.Local(), c, d, options...)
+
+		// a stopped coordinator has been superseded (restarted, cancelled or leadership moved), whatever
+		// replaced it records the outcome. reporting would end the replacement: the deployment is the same.
+		if cause := context.Cause(coordinator); cause != nil {
+			log.Println("deploy coordinator stopped, not reporting a result:", cause)
+			return
+		}
+
+		if success {
 			dcmd = agent.DeployCommandDone(by, archive.DeployOption, dopts.DeployOption)
 		}
 

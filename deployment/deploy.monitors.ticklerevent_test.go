@@ -11,6 +11,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// ignoreCommands for tests not interested in the deploy commands.
+func ignoreCommands(*agent.DeployCommand) {}
+
 // messages is a sequence yielding the messages in order.
 func messages(ms ...*agent.Message) iterx.Seq[*agent.Message] {
 	return iterx.New(func(ctx context.Context, yield func(*agent.Message) bool) error {
@@ -98,7 +101,7 @@ func TestTickleOnEvents(t *testing.T) {
 				signaled = waiter(tickle)
 			)
 
-			tickleOnEvents(t.Context(), events(t, messages(tc.message)), tickle, departed)
+			tickleOnEvents(t.Context(), events(t, messages(tc.message)), tickle, departed, ignoreCommands)
 
 			select {
 			case <-signaled:
@@ -129,7 +132,7 @@ func TestTickleOnEvents(t *testing.T) {
 			agent.NodeEvent(a, agent.Message_Departed),
 			agent.LogInfo(a, "ignored"),
 			agent.NodeEvent(b, agent.Message_Departed),
-		)), tickle, departed)
+		)), tickle, departed, ignoreCommands)
 
 		require.Equal(t, a.Name, (<-departed).Name)
 		require.Equal(t, b.Name, (<-departed).Name)
@@ -142,7 +145,7 @@ func TestTickleOnEvents(t *testing.T) {
 		done := make(chan struct{})
 		go func() {
 			defer close(done)
-			tickleOnEvents(ctx, make(chan *agent.Message), sync.NewCond(&sync.Mutex{}), make(chan *agent.Peer))
+			tickleOnEvents(ctx, make(chan *agent.Message), sync.NewCond(&sync.Mutex{}), make(chan *agent.Peer), ignoreCommands)
 		}()
 
 		select {
@@ -150,5 +153,78 @@ func TestTickleOnEvents(t *testing.T) {
 		case <-time.After(2 * time.Second):
 			t.Fatal("expected the tickler to stop")
 		}
+	})
+}
+
+func TestSupersedes(t *testing.T) {
+	var (
+		local    = agent.NewPeer("coordinator")
+		other    = agent.NewPeer("other")
+		id       = []byte("deployment")
+		other_id = []byte("another deployment")
+	)
+
+	archive := func(id []byte) *agent.Archive { return &agent.Archive{DeploymentID: id} }
+
+	for name, tc := range map[string]struct {
+		id      []byte
+		command *agent.DeployCommand
+		stopped bool
+	}{
+		"restart naming this node for the deployment":     {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Restart, Archive: archive(id), Previous: local}, stopped: true},
+		"restart naming another node":                     {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Restart, Archive: archive(id), Previous: other}},
+		"restart without a previous coordinator":          {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Restart, Archive: archive(id)}},
+		"restart naming this node for another deployment": {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Restart, Archive: archive(other_id), Previous: local}},
+		"restart when the deployment is unknown":          {command: &agent.DeployCommand{Command: agent.DeployCommand_Restart, Previous: local}},
+		"cancel":                                          {id: id, command: agent.DeployCommandCancel("someone"), stopped: true},
+		"cancel when the deployment is unknown":           {command: agent.DeployCommandCancel("someone"), stopped: true},
+		"done for the deployment":                         {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive(id)}, stopped: true},
+		"failed for the deployment":                       {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Failed, Archive: archive(id)}, stopped: true},
+		"done for another deployment":                     {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Done, Archive: archive(other_id)}},
+		"done without an archive":                         {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Done}},
+		"done when the deployment is unknown":             {command: &agent.DeployCommand{Command: agent.DeployCommand_Done}},
+		"begin":                                           {id: id, command: &agent.DeployCommand{Command: agent.DeployCommand_Begin, Archive: archive(id)}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := supersedes(local, tc.id)(tc.command)
+			require.Equal(t, tc.stopped, err != nil, "%v", err)
+		})
+	}
+}
+
+func TestTickleOnEventsStopsTheDeploy(t *testing.T) {
+	var (
+		local = agent.NewPeer("coordinator")
+		id    = []byte("deployment")
+		other = agent.NewPeer("other")
+	)
+
+	run := func(t *testing.T, ms ...*agent.Message) (stops []error) {
+		tickleOnEvents(
+			t.Context(),
+			events(t, messages(ms...)),
+			sync.NewCond(&sync.Mutex{}),
+			make(chan *agent.Peer, 1),
+			func(dc *agent.DeployCommand) {
+				if cause := supersedes(local, id)(dc); cause != nil {
+					stops = append(stops, cause)
+				}
+			},
+		)
+		return stops
+	}
+
+	t.Run("a restart naming this coordinator stops it", func(t *testing.T) {
+		restart := agent.DeployCommandRestart(local, &agent.DeployCommand{Archive: &agent.Archive{DeploymentID: id}})
+		require.Len(t, run(t, agent.LogInfo(other, "unrelated"), agent.NewDeployCommand(other, restart)), 1)
+	})
+
+	t.Run("the restart doesnt stop the coordinator that replaced it", func(t *testing.T) {
+		restart := agent.DeployCommandRestart(other, &agent.DeployCommand{Archive: &agent.Archive{DeploymentID: id}})
+		require.Empty(t, run(t, agent.NewDeployCommand(local, restart)))
+	})
+
+	t.Run("unrelated events dont stop it", func(t *testing.T) {
+		require.Empty(t, run(t, agent.LogInfo(other, "hello"), agent.NodeEvent(other, agent.Message_Joined)))
 	})
 }

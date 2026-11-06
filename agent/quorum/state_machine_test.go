@@ -129,12 +129,13 @@ func TestStateMachine(t *testing.T) {
 
 		lp := agent.NewPeer("node")
 		sm := NewMachine(
+			t.Context(),
 			lp,
 			leader,
 		)
 
 		cmd := qCommand(agent.DeployCommand_Begin)
-		require.NoError(t, sm.Dispatch(context.Background(), agent.NewDeployCommand(lp, cmd)))
+		require.NoError(t, sm.Dispatch(t.Context(), agent.NewDeployCommand(lp, cmd)))
 	})
 
 	t.Run("persisting state", func(t *testing.T) {
@@ -211,11 +212,12 @@ func TestStateMachine(t *testing.T) {
 
 				leader := findFirstState(raft.Leader, protocols...)
 				sm := NewMachine(
+					t.Context(),
 					agent.NewPeer("node"),
 					leader,
 				)
 
-				require.NoError(t, sm.Dispatch(context.Background(), c.messages...))
+				require.NoError(t, sm.Dispatch(t.Context(), c.messages...))
 
 				snapshotfuture := leader.Snapshot()
 				require.NoError(t, snapshotfuture.Error())
@@ -250,11 +252,12 @@ func TestStateMachine(t *testing.T) {
 
 		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(
+			t.Context(),
 			agent.NewPeer("node"),
 			leader,
 		)
 
-		require.Error(t, sm.Dispatch(context.Background(), agent.NewDeployCommand(local.Local(), cmd)))
+		require.Error(t, sm.Dispatch(t.Context(), agent.NewDeployCommand(local.Local(), cmd)))
 	})
 
 	t.Run("should write message to the observer", func(t *testing.T) {
@@ -270,7 +273,7 @@ func TestStateMachine(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { jrnl.Close() })
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		go func() {
 			for m := range jrnl.Connect(agent.Cursor{}).Each(ctx) {
@@ -284,11 +287,12 @@ func TestStateMachine(t *testing.T) {
 
 		leader := findFirstState(raft.Leader, protocols...)
 		sm := NewMachine(
+			t.Context(),
 			agent.NewPeer("node"),
 			leader,
 		)
 
-		require.NoError(t, sm.Dispatch(context.Background(), messages...))
+		require.NoError(t, sm.Dispatch(t.Context(), messages...))
 
 		for _, m := range messages {
 			expected := <-obs
@@ -303,7 +307,7 @@ func TestStateMachine(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { jrnl.Close() })
 
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		stalled := make(chan *agent.Message) // never read.
 		go func() {
@@ -320,11 +324,11 @@ func TestStateMachine(t *testing.T) {
 		require.NoError(t, err)
 
 		leader := findFirstState(raft.Leader, protocols...)
-		sm := NewMachine(agent.NewPeer("node"), leader)
+		sm := NewMachine(t.Context(), agent.NewPeer("node"), leader)
 
 		start := time.Now()
 		for i := 0; i < 50; i++ {
-			require.NoError(t, sm.Dispatch(context.Background(), agent.LogInfo(local.Local(), "message")))
+			require.NoError(t, sm.Dispatch(t.Context(), agent.LogInfo(local.Local(), "message")))
 		}
 		require.Less(t, time.Since(start), time.Second)
 	})

@@ -2,6 +2,7 @@ package deployment
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"math"
 	"sync/atomic"
@@ -156,8 +157,8 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 }
 
 // RunDeploy convience function for executing a deploy.
-func RunDeploy(p *agent.Peer, c cluster, di dispatcher, options ...Option) (int64, bool) {
-	return NewDeploy(p, di, options...).Deploy(c)
+func RunDeploy(ctx context.Context, p *agent.Peer, c cluster, di dispatcher, options ...Option) (int64, bool) {
+	return NewDeploy(p, di, options...).Deploy(ctx, c)
 }
 
 func loggingDeploy(ctx context.Context, peer *agent.Peer) (*agent.Deploy, error) {
@@ -289,9 +290,10 @@ type Deploy struct {
 }
 
 // Deploy deploy to the cluster. returns deployment results.
-// failed nodes and if it was considered a success.
-func (t Deploy) Deploy(c cluster) (int64, bool) {
-	ctx, done := context.WithTimeout(context.Background(), t.worker.timeout+t.worker.graceperiod)
+// failed nodes and if it was considered a success. cancelling the context stops the deploy,
+// which is then never a success.
+func (t Deploy) Deploy(ctx context.Context, c cluster) (int64, bool) {
+	ctx, done := context.WithTimeout(ctx, t.worker.timeout+t.worker.graceperiod)
 	defer done()
 
 	nodes := ApplyFilter(t.filter, c.Peers()...)
@@ -315,6 +317,9 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 			),
 		)
 		return 0, false
+	} else if errorsx.Is(failure, context.Canceled) {
+		t.stopped(ctx)
+		return 0, false
 	}
 
 	errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogUser(t.worker.local, "nodes are ready, deploying")))
@@ -331,10 +336,7 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		errorsx.Log(pool.Run(ctx, peer))
 	}
 
-	failure := errorsx.Ignore(
-		t.worker.monitor.Await(ctx, t.queue, len(nodes), t.dispatcher, c, t.worker.check, heartbeat),
-		context.Canceled,
-	)
+	failure := t.worker.monitor.Await(ctx, t.queue, len(nodes), t.dispatcher, c, t.worker.check, heartbeat)
 
 	if errorsx.Is(failure, context.DeadlineExceeded) {
 		errorsx.Log(
@@ -342,10 +344,28 @@ func (t Deploy) Deploy(c cluster) (int64, bool) {
 		)
 	}
 
+	if errorsx.Is(failure, context.Canceled) {
+		t.stopped(ctx)
+	}
+
 	// the workers must be done before reporting, the monitor can return early when the context ends.
 	errorsx.Log(asynccompute.Shutdown(ctx, pool))
 
 	return t.worker.Complete(ctx)
+}
+
+// stopped reports why the deploy was stopped before it completed, the cause of the cancelled context.
+// the notification must not depend on the context that has ended.
+func (t Deploy) stopped(ctx context.Context) {
+	cause := context.Cause(ctx)
+	log.Println("deploy stopped:", cause)
+	errorsx.Log(
+		agentutil.Dispatch(
+			context.WithoutCancel(ctx),
+			t.dispatcher,
+			agent.LogWarning(t.worker.local, fmt.Sprintf("deploy stopped by the coordinator: %v", cause)),
+		),
+	)
 }
 
 // ApplyFilter applies the filter to the set of peers.

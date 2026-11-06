@@ -35,6 +35,7 @@ type deployment struct {
 	c                    cluster
 	deploying            int32                // is a deploy process in progress.
 	runningDeploy        *agent.DeployCommand // currently active deployment.
+	coordinator          *agent.Peer          // the node coordinating the running deployment.
 	lastSuccessfulDeploy *agent.DeployCommand // used for bootstrapping and recovering when a deploy proxy fails.
 	m                    *sync.RWMutex
 }
@@ -66,12 +67,14 @@ func (t *deployment) Decode(ctx TranscoderContext, m *agent.Message) error {
 
 		t.m.Lock()
 		t.runningDeploy = dc
+		t.coordinator = m.GetPeer()
 		t.m.Unlock()
 	case agent.DeployCommand_Done:
 		atomic.SwapInt32(&t.deploying, none)
 		t.m.Lock()
 		t.lastSuccessfulDeploy = dc
 		t.runningDeploy = nil
+		t.coordinator = nil
 		t.m.Unlock()
 	default:
 		atomic.SwapInt32(&t.deploying, none)
@@ -108,6 +111,13 @@ func (t *deployment) getRunningDeploy() *agent.DeployCommand {
 	t.m.RLock()
 	defer t.m.RUnlock()
 	return t.runningDeploy
+}
+
+// getCoordinator the node coordinating the running deploy, nil when unknown.
+func (t *deployment) getCoordinator() *agent.Peer {
+	t.m.RLock()
+	defer t.m.RUnlock()
+	return t.coordinator
 }
 
 // Deploy trigger a deploy.
@@ -181,7 +191,7 @@ func (t *deployment) restartActiveDeploy(ctx context.Context, d dialers.Defaults
 	err = sm.Dispatch(
 		ctx,
 		agent.LogInfo(t.c.Local(), "restarting deploy"),
-		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart()),
+		agent.NewDeployCommand(t.c.Local(), agent.DeployCommandRestart(t.getCoordinator(), dc)),
 		agent.LogInfo(t.c.Local(), "attempting to cancel running deployments"),
 	)
 	if err != nil {

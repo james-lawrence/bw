@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"runtime"
@@ -13,6 +14,7 @@ import (
 	"github.com/james-lawrence/bw/agentutil"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/internal/errorsx"
+	"github.com/pkg/errors"
 	"golang.org/x/time/rate"
 )
 
@@ -69,17 +71,54 @@ func MonitorTicklerHeartbeat(local *agent.Peer, d dispatcher, period time.Durati
 	}
 }
 
-func MonitorTicklerEvent(l *agent.Peer, d dialers.T) MonitorTickler {
+// MonitorTicklerEvent triggers healthchecks from the events of the cluster. stop is invoked, with the reason,
+// when an event ends the deploy of the given deployment coordinated by l (see supersedes).
+func MonitorTicklerEvent(l *agent.Peer, d dialers.T, did []byte, stop func(error)) MonitorTickler {
 	return func(ctx context.Context, tickle *sync.Cond, departed chan *agent.Peer) {
 		events := make(chan *agent.Message, 100)
 		go agentutil.WatchEvents(ctx, l, d, events)
-		tickleOnEvents(ctx, events, tickle, departed)
+
+		ends := supersedes(l, did)
+		tickleOnEvents(ctx, events, tickle, departed, func(dc *agent.DeployCommand) {
+			if cause := ends(dc); cause != nil {
+				stop(cause)
+			}
+		})
+	}
+}
+
+// supersedes returns a function deciding whether a deploy command ends the deploy of the deployment coordinated
+// by local. the reason is returned for matches, nil otherwise.
+//   - a restart naming the local node as the previous coordinator, a new leader has taken the deploy over.
+//   - a cancel, which doesn't identify the deployment: there is a single deploy at a time and a single coordinator.
+//   - a done or failed for the deployment.
+//
+// restarts, done and failed are only matched when the deployment is known.
+func supersedes(local *agent.Peer, deploymentID []byte) func(*agent.DeployCommand) error {
+	return func(dc *agent.DeployCommand) error {
+		same := len(deploymentID) > 0 && bytes.Equal(dc.GetArchive().GetDeploymentID(), deploymentID)
+
+		switch dc.GetCommand() {
+		case agent.DeployCommand_Restart:
+			if same && dc.GetPrevious().GetName() == local.GetName() {
+				return errors.New("deploy restarted by a new coordinator")
+			}
+		case agent.DeployCommand_Cancel:
+			return errors.New("deploy cancelled")
+		case agent.DeployCommand_Done, agent.DeployCommand_Failed:
+			if same {
+				return errors.Errorf("deploy ended elsewhere: %s", dc.GetCommand())
+			}
+		}
+
+		return nil
 	}
 }
 
 // tickleOnEvents triggers healthchecks when a node finishes deploying and reports the nodes that
-// departed the cluster. returns when the context is done or the events are exhausted.
-func tickleOnEvents(ctx context.Context, events <-chan *agent.Message, tickle *sync.Cond, departed chan *agent.Peer) {
+// departed the cluster. returns when the context is done or the events are exhausted. deploy commands
+// are passed to onCommand.
+func tickleOnEvents(ctx context.Context, events <-chan *agent.Message, tickle *sync.Cond, departed chan *agent.Peer, onCommand func(*agent.DeployCommand)) {
 	for {
 		select {
 		case m, ok := <-events:
@@ -101,6 +140,8 @@ func tickleOnEvents(ctx context.Context, events <-chan *agent.Message, tickle *s
 				if evt.Membership == agent.Message_Departed {
 					departed <- m.Peer
 				}
+			case *agent.Message_DeployCommand:
+				onCommand(evt.DeployCommand)
 			default:
 			}
 		case <-ctx.Done():

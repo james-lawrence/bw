@@ -120,6 +120,7 @@ type Quorum struct {
 	history            History
 	leadershipTransfer *LeadershipTransfer
 	modechange         func(agent.PeerMode)
+	relinquish         context.CancelCauseFunc // ends the work started while leading, only used by Observe.
 }
 
 func (t *Quorum) mode(m agent.PeerMode) {
@@ -196,9 +197,16 @@ func (t *Quorum) leading(r *raft.Raft) {
 		return
 	}
 
+	// anything started by a previous term is over.
+	t.stepdown(errors.New("leadership term replaced"))
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	t.relinquish = cancel
+
 	t.mode(agent.PeerMode_PeerModeLeader)
 	t.sm = func() stateMachine {
 		sm := NewMachine(
+			ctx,
 			t.c.Local(),
 			r,
 		)
@@ -211,10 +219,21 @@ func (t *Quorum) leading(r *raft.Raft) {
 				"failed to restart an active deploy",
 			))
 			errorsx.Log(t.deployment.determineLatestDeploy(ctx, t.dialer, sm))
-		}(context.Background())
+		}(ctx)
 
 		return sm
 	}()
+}
+
+// stepdown ends the work that was started while leading, such as the coordinator of a deploy. nothing
+// to do if the node wasn't leading.
+func (t *Quorum) stepdown(cause error) {
+	if t.relinquish == nil {
+		return
+	}
+
+	t.relinquish(cause)
+	t.relinquish = nil
 }
 
 // Info return current info from the leader.

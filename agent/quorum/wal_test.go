@@ -155,7 +155,7 @@ func TestWALSnapshotRestore(t *testing.T) {
 			"sequential deployment begin",
 			[]*agent.Message{
 				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
-				agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+				agent.NewDeployCommand(p, agent.DeployCommandRestart(nil, nil)),
 				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", archive, nil)),
 				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 			},
@@ -209,7 +209,7 @@ func TestWALRestore(t *testing.T) {
 				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
 				agent.NewDeployCommand(p, agent.DeployCommandCancel("bar")),
 				agent.NewDeployCommand(p, agent.DeployCommandBegin("foo", nil, nil)),
-				agent.NewDeployCommand(p, agent.DeployCommandRestart()),
+				agent.NewDeployCommand(p, agent.DeployCommandRestart(nil, nil)),
 				agent.NewDeployCommand(p, agent.DeployCommandDone("foo", archive.DeployOption)),
 			},
 		},

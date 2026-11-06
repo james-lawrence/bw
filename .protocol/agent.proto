@@ -156,6 +156,9 @@ message DeployCommand {
   Archive archive = 2;
   string initiator = 3;
   DeployOptions options = 5;
+  // the node that was coordinating the deploy, set on restarts. the coordinator stops itself when it sees
+  // a restart naming it, a new leader has taken over.
+  Peer previous = 6;
 }
 
 message Deploy {
