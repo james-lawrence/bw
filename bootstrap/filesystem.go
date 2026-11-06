@@ -1,7 +1,9 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"io"
 	"log"
 	"os"
@@ -20,13 +22,15 @@ import (
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/fsx"
 	"github.com/james-lawrence/bw/internal/iox"
+	"github.com/james-lawrence/bw/storage"
 )
 
 // NewFilesystem consumes a configuration and generates a bootstrap socket
 // for the agent.
-func NewFilesystem(a agent.Config, c cluster, d dialer) Filesystem {
+func NewFilesystem(a agent.Config, c cluster, d dialer, dl storage.DownloadProtocol) Filesystem {
 	return Filesystem{
 		a:        a,
+		dl:       dl,
 		c:        c,
 		d:        d,
 		current:  filepath.Join(a.Bootstrap.ArchiveDirectory, "current.tar.gz"),
@@ -43,6 +47,7 @@ type Filesystem struct {
 	a        agent.Config
 	c        cluster
 	d        dialer
+	dl       storage.DownloadProtocol // used to retrieve archives that were never deployed locally.
 	current  string
 	metadata string
 	uploaded string
@@ -140,6 +145,7 @@ func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 	var (
 		d        *os.File
 		archive  *os.File
+		src      io.ReadCloser
 		metadata = t.metadata + ".tmp"
 	)
 
@@ -153,17 +159,35 @@ func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 		return errors.WithStack(err)
 	}
 
+	downloaded := false
 	if archive, err = os.Open(filepath.Join(bw.DeployDir(t.a.Root), bw.RandomID(a.Archive.DeploymentID).String(), bw.ArchiveFile)); err != nil {
-		return errors.WithStack(err)
+		// archives which were never deployed on this node (forced bootstrap archives) have no local copy,
+		// retrieve them from storage instead.
+		if !os.IsNotExist(errors.Cause(err)) || t.dl == nil {
+			return errors.WithStack(err)
+		}
+
+		log.Println("filesystem: no local copy of archive, downloading", bw.RandomID(a.Archive.DeploymentID))
+		downloaded = true
+		src = storage.New(storage.OptionProtocols(t.dl)).New(a.Archive.Location).Download(context.Background(), a.Archive)
+	} else {
+		src = archive
 	}
+	defer src.Close()
 
 	if d, err = os.CreateTemp(t.a.Bootstrap.ArchiveDirectory, "download-*.bin"); err != nil {
 		return errors.WithStack(err)
 	}
 	defer d.Close()
 
-	if _, err = io.Copy(d, archive); err != nil {
+	digest := sha256.New()
+	if _, err = io.Copy(io.MultiWriter(d, digest), src); err != nil {
 		return errors.WithStack(err)
+	}
+
+	if downloaded && len(a.Archive.Checksum) > 0 && !bytes.Equal(digest.Sum(nil), a.Archive.Checksum) {
+		os.Remove(d.Name())
+		return errors.Errorf("downloaded archive checksum mismatch: %s", bw.RandomID(a.Archive.DeploymentID))
 	}
 
 	if err = errorsx.Compact(d.Sync(), d.Close()); err != nil {
@@ -176,6 +200,14 @@ func (t Filesystem) clone(a *agent.DeployCommand) (err error) {
 
 	if err = os.Rename(metadata, t.metadata); err != nil {
 		return errors.WithStack(err)
+	}
+
+	if downloaded {
+		// the archive already lives within storage, there is nothing to upload. replace the stale
+		// uploaded marker so this archive is what gets served for bootstrapping.
+		if err = agent.WriteMetadata(t.uploaded, a); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 
 	// persist into the archive directory.

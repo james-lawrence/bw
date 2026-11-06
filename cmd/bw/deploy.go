@@ -17,6 +17,7 @@ type cmdDeploy struct {
 	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot" help:"generate a deployment archive without uploading it anywhere"`
 	Redeploy cmdDeployRedeploy    `cmd:"" name:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
 	Cancel   cmdDeployCancel      `cmd:"" name:"cancel" help:"cancel any current deploy"`
+	Force    cmdDeployForce       `cmd:"" name:"force" hidden:"" help:"replace the bootstrap archive with the current deployspace without deploying, then restart the nodes"`
 }
 
 type DeployCluster struct {
@@ -161,5 +162,47 @@ func (t cmdDeployCancel) Run(ctx *cmdopts.Global) error {
 		Environment: t.Environment,
 		Insecure:    t.Insecure,
 		Debug:       t.Debug,
+	})
+}
+
+type cmdDeployForce struct {
+	cmdopts.BeardedWookieEnv
+	DeployCluster
+	NoRestart bool `name:"no-restart" help:"do not restart the nodes after replacing the bootstrap archive"`
+}
+
+func (t cmdDeployForce) Run(ctx *cmdopts.Global) error {
+	filters := make([]deployment.Filter, 0, len(t.Names))
+	for _, n := range t.Names {
+		filters = append(filters, deployment.Named(n))
+	}
+
+	for _, n := range t.IPs {
+		filters = append(filters, deployment.IP(n))
+	}
+
+	// need a filter to be present for the canary to work.
+	if t.Canary {
+		filters = append(filters, deployment.AlwaysMatch)
+	}
+
+	filter := deployment.Filter(deployment.AlwaysMatch)
+	if len(filters) > 0 {
+		filter = deployment.Or(filters...)
+	}
+
+	return deploy.Force(&deploy.Context{
+		Context:     ctx.Context,
+		CancelFunc:  ctx.Shutdown,
+		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
+		Environment: t.Environment,
+		Insecure:    t.Insecure,
+		Heartbeat:   t.Heartbeat,
+		Silent:      t.Silent,
+		Canary:      t.Canary,
+		Debug:       t.Debug,
+		NoRestart:   t.NoRestart,
+		Filter:      filter,
 	})
 }

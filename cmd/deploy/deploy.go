@@ -50,6 +50,7 @@ type Context struct {
 	AllowEmpty  bool
 	Canary      bool
 	Debug       bool
+	NoRestart   bool // force only: do not restart the nodes after replacing the archive.
 	context.Context
 	context.CancelFunc
 	*sync.WaitGroup

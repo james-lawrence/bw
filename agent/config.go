@@ -198,6 +198,14 @@ func ConfigOptionCompose(options ...ConfigOption) ConfigOption {
 	}
 }
 
+// ConfigOptionBootstrapArchive sets the directory used for the bootstrap archive and whether it is readonly.
+func ConfigOptionBootstrapArchive(dir string, readonly bool) ConfigOption {
+	return func(c *Config) {
+		c.Bootstrap.ArchiveDirectory = dir
+		c.Bootstrap.ReadOnly = readonly
+	}
+}
+
 // ConfigOptionDefaultBind default connection bindings.
 func ConfigOptionDefaultBind(ip net.IP) ConfigOption {
 	return ConfigOptionCompose(
@@ -240,6 +248,13 @@ type bootstrap struct {
 	Attempts         int    `yaml:"attempts"`
 	ReadOnly         bool   `yaml:"readonly"`
 	ArchiveDirectory string `yaml:"archiveDirectory"`
+}
+
+// ArchivesDeployments returns true when the agent keeps a local copy of successful
+// deployments for use as a bootstrap archive. mirrors the conditions under which the
+// filesystem bootstrap monitor runs.
+func (t Config) ArchivesDeployments() bool {
+	return t.Bootstrap.ArchiveDirectory != "" && !t.Bootstrap.ReadOnly
 }
 
 // Config - configuration for agent processes.
@@ -313,6 +328,7 @@ func (t Config) Peer() *Peer {
 		Name:    t.Name,
 		Ip:      t.P2PAdvertised.IP.String(),
 		P2PPort: uint32(t.P2PAdvertised.Port),
+		Archive: t.ArchivesDeployments(),
 	}
 }
 

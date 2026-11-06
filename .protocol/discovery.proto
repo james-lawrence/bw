@@ -12,6 +12,8 @@ message Node {
   uint32 SWIMPort = 5;
   uint32 TorrentPort = 6;
   uint32 DiscoveryPort = 7;
+  // archive true when the node archives successful deployments for use as a bootstrap archive.
+  bool Archive = 9;
 }
 
 message QuorumRequest {}

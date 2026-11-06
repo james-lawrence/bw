@@ -27,6 +27,7 @@ func peerToNode(p *agent.Peer) Node {
 		Ip:      p.Ip,
 		Name:    p.Name,
 		P2PPort: p.P2PPort,
+		Archive: p.Archive,
 	}
 }
 
@@ -36,6 +37,7 @@ func nodeToPeer(n *Node) *agent.Peer {
 		Ip:      n.Ip,
 		Name:    n.Name,
 		P2PPort: n.P2PPort,
+		Archive: n.Archive,
 	}
 }
 

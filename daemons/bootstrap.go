@@ -31,7 +31,7 @@ func Bootstrap(ctx Context, download storage.DownloadProtocol) (err error) {
 		return errors.Wrap(err, "failed to initialize cluster bootstrap service")
 	}
 
-	if err = bootstrap.NewFilesystem(ctx.Config, cx, dialer).Bind(ctx.Context, bootstrap.SocketAuto(ctx.Config)); err != nil {
+	if err = bootstrap.NewFilesystem(ctx.Config, cx, dialer, download).Bind(ctx.Context, bootstrap.SocketAuto(ctx.Config)); err != nil {
 		return errors.Wrap(err, "failed to initialize filesystem bootstrap service")
 	}
 

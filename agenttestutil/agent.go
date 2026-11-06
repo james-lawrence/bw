@@ -39,7 +39,17 @@ func Agent(t *testing.T, client rsax.KeyGen, addr *net.TCPAddr, options ...agent
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 
+	return AgentIn(t, dir, client, addr, options...)
+}
+
+// AgentIn is Agent using an existing directory for everything the agent touches. starting it again with the same
+// directory (once the previous agent has stopped) behaves like a restart of the node: its state is kept.
+// the caller is responsible for removing dir.
+func AgentIn(t *testing.T, dir string, client rsax.KeyGen, addr *net.TCPAddr, options ...agent.ConfigOption) error {
+	t.Helper()
+
 	var (
+		err      error
 		root     = filepath.Join(dir, "a")
 		run      = filepath.Join(dir, "run")
 		agentcfg = filepath.Join(dir, "agent.yml")
