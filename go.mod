@@ -29,7 +29,7 @@ require (
 	github.com/hashicorp/raft v1.7.2
 	github.com/hashicorp/raft-boltdb v0.0.0-20250113192317-e8660f88bcc9
 	github.com/icrowley/fake v0.0.0-20240710202011-f797eb4a99c0
-	github.com/james-lawrence/torrent v0.0.0-20261103050457-294b8a5cff75
+	github.com/james-lawrence/torrent v0.0.0-20261106140703-1d901b0326db
 	github.com/joho/godotenv v1.5.1
 	github.com/logrusorgru/aurora v2.0.3+incompatible
 	github.com/manifoldco/promptui v0.9.0
@@ -46,6 +46,7 @@ require (
 	github.com/traefik/yaegi v0.9.8
 	github.com/willabides/kongplete v0.4.0
 	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.62.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/time v0.16.0
 	golang.org/x/tools v0.52.0
@@ -155,9 +156,8 @@ require (
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
-	golang.org/x/exp v0.0.0-20261014143641-f0251eb4aa3e // indirect
+	golang.org/x/exp v0.0.0-20261106112924-d498a4c2cc9a // indirect
 	golang.org/x/mod v0.42.0 // indirect
-	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/term v0.47.0 // indirect

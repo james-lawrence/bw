@@ -104,7 +104,7 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 				break
 			}
 
-			t.client.Stop(metadata)
+			errorsx.Log(errors.Wrap(t.client.Stop(metadata), "unable to stop stalled torrent"))
 		}
 
 		if ctx.Err() != nil {
