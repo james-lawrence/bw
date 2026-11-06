@@ -228,9 +228,13 @@ func DebugLog(debug bool) *log.Logger {
 	return log.New(io.Discard, log.Prefix(), log.Flags())
 }
 
+// RaftStoreFilepath opens the raft store at the given path. the store is not synced to disk: the quorum discards
+// its raft state whenever it connects, so nothing relies on it surviving a restart, and an fsync per entry is
+// the dominant cost of every dispatched message.
 func RaftStoreFilepath(p string) (*raftboltdb.BoltStore, error) {
 	sopts := raftboltdb.Options{
-		Path: p,
+		Path:   p,
+		NoSync: true,
 	}
 	return raftboltdb.New(sopts)
 }
