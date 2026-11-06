@@ -3,6 +3,7 @@ package deployment
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"runtime"
 	"sync"
@@ -231,7 +232,10 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, expected int, d dis
 			}
 
 			outstanding = checker.run(ctx, outstanding...)
-			outstanding = dropDeparted(departed, outstanding...)
+			outstanding = dropDeparted(departed, func(p *agent.Peer) {
+				// a departed node is not a failed deploy, acknowledge it and stop monitoring it.
+				errorsx.Log(agentutil.Dispatch(ctx, d, agent.LogWarning(p, fmt.Sprintf("node %s departed the cluster, no longer waiting on it", p.Ip))))
+			}, outstanding...)
 
 			if envx.Boolean(false, bw.EnvLogsDeploy, bw.EnvLogsVerbose) {
 				log.Println("healthchecks", len(outstanding), "/", cap(outstanding), q == nil, "completed")
@@ -246,7 +250,7 @@ func (t Monitor) Await(ctx context.Context, q chan *pending, expected int, d dis
 	}
 }
 
-func dropDeparted(departed map[string]*agent.Peer, outstanding ...*pending) (remaining []*pending) {
+func dropDeparted(departed map[string]*agent.Peer, acknowledge func(*agent.Peer), outstanding ...*pending) (remaining []*pending) {
 	if len(departed) == 0 {
 		return outstanding
 	}
@@ -255,6 +259,7 @@ func dropDeparted(departed map[string]*agent.Peer, outstanding ...*pending) (rem
 	for _, o := range outstanding {
 		if _, ok := departed[o.Name]; ok {
 			log.Println("dropping", o.Ip, "node departed")
+			acknowledge(o.Peer)
 			close(o.done)
 			continue
 		}
