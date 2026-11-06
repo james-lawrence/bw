@@ -81,7 +81,7 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 
 	options := []deployments.Option{
 		deployments.DeployOptionChecker(deployments.OperationFunc(check(dialer))),
-		deployments.DeployOptionDeployer(deployments.OperationFunc(deploy(dopts, archive, dialer))),
+		deployments.DeployOptionDeployer(deployments.OperationFunc(deploy(by, dopts, archive, dialer))),
 		deployments.DeployOptionFilter(filter),
 		deployments.DeployOptionPartitioner(bw.ConstantPartitioner(dopts.Concurrency)),
 		deployments.DeployOptionIgnoreFailures(dopts.IgnoreFailures),
@@ -146,7 +146,7 @@ func check(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.
 	}
 }
 
-func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
+func deploy(by string, dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
 	return func(ctx context.Context, n *agent.Peer) (_d *agent.Deploy, err error) {
 		var (
 			c *grpc.ClientConn
@@ -157,7 +157,7 @@ func deploy(dopts *agent.DeployOptions, archive *agent.Archive, d dialers.Defaul
 		}
 		defer c.Close()
 
-		return agent.NewConn(c).Deploy(ctx, dopts, archive)
+		return agent.NewConn(c).Deploy(ctx, by, dopts, archive)
 	}
 }
 

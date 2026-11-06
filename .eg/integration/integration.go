@@ -30,7 +30,7 @@ func Test(ctx context.Context, op eg.Op) error {
 				shell.Op(
 					runtime.Newf("run0 -u egd -g egd -D %s go install github.com/letsencrypt/pebble/v2/...@latest", egenv.WorkingDirectory()).Privileged(),
 					runtime.Newf("run0 -u egd -g egd -D %s bw me init --seed test linux-dev", egenv.WorkingDirectory()).Privileged(),
-					runtime.Newf("run0 -u egd -g egd -D %s bw deploy local linux-dev -vvv --debug", egenv.WorkingDirectory()).Privileged(),
+					runtime.Newf("run0 -u egd -g egd -D %s bw deploy local linux-dev", egenv.WorkingDirectory()).Privileged(),
 					runtime.Newf("run0 -u egd -g egd -D %s systemctl --user enable --now bearded-wookie-pebble.service", egenv.WorkingDirectory()).Privileged().Lenient(true),
 					runtime.Newf("run0 -u egd -g egd -D %s systemctl --user enable --now bearded-wookie@agent1.service bearded-wookie@agent2.service bearded-wookie@agent3.service bearded-wookie@agent4.service", egenv.WorkingDirectory()).Privileged(),
 				),

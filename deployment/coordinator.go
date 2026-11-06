@@ -1,6 +1,7 @@
 package deployment
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"log"
@@ -195,6 +196,17 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 		ok   bool
 		dctx *DeployContext
 	)
+
+	// the same deployment delivered again (a retried rpc) is not a conflict, and must not touch the
+	// workspace of the deploy already running. report the running deploy.
+	t.m.Lock()
+	cur := t.ds.current
+	running := atomic.LoadUint32(t.ds.state) == coordinatorDeploying
+	t.m.Unlock()
+
+	if running && cur != nil && cur.Archive != nil && bytes.Equal(cur.Archive.DeploymentID, archive.DeploymentID) {
+		return cur, nil
+	}
 
 	// set the timestamp of the archive to as this marks the time the archive was actually deployed.
 	// and ensures it shows up properly in the deployments history

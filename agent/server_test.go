@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"testing"
 
 	. "github.com/james-lawrence/bw/agent"
@@ -98,9 +99,43 @@ func TestServerDeploy(t *testing.T) {
 	t.Run("should trigger a deploy on the server", func(t *testing.T) {
 		h := testClient(t)
 
-		_, err := h.client.Deploy(context.Background(), &DeployOptions{}, &Archive{})
+		_, err := h.client.Deploy(context.Background(), "", &DeployOptions{}, &Archive{})
 		require.NoError(t, err)
 	})
+}
+
+type initiatorDeployer struct {
+	initiator chan string
+}
+
+func (initiatorDeployer) Cancel()                         {}
+func (initiatorDeployer) Reset() error                    { return nil }
+func (initiatorDeployer) Deployments() ([]*Deploy, error) { return nil, nil }
+func (initiatorDeployer) Logs([]byte) io.ReadCloser       { return io.NopCloser(strings.NewReader("")) }
+
+func (t initiatorDeployer) Deploy(_ context.Context, by string, _ *DeployOptions, _ *Archive) (*Deploy, error) {
+	t.initiator <- by
+	return &Deploy{}, nil
+}
+
+func TestServerDeployInitiator(t *testing.T) {
+	d := initiatorDeployer{initiator: make(chan string, 1)}
+
+	socket, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	c := cluster.New(NewPeer(fake.CharactersN(10)), clustering.NewMock(clusteringtestutil.NewNodes(1)[0]))
+	grpcs := grpc.NewServer()
+	RegisterAgentServer(grpcs, NewServer(c, ServerOptionAuth(testauth{}), ServerOptionDeployer(d)))
+	go grpcs.Serve(socket)
+	t.Cleanup(grpcs.Stop)
+
+	conn, err := grpc.NewClient(socket.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	_, err = NewConn(conn).Deploy(context.Background(), "test user", &DeployOptions{}, &Archive{})
+	require.NoError(t, err)
+	require.Equal(t, "test user", <-d.initiator)
 }
 
 func TestServerLogs(t *testing.T) {

@@ -37,7 +37,7 @@ type Client interface {
 	Shutdown(ctx context.Context) error
 	Upload(ctx context.Context, meta *UploadMetadata, src io.Reader) (*Archive, error)
 	RemoteDeploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive, peers ...*Peer) error
-	Deploy(context.Context, *DeployOptions, *Archive) (*Deploy, error)
+	Deploy(ctx context.Context, initiator string, dopts *DeployOptions, a *Archive) (*Deploy, error)
 	Connect(ctx context.Context) (*ConnectResponse, error)
 	Cancel(context.Context, *CancelRequest) error
 	NodeCancel(ctx context.Context) error

@@ -1,15 +1,10 @@
 package agentcmd
 
 import (
-	"context"
-
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agentutil"
-	"github.com/james-lawrence/bw/cluster"
+	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
-	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/uxterm"
-	"github.com/pkg/errors"
 )
 
 type CmdControlNodes struct {
@@ -24,16 +19,16 @@ func (t CmdControlNodes) Run(gctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	cx := cluster.New(commandutils.NewClientPeer(), t.filtered(c))
-	return agentutil.NewClusterOperation(gctx.Context, agentutil.Operation(func(ctx context.Context, p *agent.Peer, c agent.Client) (err error) {
-		var (
-			info *agent.StatusResponse
-		)
+	conn, err := dialers.NewQuorum(c, d.Defaults()...).DialContext(gctx.Context)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
 
-		if info, err = c.Info(ctx); err != nil {
-			return errors.WithStack(err)
-		}
+	info, err := agent.NewQuorumClient(conn).Info(gctx.Context, &agent.InfoRequest{})
+	if err != nil {
+		return err
+	}
 
-		return uxterm.PrintNode(info)
-	}))(cx, d)
+	return uxterm.PrintNodes(info, agent.NodesToPeers(t.filtered(c).Members()...))
 }

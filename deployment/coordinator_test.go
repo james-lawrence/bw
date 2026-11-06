@@ -100,6 +100,26 @@ func TestCoordinator(t *testing.T) {
 		}, time.Second, 10*time.Millisecond)
 	})
 
+	t.Run("redelivering the running deploy is not a conflict", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		p := agent.NewPeer("node1")
+		c := deployment.New(
+			p,
+			deployment.NewDirective(),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
+		)
+		a := &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+
+		first, err := c.Deploy(context.Background(), "test user", dopts, a)
+		require.NoError(t, err)
+
+		second, err := c.Deploy(context.Background(), "", dopts, a)
+		require.NoError(t, err)
+		require.Equal(t, first.Archive.DeploymentID, second.Archive.DeploymentID)
+	})
+
 	t.Run("should be able to cancel a running deploy", func(t *testing.T) {
 		workdir := testingx.TempDir(t)
 		p := agent.NewPeer("node1")

@@ -163,7 +163,7 @@ func (t Conn) RemoteDeploy(ctx context.Context, initiator string, dopts *DeployO
 }
 
 // Deploy ...
-func (t Conn) Deploy(ctx context.Context, options *DeployOptions, archive *Archive) (d *Deploy, err error) {
+func (t Conn) Deploy(ctx context.Context, initiator string, options *DeployOptions, archive *Archive) (d *Deploy, err error) {
 	var (
 		ar *DeployResponse
 	)
@@ -171,7 +171,7 @@ func (t Conn) Deploy(ctx context.Context, options *DeployOptions, archive *Archi
 	rpc := NewAgentClient(t.conn)
 
 	err = grpcx.Retry(ctx, func() error {
-		if ar, err = rpc.Deploy(ctx, &DeployRequest{Options: options, Archive: archive}); err != nil {
+		if ar, err = rpc.Deploy(ctx, &DeployRequest{Initiator: initiator, Options: options, Archive: archive}); err != nil {
 			return errors.Wrap(err, "failed to initiated deploy")
 		}
 
