@@ -139,7 +139,11 @@ func (t *Coordinator) background(dctx *DeployContext) {
 	}
 
 	if t.completedObserver != nil {
-		t.completedObserver <- done
+		select {
+		case t.completedObserver <- done:
+		case <-dctx.deadline.Done():
+			// the deploy's context ended (caller gave up, or timeout) so nobody is observing, don't hold the coordinator hostage.
+		}
 	}
 
 	atomic.SwapUint32(t.ds.state, coordinaterWaiting)

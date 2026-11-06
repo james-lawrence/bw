@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -188,6 +189,40 @@ func TestCoordinator(t *testing.T) {
 
 		c.Cancel()
 		c.Cancel()
+	})
+
+	t.Run("a failed deploy must not block later deploys when the result observer is stalled", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		p := agent.NewPeer("node1")
+		// nothing ever reads from results, simulating a hung consumer on the result bus.
+		results := make(chan *deployment.DeployResult)
+		c := deployment.New(
+			p,
+			deployment.NewDirective(),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{Err: context.DeadlineExceeded}),
+			deployment.CoordinatorOptionDeployResults(results),
+		)
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+
+		// mirrors bootstrap, which abandons the deploy context when Deploy returns an error.
+		ctx, cancel := context.WithCancel(context.Background())
+		_, err := c.Deploy(ctx, "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
+		require.Error(t, err)
+		cancel()
+
+		require.Eventually(t, func() bool {
+			deploys, err := c.Deployments()
+			require.NoError(t, err)
+			return len(deploys) == 1 && deploys[0].Stage == agent.Deploy_Failed
+		}, time.Second, 10*time.Millisecond)
+
+		require.Eventually(t, func() bool {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			_, err := c.Deploy(ctx, "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
+			return !strings.Contains(fmt.Sprint(err), "is already deploying")
+		}, time.Second, 10*time.Millisecond)
 	})
 }
 
