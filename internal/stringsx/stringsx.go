@@ -16,6 +16,15 @@ func Reverse(s string) string {
 	return string(r)
 }
 
+// Tail returns the last n runes of s, or s when it has n or fewer.
+func Tail(s string, n int) string {
+	r := []rune(s)
+	if len(r) <= n {
+		return s
+	}
+	return string(r[len(r)-n:])
+}
+
 func Empty(s string) bool {
 	return strings.TrimSpace(s) == ""
 }

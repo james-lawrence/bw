@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 
 	"github.com/james-lawrence/bw"
-	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/pkg/errors"
 )
 
@@ -23,18 +22,19 @@ func (t dlog) Write(b []byte) (n int, err error) {
 
 func (t dlog) Close() error {
 	if t.dst != nil {
-		return errorsx.Compact(t.dst.Sync(), t.dst.Close())
+		return t.dst.Close()
 	}
 
 	return nil
 }
 
+// newLogger the deploy log is informational and throwaway, it is never synced to disk.
 func newLogger(uid bw.RandomID, root, prefix string) (_dlog dlog, err error) {
 	var (
 		dst *os.File
 	)
 
-	if dst, err = os.OpenFile(filepath.Join(root, bw.DeployLog), os.O_CREATE|os.O_WRONLY|os.O_SYNC, 0600); err != nil {
+	if dst, err = os.OpenFile(filepath.Join(root, bw.DeployLog), os.O_CREATE|os.O_WRONLY, 0600); err != nil {
 		return _dlog, errors.WithStack(err)
 	}
 
