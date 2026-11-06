@@ -6,33 +6,35 @@ import (
 	"io"
 	"log"
 	"net"
-
-	"github.com/james-lawrence/bw/internal/errorsx"
 )
 
+// Proxy copies data between client and dst until either side finishes, then closes both.
 func Proxy(ctx context.Context, client, dst net.Conn, buf io.Reader) error {
 	var (
-		errors chan error
+		errors = make(chan error, 2)
 	)
 
 	log.Println("proxying connection")
 	ctx, done := context.WithCancel(ctx)
+	defer done()
+	defer client.Close()
+	defer dst.Close()
+
 	go func() {
-		select {
-		case errors <- proxyConn(ctx, done, client, dst, buf):
-		case <-ctx.Done():
-			errors <- ctx.Err()
-		}
+		errors <- proxyConn(ctx, done, client, dst, buf)
 	}()
 	go func() {
-		select {
-		case errors <- proxyConn(ctx, done, dst, client, nil):
-		case <-ctx.Done():
-			errors <- ctx.Err()
-		}
+		errors <- proxyConn(ctx, done, dst, client, nil)
 	}()
 
-	return errorsx.Compact(<-errors, <-errors)
+	// the first side to finish (or the context) ends the session, the deferred closes
+	// unblock the other copy.
+	select {
+	case err := <-errors:
+		return err
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }
 
 func proxyConn(ctx context.Context, done context.CancelFunc, from, to net.Conn, buf io.Reader) (err error) {
