@@ -161,26 +161,6 @@ func (t Deployment) Watch(req *agent.WatchRequest, out agent.Deployments_WatchSe
 	return errorsx.Compact(errors.WithStack(err), w.CloseSend())
 }
 
-// Dispatch messages to the state machine.
-func (t Deployment) Dispatch(ctx context.Context, req *agent.DispatchRequest) (resp *agent.DispatchResponse, err error) {
-	var (
-		cc *grpc.ClientConn
-	)
-
-	if !t.Auth.Authorize(ctx).Deploy {
-		return resp, status.Error(codes.PermissionDenied, "invalid credentials")
-	}
-
-	if cc, err = t.conn(ctx); err != nil {
-		cause := status.Error(codes.Unavailable, "proxy connection error")
-		errorsx.Log(cause)
-		return resp, cause
-	}
-	defer cc.Close()
-
-	return agent.NewQuorumClient(cc).Dispatch(ctx, req)
-}
-
 // Logs retrieve logs for the given deploy.
 func (t Deployment) Logs(req *agent.LogRequest, out agent.Deployments_LogsServer) (err error) {
 	var (

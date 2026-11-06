@@ -3,6 +3,7 @@ package proxy
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -63,6 +64,13 @@ func WireformatEncode(encoded []byte) []byte {
 	return append(buf, encoded...)
 }
 
+// MaxWireformat is the largest message WireformatDecode accepts. the length prefix is read
+// before the peer is authenticated, so it must not be trusted to size an allocation.
+const MaxWireformat = 1 << 20
+
+// ErrWireformatTooLarge is returned when the length prefix exceeds MaxWireformat.
+var ErrWireformatTooLarge = errors.New("proxy: message exceeds the maximum size")
+
 func WireformatDecode(src io.Reader) (buf []byte, err error) {
 	buf = make([]byte, 8)
 
@@ -71,6 +79,9 @@ func WireformatDecode(src io.Reader) (buf []byte, err error) {
 	}
 
 	length := binary.LittleEndian.Uint64(buf)
+	if length > MaxWireformat {
+		return nil, ErrWireformatTooLarge
+	}
 
 	buf = make([]byte, length)
 
