@@ -203,19 +203,27 @@ func (t *Coordinator) Reset() error {
 // Deploy deploy a given archive.
 func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployOptions, archive *agent.Archive) (d *agent.Deploy, err error) {
 	var (
-		ok   bool
 		dctx *DeployContext
 	)
 
-	// the same deployment delivered again (a retried rpc) is not a conflict, and must not touch the
-	// workspace of the deploy already running. report the running deploy.
-	t.m.Lock()
-	cur := t.ds.current
-	running := atomic.LoadUint32(t.ds.state) == coordinatorDeploying
-	t.m.Unlock()
+	// claim the coordinator before touching anything else. a call that doesn't win the claim must have no side
+	// effects: cleaning, building a context for the deployment (same id, same workspace) or starting a
+	// background goroutine would corrupt the deploy that is running.
+	d = &agent.Deploy{Initiator: by, Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
+	previous, claimed := t.claim(d)
+	if !claimed {
+		// the same deployment delivered again (a retried rpc) is not a conflict, report the running deploy.
+		if previous != nil && previous.Archive != nil && bytes.Equal(previous.Archive.DeploymentID, archive.DeploymentID) {
+			return previous, nil
+		}
 
-	if running && cur != nil && cur.Archive != nil && bytes.Equal(cur.Archive.DeploymentID, archive.DeploymentID) {
-		return cur, nil
+		err = errors.Errorf("already deploying - unknown deployment - %s", previous.GetStage())
+		if previous.GetArchive() != nil {
+			err = errors.Errorf("%s is already deploying: %s - %s", previous.Initiator, bw.RandomID(previous.Archive.DeploymentID).String(), previous.Stage)
+		}
+
+		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
+		return previous, err
 	}
 
 	// set the timestamp of the archive to as this marks the time the archive was actually deployed.
@@ -240,7 +248,8 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 
 	if dctx, err = NewRemoteDeployContext(ctx, t.deploysRoot, t.local, by, opts, archive, dcopts...); err != nil {
 		errorsx.Log(agentutil.Dispatch(ctx, t.dispatcher, agent.LogError(t.local, err)))
-		return t.ds.current, err
+		t.unclaim(d, previous)
+		return previous, err
 	}
 
 	if dctx.Log == nil || dctx.Archive.Peer == nil {
@@ -253,17 +262,6 @@ func (t *Coordinator) Deploy(ctx context.Context, by string, opts *agent.DeployO
 		t.background(dctx)
 	}()
 
-	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
-		err = errors.Errorf("already deploying - unknown deployment - %s", t.ds.current.Stage)
-		if t.ds.current.Archive != nil {
-			err = errors.Errorf("%s is already deploying: %s - %s", t.ds.current.Initiator, bw.RandomID(t.ds.current.Archive.DeploymentID).String(), t.ds.current.Stage)
-		}
-
-		errorsx.Log(dctx.Dispatch(agent.LogError(t.local, err)))
-		return t.ds.current, dctx.Done(err)
-	}
-
-	d = &agent.Deploy{Initiator: by, Archive: archive, Options: opts, Stage: agent.Deploy_Deploying}
 	t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
 
 	if err = writeDeployMetadata(dctx.Root, d); err != nil {
@@ -302,7 +300,9 @@ func (t *Coordinator) Cancel() {
 	defer t.m.Unlock()
 	log.Println("cancelling deploy", *t.ds.state == coordinatorDeploying)
 	if ok := atomic.CompareAndSwapUint32(t.ds.state, coordinatorDeploying, coordinaterWaiting); ok {
-		t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
+		if t.ds.currentContext != nil {
+			t.ds.currentContext.Cancel(errors.New("deploy cancel signal received"))
+		}
 		errorsx.Log(agentutil.Dispatch(context.Background(), t.dispatcher, agent.LogInfo(t.local, "cancelled deploy")))
 	} else {
 		log.Println("ignored cancel not deploying", *t.ds.state == coordinatorDeploying)
@@ -320,6 +320,35 @@ func (t *Coordinator) cleaner() agentutil.Cleaner {
 	}
 
 	return t.cleanup
+}
+
+// claim the coordinator for the deploy. returns the current deploy, and whether the claim succeeded.
+// when the claim fails the current deploy is the one holding it. the deploy is the current deploy
+// as soon as it is claimed so a concurrent delivery of the same deployment recognises it.
+func (t *Coordinator) claim(d *agent.Deploy) (current *agent.Deploy, ok bool) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	current = t.ds.current
+	if ok = atomic.CompareAndSwapUint32(t.ds.state, coordinaterWaiting, coordinatorDeploying); !ok {
+		return current, false
+	}
+
+	t.ds.current = d
+
+	return current, true
+}
+
+// unclaim gives the coordinator back when the claimed deploy could not be started.
+func (t *Coordinator) unclaim(d *agent.Deploy, previous *agent.Deploy) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.ds.current == d {
+		t.ds.current = previous
+	}
+
+	atomic.StoreUint32(t.ds.state, coordinaterWaiting)
 }
 
 func (t *Coordinator) update(dctx *DeployContext, d *agent.Deploy, c agentutil.Cleaner) *agent.Deploy {

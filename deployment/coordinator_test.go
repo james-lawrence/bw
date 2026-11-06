@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -18,6 +19,22 @@ import (
 	"github.com/james-lawrence/bw/internal/testingx"
 	"github.com/james-lawrence/bw/storage"
 )
+
+// blockingDeployer keeps every deploy running until the test ends.
+type blockingDeployer struct{ release chan struct{} }
+
+func (t blockingDeployer) Deploy(dctx *deployment.DeployContext) {
+	go func() {
+		<-t.release
+		dctx.Done(nil)
+	}()
+}
+
+func blocking(t *testing.T) blockingDeployer {
+	d := blockingDeployer{release: make(chan struct{})}
+	t.Cleanup(func() { close(d.release) })
+	return d
+}
 
 func TestCoordinator(t *testing.T) {
 
@@ -119,6 +136,88 @@ func TestCoordinator(t *testing.T) {
 		second, err := c.Deploy(context.Background(), "", dopts, a)
 		require.NoError(t, err)
 		require.Equal(t, first.Archive.DeploymentID, second.Archive.DeploymentID)
+	})
+
+	t.Run("a rejected deploy must not disturb the running deploy", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		p := agent.NewPeer("node1")
+		c := deployment.New(
+			p,
+			blocking(t),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
+		)
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+		a := &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}
+		conflicting := &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}
+
+		_, err := c.Deploy(context.Background(), "test user", dopts, a)
+		require.NoError(t, err)
+
+		_, err = c.Deploy(context.Background(), "test user 2", dopts, conflicting)
+		require.EqualError(t, err, fmt.Sprintf("test user is already deploying: %s - Deploying", bw.RandomID(a.DeploymentID).String()))
+
+		// give a rejected deploy's background work the chance to run.
+		time.Sleep(100 * time.Millisecond)
+
+		// the rejected deploy leaves no record and the running deploy is untouched.
+		deploys, err := c.Deployments()
+		require.NoError(t, err)
+		require.Len(t, deploys, 1)
+		require.Equal(t, a.DeploymentID, deploys[0].Archive.DeploymentID)
+		require.Equal(t, agent.Deploy_Deploying, deploys[0].Stage)
+
+		// still running: a conflicting deploy is rejected again and the running deploy can be redelivered.
+		_, err = c.Deploy(context.Background(), "test user 2", dopts, conflicting)
+		require.ErrorContains(t, err, "is already deploying")
+
+		current, err := c.Deploy(context.Background(), "", dopts, a)
+		require.NoError(t, err)
+		require.Equal(t, agent.Deploy_Deploying, current.Stage)
+		require.Equal(t, a.DeploymentID, current.Archive.DeploymentID)
+	})
+
+	t.Run("concurrently delivering the running deploy is not a conflict", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		p := agent.NewPeer("node1")
+		c := deployment.New(
+			p,
+			blocking(t),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
+		)
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+		a := &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}
+
+		const n = 16
+		var (
+			wg   sync.WaitGroup
+			errs = make([]error, n)
+		)
+
+		for i := 0; i < n; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, errs[i] = c.Deploy(context.Background(), "test user", dopts, a)
+			}()
+		}
+		wg.Wait()
+
+		for _, err := range errs {
+			require.NoError(t, err)
+		}
+
+		time.Sleep(100 * time.Millisecond)
+
+		deploys, err := c.Deployments()
+		require.NoError(t, err)
+		require.Len(t, deploys, 1)
+		require.Equal(t, agent.Deploy_Deploying, deploys[0].Stage)
+
+		// the deploy is still the running one.
+		_, err = c.Deploy(context.Background(), "test user 2", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
+		require.ErrorContains(t, err, "is already deploying")
 	})
 
 	t.Run("should be able to cancel a running deploy", func(t *testing.T) {
