@@ -1,10 +1,8 @@
 package agentcmd
 
 import (
-	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
-	"github.com/james-lawrence/bw/uxterm"
+	"github.com/pterm/pterm"
 )
 
 type CmdControlNodes struct {
@@ -19,16 +17,11 @@ func (t CmdControlNodes) Run(gctx *cmdopts.Global) (err error) {
 		return err
 	}
 
-	conn, err := dialers.NewQuorum(c, d.Defaults()...).DialContext(gctx.Context)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	info, err := agent.NewQuorumClient(conn).Info(gctx.Context, &agent.InfoRequest{})
+	rendered, err := t.nodes(gctx.Context, d, c)
 	if err != nil {
 		return err
 	}
 
-	return uxterm.PrintNodes(info, agent.NodesToPeers(t.filtered(c).Members()...))
+	pterm.Println(rendered)
+	return nil
 }

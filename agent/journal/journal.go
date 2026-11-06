@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gofrs/uuid/v5"
@@ -33,7 +34,14 @@ const (
 	// Window is the amount of time covered by a single segment.
 	Window = agent.CursorWindow
 
+	// DefaultRetention how long segments are kept when no deploy has retained them, see Retain.
+	DefaultRetention = 24 * time.Hour
+
 	extension = ".log"
+
+	// ErrReset ends the followers of a journal that was reset, the messages they were following are gone.
+	// they resume from a window cursor, which is still valid.
+	ErrReset = errorsx.String("journal reset")
 )
 
 // Segment returns the file name for the window containing t. the name is the smallest UUIDv7
@@ -63,7 +71,7 @@ func segmentTime(name string) (time.Time, error) {
 // Option configures a journal.
 type Option func(*Journal)
 
-// OptionRetention how long segments are kept, measured from the newest write.
+// OptionRetention how long segments are kept when nothing has been retained, measured from the newest write.
 func OptionRetention(d time.Duration) Option {
 	return func(j *Journal) {
 		j.retention = d
@@ -95,7 +103,7 @@ func New(dir string, options ...Option) (*Journal, error) {
 
 	j := new(langx.Clone(Journal{
 		dir:       dir,
-		retention: time.Hour,
+		retention: DefaultRetention,
 		debounce:  200 * time.Millisecond,
 		pruner: asynccompute.New(
 			func(_ context.Context, evt discard) error {
@@ -111,6 +119,57 @@ func New(dir string, options ...Option) (*Journal, error) {
 	j.written = sync.NewCond(&j.m)
 
 	return j, nil
+}
+
+// Retain keeps the messages written since the given time, segments entirely before it are discarded. a
+// deploy retains from its archive, so the history of the last successful deploy survives for as long as it is the
+// latest. the zero time is -inf: back to the retention measured from the newest write.
+func (t *Journal) Retain(since time.Time) {
+	if since.IsZero() {
+		t.floor.Store(0)
+	} else {
+		t.floor.Store(since.UnixNano())
+	}
+
+	t.m.Lock()
+	current := t.current
+	closed := t.closed
+	t.m.Unlock()
+
+	if closed || current == "" {
+		return
+	}
+
+	errorsx.Log(t.pruner.Run(context.Background(), discard{Journal: t, discard: current}))
+}
+
+// Reset discards every message and ends the followers with ErrReset. the state the journal recorded is being
+// replaced, e.g. by restoring a snapshot, and the messages that follow rebuild it. replayed messages written into
+// the segments followers are reading would be delivered to them again as new events.
+func (t *Journal) Reset() (err error) {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.closed {
+		return errors.New("journal is closed")
+	}
+
+	if t.f != nil {
+		errorsx.Log(t.f.Close())
+		t.f = nil
+	}
+
+	for _, s := range t.Segments() {
+		if err = os.Remove(filepath.Join(t.dir, s)); err != nil && !os.IsNotExist(err) {
+			return errors.WithStack(err)
+		}
+	}
+
+	t.current, t.tail = "", agent.Cursor{}
+	t.epoch++
+	t.written.Broadcast() // release the followers, they are over.
+
+	return nil
 }
 
 // Close stops pruning and releases the open segment. dispatching to a closed journal is an error.
@@ -137,6 +196,8 @@ type Journal struct {
 	dir       string
 	retention time.Duration
 	debounce  time.Duration
+	floor     atomic.Int64 // unix nanoseconds, segments entirely before it are discarded. zero falls back to the retention.
+	epoch     uint64       // incremented whenever the journal is reset, followers of an older epoch are over.
 
 	pruner *asynccompute.Pool[discard] // removes expired segments off the apply path.
 
@@ -237,16 +298,28 @@ func (t *Journal) rollover(name string) (f *os.File, err error) {
 	return f, nil
 }
 
-// prune removes segments older than the retention relative to the newest segment.
+// prune removes the segments that are no longer retained: entirely before the floor, or when there isn't one
+// older than the retention relative to the newest segment.
 func (t *Journal) prune(newest string) {
 	now, err := segmentTime(newest)
 	if err != nil {
 		return
 	}
 
+	// the pruner runs while the journal is locked by the writer, it must not take the lock.
+	floor := t.floor.Load()
+
+	expired := func(ts time.Time) bool {
+		if floor != 0 {
+			return ts.Add(Window).UnixNano() <= floor
+		}
+
+		return now.Sub(ts) > t.retention
+	}
+
 	for _, s := range t.Segments() {
-		if ts, err := segmentTime(s); err == nil && now.Sub(ts) > t.retention {
-			if err := os.Remove(filepath.Join(t.dir, s)); err != nil {
+		if ts, err := segmentTime(s); err == nil && expired(ts) {
+			if err := os.Remove(filepath.Join(t.dir, s)); err != nil && !os.IsNotExist(err) {
 				log.Println(errors.Wrap(err, "unable to prune journal segment"))
 			}
 		}
@@ -279,12 +352,28 @@ func (t *Journal) Tail() agent.Cursor {
 	return t.tail
 }
 
-// await blocks until the journal has data past the cursor, it is closed, or the context is done.
-func (t *Journal) await(ctx context.Context, c agent.Cursor) error {
+// checkEpoch returns ErrReset when the journal was reset since the epoch.
+func (t *Journal) checkEpoch(epoch uint64) error {
+	t.m.Lock()
+	defer t.m.Unlock()
+
+	if t.epoch != epoch {
+		return ErrReset
+	}
+
+	return nil
+}
+
+// await blocks until the journal has data past the cursor, it is reset, closed, or the context is done.
+func (t *Journal) await(ctx context.Context, epoch uint64, c agent.Cursor) error {
 	t.m.Lock()
 	defer t.m.Unlock()
 
 	for bytes.Compare(t.tail[:], c[:]) <= 0 {
+		if t.epoch != epoch {
+			return ErrReset
+		}
+
 		if t.closed {
 			return errors.New("journal is closed")
 		}
@@ -299,20 +388,33 @@ func (t *Journal) await(ctx context.Context, c agent.Cursor) error {
 	return nil
 }
 
-// Connect streams the messages starting at the cursor, the zero cursor streams the messages written after the call.
-// a cursor into a window continues from the cursor, windows pruned in the meantime are skipped. hidden messages
-// are skipped. the sequence runs until the context is cancelled or the consumer stops.
-func (t *Journal) Connect(c agent.Cursor) iterx.Seq[*agent.Message] {
-	if c == (agent.Cursor{}) {
-		c = t.Tail()
+// Connect streams the messages starting at the cursor. a cursor into a window continues from the cursor, windows
+// pruned in the meantime are skipped. hidden messages are skipped.
+//
+// when tailing the zero cursor streams the messages written after the call and the sequence runs until the
+// context is cancelled, the consumer stops, or the journal is reset (ErrReset). otherwise the zero cursor starts at
+// the oldest message and the sequence ends when it reaches the end of the journal, it doesn't wait for more.
+func (t *Journal) Connect(c agent.Cursor, tail bool) iterx.Seq[*agent.Message] {
+	if !tail {
+		return iterx.New(func(ctx context.Context, yield func(*agent.Message) bool) error {
+			_, _, err := t.drain(ctx, c, yield)
+			return err
+		})
 	}
 
+	t.m.Lock()
+	epoch := t.epoch
+	if c == (agent.Cursor{}) {
+		c = t.tail
+	}
+	t.m.Unlock()
+
 	return iterx.New(func(ctx context.Context, yield func(*agent.Message) bool) error {
-		return t.follow(ctx, c, yield)
+		return t.follow(ctx, epoch, c, yield)
 	})
 }
 
-func (t *Journal) follow(ctx context.Context, c agent.Cursor, yield func(*agent.Message) bool) (err error) {
+func (t *Journal) follow(ctx context.Context, epoch uint64, c agent.Cursor, yield func(*agent.Message) bool) (err error) {
 	// Cond.Wait can't observe the context, ring the doorbell when it is done so the waiters re-check it. the lock is
 	// required: await checks the context and registers for the broadcast under it, without it a cancellation landing
 	// in between would be missed.
@@ -324,12 +426,16 @@ func (t *Journal) follow(ctx context.Context, c agent.Cursor, yield func(*agent.
 	defer stop()
 
 	for {
+		if err = t.checkEpoch(epoch); err != nil {
+			return err
+		}
+
 		var more bool
 		if c, more, err = t.drain(ctx, c, yield); err != nil || !more {
 			return err
 		}
 
-		if err = t.await(ctx, c); err != nil {
+		if err = t.await(ctx, epoch, c); err != nil {
 			return err
 		}
 

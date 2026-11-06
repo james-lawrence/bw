@@ -41,6 +41,16 @@ func FirstNonZero(s ...time.Time) (_zero time.Time) {
 	return _zero
 }
 
+// UnixOrZero returns unix seconds as a time, the zero time for a value that isn't positive. composes
+// with FirstNonZero.
+func UnixOrZero(sec int64) time.Time {
+	if sec <= 0 {
+		return time.Time{}
+	}
+
+	return time.Unix(sec, 0)
+}
+
 // DurationMax select the maximum duration from the set.
 func DurationMax(ds ...time.Duration) (d time.Duration) {
 	for _, c := range ds {

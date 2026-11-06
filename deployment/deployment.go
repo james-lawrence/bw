@@ -270,7 +270,7 @@ func (t DeployResult) deployComplete() *agent.Deploy {
 	tmpa := t.Archive
 	tmpo := t.DeployOptions
 	t.Log.Println("------------------- deploy completed -------------------")
-	d := &agent.Deploy{Stage: agent.Deploy_Completed, Archive: tmpa, Options: tmpo}
+	d := &agent.Deploy{Stage: agent.Deploy_Completed, Initiator: t.Initiator, Archive: tmpa, Options: tmpo}
 	errorsx.Log(t.Dispatch(agent.DeployEvent(t.Local, d)))
 	return d
 }
@@ -281,7 +281,7 @@ func (t DeployResult) deployFailed(err error) *agent.Deploy {
 
 	t.Log.Printf("cause:\n%+v\n", err)
 	t.Log.Println("------------------- deploy failed -------------------")
-	d := &agent.Deploy{Stage: agent.Deploy_Failed, Archive: tmpa, Options: tmpo}
+	d := &agent.Deploy{Stage: agent.Deploy_Failed, Initiator: t.Initiator, Archive: tmpa, Options: tmpo}
 	errorsx.Log(
 		t.Dispatch(
 			agent.LogError(t.Local, err),

@@ -73,20 +73,52 @@ func ModeString(m agent.PeerMode) string {
 
 // PrintNodes prints the nodes of the cluster along with the deployment state of the quorum.
 func PrintNodes(info *agent.InfoResponse, peers []*agent.Peer) error {
+	rendered, err := RenderNodes(info, peers)
+	if err != nil {
+		return err
+	}
+
+	pterm.Println(rendered)
+	return nil
+}
+
+// RenderNodes renders the nodes of the cluster along with the deployment state of the quorum.
+func RenderNodes(info *agent.InfoResponse, peers []*agent.Peer) (string, error) {
 	var nodes = pterm.TableData{
-		{"archive", "mode", "name", "address", "port"},
+		{"archive", "mode", "name", "address", "port", "deployed"},
 	}
 
 	for _, p := range peers {
 		nodes = append(nodes, []string{
-			strconv.FormatBool(p.Archive), ModeString(p.Mode), NodeName(p.Name), p.Ip, strconv.Itoa(int(p.P2PPort)),
+			strconv.FormatBool(p.Archive), ModeString(p.Mode), NodeName(p.Name), p.Ip, strconv.Itoa(int(p.P2PPort)), NodeDeployed(info, p),
 		})
 	}
 
-	pterm.Printfln("Leader    : %s", PeerString(info.Leader))
-	pterm.Printfln("Latest    : %s", DeploymentString(info.Deployed))
-	pterm.Printfln("Deploying : %s", DeploymentString(info.Deploying))
-	return pterm.DefaultTable.WithHasHeader().WithData(nodes).Render()
+	table, err := pterm.DefaultTable.WithHasHeader().WithData(nodes).Srender()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(
+		"Leader    : %s\nLatest    : %s\nDeploying : %s\n%s",
+		PeerString(info.Leader), DeploymentString(info.Deployed), DeploymentString(info.Deploying), table,
+	), nil
+}
+
+// NodeDeployed describes the archive the quorum last saw the node complete a deployment of, "-" when the
+// node hasn't reported one.
+func NodeDeployed(info *agent.InfoResponse, p *agent.Peer) string {
+	for _, m := range info.GetCompleted() {
+		if m.GetPeer().GetName() != p.Name {
+			continue
+		}
+
+		if id := m.GetDeploy().GetArchive().GetDeploymentID(); len(id) > 0 {
+			return bw.RandomID(id).String()
+		}
+	}
+
+	return "-"
 }
 
 func PeerString(p *agent.Peer) string {

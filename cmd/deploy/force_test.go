@@ -26,6 +26,16 @@ import (
 
 // deployedID returns the deployment id of the last successful deploy recorded by the quorum.
 func deployedID(ctx context.Context) ([]byte, error) {
+	info, err := quorumInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return info.GetDeployed().GetArchive().GetDeploymentID(), nil
+}
+
+// quorumInfo retrieves the information of the quorum.
+func quorumInfo(ctx context.Context) (*agent.InfoResponse, error) {
 	config, err := commandutils.LoadConfiguration(ctx, agenttestutil.Environment, agent.CCOptionInsecure(true))
 	if err != nil {
 		return nil, err
@@ -47,12 +57,7 @@ func deployedID(ctx context.Context) ([]byte, error) {
 	}
 	defer conn.Close()
 
-	info, err := agent.NewQuorumClient(conn).Info(ctx, &agent.InfoRequest{})
-	if err != nil {
-		return nil, err
-	}
-
-	return info.GetDeployed().GetArchive().GetDeploymentID(), nil
+	return agent.NewQuorumClient(conn).Info(ctx, &agent.InfoRequest{})
 }
 
 // the full gamut: a normal deploy, forcing a different archive, the done announcement, the restart

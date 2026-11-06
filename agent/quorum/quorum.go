@@ -72,7 +72,6 @@ func OptionStateMachineDispatch(d stateMachine) Option {
 func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload storage.UploadProtocol, rp raftutil.Protocol, options ...Option) Quorum {
 	deployment := newDeployment(c)
 	obs := NewObserver(cd)
-	history := NewHistory()
 	leadershipTransfer := NewLeadershipTransfer(c, rp)
 
 	wal := NewWAL(
@@ -80,7 +79,6 @@ func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload sto
 			deployment,
 			codec,
 			obs,
-			history,
 			leadershipTransfer,
 		),
 	)
@@ -97,7 +95,6 @@ func New(cd agent.ConnectableDispatcher, c cluster, codec transcoder, upload sto
 		c:                     c,
 		lost:                  make(chan struct{}),
 		disconnected:          make(chan struct{}),
-		history:               history,
 		leadershipTransfer:    leadershipTransfer,
 	}, options...)
 
@@ -117,7 +114,6 @@ type Quorum struct {
 	lost               chan struct{}
 	disconnected       chan struct{}
 	rp                 raftutil.Protocol
-	history            History
 	leadershipTransfer *LeadershipTransfer
 	modechange         func(agent.PeerMode)
 	relinquish         context.CancelCauseFunc // ends the work started while leading, only used by Observe.
@@ -238,7 +234,12 @@ func (t *Quorum) stepdown(cause error) {
 
 // Info return current info from the leader.
 func (t *Quorum) Info(ctx context.Context) (z agent.InfoResponse, err error) {
-	return t.deployment.getInfo(t.sm.Leader()), nil
+	state, err := scanLatest(ctx, t.ConnectableDispatcher)
+	if err != nil {
+		return agent.InfoResponse{}, errors.Wrap(err, "unable to determine the deployments of the nodes")
+	}
+
+	return t.deployment.getInfo(t.sm.Leader(), state.completed()), nil
 }
 
 // Cancel any active deploys
@@ -303,13 +304,18 @@ func (t *Quorum) Upload(stream agent.Quorum_UploadServer) (err error) {
 	}
 }
 
-// Watch watch for events.
-func (t *Quorum) History(context.Context) (_ []*agent.Message, err error) {
+// History the messages of the latest deploy.
+func (t *Quorum) History(ctx context.Context) (_ []*agent.Message, err error) {
 	if _, err = t.quorumOnly(); err != nil {
 		return nil, errors.Wrap(err, "history")
 	}
 
-	return t.history.Snapshot(), nil
+	state, err := scanLatest(ctx, t.ConnectableDispatcher)
+	if err != nil {
+		return nil, errors.Wrap(err, "history")
+	}
+
+	return state.history, nil
 
 }
 
@@ -335,7 +341,7 @@ func (t *Quorum) Watch(cursor agent.Cursor, out agent.Quorum_WatchServer) (err e
 		}
 	}()
 
-	seq := t.ConnectableDispatcher.Connect(cursor)
+	seq := t.ConnectableDispatcher.Connect(cursor, true)
 	for m := range seq.Each(ctx) {
 		if err = out.Send(m); err != nil {
 			cause := errors.Wrap(err, "failed to deliver message")

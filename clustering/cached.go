@@ -30,6 +30,7 @@ func (t *Cached) cached() Rendezvous {
 	defer t.m.Unlock()
 	if time.Since(t.last) > t.ttl {
 		t._cached = t.fetch(context.Background())
+		t.last = time.Now()
 	}
 	return t._cached
 }

@@ -226,7 +226,7 @@ func TestJournalFollow(t *testing.T) {
 	t.Run("should replay from the beginning without duplicates and then tail", func(t *testing.T) {
 		ctx, _, j, out := setup(t)
 		require.NoError(t, j.Dispatch(ctx, v4("1", epoch), v4("2", epoch.Add(20*time.Second))))
-		go pump(ctx, j.Connect(agent.WindowCursor(epoch)), out)
+		go pump(ctx, j.Connect(agent.WindowCursor(epoch), true), out)
 		require.Equal(t, []string{"1", "2"}, receive(t, out, 2))
 		require.NoError(t, j.Dispatch(ctx, v4("3", epoch.Add(21*time.Second)), v4("4", epoch.Add(40*time.Second))))
 		require.Equal(t, []string{"3", "4"}, receive(t, out, 2))
@@ -236,7 +236,7 @@ func TestJournalFollow(t *testing.T) {
 	t.Run("should start at the tail by default", func(t *testing.T) {
 		ctx, _, j, out := setup(t)
 		require.NoError(t, j.Dispatch(ctx, v4("old", epoch)))
-		go pump(ctx, j.Connect(agent.Cursor{}), out)
+		go pump(ctx, j.Connect(agent.Cursor{}, true), out)
 		requireNoReceive(t, out, 200*time.Millisecond)
 		require.NoError(t, j.Dispatch(ctx, v4("new", epoch.Add(time.Second))))
 		require.Equal(t, []string{"new"}, receive(t, out, 1))
@@ -247,7 +247,7 @@ func TestJournalFollow(t *testing.T) {
 		require.NoError(t, j.Dispatch(ctx, v4("1", epoch), v4("2", epoch)))
 		cursor := j.Tail()
 		require.NoError(t, j.Dispatch(ctx, v4("3", epoch), v4("4", epoch.Add(15*time.Second))))
-		go pump(ctx, j.Connect(cursor), out)
+		go pump(ctx, j.Connect(cursor, true), out)
 		require.Equal(t, []string{"3", "4"}, receive(t, out, 2))
 	})
 
@@ -255,14 +255,14 @@ func TestJournalFollow(t *testing.T) {
 		ctx, _, j, out := setup(t)
 		m1, m2, m3 := v7("1", epoch), v7("2", epoch.Add(time.Second)), v7("3", epoch.Add(20*time.Second))
 		require.NoError(t, j.Dispatch(ctx, m1, m2, m3))
-		go pump(ctx, j.Connect(agent.CursorOf(m2)), out)
+		go pump(ctx, j.Connect(agent.CursorOf(m2), true), out)
 		require.Equal(t, []string{"1", "2", "3"}, receive(t, out, 3))
 	})
 
 	t.Run("should skip windows that have been pruned", func(t *testing.T) {
 		ctx, _, j, out := setup(t)
 		require.NoError(t, j.Dispatch(ctx, v4("1", epoch.Add(30*time.Second))))
-		go pump(ctx, j.Connect(agent.WindowCursor(epoch)), out)
+		go pump(ctx, j.Connect(agent.WindowCursor(epoch), true), out)
 		require.Equal(t, []string{"1"}, receive(t, out, 1))
 	})
 
@@ -270,7 +270,7 @@ func TestJournalFollow(t *testing.T) {
 		ctx, _, j, out := setup(t)
 		hidden := v4("hidden", epoch)
 		hidden.Hidden = true
-		go pump(ctx, j.Connect(agent.Cursor{}), out)
+		go pump(ctx, j.Connect(agent.Cursor{}, true), out)
 		require.NoError(t, j.Dispatch(ctx, hidden, v4("visible", epoch)))
 		require.Equal(t, []string{"visible"}, receive(t, out, 1))
 	})
@@ -278,7 +278,7 @@ func TestJournalFollow(t *testing.T) {
 	t.Run("should not block the writer when a reader is stalled", func(t *testing.T) {
 		ctx, _, j, _ := setup(t)
 		stalled := make(chan *agent.Message) // never read.
-		go pump(ctx, j.Connect(agent.Cursor{}), stalled)
+		go pump(ctx, j.Connect(agent.Cursor{}, true), stalled)
 
 		start := time.Now()
 		for i := 0; i < 1000; i++ {
@@ -289,7 +289,7 @@ func TestJournalFollow(t *testing.T) {
 
 	t.Run("should stop when the context is cancelled", func(t *testing.T) {
 		ctx, cancel, j, _ := setup(t)
-		seq := j.Connect(agent.Cursor{})
+		seq := j.Connect(agent.Cursor{}, true)
 		done := make(chan error, 1)
 		go func() {
 			for range seq.Each(ctx) {
@@ -303,7 +303,7 @@ func TestJournalFollow(t *testing.T) {
 	t.Run("should stop without an error when the consumer stops", func(t *testing.T) {
 		ctx, _, j, _ := setup(t)
 		require.NoError(t, j.Dispatch(ctx, v4("1", epoch), v4("2", epoch), v4("3", epoch)))
-		seq := iterx.N(2, j.Connect(agent.WindowCursor(epoch)))
+		seq := iterx.N(2, j.Connect(agent.WindowCursor(epoch), true))
 
 		var got []string
 		for m := range seq.Each(ctx) {
@@ -318,7 +318,7 @@ func TestJournalFollow(t *testing.T) {
 		ctx, cancel, j, _ := setup(t)
 		require.NoError(t, j.Dispatch(ctx, v4("1", epoch)))
 
-		seq := j.Connect(agent.WindowCursor(epoch))
+		seq := j.Connect(agent.WindowCursor(epoch), true)
 		done := make(chan error, 1)
 		go func() {
 			for range seq.Each(ctx) {
@@ -334,7 +334,7 @@ func TestJournalFollow(t *testing.T) {
 
 	t.Run("should end a waiting follower with an error when the journal is closed", func(t *testing.T) {
 		ctx, _, j, _ := setup(t)
-		seq := j.Connect(agent.Cursor{})
+		seq := j.Connect(agent.Cursor{}, true)
 		done := make(chan error, 1)
 		go func() {
 			for range seq.Each(ctx) {
@@ -353,7 +353,7 @@ func TestJournalFollow(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { burst.Close() })
 
-		go pump(ctx, burst.Connect(agent.Cursor{}), out)
+		go pump(ctx, burst.Connect(agent.Cursor{}, true), out)
 		time.Sleep(50 * time.Millisecond) // the follower is parked.
 
 		expected := make([]string, 0, 20)
@@ -371,7 +371,7 @@ func TestJournalFollow(t *testing.T) {
 		require.NoError(t, err)
 		t.Cleanup(func() { steady.Close() })
 
-		go pump(ctx, steady.Connect(agent.Cursor{}), out)
+		go pump(ctx, steady.Connect(agent.Cursor{}, true), out)
 
 		// a write every 10ms for 600ms, a debounce that restarts on every write would deliver nothing until it ends.
 		start := time.Now()

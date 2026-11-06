@@ -25,9 +25,10 @@ type Dispatcher interface {
 // ConnectableDispatcher a dispatcher whose messages can be followed by observers.
 type ConnectableDispatcher interface {
 	Dispatcher
-	// Connect streams the messages starting at the cursor, the zero cursor streams the messages dispatched
-	// after the call. see Cursor.
-	Connect(Cursor) iterx.Seq[*Message]
+	// Connect streams the messages starting at the cursor. when tailing it keeps following, waiting for more
+	// messages, and the zero cursor streams the messages dispatched after the call. otherwise it stops when it
+	// reaches the end and the zero cursor starts at the oldest message. see Cursor.
+	Connect(c Cursor, tail bool) iterx.Seq[*Message]
 }
 
 // Client - client facade interface.

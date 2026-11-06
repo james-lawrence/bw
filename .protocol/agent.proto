@@ -230,6 +230,9 @@ message InfoResponse {
   DeployCommand deployed = 3;
   Peer leader = 4;
   repeated Peer quorum = 5;
+  // completed the latest deploy each node reported completing, as the DeployEvent messages the node sent: the peer
+  // as it was then, the deploy, and when it completed. a node is kept until it departs.
+  repeated Message completed = 6;
 }
 
 message HistoryRequest {}

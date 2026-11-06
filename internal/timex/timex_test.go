@@ -28,3 +28,17 @@ func TestFirstNonZero(t *testing.T) {
 		})
 	}
 }
+
+func TestUnixOrZero(t *testing.T) {
+	if got := timex.UnixOrZero(0); !got.IsZero() {
+		t.Fatalf("expected the zero time for 0 got %v", got)
+	}
+
+	if got := timex.UnixOrZero(-5); !got.IsZero() {
+		t.Fatalf("expected the zero time for a negative value got %v", got)
+	}
+
+	if got := timex.UnixOrZero(1793512800); !got.Equal(time.Unix(1793512800, 0)) {
+		t.Fatalf("unexpected time %v", got)
+	}
+}

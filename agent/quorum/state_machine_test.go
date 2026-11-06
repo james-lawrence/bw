@@ -276,7 +276,7 @@ func TestStateMachine(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		go func() {
-			for m := range jrnl.Connect(agent.Cursor{}).Each(ctx) {
+			for m := range jrnl.Connect(agent.Cursor{}, true).Each(ctx) {
 				obs <- m
 			}
 		}()
@@ -311,7 +311,7 @@ func TestStateMachine(t *testing.T) {
 		defer cancel()
 		stalled := make(chan *agent.Message) // never read.
 		go func() {
-			for m := range jrnl.Connect(agent.Cursor{}).Each(ctx) {
+			for m := range jrnl.Connect(agent.Cursor{}, true).Each(ctx) {
 				select {
 				case stalled <- m:
 				case <-ctx.Done():

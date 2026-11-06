@@ -103,7 +103,7 @@ func (t upgrader) Inbound(ctx context.Context, a auth, c1 net.Conn, d dialer) (e
 	}
 
 	go func() {
-		if cause := proxy.Proxy(ctx, c1, c2, nil); err != nil {
+		if cause := proxy.Proxy(ctx, c1, c2, nil); cause != nil {
 			log.Println("proxy failed", cause)
 		}
 	}()

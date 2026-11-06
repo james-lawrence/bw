@@ -17,6 +17,7 @@ import (
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/envx"
 	"github.com/james-lawrence/bw/notary"
+	"github.com/james-lawrence/bw/uxterm"
 	"github.com/james-lawrence/bw/vcsinfo"
 	"google.golang.org/grpc"
 )
@@ -62,6 +63,23 @@ func (t controlConnection) connect(ctx context.Context) (d dialers.Defaults, c c
 	}
 
 	return d, c, nil
+}
+
+// nodes renders the nodes of the cluster that match the filters, with the state of the quorum.
+// the nodes are discovered on every call.
+func (t controlConnection) nodes(ctx context.Context, d dialers.Defaults, c clustering.Rendezvous) (string, error) {
+	conn, err := dialers.NewQuorum(c, d.Defaults()...).DialContext(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+
+	info, err := agent.NewQuorumClient(conn).Info(ctx, &agent.InfoRequest{})
+	if err != nil {
+		return "", err
+	}
+
+	return uxterm.RenderNodes(info, agent.NodesToPeers(t.filtered(c).Members()...))
 }
 
 func (t controlConnection) filters(additional ...deployment.Filter) []deployment.Filter {

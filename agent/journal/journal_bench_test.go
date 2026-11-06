@@ -40,7 +40,7 @@ func BenchmarkJournalFollowers(b *testing.B) {
 				go func() {
 					defer done.Done()
 
-					seq := j.Connect(agent.Cursor{})
+					seq := j.Connect(agent.Cursor{}, true)
 					ready.Done()
 
 					seen := 0

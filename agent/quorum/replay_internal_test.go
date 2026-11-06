@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/james-lawrence/bw/agent"
+	"github.com/james-lawrence/bw/agent/journal"
 	"github.com/james-lawrence/bw/internal/jsonl"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
@@ -73,10 +74,48 @@ func ids(msgs []*agent.Message) (ids []string) {
 	return ids
 }
 
+// newJournaledWAL builds a write ahead log recording to a journal, the same stack the quorum uses.
+func newJournaledWAL(t *testing.T) (*journal.Journal, WAL) {
+	t.Helper()
+
+	j, err := journal.New(t.TempDir())
+	require.NoError(t, err)
+	t.Cleanup(func() { j.Close() })
+
+	return j, NewWAL(NewTranscoder(NewObserver(j)))
+}
+
+// latestHistory the history of the latest deploy the messages should produce: each message once, without
+// heartbeats, from the last begin.
+func latestHistory(msgs []*agent.Message) (result []*agent.Message) {
+	seen := map[string]bool{}
+	for _, m := range msgs {
+		if seen[m.Id] || m.Type == agent.Message_DeployHeartbeat {
+			continue
+		}
+		seen[m.Id] = true
+
+		if m.Type == agent.Message_DeployCommandEvent && m.GetDeployCommand().GetCommand() == agent.DeployCommand_Begin {
+			result = result[:0]
+		}
+
+		result = append(result, m)
+	}
+
+	return result
+}
+
 func TestReplayJSONL(t *testing.T) {
 	files, err := filepath.Glob(".xfixtures/*.jsonl")
 	require.NoError(t, err)
 	require.NotEmpty(t, files)
+
+	history := func(t *testing.T, j *journal.Journal) []*agent.Message {
+		t.Helper()
+		state, err := scanLatest(t.Context(), j)
+		require.NoError(t, err)
+		return state.history
+	}
 
 	for _, file := range files {
 		msgs := loadMessages(t, file)
@@ -84,26 +123,23 @@ func TestReplayJSONL(t *testing.T) {
 
 		// the capture is only interesting when it is not unique already.
 		t.Run(filepath.Base(file), func(t *testing.T) {
-			expected := firsts(msgs)
+			expected := ids(latestHistory(msgs))
 
 			t.Run("records each message once, in order", func(t *testing.T) {
-				h := NewHistory()
-				w := NewWAL(NewTranscoder(h))
+				j, w := newJournaledWAL(t)
 				replay(t, &w, msgs)
-				require.Equal(t, expected, ids(h.Snapshot()))
+				require.Equal(t, expected, ids(history(t, j)))
 			})
 
 			t.Run("replaying again records nothing", func(t *testing.T) {
-				h := NewHistory()
-				w := NewWAL(NewTranscoder(h))
+				j, w := newJournaledWAL(t)
 				replay(t, &w, msgs)
 				replay(t, &w, msgs)
-				require.Equal(t, expected, ids(h.Snapshot()))
+				require.Equal(t, expected, ids(history(t, j)))
 			})
 
 			t.Run("a restored snapshot rebuilds the history from the snapshot", func(t *testing.T) {
-				h := NewHistory()
-				w := NewWAL(NewTranscoder(h))
+				j, w := newJournaledWAL(t)
 				replay(t, &w, msgs)
 
 				// snapshots keep the messages from the last deploy command onward.
@@ -124,7 +160,7 @@ func TestReplayJSONL(t *testing.T) {
 
 				var buff bytes.Buffer
 				require.NoError(t, snapshotRestore(w, &buff))
-				require.Equal(t, ids(unique[last:]), ids(h.Snapshot()))
+				require.Equal(t, ids(latestHistory(unique[last:])), ids(history(t, j)))
 			})
 		})
 	}

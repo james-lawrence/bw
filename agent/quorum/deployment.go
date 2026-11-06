@@ -83,7 +83,8 @@ func (t *deployment) Decode(ctx TranscoderContext, m *agent.Message) error {
 	return nil
 }
 
-func (t *deployment) getInfo(leader *agent.Peer) agent.InfoResponse {
+// getInfo the state of the deployments, completed are the deploy events the nodes completed.
+func (t *deployment) getInfo(leader *agent.Peer, completed []*agent.Message) agent.InfoResponse {
 	t.m.RLock()
 	defer t.m.RUnlock()
 
@@ -93,6 +94,7 @@ func (t *deployment) getInfo(leader *agent.Peer) agent.InfoResponse {
 	}
 
 	return agent.InfoResponse{
+		Completed: completed,
 		Mode:      m,
 		Deploying: t.runningDeploy,
 		Deployed:  t.lastSuccessfulDeploy,

@@ -54,11 +54,12 @@ func TestObserver(t *testing.T) {
 		require.Len(t, d.delivered, 1)
 	})
 
-	t.Run("should ignore messages replayed while recovering", func(t *testing.T) {
+	// a restore resets the journal, see TestObserverJournal, the messages it replays rebuild it.
+	t.Run("should journal messages replayed while recovering", func(t *testing.T) {
 		d := &flakyDispatcher{}
 		m := agent.LogInfo(agent.NewPeer("local"), "message")
 
 		require.NoError(t, NewObserver(d).Decode(TranscoderContext{State: StateRecovering}, m))
-		require.Zero(t, d.attempts)
+		require.Len(t, d.delivered, 1)
 	})
 }

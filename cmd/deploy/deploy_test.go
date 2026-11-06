@@ -1,6 +1,7 @@
 package deploy_test
 
 import (
+	"bytes"
 	"context"
 	"net"
 	"os"
@@ -65,6 +66,17 @@ func TestInto(t *testing.T) {
 			t.Fatal("deploy did not return after the agent completed the deploy")
 		}
 		require.FileExists(t, marker)
+
+		// the quorum remembers the archive the node completed.
+		require.Eventually(t, func() bool {
+			info, err := quorumInfo(context.Background())
+			if err != nil || len(info.GetCompleted()) != 1 {
+				return false
+			}
+
+			id := info.GetCompleted()[0].GetDeploy().GetArchive().GetDeploymentID()
+			return len(id) > 0 && bytes.Equal(id, info.GetDeployed().GetArchive().GetDeploymentID())
+		}, 10*time.Second, 100*time.Millisecond)
 	})
 
 	// a failing remote directive must fail the deploy, and not hang waiting on the agent.
