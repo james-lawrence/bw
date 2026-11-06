@@ -2,15 +2,18 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/james-lawrence/bw/internal/debugx"
 	"github.com/james-lawrence/bw/internal/errorsx"
 	"github.com/james-lawrence/bw/internal/fsx"
 	"github.com/james-lawrence/bw/internal/iterx"
 	"github.com/james-lawrence/torrent"
+	"github.com/james-lawrence/torrent/dht/int160"
 	"github.com/james-lawrence/torrent/metainfo"
 	"github.com/pkg/errors"
 )
@@ -39,10 +42,14 @@ func (t TorrentUtil) ClearTorrents(ctx context.Context, c TorrentConfig, keepN i
 
 	stale := fsx.KeepNewestN(keepN, iterx.Slice(paths...))
 	for path := range stale.Each(ctx) {
-		md, cause := torrent.NewFromFile(path)
-		if cause != nil {
-			log.Println("unable to load torrent", path, cause)
-			continue
+		// loading a torrent from its file hashes the entire archive, the metadata cache already has what's needed.
+		md, ok := t.cachedMetadata(c, filepath.Base(path))
+		if !ok {
+			var cause error
+			if md, cause = torrent.NewFromFile(path); cause != nil {
+				log.Println("unable to load torrent", path, cause)
+				continue
+			}
 		}
 
 		errorsx.Log(c.client.Stop(md))
@@ -52,6 +59,33 @@ func (t TorrentUtil) ClearTorrents(ctx context.Context, c TorrentConfig, keepN i
 	errorsx.Log(stale.Err())
 
 	log.Println(dropped, "torrents dropped, keeping the", keepN, "newest")
+}
+
+// cachedMetadata finds the metadata of the torrent stored in the named file. the cache is a directory of small
+// <infohash>.torrent files, the infohash can't be derived from the archive so match on the name of the torrent.
+// the store's Each doesn't walk those files so list the directory.
+func (TorrentUtil) cachedMetadata(c TorrentConfig, name string) (md torrent.Metadata, found bool) {
+	if c.metadata == nil {
+		return md, false
+	}
+
+	entries, err := os.ReadDir(filepath.Join(c.dir, metadataDir))
+	if err != nil {
+		return md, false
+	}
+
+	for _, e := range entries {
+		decoded, err := hex.DecodeString(strings.TrimSuffix(e.Name(), ".torrent"))
+		if err != nil || e.IsDir() {
+			continue
+		}
+
+		if md, err = c.metadata.Read(int160.FromBytes(decoded)); err == nil && md.DisplayName == name {
+			return md, true
+		}
+	}
+
+	return torrent.Metadata{}, false
 }
 
 // PrintTorrentInfo prints information about the torrent cluster.

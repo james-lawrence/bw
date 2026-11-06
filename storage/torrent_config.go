@@ -19,6 +19,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// metadataDir the directory within the data directory caching the metadata of the torrents.
+const metadataDir = ".metadata"
+
 // TorrentOption ...
 type TorrentOption func(*TorrentConfig)
 
@@ -62,8 +65,9 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 	// the metadata and piece completion caches live in sub directories, which are ignored when loading the data
 	// directory. the library defaults the piece cache to the user cache directory, so pin it here to keep
 	// everything the torrent subsystem reads and writes within the data directory.
+	c.metadata = torrent.NewMetadataCache(filepath.Join(c.dir, metadataDir))
 	c.ClientConfig = torrent.NewDefaultClientConfig(
-		torrent.NewMetadataCache(filepath.Join(c.dir, ".metadata")),
+		c.metadata,
 		tstorage.NewFile(c.dir, tstorage.FileOptionPathMaker(dataPathMaker)),
 		torrent.ClientConfigCacheDirectory(filepath.Join(c.dir, ".bitmaps")),
 		torrent.ClientConfigInfoLogger(logger),
@@ -88,9 +92,10 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 
 // TorrentConfig ...
 type TorrentConfig struct {
-	b   torrent.Binder
-	c   cluster
-	dir string
+	b        torrent.Binder
+	c        cluster
+	dir      string
+	metadata torrent.MetadataStore
 	*torrent.ClientConfig
 	client *torrent.Client
 }
