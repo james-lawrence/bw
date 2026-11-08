@@ -249,36 +249,33 @@ func (t *Journal) append(m *agent.Message) (err error) {
 	}
 
 	name := Segment(ts)
-	if name == t.current {
-		f = t.f
-	} else if name > t.current {
-		if f, err = t.rollover(name); err != nil {
+	// a late message for an older window (clock skew, commit latency) goes to the current segment. followers only
+	// read forward from their cursor so a record in an older segment would never be delivered.
+	if name > t.current {
+		if _, err = t.rollover(name); err != nil {
 			return err
 		}
-	} else {
-		// late message for an older window, don't disturb the current segment.
-		if f, err = os.OpenFile(filepath.Join(t.dir, name), os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640); err != nil {
-			return errors.WithStack(err)
-		}
-		defer f.Close()
 	}
+	f, name = t.f, t.current
 
 	// a single write so readers never observe a partially written length prefix and body in separate calls.
 	if _, err = f.Write(record); err != nil {
 		return errors.WithStack(err)
 	}
 
-	// late messages for an older window don't move the tail, there is nothing newer for the followers to read.
-	if name == t.current {
-		segment := agent.WindowCursor(ts).Segment()
-
-		var offset int64
-		if t.tail.Segment() == segment {
-			offset = t.tail.Offset()
-		}
-
-		t.tail = agent.NewCursor(segment, offset+int64(len(record)))
+	segment, err := segmentTime(name)
+	if err != nil {
+		return err
 	}
+
+	seg := agent.WindowCursor(segment).Segment()
+
+	var offset int64
+	if t.tail.Segment() == seg {
+		offset = t.tail.Offset()
+	}
+
+	t.tail = agent.NewCursor(seg, offset+int64(len(record)))
 
 	return nil
 }

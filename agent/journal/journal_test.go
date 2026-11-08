@@ -204,12 +204,14 @@ func TestJournalTail(t *testing.T) {
 		require.Equal(t, info.Size(), j.Tail().Offset())
 	})
 
-	t.Run("does not move for a late message of an older window", func(t *testing.T) {
+	t.Run("moves for a late message of an older window", func(t *testing.T) {
 		_, j := newJournal(t)
 		require.NoError(t, j.Dispatch(context.Background(), v4("new", epoch.Add(20*time.Second))))
 		before := j.Tail()
 		require.NoError(t, j.Dispatch(context.Background(), v4("late", epoch)))
-		require.Equal(t, before, j.Tail())
+		after := j.Tail()
+		require.Equal(t, before.Segment(), after.Segment())
+		require.Greater(t, after.Offset(), before.Offset())
 	})
 }
 
@@ -222,6 +224,14 @@ func TestJournalFollow(t *testing.T) {
 		t.Cleanup(cancel)
 		return ctx, cancel, j, make(chan *agent.Message, 32)
 	}
+
+	t.Run("should deliver a late message of an older window to a live follower", func(t *testing.T) {
+		ctx, _, j, out := setup(t)
+		require.NoError(t, j.Dispatch(ctx, v4("1", epoch.Add(20*time.Second))))
+		go pump(ctx, j.Connect(agent.Cursor{}, true), out)
+		require.NoError(t, j.Dispatch(ctx, v4("late", epoch)))
+		require.Equal(t, []string{"late"}, receive(t, out, 1))
+	})
 
 	t.Run("should replay from the beginning without duplicates and then tail", func(t *testing.T) {
 		ctx, _, j, out := setup(t)
