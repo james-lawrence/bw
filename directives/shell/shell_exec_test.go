@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"os/user"
 	"testing"
 	"time"
@@ -55,4 +57,21 @@ func TestShellExecute(t *testing.T) {
 			require.Equal(t, tc.output, buf.String())
 		})
 	}
+}
+
+// stopping a command (timeout or the deploy being cancelled) must stop everything the command started,
+// not just the shell. anything left behind keeps working on a deploy that was reported as stopped.
+func TestShellExecuteStopsChildProcesses(t *testing.T) {
+	// unique to this run so it can't match anything else on the machine.
+	marker := fmt.Sprintf("sleep %d.5", 5000+os.Getpid())
+
+	running := func() bool {
+		return exec.Command("pgrep", "-f", marker).Run() == nil
+	}
+
+	sctx := Context{Shell: "/bin/bash", Environ: os.Environ(), output: io.Discard}
+	err := Exec{Command: marker + " & wait", Timeout: 300 * time.Millisecond}.execute(context.Background(), sctx)
+	require.Error(t, err)
+
+	require.Eventually(t, func() bool { return !running() }, 2*time.Second, 50*time.Millisecond, "child process survived the command being stopped")
 }
