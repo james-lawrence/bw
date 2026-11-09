@@ -47,6 +47,25 @@ func Agent(t *testing.T, client rsax.KeyGen, addr *net.TCPAddr, options ...agent
 // the caller is responsible for removing dir.
 func AgentIn(t *testing.T, dir string, client rsax.KeyGen, addr *net.TCPAddr, options ...agent.ConfigOption) error {
 	t.Helper()
+	return agentIn(t, dir, client, addr, nil, options...)
+}
+
+// AgentJoin is Agent for an additional node, it bootstraps from the already running node at join.
+// the nodes of a cluster should set Config.MinimumNodes to the cluster size, see Agent for the rest.
+func AgentJoin(t *testing.T, client rsax.KeyGen, addr *net.TCPAddr, join *net.TCPAddr, options ...agent.ConfigOption) error {
+	t.Helper()
+
+	dir, err := os.MkdirTemp("", "bw.test.agent.*")
+	if err != nil {
+		return err
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+
+	return agentIn(t, dir, client, addr, []string{"--bootstrap-static-addresses=" + join.String()}, options...)
+}
+
+func agentIn(t *testing.T, dir string, client rsax.KeyGen, addr *net.TCPAddr, args []string, options ...agent.ConfigOption) error {
+	t.Helper()
 
 	var (
 		err      error
@@ -113,6 +132,6 @@ func AgentIn(t *testing.T, dir string, client rsax.KeyGen, addr *net.TCPAddr, op
 
 	err = cmdtestx.New(t, &agentcmd.CmdDaemon{}).
 		Options(cmdopts.Vars(defaults), cmdopts.Mappers(), kong.Bind(&defaults)).
-		Run("runtime", "--agent-config="+agentcfg, "--agent-address="+addr.String())
+		Run(append([]string{"runtime", "--agent-config=" + agentcfg, "--agent-address=" + addr.String()}, args...)...)
 	return err
 }

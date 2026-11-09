@@ -69,7 +69,7 @@ func TestInto(t *testing.T) {
 
 		// the quorum remembers the archive the node completed.
 		require.Eventually(t, func() bool {
-			info, err := quorumInfo(context.Background())
+			info, err := agenttestutil.QuorumInfo(context.Background())
 			if err != nil || len(info.GetCompleted()) != 1 {
 				return false
 			}

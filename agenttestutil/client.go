@@ -11,6 +11,7 @@ import (
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
 	"github.com/james-lawrence/bw/agent/dialers"
+	"github.com/james-lawrence/bw/clustering"
 	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/internal/fsx"
@@ -66,23 +67,54 @@ func Client(t *testing.T, id rsax.KeyGen, addr *net.TCPAddr, options ...agent.Co
 	return nil
 }
 
-// WaitQuorum blocks until the agent has joined the quorum and has a leader.
-// the agent accepts connections before then, but rejects the operations that require the quorum.
-func WaitQuorum(parent context.Context) error {
-	ctx, done := context.WithTimeout(parent, 30*time.Second)
-	defer done()
-
+// connect to the cluster as the client configured by Client.
+func connect(ctx context.Context) (dialers.Defaults, clustering.Rendezvous, error) {
 	config, err := commandutils.LoadConfiguration(ctx, Environment, agent.CCOptionInsecure(true))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	ss, err := notary.NewAutoSigner(vcsinfo.CurrentUserDisplay(config.WorkDir()))
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	d, c, err := daemons.ConnectClientUntilSuccess(ctx, config, ss, grpc.WithPerRPCCredentials(ss))
+	return daemons.ConnectClientUntilSuccess(ctx, config, ss, grpc.WithPerRPCCredentials(ss))
+}
+
+// QuorumInfo retrieves the information of the quorum, as the client configured by Client.
+func QuorumInfo(ctx context.Context) (*agent.InfoResponse, error) {
+	d, c, err := connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return quorumInfo(ctx, dialers.NewQuorum(c, d.Defaults()...))
+}
+
+func quorumInfo(ctx context.Context, qd dialers.Quorum) (*agent.InfoResponse, error) {
+	conn, err := qd.DialContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+
+	return agent.NewConn(conn).QuorumInfo(ctx)
+}
+
+// WaitQuorum blocks until the agent has joined the quorum and has a leader.
+// the agent accepts connections before then, but rejects the operations that require the quorum.
+func WaitQuorum(parent context.Context) error {
+	return WaitNodes(parent, 1)
+}
+
+// WaitNodes blocks until the quorum has a leader and the client sees at least n nodes in the cluster.
+// the deploy goes to the nodes the client sees, so a cluster is only ready once all of them are visible.
+func WaitNodes(parent context.Context, n int) error {
+	ctx, done := context.WithTimeout(parent, 30*time.Second)
+	defer done()
+
+	d, c, err := connect(ctx)
 	if err != nil {
 		return err
 	}
@@ -90,25 +122,14 @@ func WaitQuorum(parent context.Context) error {
 	qd := dialers.NewQuorum(c, d.Defaults()...)
 
 	for {
-		if hasLeader(ctx, qd) {
+		if info, err := quorumInfo(ctx, qd); err == nil && info.Leader != nil && len(c.Members()) >= n {
 			return nil
 		}
 
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("agent did not join the quorum: %w", ctx.Err())
+			return fmt.Errorf("cluster did not become ready, want %d nodes: %w", n, ctx.Err())
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-}
-
-func hasLeader(ctx context.Context, qd dialers.Quorum) bool {
-	conn, err := qd.DialContext(ctx)
-	if err != nil {
-		return false
-	}
-	defer conn.Close()
-
-	info, err := agent.NewQuorumClient(conn).Info(ctx, &agent.InfoRequest{})
-	return err == nil && info.Leader != nil
 }

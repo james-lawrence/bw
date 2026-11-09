@@ -11,53 +11,21 @@ import (
 
 	"github.com/james-lawrence/bw"
 	"github.com/james-lawrence/bw/agent"
-	"github.com/james-lawrence/bw/agent/dialers"
 	"github.com/james-lawrence/bw/agenttestutil"
-	"github.com/james-lawrence/bw/cmd/commandutils"
 	"github.com/james-lawrence/bw/cmd/deploy"
-	"github.com/james-lawrence/bw/daemons"
 	"github.com/james-lawrence/bw/deployment"
 	"github.com/james-lawrence/bw/internal/rsax"
-	"github.com/james-lawrence/bw/notary"
-	"github.com/james-lawrence/bw/vcsinfo"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 )
 
 // deployedID returns the deployment id of the last successful deploy recorded by the quorum.
 func deployedID(ctx context.Context) ([]byte, error) {
-	info, err := quorumInfo(ctx)
+	info, err := agenttestutil.QuorumInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return info.GetDeployed().GetArchive().GetDeploymentID(), nil
-}
-
-// quorumInfo retrieves the information of the quorum.
-func quorumInfo(ctx context.Context) (*agent.InfoResponse, error) {
-	config, err := commandutils.LoadConfiguration(ctx, agenttestutil.Environment, agent.CCOptionInsecure(true))
-	if err != nil {
-		return nil, err
-	}
-
-	ss, err := notary.NewAutoSigner(vcsinfo.CurrentUserDisplay(config.WorkDir()))
-	if err != nil {
-		return nil, err
-	}
-
-	d, c, err := daemons.ConnectClientUntilSuccess(ctx, config, ss, grpc.WithPerRPCCredentials(ss))
-	if err != nil {
-		return nil, err
-	}
-
-	conn, err := dialers.NewQuorum(c, d.Defaults()...).DialContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	return agent.NewQuorumClient(conn).Info(ctx, &agent.InfoRequest{})
 }
 
 // the full gamut: a normal deploy, forcing a different archive, the done announcement, the restart
