@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"io"
+	"log"
 	"net/netip"
 	"time"
 
@@ -112,6 +113,7 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 				break
 			}
 
+			log.Printf("download stalled, restarting: %s received(%d) metadata(%t) cause(%v)\n", metadata.ID, pos, !metadataStalled, err)
 			errorsx.Log(errors.Wrap(t.client.Stop(metadata), "unable to stop stalled torrent"))
 		}
 
