@@ -15,9 +15,10 @@ import (
 )
 
 func Inmem(dctx Context) (_ Context, err error) {
-	const inmemconn = "bw.memu"
 	var (
 		l net.Listener
+		// unique per agent so multiple agents can share a process.
+		inmemconn = "bw.memu." + dctx.Config.Name
 	)
 
 	if l, err = memconn.Listen("memu", inmemconn); err != nil {
