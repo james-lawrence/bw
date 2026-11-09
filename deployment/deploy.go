@@ -73,6 +73,14 @@ func DeployOptionChecker(x operation) Option {
 	}
 }
 
+// DeployOptionReadiness set the strategy for checking that a node is ready to be deployed to. this runs before
+// anything is sent to the nodes, so unlike the checker it can't depend on the node knowing about the deployment.
+func DeployOptionReadiness(x operation) Option {
+	return func(d *Deploy) {
+		d.worker.ready = x
+	}
+}
+
 // DeployOptionDeployer set the strategy for deploying.
 func DeployOptionDeployer(o operation) Option {
 	return func(d *Deploy) {
@@ -131,6 +139,7 @@ func NewDeploy(p *agent.Peer, di dispatcher, options ...Option) Deploy {
 		filter: AlwaysMatch,
 		worker: worker{
 			check:       constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
+			ready:       constantChecker{Deploy: &agent.Deploy{Stage: agent.Deploy_Completed}},
 			deploy:      OperationFunc(loggingDeploy),
 			dispatcher:  di,
 			local:       p,
@@ -180,7 +189,8 @@ type worker struct {
 	local          *agent.Peer
 	dispatcher     dispatcher
 	monitor        monitor
-	check          operation
+	check          operation // checks the state of the deployment on a node.
+	ready          operation // checks a node is ready to receive a deployment.
 	deploy         operation
 	completed      *int64
 	failed         *int64
@@ -307,7 +317,7 @@ func (t Deploy) Deploy(ctx context.Context, c cluster) (int64, bool) {
 
 	heartbeat := MonitorTicklerHeartbeat(t.worker.local, t.dispatcher, t.worker.heartbeat)
 
-	if failure := t.monitor.Await(ctx, initial, len(nodes), t.dispatcher, c, t.worker.check, heartbeat); errorsx.Is(failure, context.DeadlineExceeded) {
+	if failure := t.monitor.Await(ctx, initial, len(nodes), t.dispatcher, c, t.worker.ready, heartbeat); errorsx.Is(failure, context.DeadlineExceeded) {
 		// the deploy's context has ended, the notification must not depend on it.
 		errorsx.Log(
 			agentutil.Dispatch(

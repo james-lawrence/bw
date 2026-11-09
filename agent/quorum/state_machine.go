@@ -103,6 +103,7 @@ func (t *StateMachine) Deploy(ctx context.Context, c cluster, dialer dialers.Def
 	}
 
 	options := []deployments.Option{
+		deployments.DeployOptionReadiness(deployments.OperationFunc(ready(dialer))),
 		deployments.DeployOptionChecker(deployments.OperationFunc(check(dialer, archive))),
 		deployments.DeployOptionDeployer(deployments.OperationFunc(deploy(by, dopts, archive, dialer))),
 		deployments.DeployOptionFilter(filter),
@@ -151,6 +152,32 @@ func dispatchDeployResult(ctx context.Context, d agent.Dispatcher, local *agent.
 	defer done()
 
 	return agentutil.ReliableDispatch(ctx, d, agent.NewDeployCommand(local, dcmd))
+}
+
+// ready the latest deployment of the node, or a completed one when it has none. nodes are ready to be
+// deployed to once whatever they were previously doing is finished, they can't know about this deployment yet.
+func ready(d dialers.Defaults) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {
+	return func(ctx context.Context, n *agent.Peer) (_d *agent.Deploy, err error) {
+		var (
+			c    *grpc.ClientConn
+			info *agent.StatusResponse
+		)
+
+		if c, err = dialers.NewDirect(agent.RPCAddress(n)).DialContext(ctx, d.Defaults()...); err != nil {
+			return _d, err
+		}
+		defer c.Close()
+
+		if info, err = agent.NewConn(c).Info(ctx); err != nil {
+			return _d, err
+		}
+
+		if len(info.Deployments) > 0 {
+			return info.Deployments[0], nil
+		}
+
+		return &agent.Deploy{Stage: agent.Deploy_Completed}, nil
+	}
 }
 
 func check(d dialers.Defaults, archive *agent.Archive) func(ctx context.Context, n *agent.Peer) (*agent.Deploy, error) {

@@ -56,6 +56,22 @@ func (t *recorder) logs() (found []string) {
 	return found
 }
 
+// contextFixture is a single node cluster whose nodes never finish, only the context can end the deploy before the timeout.
+func contextFixture() (*agent.Peer, cluster.Cluster, deployment.OperationFunc) {
+	p := agent.NewPeer("node4")
+	c := cluster.New(
+		p,
+		clustering.NewMock(
+			agent.PeerToNode(p),
+			clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
+		),
+	)
+
+	return p, c, deployment.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
+		return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
+	})
+}
+
 func testCluster(p *agent.Peer) cluster.Cluster {
 	return cluster.New(
 		p,
@@ -126,7 +142,7 @@ func TestDeploy(t *testing.T) {
 				atomic.AddInt64(&deploycount, 1)
 				return ignored, nil
 			})),
-			deployment.DeployOptionChecker(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
+			deployment.DeployOptionReadiness(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
 				switch atomic.AddInt64(&healthcheckcount, 1) {
 				case 1:
 					return &failedDeploy, nil
@@ -341,24 +357,9 @@ func TestDeploy(t *testing.T) {
 			return strings.Contains(l, "timed out while waiting for nodes to complete")
 		}))
 	})
-}
-
-func TestDeployContext(t *testing.T) {
-	p := agent.NewPeer("node4")
-	c := cluster.New(
-		p,
-		clustering.NewMock(
-			agent.PeerToNode(p),
-			clusteringtestutil.NewNodeFromAddress("node1", "127.0.0.1"),
-		),
-	)
-
-	// nodes that never finish, only the context can end the deploy before the timeout.
-	stuck := deployment.OperationFunc(func(context.Context, *agent.Peer) (*agent.Deploy, error) {
-		return &agent.Deploy{Stage: agent.Deploy_Deploying}, nil
-	})
 
 	t.Run("cancelling the context stops the deploy and is not a success", func(t *testing.T) {
+		p, c, stuck := contextFixture()
 		ctx, cancel := context.WithCancelCause(t.Context())
 		rec := &recorder{}
 
@@ -393,6 +394,7 @@ func TestDeployContext(t *testing.T) {
 	})
 
 	t.Run("a context cancelled before the deploy starts runs nothing", func(t *testing.T) {
+		p, c, _ := contextFixture()
 		ctx, cancel := context.WithCancelCause(t.Context())
 		cancel(errors.New("leadership lost"))
 
@@ -410,5 +412,47 @@ func TestDeployContext(t *testing.T) {
 		_, success := deploy.Deploy(ctx, c)
 		require.False(t, success)
 		require.Zero(t, atomic.LoadInt64(&visits))
+	})
+
+	// the checker used while deploying only finds the deployment once the node has been sent it. the cluster must
+	// still be deployed to, waiting for nodes to know about the deployment before sending it to them is a deadlock.
+	t.Run("checks only know the deployment once sent", func(t *testing.T) {
+		var (
+			m    sync.Mutex
+			sent = map[string]bool{}
+		)
+
+		p := agent.NewPeer("node4")
+		c := testCluster(p)
+
+		deploy := deployment.NewDeploy(
+			p,
+			agentutil.DiscardDispatcher{},
+			deployment.DeployOptionTimeout(time.Second),
+			deployment.DeployOptionHeartbeatFrequency(time.Hour),
+			deployment.DeployOptionDeployer(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (ignored *agent.Deploy, err error) {
+				m.Lock()
+				defer m.Unlock()
+				sent[p.Ip] = true
+				return ignored, nil
+			})),
+			deployment.DeployOptionChecker(deployment.OperationFunc(func(ctx context.Context, p *agent.Peer) (*agent.Deploy, error) {
+				m.Lock()
+				defer m.Unlock()
+				if !sent[p.Ip] {
+					return nil, errors.New("deployment not found on " + p.Ip)
+				}
+				return &completedDeploy, nil
+			})),
+		)
+
+		ctx, done := context.WithTimeout(t.Context(), 10*time.Second)
+		defer done()
+
+		failures, success := deploy.Deploy(ctx, c)
+		require.NoError(t, ctx.Err(), "deploy hung waiting for the nodes to know about a deployment they were never sent")
+		require.Equal(t, int64(0), failures)
+		require.True(t, success)
+		require.Len(t, sent, 4)
 	})
 }
