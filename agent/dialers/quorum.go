@@ -18,7 +18,7 @@ type Quorum struct {
 
 // DialContext with the given options
 func (t Quorum) DialContext(ctx context.Context, options ...grpc.DialOption) (c *grpc.ClientConn, err error) {
-	return grpc.DialContext(ctx, "bw.agent://quorum", t.Defaults()...)
+	return grpc.DialContext(ctx, quorumScheme+"://", t.Defaults()...)
 }
 
 // Defaults return the defaults for this dialer.

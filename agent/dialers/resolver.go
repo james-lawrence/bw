@@ -25,8 +25,13 @@ func (b *ringResolverBuilder) Build(target resolver.Target, cc resolver.ClientCo
 	return r, nil
 }
 
+// quorumScheme is the scheme of the quorum target. it must not be the scheme of a peer address
+// (bw.agent://ip:port#name), a resolver registered for that scheme would resolve every direct dial to
+// the members of the quorum instead of the peer being dialed.
+const quorumScheme = "bw.quorum"
+
 func (b *ringResolverBuilder) Scheme() string {
-	return "bw.agent"
+	return quorumScheme
 }
 
 type ringResolver struct {
