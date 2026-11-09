@@ -32,6 +32,7 @@ type cli struct {
 	Environment        cmdEnv                       `cmd:"" help:"environment related commands"`
 	Deploy             cmdDeploy                    `cmd:"" help:"deployment related commands"`
 	Redeploy           cmdDeployRedeploy            `cmd:"" name:"redeploy" help:"redeploy an archive to nodes within the cluster of the specified environment"`
+	Bootstrap          cmdBootstrap                 `cmd:"" help:"bootstrap related commands"`
 	Me                 cmdMe                        `cmd:"" help:"commands for managing the user's profile"`
 	Notary             cmdNotary                    `cmd:"" help:"retrieve and manage permissions"`
 	Workspace          cmdWorkspace                 `cmd:"" help:"workspace related commands"`

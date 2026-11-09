@@ -37,6 +37,8 @@ const (
 	DirArchive = "archive"
 	// EnvFile contains the filename for the deploy's environment variables.
 	EnvFile = "bw.env"
+	// AgentEnvFile contains the filename for the agent's environment variables.
+	AgentEnvFile = "agent.env"
 	// AuthKeysFile contains the filename which holds the public keys for deployments.
 	AuthKeysFile = "bw.auth.keys"
 	// DefaultDeployTimeout default timeout for a deployment.
