@@ -105,6 +105,7 @@ func (t Directive) deploy(dctx *DeployContext) {
 			shell.OptionLogger(dctx.Log),
 			shell.OptionEnviron(append(t.sctx.Environ, environ...)),
 			shell.OptionDir(dctx.ArchiveRoot),
+			shell.OptionLatestDir(filepath.Join(filepath.Dir(dctx.Root), latestLink)),
 			shell.OptionVCSCommit(dctx.Archive.Commit),
 			shell.OptionInitiator(dctx.Initiator),
 			shell.OptionTempDir(tmpdir),

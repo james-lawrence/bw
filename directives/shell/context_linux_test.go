@@ -18,6 +18,7 @@ var example1 = Context{
 	FQDN:          "FQDN",
 	Environ:       []string{"FOO=BAR"},
 	dir:           "ARCHIVEDIR",
+	latestdir:     "LATESTDIR",
 	tmpdir:        "TEMPDIR",
 	cachedir:      "CACHEDIR",
 	timeout:       time.Second,
@@ -35,6 +36,7 @@ func TestContextLinuxVariableSubstitution(t *testing.T) {
 	}{
 		{"basic environment deprecated", example1, "%H %m %d %f %u %U %h %bwroot %bwcwd %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR ARCHIVEDIR WORKDIR 00000000-0000-0000-0000-000000000000 %"},
 		{"basic environment", example1, "%H %m %d %f %u %U %h %bw.work.directory% %bw.archive.directory% %bw.cache.directory% %bw.temp.directory% %bw.deploy.id% %%", "HOSTNAME MACHINEID DOMAIN FQDN USERNAME USERID HOMEDIR WORKDIR ARCHIVEDIR CACHEDIR TEMPDIR 00000000-0000-0000-0000-000000000000 %"},
+		{"archive latest", example1, "%bw.archive.latest%", "LATESTDIR"},
 		{"properly escape", example1, "git show -s --format=%ct-%%h", "git show -s --format=%ct-%h"},
 		{"deploy information", example1, "%bw.deploy.id% %bw.deploy.user.name% %bw.deploy.commit%", "00000000-0000-0000-0000-000000000000 DEPLOYER d9662c91bf8c4591ae311d853404ae8e"},
 	} {
@@ -59,6 +61,7 @@ func TestContextLinuxEnvironmentVariables(t *testing.T) {
 			"BW_ENVIRONMENT_USERHOME=HOMEDIR",
 			"BW_ENVIRONMENT_ROOT=ARCHIVEDIR",
 			"BW_ENVIRONMENT_ARCHIVE_DIRECTORY=ARCHIVEDIR",
+			"BW_ENVIRONMENT_ARCHIVE_LATEST=LATESTDIR",
 			"BW_ENVIRONMENT_WORK_DIRECTORY=WORKDIR",
 			"BW_ENVIRONMENT_TEMP_DIRECTORY=TEMPDIR",
 			"BW_ENVIRONMENT_CACHE_DIRECTORY=CACHEDIR",

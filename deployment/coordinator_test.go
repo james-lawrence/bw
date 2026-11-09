@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -151,6 +151,15 @@ func TestCoordinatorSlowDeliveryRetried(t *testing.T) {
 }
 
 func TestCoordinator(t *testing.T) {
+	await := func(t *testing.T, results chan *deployment.DeployResult) *deployment.DeployResult {
+		select {
+		case r := <-results:
+			return r
+		case <-time.After(5 * time.Second):
+			t.Fatal("deploy did not complete")
+			return nil
+		}
+	}
 
 	t.Run("deployments should return the deploy options", func(t *testing.T) {
 		workdir := testingx.TempDir(t)
@@ -438,12 +447,65 @@ func TestCoordinator(t *testing.T) {
 			return !strings.Contains(fmt.Sprint(err), "is already deploying")
 		}, time.Second, 10*time.Millisecond)
 	})
-}
 
-func TestMain(m *testing.M) {
-	log.SetFlags(log.Flags() | log.Lshortfile)
-	log.SetOutput(io.Discard)
-	code := m.Run()
-	testingx.Cleanup()
-	os.Exit(code)
+	t.Run("successful deploys point latest at the archive directory", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		latest := filepath.Join(bw.DeployDir(workdir), "latest")
+		p := agent.NewPeer("node1")
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+		results := make(chan *deployment.DeployResult, 1)
+		c := deployment.New(
+			p,
+			deployment.NewDirective(),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{}),
+			deployment.CoordinatorOptionDeployResults(results),
+		)
+
+		_, err := c.Deploy(context.Background(), "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
+		require.NoError(t, err)
+		first := await(t, results)
+		require.NoError(t, first.Error)
+
+		target, err := os.Readlink(latest)
+		require.NoError(t, err)
+		require.Equal(t, first.ArchiveRoot, target)
+
+		// the coordinator returns to waiting shortly after the result is delivered.
+		var second *deployment.DeployResult
+		require.Eventually(t, func() bool {
+			if _, err := c.Deploy(context.Background(), "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p}); err != nil {
+				return false
+			}
+			second = await(t, results)
+			return true
+		}, time.Second, 10*time.Millisecond)
+		require.NoError(t, second.Error)
+		require.NotEqual(t, first.ArchiveRoot, second.ArchiveRoot)
+
+		target, err = os.Readlink(latest)
+		require.NoError(t, err)
+		require.Equal(t, second.ArchiveRoot, target)
+	})
+
+	t.Run("failed deploys do not create latest", func(t *testing.T) {
+		workdir := testingx.TempDir(t)
+		p := agent.NewPeer("node1")
+		dopts := &agent.DeployOptions{Concurrency: 1, SilenceDeployLogs: true, Timeout: int64(time.Minute)}
+		results := make(chan *deployment.DeployResult, 1)
+		c := deployment.New(
+			p,
+			deployment.NewDirective(),
+			deployment.CoordinatorOptionRoot(workdir),
+			deployment.CoordinatorOptionStorage(storage.NoopRegistry{Err: context.DeadlineExceeded}),
+			deployment.CoordinatorOptionDeployResults(results),
+		)
+
+		_, err := c.Deploy(context.Background(), "test user", dopts, &agent.Archive{DeploymentID: bw.MustGenerateID(), Peer: p})
+		require.NoError(t, err)
+		require.Error(t, await(t, results).Error)
+
+		_, err = os.Lstat(filepath.Join(bw.DeployDir(workdir), "latest"))
+		require.True(t, os.IsNotExist(err), "unexpected latest link: %v", err)
+	})
 }

@@ -83,6 +83,13 @@ func OptionVCSCommit(l string) Option {
 	}
 }
 
+// OptionLatestDir set the stable path which always points at the archive directory of the latest successful deploy.
+func OptionLatestDir(l string) Option {
+	return func(ctx *Context) {
+		ctx.latestdir = l
+	}
+}
+
 // OptionWorkDir set work directory
 func OptionWorkDir(l string) Option {
 	return func(ctx *Context) {
@@ -178,6 +185,7 @@ type Context struct {
 	initiator     string
 	deploymentID  string
 	dir           string
+	latestdir     string
 	tmpdir        string
 	cachedir      string
 	bwconfigdir   string
@@ -204,6 +212,7 @@ func (t Context) variableSubst(cmd string) string {
 	cmd = strings.Replace(cmd, "%bw.user.home.directory%", t.User.HomeDir, -1)
 	cmd = strings.Replace(cmd, "%bwroot", t.dir, -1)
 	cmd = strings.Replace(cmd, "%bw.archive.directory%", t.dir, -1)
+	cmd = strings.Replace(cmd, "%bw.archive.latest%", t.latestdir, -1)
 	cmd = strings.Replace(cmd, "%bwtmp", t.tmpdir, -1)
 	cmd = strings.Replace(cmd, "%bw.temp.directory%", t.tmpdir, -1)
 	cmd = strings.Replace(cmd, "%bwcwd", t.WorkDirectory, -1)
@@ -232,6 +241,7 @@ func (t Context) environmentSubst() []string {
 		fmt.Sprintf("BW_ENVIRONMENT_USERHOME=%s", t.User.HomeDir),
 		fmt.Sprintf("BW_ENVIRONMENT_ROOT=%s", t.dir),
 		fmt.Sprintf("BW_ENVIRONMENT_ARCHIVE_DIRECTORY=%s", t.dir),
+		fmt.Sprintf("BW_ENVIRONMENT_ARCHIVE_LATEST=%s", t.latestdir),
 		fmt.Sprintf("BW_ENVIRONMENT_WORK_DIRECTORY=%s", t.WorkDirectory),
 		fmt.Sprintf("BW_ENVIRONMENT_TEMP_DIRECTORY=%s", t.tmpdir),
 		fmt.Sprintf("BW_ENVIRONMENT_CACHE_DIRECTORY=%s", t.cachedir),

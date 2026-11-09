@@ -15,6 +15,9 @@ import (
 
 const deployMetadataName = "deploy.metadata"
 
+// latestLink name of the symlink, within the deploys directory, to the archive of the latest successful deploy.
+const latestLink = "latest"
+
 func less(a, b *agent.Deploy) bool {
 	if a == nil || a.Archive == nil {
 		return true

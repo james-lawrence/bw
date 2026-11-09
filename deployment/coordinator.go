@@ -133,6 +133,9 @@ func (t *Coordinator) background(dctx *DeployContext) {
 	// by default keep the oldest deploys. if we have a successful deploy then keep the newest.
 	switch d.Stage {
 	case agent.Deploy_Completed:
+		if err := t.swaplatest(done); err != nil {
+			log.Println("failed to update latest link", err)
+		}
 		t.update(dctx, d, agentutil.KeepNewestN(t.keepN))
 	default:
 		t.update(dctx, d, agentutil.KeepOldestN(t.keepN))
@@ -366,6 +369,22 @@ func (t *Coordinator) update(dctx *DeployContext, d *agent.Deploy, c agentutil.C
 	t.ds.cleanup = c
 
 	return d
+}
+
+// swaplatest atomically points the latest link at the archive directory of the deploy,
+// equivalent to ln -snf <archive> <deploys>/latest.
+func (t *Coordinator) swaplatest(dctx *DeployResult) error {
+	tmp := filepath.Join(t.deploysRoot, ".latest.tmp")
+
+	if err := os.Remove(tmp); err != nil && !os.IsNotExist(err) {
+		return errors.WithStack(err)
+	}
+
+	if err := os.Symlink(dctx.ArchiveRoot, tmp); err != nil {
+		return errors.WithStack(err)
+	}
+
+	return errors.WithStack(os.Rename(tmp, filepath.Join(t.deploysRoot, latestLink)))
 }
 
 func (t *Coordinator) correctLatestDeploy(deploys ...*agent.Deploy) error {
