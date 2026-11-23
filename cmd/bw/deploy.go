@@ -9,12 +9,13 @@ import (
 	"github.com/james-lawrence/bw/cmd/bw/cmdopts"
 	"github.com/james-lawrence/bw/cmd/deploy"
 	"github.com/james-lawrence/bw/deployment"
+	"github.com/james-lawrence/bw/internal/blobfs"
 )
 
 type cmdDeploy struct {
 	Env      cmdDeployEnvironment `cmd:"" name:"env" aliases:"deploy" help:"deploy to nodes within the cluster of the specified environment"`
 	Locally  cmdDeployLocal       `cmd:"" name:"locally" aliases:"local" help:"deploy to the local system"`
-	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot" help:"generate a deployment archive without uploading it anywhere"`
+	Snapshot cmdDeploySnapshot    `cmd:"" name:"snapshot" help:"generate a deployment archive without deploying it"`
 	Redeploy cmdDeployRedeploy    `cmd:"" name:"archive" help:"redeploy an archive to nodes within the cluster of the specified environment"`
 	Cancel   cmdDeployCancel      `cmd:"" name:"cancel" help:"cancel any current deploy"`
 	Force    cmdDeployForce       `cmd:"" name:"force" hidden:"" help:"replace the bootstrap archive with the current deployspace without deploying, then restart the nodes"`
@@ -130,22 +131,42 @@ func (t cmdDeployLocal) Run(ctx *cmdopts.Global) error {
 }
 
 type cmdDeploySnapshot struct {
-	cmdopts.BeardedWookieEnv
-	snapshotOutput *os.File `name:"output" help:"file to write to. by default archive is written to stdout" short:"o"`
+	Archive cmdDeploySnapshotArchive `cmd:"" name:"archive" help:"write the deployment archive to stdout"`
+	Push    cmdDeploySnapshotPush    `cmd:"" name:"push" help:"write the deployment archive and metadata to a bucket (gs, s3) or directory using bootstrap naming (current.tar.gz, current.meta)"`
 }
 
-func (t cmdDeploySnapshot) Run(ctx *cmdopts.Global) error {
-	if t.snapshotOutput == nil {
-		t.snapshotOutput = os.Stdout
-	}
+type cmdDeploySnapshotArchive struct {
+	cmdopts.BeardedWookieEnv
+}
 
+func (t cmdDeploySnapshotArchive) Run(ctx *cmdopts.Global) error {
 	return deploy.Snapshot(deploy.Context{
 		Context:     ctx.Context,
 		CancelFunc:  ctx.Shutdown,
 		WaitGroup:   ctx.Cleanup,
 		Verbose:     ctx.Verbosity > 0,
 		Environment: t.Environment,
-	}, t.snapshotOutput)
+	}, os.Stdout, nil)
+}
+
+type cmdDeploySnapshotPush struct {
+	cmdopts.BeardedWookieEnvRequired
+	Destination string `arg:"" name:"destination" help:"gs://<bucket>/<prefix>/, s3://<bucket>/<prefix>/ or a local directory to write to"`
+}
+
+func (t cmdDeploySnapshotPush) Run(ctx *cmdopts.Global) error {
+	dst, err := blobfs.Open(ctx.Context, t.Destination)
+	if err != nil {
+		return err
+	}
+
+	return deploy.SnapshotPush(deploy.Context{
+		Context:     ctx.Context,
+		CancelFunc:  ctx.Shutdown,
+		WaitGroup:   ctx.Cleanup,
+		Verbose:     ctx.Verbosity > 0,
+		Environment: t.Environment,
+	}, dst)
 }
 
 type cmdDeployCancel struct {

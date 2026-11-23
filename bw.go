@@ -47,6 +47,12 @@ const (
 	DeployLog = "deploy.log"
 	// ArchiveFile name of the archive file stored on disk
 	ArchiveFile = "archive.tar.gz"
+	// BootstrapArchiveFile name of the archive within the bootstrap archive directory.
+	BootstrapArchiveFile = "current.tar.gz"
+	// BootstrapMetadataFile name of the deployment metadata within the bootstrap archive directory.
+	BootstrapMetadataFile = "current.meta"
+	// BootstrapUploadedFile name of the marker holding the uploaded archive within the bootstrap archive directory.
+	BootstrapUploadedFile = "current.uploaded"
 	// DefaultP2PPort port which will replace all other ports
 	DefaultP2PPort = 2000
 	// DefaultDirAgentCredentials ...

@@ -33,9 +33,9 @@ func NewFilesystem(a agent.Config, c cluster, d dialer, dl storage.DownloadProto
 		dl:       dl,
 		c:        c,
 		d:        d,
-		current:  filepath.Join(a.Bootstrap.ArchiveDirectory, "current.tar.gz"),
-		metadata: filepath.Join(a.Bootstrap.ArchiveDirectory, "current.meta"),
-		uploaded: filepath.Join(a.Bootstrap.ArchiveDirectory, "current.uploaded"),
+		current:  filepath.Join(a.Bootstrap.ArchiveDirectory, bw.BootstrapArchiveFile),
+		metadata: filepath.Join(a.Bootstrap.ArchiveDirectory, bw.BootstrapMetadataFile),
+		uploaded: filepath.Join(a.Bootstrap.ArchiveDirectory, bw.BootstrapUploadedFile),
 	}
 }
 
