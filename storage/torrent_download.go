@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"crypto/sha1"
+	"fmt"
 	"io"
 	"log"
 	"net/netip"
@@ -55,6 +56,21 @@ func peersToNode(peers ...*agent.Peer) (r []torrent.Peer) {
 		}
 	}
 	return r
+}
+
+// stallstats summarizes the state of a torrent for the stalled download log. distinguishes
+// a connection that is idle with chunks still missing from one that has no peers at all.
+func stallstats(dl torrent.Torrent) string {
+	s := dl.Stats()
+
+	return fmt.Sprintf(
+		"chunks(missing(%d) outstanding(%d) unverified(%d) failed(%d) completed(%d)) peers(active(%d) seeders(%d) pending(%d) halfopen(%d) total(%d)) read(data(%d) useful(%d) chunks(%d) useful(%d) wasted(%d)) written(chunks(%d)) lastactivity(%s) lastconnection(%s)",
+		s.Missing, s.Outstanding, s.Unverified, s.Failed, s.Completed,
+		s.ActivePeers, s.Seeders, s.PendingPeers, s.HalfOpenPeers, s.TotalPeers,
+		s.BytesReadData.Int64(), s.BytesReadUsefulData.Int64(), s.ChunksRead.Int64(), s.ChunksReadUseful.Int64(), s.ChunksReadWasted.Int64(),
+		s.ChunksWritten.Int64(),
+		time.Since(s.LastActivity).Round(time.Second), time.Since(s.LastConnection).Round(time.Second),
+	)
 }
 
 func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.ReadCloser) {
@@ -113,7 +129,7 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 				break
 			}
 
-			log.Printf("download stalled, restarting: %s received(%d) metadata(%t) cause(%v)\n", metadata.ID, pos, !metadataStalled, err)
+			log.Printf("download stalled, restarting: %s received(%d) metadata(%t) cause(%v) %s\n", metadata.ID, pos, !metadataStalled, err, stallstats(dl))
 			errorsx.Log(errors.Wrap(t.client.Stop(metadata), "unable to stop stalled torrent"))
 		}
 
