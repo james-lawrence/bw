@@ -300,10 +300,10 @@ github.com/aws/smithy-go/waiter
 # github.com/benbjohnson/immutable v0.4.3
 ## explicit; go 1.18
 github.com/benbjohnson/immutable
-# github.com/bits-and-blooms/bitset v1.29.0
+# github.com/bits-and-blooms/bitset v1.30.0
 ## explicit; go 1.16
 github.com/bits-and-blooms/bitset
-# github.com/bits-and-blooms/bloom/v3 v3.7.1
+# github.com/bits-and-blooms/bloom/v3 v3.7.2
 ## explicit; go 1.16
 github.com/bits-and-blooms/bloom/v3
 # github.com/boltdb/bolt v1.3.1
@@ -744,7 +744,7 @@ github.com/james-lawrence/genieql/internal/userx
 github.com/james-lawrence/genieql/internal/wasidialect
 github.com/james-lawrence/genieql/internal/wasix/ffierrors
 github.com/james-lawrence/genieql/internal/wasix/ffiguest
-# github.com/james-lawrence/torrent v0.0.0-20261106140703-1d901b0326db
+# github.com/james-lawrence/torrent v0.0.0-20261123033726-cfb79656479d
 ## explicit; go 1.27.0
 github.com/james-lawrence/torrent
 github.com/james-lawrence/torrent/bencode
@@ -766,6 +766,7 @@ github.com/james-lawrence/torrent/dht/traversal
 github.com/james-lawrence/torrent/dht/traversal2
 github.com/james-lawrence/torrent/dht/types
 github.com/james-lawrence/torrent/internal/asynccompute
+github.com/james-lawrence/torrent/internal/asyncx
 github.com/james-lawrence/torrent/internal/atomicx
 github.com/james-lawrence/torrent/internal/backoffx
 github.com/james-lawrence/torrent/internal/bitmapx
@@ -786,6 +787,7 @@ github.com/james-lawrence/torrent/internal/slogx
 github.com/james-lawrence/torrent/internal/stmutil
 github.com/james-lawrence/torrent/internal/timex
 github.com/james-lawrence/torrent/internal/userx
+github.com/james-lawrence/torrent/internal/uuidx
 github.com/james-lawrence/torrent/iplist
 github.com/james-lawrence/torrent/logonce
 github.com/james-lawrence/torrent/metainfo
@@ -987,7 +989,7 @@ go.uber.org/multierr
 # go.yaml.in/yaml/v3 v3.0.6
 ## explicit; go 1.16
 go.yaml.in/yaml/v3
-# golang.org/x/crypto v0.58.0
+# golang.org/x/crypto v0.59.0
 ## explicit; go 1.26.0
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
@@ -1008,16 +1010,16 @@ golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/knownhosts
-# golang.org/x/exp v0.0.0-20261106112924-d498a4c2cc9a
-## explicit; go 1.26
+# golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5
+## explicit; go 1.26.0
 golang.org/x/exp/constraints
-# golang.org/x/mod v0.42.0
+# golang.org/x/mod v0.43.0
 ## explicit; go 1.26.0
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/modfile
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.62.0
+# golang.org/x/net v0.63.0
 ## explicit; go 1.26.0
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -1049,11 +1051,11 @@ golang.org/x/oauth2/google/internal/stsexchange
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.24.0
+# golang.org/x/sync v0.25.0
 ## explicit; go 1.26.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.49.0
+# golang.org/x/sys v0.50.0
 ## explicit; go 1.26.0
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
@@ -1061,10 +1063,10 @@ golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/term v0.47.0
+# golang.org/x/term v0.48.0
 ## explicit; go 1.26.0
 golang.org/x/term
-# golang.org/x/text v0.43.0
+# golang.org/x/text v0.44.0
 ## explicit; go 1.26.0
 golang.org/x/text/cases
 golang.org/x/text/encoding
@@ -1087,7 +1089,7 @@ golang.org/x/text/width
 # golang.org/x/time v0.16.0
 ## explicit; go 1.26.0
 golang.org/x/time/rate
-# golang.org/x/tools v0.52.0
+# golang.org/x/tools v0.53.0
 ## explicit; go 1.26.0
 golang.org/x/tools/cover
 golang.org/x/tools/go/ast/astutil

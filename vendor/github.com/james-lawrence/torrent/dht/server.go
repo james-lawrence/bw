@@ -60,6 +60,7 @@ type Server struct {
 	id          *atomic.Pointer[int160.T]
 	dynamicaddr *atomic.Pointer[netip.AddrPort]
 	bindings    []*socketbinding
+	passive     bool // never serve sockets, see OptionPassive.
 
 	mu            sync.RWMutex
 	wg            sync.WaitGroup
@@ -93,6 +94,7 @@ type Server struct {
 	// BEP-44: Storing arbitrary data in the DHT.
 	store       bep44.Store
 	log         logging
+	debug       logging
 	sendLimiter *rate.Limiter
 
 	mux Muxer
@@ -208,6 +210,7 @@ func NewServer(k int, options ...Option) (s *Server, err error) {
 		queryResendDelay:  defaultQueryResendDelay,
 		defaultWant:       []krpc.Want{krpc.WantNodes, krpc.WantNodes6},
 		log:               discard{},
+		debug:             discard{},
 		hookQuery:         func(source netip.AddrPort, query *krpc.Msg) (propagate bool) { return true },
 	}, options...))
 
@@ -251,6 +254,10 @@ func (s *Server) ServeBinding(ctx context.Context, pc net.PacketConn, bestaddr n
 }
 
 func (s *Server) serveBinding(ctx context.Context, pc net.PacketConn, bestaddr netip.AddrPort, dedup bool) (Binding, error) {
+	if s.passive {
+		return nil, errorsx.New("passive dht server cannot serve sockets")
+	}
+
 	_dedup := func(pc net.PacketConn) (*socketbinding, bool) {
 		incoming := errorsx.Zero(netx.AddrPort(pc.LocalAddr()))
 		return slicesx.Find(func(b *socketbinding) bool {
@@ -328,6 +335,11 @@ func (s *Server) serveBinding(ctx context.Context, pc net.PacketConn, bestaddr n
 }
 
 func (s *Server) Serve(ctx context.Context, pc net.PacketConn) error {
+	// a passive server ignores sockets, it only provides an identity.
+	if s.passive {
+		return nil
+	}
+
 	bound := pc.LocalAddr()
 
 	ap, err := netx.AddrPort(bound)
@@ -463,7 +475,7 @@ func (s *Server) processPacket(ctx context.Context, binding *socketbinding, b []
 	}
 
 	if d.Y == krpc.YQuery {
-		s.logger().Printf("received query %q from %v\n", d.Q, addr)
+		s.debugger().Printf("received query %q from %v\n", d.Q, addr)
 		s.handleQuery(ctx, binding, addr, b, d)
 		return
 	}
@@ -476,7 +488,7 @@ func (s *Server) processPacket(ctx context.Context, binding *socketbinding, b []
 		T:          d.T,
 	}
 	if !s.transactions.Have(tk) {
-		s.logger().Printf("received response for untracked transaction %q from %v\n", d.T, addr)
+		s.debugger().Printf("received response for untracked transaction %q from %v\n", d.T, addr)
 		return
 	}
 	t := s.transactions.Pop(tk)
@@ -652,7 +664,10 @@ func (s *Server) handleQuery(ctx context.Context, binding *socketbinding, source
 		return
 	}
 
-	if err := fn.Handle(ctx, source, s, binding, raw, &m); err != nil {
+	started := time.Now()
+	err := fn.Handle(ctx, source, s, binding, raw, &m)
+	s.debugger().Printf("handled %s from %s in %v err=%v\n", pattern, source, time.Since(started), err)
+	if err != nil {
 		log.Printf("query failed %s - %T - %v\n", source.String(), err, err)
 		if cause, ok := err.(krpc.Error); ok {
 			if err := s.sendError(ctx, binding, source, m.T, cause); err != nil {
@@ -753,7 +768,7 @@ func (s *Server) reply(ctx context.Context, b Binding, addr Addr, t string, r kr
 	r.ID = b.ID().AsByteArray()
 	m := krpc.Msg{T: t, Y: krpc.YResponse, R: &r, IP: addr.KRPC()}
 	buf := bencode.MustMarshal(m)
-	s.logger().Printf("replying to %s\n", addr)
+	s.debugger().Printf("replying to %s\n", addr)
 	_, err := b.SendToNode(ctx, buf, addr, 1)
 	if err != nil {
 		s.logger().Printf("error replying to %s: %s\n", addr, err)
@@ -860,9 +875,9 @@ type QueryInput struct {
 // may make use of the response internally before passing it back to the caller.
 func (s *Server) Query(ctx context.Context, addr Addr, input QueryInput) (ret QueryResult) {
 	defer func(started time.Time) {
-		s.logger().Printf(
-			"Query(%v) returned after %v (err=%v, reply.Y=%v, reply.E=%v, writes=%v) encoded=%s\n",
-			input.Method, time.Since(started), ret.Err, ret.Reply.Y, ret.Reply.E, ret.Writes, base64.URLEncoding.EncodeToString(input.Encoded))
+		s.debugger().Printf(
+			"Query(%v) %s returned after %v (err=%v, reply.Y=%v, reply.E=%v, writes=%v) encoded=%s\n",
+			input.Method, addr, time.Since(started), ret.Err, ret.Reply.Y, ret.Reply.E, ret.Writes, base64.URLEncoding.EncodeToString(input.Encoded))
 	}(time.Now())
 
 	replyChan := make(chan *QueryResult, 1)
@@ -892,9 +907,9 @@ func (s *Server) Query(ctx context.Context, addr Addr, input QueryInput) (ret Qu
 	s.mu.Unlock()
 
 	go func() {
-		s.logger().Printf("transmitting initiated %s %s %x %d\n", addr, input.Method, input.Tid, input.NumTries)
+		s.debugger().Printf("transmitting initiated %s %s %x %d\n", addr, input.Method, input.Tid, input.NumTries)
 		_, err := s.SendToNode(sctx, input.Encoded, addr, input.NumTries)
-		s.logger().Printf("transmitting completed %s %s %x %d %v\n", addr, input.Method, input.Tid, input.NumTries, err)
+		s.debugger().Printf("transmitting completed %s %s %x %d %v\n", addr, input.Method, input.Tid, input.NumTries, err)
 		if err != nil {
 			done(err)
 		}
@@ -998,6 +1013,14 @@ func (s *Server) Close() {
 	s.mu.Unlock()
 
 	for _, b := range bindings {
+		// some PacketConns (e.g. utp.Socket) do not wake a blocked ReadFrom on Close,
+		// a deadline in the past does. serve exits on any read error once closed.
+		// go-libutp's Socket panics("not implemented") on SetReadDeadline, but its Close wakes
+		// ReadFrom itself, so a panicking deadline is safe to skip.
+		func() {
+			defer func() { _ = recover() }()
+			_ = b.pc.SetReadDeadline(time.Now())
+		}()
 		b.pc.Close()
 	}
 	s.wg.Wait()
@@ -1092,6 +1115,10 @@ func (s *Server) AddNodesFromFile(fileName string) (added int, err error) {
 
 func (s *Server) logger() logging {
 	return s.log
+}
+
+func (s *Server) debugger() logging {
+	return s.debug
 }
 
 func (s *Server) PeerStore() peer_store.Interface {

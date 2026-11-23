@@ -23,6 +23,7 @@ import (
 
 	"github.com/james-lawrence/torrent/bencode"
 	pp "github.com/james-lawrence/torrent/btprotocol"
+	"github.com/james-lawrence/torrent/internal/asyncx"
 	"github.com/james-lawrence/torrent/internal/atomicx"
 	"github.com/james-lawrence/torrent/internal/bitmapx"
 	"github.com/james-lawrence/torrent/internal/bytesx"
@@ -50,8 +51,8 @@ func newConnection(cfg *ClientConfig, nc net.Conn, outgoing bool, remote netip.A
 	ts := time.Now()
 	return &connection{
 		_mu:                     _mu,
-		upload:                  sync.NewCond(_mu),
-		request:                 sync.NewCond(_mu),
+		upload:                  asyncx.NewSemaphore(1),
+		request:                 asyncx.NewSemaphore(1),
 		conn:                    nc,
 		outgoing:                outgoing,
 		Choked:                  atomicx.Bool(true),
@@ -182,9 +183,9 @@ type connection struct {
 	PeerExtensionIDs map[pp.ExtensionName]pp.ExtensionNumber
 	PeerClientName   string
 
-	upload        *sync.Cond  // used to wake up the connection.reader
-	request       *sync.Cond  // used to wake up the connection.writer
-	needsresponse atomic.Bool // used to track when responses need to be sent that might be missed by the respond condition.
+	upload        *asyncx.Semaphore // used to wake up the connection.reader
+	request       *asyncx.Semaphore // used to wake up the connection.writer
+	needsresponse atomic.Bool       // used to track when responses need to be sent that might be missed by the respond condition.
 	chunkwakefreq atomic.Uint32
 }
 
@@ -435,7 +436,7 @@ func (t messageWriter) Deprecated() func(pp.Message) bool {
 
 func (cn *connection) updateRequests() {
 	if !cn.needsresponse.Swap(true) {
-		cn.upload.Broadcast()
+		cn.upload.Signal()
 	}
 }
 
@@ -446,7 +447,7 @@ func (cn *connection) peerPiecesChanged() {
 
 	cn.refreshrequestable.Store(new(time.Now()))
 	if cn.needsresponse.CompareAndSwap(false, true) {
-		cn.request.Broadcast()
+		cn.request.Signal()
 	}
 }
 
@@ -788,7 +789,7 @@ func (cn *connection) ReadOne(ctx context.Context, decoder *pp.Decoder, ws *writ
 		cn.t.chunks.pool.Put(&msg.Piece)
 
 		if n, mod := cn.chunkwakefreq.Add(1), max(ws.PeerMaxRequests.Load()/4, 1); n%mod == 0 {
-			cn.request.Broadcast()
+			cn.request.Signal()
 		}
 		return msg, nil
 	case pp.Cancel:
@@ -840,8 +841,8 @@ func (cn *connection) ReadOne(ctx context.Context, decoder *pp.Decoder, ws *writ
 
 		return msg, nil
 	case pp.Extended:
-		defer cn.request.Broadcast()
-		defer cn.upload.Broadcast()
+		defer cn.request.Signal()
+		defer cn.upload.Signal()
 
 		if err = cn.onReadExtendedMsg(msg.ExtendedID, msg.ExtendedPayload, ws); err != nil {
 			return msg, err

@@ -7,12 +7,14 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/james-lawrence/torrent/internal/asyncx"
 )
 
 type logger interface {
-	Println(v ...interface{})
-	Printf(format string, v ...interface{})
-	Print(v ...interface{})
+	Println(v ...any)
+	Printf(format string, v ...any)
+	Print(v ...any)
 }
 type Shared struct {
 	done context.CancelCauseFunc
@@ -23,26 +25,30 @@ type T interface {
 	Update(context.Context, *Shared) T
 }
 
-func Idle(ctx context.Context, cond *sync.Cond, signals ...*sync.Cond) *Idler {
+// Idle creates an idler that wakes when wake is broadcast to. wake remembers broadcasts that
+// happen while the state machine is not idle, so a wakeup is never lost between checking
+// state and going idle.
+//
+// signals are shared conds (they have other waiters, so they cannot be replaced by a semaphore),
+// each is relayed into wake by a goroutine that lives until Stop is called.
+func Idle(ctx context.Context, wake *asyncx.Semaphore, signals ...*sync.Cond) *Idler {
 	tt := time.NewTimer(time.Hour)
 	tt.Stop()
 
 	_ctx, done := context.WithCancel(ctx)
 	return (&Idler{
 		timeout: tt,
-		target:  cond,
+		target:  wake,
 		signals: signals,
 		stop:    done,
-		done:    make(chan struct{}, 1),
 	}).monitor(_ctx)
 }
 
 type Idler struct {
 	timeout *time.Timer
-	target  *sync.Cond
+	target  *asyncx.Semaphore
 	signals []*sync.Cond
 	stop    context.CancelFunc
-	done    chan struct{}
 }
 
 func (t *Idler) Stop() {
@@ -61,39 +67,20 @@ func (t *Idler) Idle(next T, d time.Duration) idle {
 
 func (t *Idler) monitor(ctx context.Context) *Idler {
 	for _, s := range t.signals {
-		go func() {
+		go func(_s *sync.Cond) {
 			for {
-				s.L.Lock()
-				s.Wait()
-				s.L.Unlock()
-				t.target.Broadcast()
+				_s.L.Lock()
+				_s.Wait()
+				_s.L.Unlock()
+				t.target.Signal()
 				select {
 				case <-ctx.Done():
 					return
 				default:
 				}
 			}
-		}()
+		}(s)
 	}
-
-	go func() {
-		for {
-			t.target.L.Lock()
-			t.target.Wait()
-			t.target.L.Unlock()
-
-			select {
-			case t.done <- struct{}{}:
-			default:
-			}
-
-			select {
-			case <-ctx.Done():
-				return
-			default:
-			}
-		}
-	}()
 
 	return t
 }
@@ -106,10 +93,9 @@ type idle struct {
 func (t idle) Update(ctx context.Context, c *Shared) T {
 	defer t.Idler.timeout.Stop()
 	select {
-	case <-t.done:
+	case <-t.target.Wait():
 	case <-t.Idler.timeout.C:
 	case <-ctx.Done():
-		t.Idler.target.Broadcast()
 	}
 	return t.next
 }

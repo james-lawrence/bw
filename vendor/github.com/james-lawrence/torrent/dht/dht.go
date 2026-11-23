@@ -180,9 +180,28 @@ func OptionQueryResendDelay(d time.Duration) Option {
 
 func OptionNoop(sc *Server) {}
 
+// OptionPassive when true the server never serves a socket, it takes no part in the dht (no queries sent,
+// none answered) but retains its identity (see OptionNodeID), which clients use to tell their own connections
+// from those of their peers.
+func OptionPassive(passive bool) Option {
+	return func(sc *Server) {
+		sc.passive = passive
+	}
+}
+
+// OptionLogger sets the info logger, used for general server activity
+// (bootstrapping, routing table maintenance, errors).
 func OptionLogger(m logging) Option {
 	return func(sc *Server) {
 		sc.log = m
+	}
+}
+
+// OptionDebugLogger sets the debug logger, used to trace every method
+// executed by the server: inbound queries handled and outbound queries sent.
+func OptionDebugLogger(m logging) Option {
+	return func(sc *Server) {
+		sc.debug = m
 	}
 }
 
