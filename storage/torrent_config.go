@@ -73,6 +73,8 @@ func NewTorrent(cls cluster, options ...TorrentOption) (c TorrentConfig, err err
 		torrent.ClientConfigInfoLogger(logger),
 		torrent.ClientConfigDebugLogger(debug),
 		torrent.ClientConfigSeed(true),
+		// healthy keeps the library default (4s), starving is configurable.
+		torrent.ClientConfigDialTimeouts(1*time.Second, envx.Duration(4*time.Second, bw.EnvTorrentDialTimeout)),
 		torrent.ClientConfigFirewall(connections.NewFirewall(
 			connections.BanInvalidPort{},
 			// connections.NewBloomBanIP(10*time.Minute),
@@ -134,7 +136,7 @@ func (t torrentP) New() Downloader {
 		c:      t.c,
 		dir:    t.dir,
 		client: t.client,
-		stall:  16 * time.Second,
+		stall:  envx.Duration(120*time.Second, bw.EnvTorrentStallTimeout),
 	}
 }
 

@@ -27,4 +27,6 @@ const (
 	EnvAgentACMEDNSChallengeNameServer   = "BEARDED_WOOKIE_AGENT_ACME_DNS_CHALLENGE_NAMESERVER"        // provide a nameserver override for DNS challeges.
 	EnvAgentQUICDisable                  = "BEARDED_WOOKIE_AGENT_QUIC_DISABLE"                         // disable listening and dialing over quic, the agent uses tcp and udp only. boolean, see strconv.ParseBool for valid values.
 	EnvAgentCachedTLSCertificateMinimum  = "BEARDED_WOOKIE_AGENT_CACHED_TLS_CERTIFICATE_MINIMUM"       // minimum duration in milliseconds that a certificate needs to be valid for to be acceptable for use.
+	EnvTorrentStallTimeout               = "BEARDED_WOOKIE_TORRENT_STALL_TIMEOUT"                      // window without progress before a torrent download is restarted, defaults to 120s. see time.ParseDuration for valid values. e.g.) 90s
+	EnvTorrentDialTimeout                = "BEARDED_WOOKIE_TORRENT_DIAL_TIMEOUT"                       // maximum time to wait when dialing a torrent peer while the torrent is starving for peers, defaults to 16s. see time.ParseDuration for valid values. e.g.) 30s
 )
