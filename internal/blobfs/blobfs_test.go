@@ -5,6 +5,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -70,4 +72,16 @@ func TestGCS(t *testing.T) {
 func TestOpenRejectsUnknownSchemes(t *testing.T) {
 	_, err := Open(context.Background(), "ftp://host/dir")
 	require.Error(t, err)
+}
+
+func TestOpenDirectory(t *testing.T) {
+	dir := t.TempDir()
+	for _, location := range []string{dir, "file://" + dir} {
+		f, err := Open(context.Background(), location)
+		require.NoError(t, err)
+		write(t, f, "current.meta", "meta")
+		raw, err := os.ReadFile(filepath.Join(dir, "current.meta"))
+		require.NoError(t, err)
+		require.Equal(t, "meta", string(raw))
+	}
 }
