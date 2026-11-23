@@ -60,11 +60,12 @@ func peersToNode(peers ...*agent.Peer) (r []torrent.Peer) {
 
 // stallstats summarizes the state of a torrent for the stalled download log. distinguishes
 // a connection that is idle with chunks still missing from one that has no peers at all.
-func stallstats(dl torrent.Torrent) string {
+func stallstats(dl torrent.Torrent, quorum []*agent.Peer) string {
 	s := dl.Stats()
 
 	return fmt.Sprintf(
-		"chunks(missing(%d) outstanding(%d) unverified(%d) failed(%d) completed(%d)) peers(active(%d) seeders(%d) pending(%d) halfopen(%d) total(%d)) read(data(%d) useful(%d) chunks(%d) useful(%d) wasted(%d)) written(chunks(%d)) lastactivity(%s) lastconnection(%s)",
+		"quorum(size(%d) peers(%d)) chunks(missing(%d) outstanding(%d) unverified(%d) failed(%d) completed(%d)) peers(active(%d) seeders(%d) pending(%d) halfopen(%d) total(%d)) read(data(%d) useful(%d) chunks(%d) useful(%d) wasted(%d)) written(chunks(%d)) lastactivity(%s) lastconnection(%s)",
+		len(quorum), len(peersToNode(quorum...)),
 		s.Missing, s.Outstanding, s.Unverified, s.Failed, s.Completed,
 		s.ActivePeers, s.Seeders, s.PendingPeers, s.HalfOpenPeers, s.TotalPeers,
 		s.BytesReadData.Int64(), s.BytesReadUsefulData.Int64(), s.ChunksRead.Int64(), s.ChunksReadUseful.Int64(), s.ChunksReadWasted.Int64(),
@@ -129,7 +130,7 @@ func (t torrentD) Download(ctx context.Context, archive *agent.Archive) (r io.Re
 				break
 			}
 
-			log.Printf("download stalled, restarting: %s received(%d) metadata(%t) cause(%v) %s\n", metadata.ID, pos, !metadataStalled, err, stallstats(dl))
+			log.Printf("download stalled, restarting: %s received(%d) metadata(%t) cause(%v) %s\n", metadata.ID, pos, !metadataStalled, err, stallstats(dl, t.c.Quorum()))
 			errorsx.Log(errors.Wrap(t.client.Stop(metadata), "unable to stop stalled torrent"))
 		}
 
